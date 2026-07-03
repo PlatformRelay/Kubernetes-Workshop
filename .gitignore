@@ -1,0 +1,42 @@
+# Dependencies & build output
+node_modules/
+dist/
+*.local
+stuff
+.claude
+.vscode
+.envrc
+
+# Slidev / Vite
+.vite-inspect/
+.remote-assets/
+components.d.ts
+
+# Export artifacts
+*.pdf
+.slides-export/
+slidev-export/
+
+# OS & editors
+.DS_Store
+Thumbs.db
+.idea/
+*.swp
+*.swo
+
+# Logs & env
+*.log
+npm-debug.log*
+.env
+.env.*
+!.env.example
+
+# Working material / internal research — NOT part of the published deck.
+# Contains planning notes, source analysis, and agent handoff context; keep it local.
+agent-context/
+
+# Local demo/reference clones (nested git repos) — facilitator rehearsal only.
+references/
+
+# Keep deck docs even if ignored globally
+!AGENTS.md
