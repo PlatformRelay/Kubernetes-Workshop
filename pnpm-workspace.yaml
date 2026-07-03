@@ -1,0 +1,9 @@
+shamefullyHoist: true
+
+# pnpm v11 errors on unapproved dependency build scripts, so allowlist the two
+# we rely on: `vue-demi` (used by @vueuse/motion; picks the Vue-3 entry in its
+# postinstall) and `playwright-chromium` (downloads the browser that
+# `slidev export` needs for PDF/PNG/PPTX output).
+allowBuilds:
+  vue-demi: true
+  playwright-chromium: true
