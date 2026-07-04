@@ -6,10 +6,12 @@ roughly 50% presentation and 50% practice.
 
 ## Status
 
-Curriculum skeleton. All sections (`S00`–`S27`) exist as toggleable stubs with
-matching lab stubs; the reusable layouts, components, and the animation-technology
-decision live in the template gallery (`slides-templates.md`). Section content is
-authored milestone by milestone (Day 1 first).
+Curriculum skeleton with a finished master theme. All sections (`S00`–`S27`)
+exist as toggleable stubs with matching lab stubs. The deck's design system —
+a local Slidev theme with layouts, components, and code-annotation patterns —
+lives in `theme/` and is showcased slide by slide in the template gallery
+(`slides-templates.md`). Section content is authored milestone by milestone
+(Day 1 first).
 
 ## Develop
 
@@ -31,8 +33,9 @@ pnpm export             # PDF export (needs playwright-chromium)
 | `slides-templates.md` | Template gallery & animation-technology spike |
 | `pages/SNN-topic/` | One self-contained, toggleable section per folder (`index.md`) |
 | `labs/day-*/` | Standalone Markdown labs, one per section |
-| `layouts/` | Reusable slide layouts (section cover, code walkthrough, lab, …) |
-| `components/` | Shared Vue components, incl. animated teaching diagrams |
+| `theme/` | **Local Slidev theme** — master styles, layouts, and UI components |
+| `components/` | Deck-level Vue components (animated teaching diagrams) |
+| `global-bottom.vue` | Global chrome: footer, page number, progress bar |
 | `public/icons/` | Curated official Kubernetes/CNCF artwork (see its README) |
 | `docs/decisions/` | Decision records |
 
