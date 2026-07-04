@@ -11,6 +11,42 @@ self-contained, **toggleable** unit, and one or more **root decks** compose them
 `slides.md` and a boiled-down `slides-3day.md`). See
 [Deck architecture](#deck-architecture--compartmentalized-sections).
 
+## Operator board — multi-agent coordination
+
+This repo is currently built by **several agents in parallel git worktrees** that converge
+to `main` through stacked feature branches. Before starting a lane, **claim it here** and
+scan the board for anyone already holding the files you intend to touch. The board is the
+one place that tells you what is in flight and what is safe to author in parallel.
+
+**Protocol**
+
+- **Claim before authoring.** Add a row with your lane, branch, the paths you own, and
+  status `🔨 in progress`. Keep the paths **coarse and append-only** so the board itself
+  rarely conflicts at merge; resolve any board conflict by taking the **union** of rows.
+- **Own paths, not the tree.** Two lanes must not edit the same file. Labs
+  (`labs/day-*`) are decoupled from deck theme (`layouts/`, `components/`, `style.css`,
+  root decks) and from section content (`pages/SNN-*`); parallelize along those seams.
+- **Base on the furthest-along foundation.** Content lanes stack on
+  `feat/us-g1-g2-section-skeleton` (the section + lab-stub library) until it merges, not on
+  bare `main` (which has none of it yet).
+- **Board of record.** The authoritative copy is whichever board reaches `main` first;
+  until then, keep your branch's copy current and merge by union.
+- **Release on done.** Flip your row to `✅ done` with the date + branch when the lane's
+  Definition of Done is met and it is committed.
+
+**Live lanes** *(as of 2026-07-04)*
+
+| Lane | Branch | Owns (paths) | Status |
+| --- | --- | --- | --- |
+| Deck theme master | `feat/deck-theme-master` | `layouts/`, `components/`, `style.css`, root decks | 🔨 in progress |
+| US-0 templates + animation spike | `feat/us-0-templates-animation-spike` | `layouts/`, `components/`, `slides-templates.md`, ADR 0001 | ✅ done — awaiting merge |
+| Section skeleton (G1/G2) | `feat/us-g1-g2-section-skeleton` | `pages/SNN-*` stubs, `slides.md`, `slides-3day.md`, `labs/**` stubs | ✅ done — awaiting merge |
+| Day-1 cluster labs | `feat/day1-labs` | `labs/day-1/{00,05,06,07,08}.md` | 🔨 in progress |
+
+> Section **slides** (`pages/SNN-*`) for Day 1 are intentionally **not** claimed yet — they
+> depend on the deck-theme master settling. Container labs `01`/`02` need a container engine
+> (docker/podman) and are deferred until an authoring env has one.
+
 ## Non-negotiable guardrails
 
 These apply to **everything** — slides, labs, components, assets, planning docs,
