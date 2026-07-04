@@ -15,16 +15,22 @@ const props = withDefaults(
   }>(),
   { aiGenerated: true },
 )
+
+const base = import.meta.env.BASE_URL
+
+function resolveAsset(url: string) {
+  return url.startsWith('/') ? base + url.slice(1) : url
+}
 </script>
 
 <template>
   <div class="slidev-layout kw-section-cover">
-    <img v-if="props.image" class="kw-cover-image" :src="props.image" alt="" />
-    <div class="kw-cover-overlay" />
+    <img v-if="props.image" class="kw-cover-image" :src="resolveAsset(props.image)" alt="" />
+    <div class="kw-cover-overlay" :class="{ 'kw-cover-overlay--plain': !props.image }" />
 
     <div class="kw-cover-body">
       <div class="kw-cover-meta">
-        <img src="/icons/kubernetes-icon-white.svg" alt="Kubernetes" class="kw-cover-logo" />
+        <img :src="`${base}icons/kubernetes-icon-white.svg`" alt="Kubernetes" class="kw-cover-logo" />
         <span v-if="props.day" class="kw-kicker">{{ props.day }}</span>
         <span v-if="props.section" class="kw-kicker kw-cover-section">§ {{ props.section }}</span>
       </div>
@@ -63,6 +69,16 @@ const props = withDefaults(
   );
 }
 
+/* No artwork: fall back to the engineering dot grid. */
+.kw-cover-overlay--plain {
+  background-color: var(--kw-bg);
+  background-image: radial-gradient(
+    color-mix(in srgb, var(--kw-border) 55%, transparent) 1px,
+    transparent 1px
+  );
+  background-size: 24px 24px;
+}
+
 .kw-cover-body {
   position: absolute;
   left: 3.5rem;
@@ -94,19 +110,5 @@ const props = withDefaults(
 .kw-cover-title :deep(p) {
   color: var(--kw-text-dim);
   margin-top: 0.5rem;
-}
-
-.kw-ai-footer {
-  position: absolute;
-  right: 0.9rem;
-  bottom: 0.7rem;
-  font-size: 0.6rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--kw-text-dim);
-  background: color-mix(in srgb, var(--kw-bg) 75%, transparent);
-  border: 1px solid var(--kw-border);
-  border-radius: 4px;
-  padding: 0.15rem 0.45rem;
 }
 </style>

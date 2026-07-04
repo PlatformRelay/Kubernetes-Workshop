@@ -13,10 +13,17 @@ const props = withDefaults(
   }>(),
   { name: 'kubernetes-icon-white', size: '2rem' },
 )
+
+const base = import.meta.env.BASE_URL
 </script>
 
 <template>
-  <img :src="`/icons/${props.name}.svg`" :style="{ height: props.size }" alt="" class="kw-icon" />
+  <img
+    :src="`${base}icons/${props.name}.svg`"
+    :style="{ height: props.size }"
+    alt=""
+    class="kw-icon"
+  />
 </template>
 
 <style scoped>

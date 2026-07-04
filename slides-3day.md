@@ -1,17 +1,12 @@
 ---
-theme: default
+theme: ./theme
 title: Kubernetes Practitioner Workshop — 3-day cut
 info: |
   Open source, vendor-neutral Kubernetes workshop.
   Canonical 3-day boil-down: all core sections plus selected recommended
   ones (~390 min/day at ~50/50). Hidden sections stay fully authored in the
   superset; flip `hide:` to recompose the cut.
-colorSchema: dark
-transition: slide-left
-fonts:
-  sans: Inter
-  mono: JetBrains Mono
-layout: section-cover
+layout: cover
 ---
 
 # Kubernetes Practitioner Workshop

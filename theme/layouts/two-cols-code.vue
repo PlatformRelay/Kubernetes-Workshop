@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import LabCallout from '../components/LabCallout.vue'
+
 const props = defineProps<{
   heading?: string
   /** Optional lab reference chip. */

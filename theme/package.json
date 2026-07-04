@@ -1,0 +1,21 @@
+{
+  "name": "slidev-theme-k8s-workshop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Dark, technical, vendor-neutral Slidev theme for the Kubernetes Practitioner Workshop",
+  "keywords": ["slidev-theme", "slidev"],
+  "engines": {
+    "slidev": ">=52.0.0"
+  },
+  "slidev": {
+    "colorSchema": "dark",
+    "defaults": {
+      "transition": "slide-left",
+      "highlighter": "shiki",
+      "fonts": {
+        "sans": "Inter",
+        "mono": "JetBrains Mono"
+      }
+    }
+  }
+}

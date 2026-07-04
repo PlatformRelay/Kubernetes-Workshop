@@ -1,16 +1,11 @@
 ---
-theme: default
+theme: ./theme
 title: Kubernetes Practitioner Workshop
 info: |
   Open source, vendor-neutral Kubernetes workshop.
   Superset root deck: imports every section S00–S27. Toggle any section
   with `hide: true` on its import block below.
-colorSchema: dark
-transition: slide-left
-fonts:
-  sans: Inter
-  mono: JetBrains Mono
-layout: section-cover
+layout: cover
 ---
 
 # Kubernetes Practitioner Workshop

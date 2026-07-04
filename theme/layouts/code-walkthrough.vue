@@ -1,8 +1,10 @@
 <script setup lang="ts">
+import LabCallout from '../components/LabCallout.vue'
+
 const props = defineProps<{
   /** Slide heading shown in the header bar. */
   heading?: string
-  /** Optional lab reference, e.g. "labs/day-1/03-pod.md". */
+  /** Optional lab reference, e.g. "labs/day-1/05-pod.md". */
   lab?: string
 }>()
 </script>

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 const props = defineProps<{
-  /** Lab file path, e.g. "labs/day-1/03-pod.md". */
+  /** Lab file path, e.g. "labs/day-1/05-pod.md". */
   lab: string
   duration?: string
 }>()
@@ -28,7 +28,8 @@ const props = defineProps<{
 
 .kw-lab-callout code {
   background: none;
-  color: var(--kw-accent-soft);
+  border: none;
+  color: var(--kw-accent-bright);
   padding: 0;
 }
 
