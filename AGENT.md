@@ -41,7 +41,11 @@ one place that tells you what is in flight and what is safe to author in paralle
 | Deck theme master | `feat/deck-theme-master` | `layouts/`, `components/`, `style.css`, root decks | 🔨 in progress |
 | US-0 templates + animation spike | `feat/us-0-templates-animation-spike` | `layouts/`, `components/`, `slides-templates.md`, ADR 0001 | ✅ done — awaiting merge |
 | Section skeleton (G1/G2) | `feat/us-g1-g2-section-skeleton` | `pages/SNN-*` stubs, `slides.md`, `slides-3day.md`, `labs/**` stubs | ✅ done — awaiting merge |
-| Day-1 cluster labs | `feat/day1-labs` | `labs/day-1/{00,05,06,07,08}.md` | 🔨 in progress |
+| Day-1 cluster labs | `feat/day1-labs` | `labs/day-1/{00,05,06,07,08}.md` | 🔨 labs authored + committed — **live-cluster verify pending** (no cluster in authoring env); section **slides** (`pages/S00,S05–S08`) not started (await deck-theme master) |
+
+> **Backlog sync owed** (do not let this branch edit `agent-context/` — a planning agent owns
+> it): flip `US-B00`, `US-C1`–`US-C4` to *lab authored, slides pending*; note `US-B0`/`US-B0b`
+> (container labs `01`/`02`) still `todo` — deferred, need a container engine.
 
 > Section **slides** (`pages/SNN-*`) for Day 1 are intentionally **not** claimed yet — they
 > depend on the deck-theme master settling. Container labs `01`/`02` need a container engine
