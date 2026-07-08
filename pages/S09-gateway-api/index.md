@@ -1,5 +1,6 @@
 ---
 layout: section-cover
+image: /covers/section-09-modular-customs-house.png
 day: Day 2
 section: '09'
 tier: recommended

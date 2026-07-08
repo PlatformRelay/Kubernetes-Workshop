@@ -1,5 +1,6 @@
 ---
 layout: section-cover
+image: /covers/section-13-rationing-hall.png
 day: Day 2
 section: '13'
 tier: core

@@ -1,5 +1,6 @@
 ---
 layout: section-cover
+image: /covers/section-19-keymaster.png
 day: Day 3
 section: '19'
 tier: optional

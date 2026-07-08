@@ -1,5 +1,6 @@
 ---
 layout: section-cover
+image: /covers/section-20-shipwrights-bottle.png
 day: Day 3
 section: '20'
 tier: core

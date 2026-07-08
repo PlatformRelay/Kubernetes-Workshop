@@ -1,5 +1,6 @@
 ---
 layout: section-cover
+image: /covers/section-11-luggage-depot.png
 day: Day 2
 section: '11'
 tier: core

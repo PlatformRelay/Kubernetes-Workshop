@@ -1,5 +1,6 @@
 ---
 layout: section-cover
+image: /covers/section-17-armour-fitting.png
 day: Day 3
 section: '17'
 tier: core

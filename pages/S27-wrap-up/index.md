@@ -1,5 +1,6 @@
 ---
 layout: section-cover
+image: /covers/section-27-sailing-on.png
 day: Day 3
 section: '27'
 tier: core

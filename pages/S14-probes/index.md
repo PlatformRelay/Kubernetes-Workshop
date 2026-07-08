@@ -1,5 +1,6 @@
 ---
 layout: section-cover
+image: /covers/section-14-clinic.png
 day: Day 2
 section: '14'
 tier: core

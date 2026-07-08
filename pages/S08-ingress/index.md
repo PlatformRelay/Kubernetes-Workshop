@@ -1,5 +1,6 @@
 ---
 layout: section-cover
+image: /covers/section-08-grand-gate.png
 day: Day 1
 section: '08'
 tier: core

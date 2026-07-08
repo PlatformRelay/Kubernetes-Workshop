@@ -1,5 +1,6 @@
 ---
 layout: section-cover
+image: /covers/section-23-observatory.png
 day: Day 3
 section: '23'
 tier: recommended

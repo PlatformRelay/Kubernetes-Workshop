@@ -1,5 +1,6 @@
 ---
 layout: section-cover
+image: /covers/section-21-oracle-lighthouse.png
 day: Day 3
 section: '21'
 tier: recommended

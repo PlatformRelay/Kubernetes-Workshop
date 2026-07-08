@@ -1,5 +1,6 @@
 ---
 layout: section-cover
+image: /covers/section-24-forging-little-owl.png
 day: Day 3
 section: '24'
 tier: optional

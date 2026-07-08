@@ -1,5 +1,6 @@
 ---
 layout: section-cover
+image: /covers/section-22-tireless-owl.png
 day: Day 3
 section: '22'
 tier: recommended

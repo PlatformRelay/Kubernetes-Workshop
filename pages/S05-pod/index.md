@@ -1,5 +1,6 @@
 ---
 layout: section-cover
+image: /covers/section-05-first-hatchling.png
 day: Day 1
 section: '05'
 tier: core
