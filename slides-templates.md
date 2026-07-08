@@ -470,10 +470,264 @@ next: 'Appendix — the animation-technology spike (ADR 0001)'
 | `KwCard` / `KwChip` | concept grids, tags |
 | `ArchBox` + `.kw-obj` | cluster diagrams |
 | `LabCallout` | lab reference chip |
-| `K8sIcon` | official artwork |
+| `K8sIcon` | brand logos + resource glyphs |
 | `PodCard`, `PodReplaceCss` | object behavior scenes |
 
 </div>
+</div>
+
+---
+layout: section-cover
+---
+
+# Iconography — resource glyphs
+
+<span class="kw-kicker">Sample · under review</span>
+
+The official Kubernetes architecture-icon set, vendored and wrapped in
+`K8sIcon`. Proposed for diagrams and concept slides — review the style, then
+we standardize.
+
+---
+
+<span class="kw-kicker">Sample · the set</span>
+
+# One glyph per resource
+
+<div class="ic-groups">
+  <div class="ic-group">
+    <div class="ic-group-label">Workloads</div>
+    <div class="ic-row">
+      <span class="ic-tile"><K8sIcon kind="pod" size="2.4rem" /><code>pod</code></span>
+      <span class="ic-tile"><K8sIcon kind="deploy" size="2.4rem" /><code>deploy</code></span>
+      <span class="ic-tile"><K8sIcon kind="rs" size="2.4rem" /><code>rs</code></span>
+      <span class="ic-tile"><K8sIcon kind="sts" size="2.4rem" /><code>sts</code></span>
+      <span class="ic-tile"><K8sIcon kind="ds" size="2.4rem" /><code>ds</code></span>
+      <span class="ic-tile"><K8sIcon kind="job" size="2.4rem" /><code>job</code></span>
+      <span class="ic-tile"><K8sIcon kind="cronjob" size="2.4rem" /><code>cronjob</code></span>
+      <span class="ic-tile"><K8sIcon kind="hpa" size="2.4rem" /><code>hpa</code></span>
+    </div>
+  </div>
+  <div class="ic-group">
+    <div class="ic-group-label">Networking</div>
+    <div class="ic-row">
+      <span class="ic-tile"><K8sIcon kind="svc" size="2.4rem" /><code>svc</code></span>
+      <span class="ic-tile"><K8sIcon kind="ep" size="2.4rem" /><code>ep</code></span>
+      <span class="ic-tile"><K8sIcon kind="ing" size="2.4rem" /><code>ing</code></span>
+      <span class="ic-tile"><K8sIcon kind="netpol" size="2.4rem" /><code>netpol</code></span>
+    </div>
+  </div>
+  <div class="ic-group">
+    <div class="ic-group-label">Config &amp; storage</div>
+    <div class="ic-row">
+      <span class="ic-tile"><K8sIcon kind="cm" size="2.4rem" /><code>cm</code></span>
+      <span class="ic-tile"><K8sIcon kind="secret" size="2.4rem" /><code>secret</code></span>
+      <span class="ic-tile"><K8sIcon kind="pv" size="2.4rem" /><code>pv</code></span>
+      <span class="ic-tile"><K8sIcon kind="pvc" size="2.4rem" /><code>pvc</code></span>
+      <span class="ic-tile"><K8sIcon kind="quota" size="2.4rem" /><code>quota</code></span>
+    </div>
+  </div>
+  <div class="ic-group">
+    <div class="ic-group-label">Cluster &amp; control plane</div>
+    <div class="ic-row">
+      <span class="ic-tile"><K8sIcon kind="ns" size="2.4rem" /><code>ns</code></span>
+      <span class="ic-tile"><K8sIcon kind="sa" size="2.4rem" /><code>sa</code></span>
+      <span class="ic-tile"><K8sIcon kind="crd" size="2.4rem" /><code>crd</code></span>
+      <span class="ic-tile"><K8sIcon kind="api" size="2.4rem" /><code>api</code></span>
+      <span class="ic-tile"><K8sIcon kind="etcd" size="2.4rem" /><code>etcd</code></span>
+      <span class="ic-tile"><K8sIcon kind="sched" size="2.4rem" /><code>sched</code></span>
+      <span class="ic-tile"><K8sIcon kind="node" size="2.4rem" /><code>node</code></span>
+    </div>
+  </div>
+</div>
+
+<div class="mt-4 kw-muted text-xs">
+Full set vendored under <code>public/icons/resources/</code> · official Kubernetes icon set, Apache-2.0.
+</div>
+
+<style scoped>
+.ic-groups { display: grid; grid-template-columns: 1fr 1fr; gap: 0.9rem 1.6rem; margin-top: 1rem; }
+.ic-group-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--kw-text-dim); margin-bottom: 0.4rem; }
+.ic-row { display: flex; flex-wrap: wrap; gap: 0.9rem; }
+.ic-tile { display: flex; flex-direction: column; align-items: center; gap: 0.25rem; width: 3.4rem; }
+.ic-tile code { background: none; padding: 0; font-size: 0.62rem; color: var(--kw-text-dim); }
+</style>
+
+---
+
+<span class="kw-kicker">Sample · pick a style</span>
+
+# Two styles, one component
+
+<div class="ic-variants">
+  <div class="ic-variant-col">
+    <div class="ic-group-label">labeled — hexagon + type text</div>
+    <div class="ic-row">
+      <span class="ic-tile"><K8sIcon kind="deploy" variant="labeled" size="3rem" /></span>
+      <span class="ic-tile"><K8sIcon kind="svc" variant="labeled" size="3rem" /></span>
+      <span class="ic-tile"><K8sIcon kind="cm" variant="labeled" size="3rem" /></span>
+      <span class="ic-tile"><K8sIcon kind="secret" variant="labeled" size="3rem" /></span>
+      <span class="ic-tile"><K8sIcon kind="ns" variant="labeled" size="3rem" /></span>
+    </div>
+    <div class="kw-muted text-xs mt-2">Self-labeling — good standalone, in galleries and legends.</div>
+  </div>
+  <div class="ic-variant-col">
+    <div class="ic-group-label">unlabeled — bare hexagon</div>
+    <div class="ic-row">
+      <span class="ic-tile"><K8sIcon kind="deploy" variant="unlabeled" size="3rem" /></span>
+      <span class="ic-tile"><K8sIcon kind="svc" variant="unlabeled" size="3rem" /></span>
+      <span class="ic-tile"><K8sIcon kind="cm" variant="unlabeled" size="3rem" /></span>
+      <span class="ic-tile"><K8sIcon kind="secret" variant="unlabeled" size="3rem" /></span>
+      <span class="ic-tile"><K8sIcon kind="ns" variant="unlabeled" size="3rem" /></span>
+    </div>
+    <div class="kw-muted text-xs mt-2">Compact — good inline and where a label already names the box.</div>
+  </div>
+</div>
+
+<div class="ic-sizes mt-6">
+  <span class="ic-group-label">scales cleanly (SVG)</span>
+  <span class="ic-size-row">
+    <K8sIcon kind="pod" variant="unlabeled" size="1rem" />
+    <K8sIcon kind="pod" variant="unlabeled" size="1.5rem" />
+    <K8sIcon kind="pod" variant="unlabeled" size="2.25rem" />
+    <K8sIcon kind="pod" variant="unlabeled" size="3.25rem" />
+  </span>
+</div>
+
+<style scoped>
+.ic-variants { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-top: 1rem; }
+.ic-group-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--kw-text-dim); margin-bottom: 0.5rem; }
+.ic-row { display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-end; }
+.ic-sizes { display: flex; flex-direction: column; gap: 0.5rem; }
+.ic-size-row { display: flex; align-items: flex-end; gap: 1rem; }
+</style>
+
+---
+layout: two-cols-code
+heading: 'Sample · icons in a diagram — Service → Pods'
+---
+
+<div class="ic-diagram">
+  <div class="ic-node">
+    <K8sIcon kind="svc" variant="unlabeled" size="2.6rem" />
+    <code>web</code>
+    <span class="kw-muted text-xs">ClusterIP</span>
+  </div>
+  <div class="kw-flow-arrow">selector <code>app=web</code> ▸</div>
+  <div class="ic-node">
+    <K8sIcon kind="ep" variant="unlabeled" size="2.6rem" />
+    <code>EndpointSlice</code>
+  </div>
+  <div class="kw-flow-arrow">▸</div>
+  <div class="ic-pods">
+    <div class="ic-node ic-node--sm"><K8sIcon kind="pod" variant="unlabeled" size="2rem" /><code>web-x2lqp</code></div>
+    <div class="ic-node ic-node--sm"><K8sIcon kind="pod" variant="unlabeled" size="2rem" /><code>web-7nqld</code></div>
+    <div class="ic-node ic-node--sm"><K8sIcon kind="pod" variant="unlabeled" size="2rem" /><code>web-lm4tt</code></div>
+  </div>
+</div>
+
+::right::
+
+<div class="text-sm kw-muted">
+
+The same wiring `ServiceRouting.vue` animates — but the **nodes are real
+resource glyphs** instead of hand-drawn boxes. Drop `K8sIcon` into any
+`ArchBox`/`kw-obj` scene or Vue diagram component; it's a plain `<img>`, so it
+exports to PNG/PDF cleanly (ADR 0001).
+
+</div>
+
+<style scoped>
+.ic-diagram { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+.ic-node { display: flex; flex-direction: column; align-items: center; gap: 0.2rem; padding: 0.6rem 0.8rem; background: var(--kw-panel); border: 1px solid var(--kw-border); border-radius: var(--kw-radius-sm); }
+.ic-node code { background: none; padding: 0; font-size: 0.68rem; }
+.ic-node--sm { padding: 0.4rem 0.5rem; }
+.ic-pods { display: flex; flex-direction: column; gap: 0.5rem; }
+.kw-flow-arrow { font-size: 0.72rem; }
+</style>
+
+---
+
+<span class="kw-kicker">Sample · concept cards</span>
+
+# Emoji today → glyph proposed
+
+<div class="kw-cols-2 mt-4">
+  <div>
+    <div class="ic-group-label">today — emoji</div>
+    <div class="kw-cols-2">
+      <KwCard heading="Pod" icon="📦">Smallest deployable unit.</KwCard>
+      <KwCard heading="ConfigMap" icon="🎛️">Non-secret config.</KwCard>
+    </div>
+  </div>
+  <div>
+    <div class="ic-group-label">proposed — resource glyph</div>
+    <div class="kw-cols-2">
+      <div class="ic-card">
+        <div class="ic-card-head"><K8sIcon kind="pod" variant="unlabeled" size="1.5rem" /><span>Pod</span></div>
+        <div class="ic-card-body">Smallest deployable unit.</div>
+      </div>
+      <div class="ic-card">
+        <div class="ic-card-head"><K8sIcon kind="cm" variant="unlabeled" size="1.5rem" /><span>ConfigMap</span></div>
+        <div class="ic-card-body">Non-secret config.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="mt-6 text-sm kw-muted">
+
+If you like this, the phase-3 follow-up is a one-liner: let `KwCard` take a
+`kind` (glyph) instead of an emoji `icon`, and point the authoring guide at
+`K8sIcon`.
+
+</div>
+
+<style scoped>
+.ic-group-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--kw-text-dim); margin-bottom: 0.5rem; }
+.ic-card { background: var(--kw-panel); border: 1px solid var(--kw-border); border-top: 3px solid var(--kw-accent); border-radius: var(--kw-radius-sm); padding: 0.7rem 0.9rem; }
+.ic-card-head { display: flex; align-items: center; gap: 0.45rem; font-weight: 650; font-size: 0.88rem; margin-bottom: 0.3rem; }
+.ic-card-body { font-size: 0.78rem; color: var(--kw-text-dim); }
+</style>
+
+---
+
+<span class="kw-kicker">Sample · how to call it</span>
+
+# Using `K8sIcon`
+
+<div class="grid grid-cols-2 gap-6 mt-2">
+<div>
+
+```md
+<!-- resource glyph (default: labeled) -->
+<K8sIcon kind="deploy" />
+
+<!-- bare hexagon, custom size -->
+<K8sIcon kind="svc" variant="unlabeled" size="2rem" />
+
+<!-- brand logo (unchanged, back-compatible) -->
+<K8sIcon name="kubernetes-icon-color" />
+```
+
+</div>
+<div>
+
+| Prop | Values |
+| --- | --- |
+| `kind` | `pod` `deploy` `rs` `svc` `ep` `ing` `cm` `secret` `ns` … |
+| `variant` | `labeled` (default) · `unlabeled` |
+| `size` | any CSS height, e.g. `2rem` |
+| `name` | brand logos (as before) |
+
+</div>
+</div>
+
+<div class="mt-5 text-sm kw-muted">
+
+Glyphs live in <code>public/icons/resources/{labeled,unlabeled}/</code>. Full
+slug list and attribution: <code>public/icons/README.md</code>.
+
 </div>
 
 ---
