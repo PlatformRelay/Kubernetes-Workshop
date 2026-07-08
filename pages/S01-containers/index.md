@@ -71,6 +71,8 @@ registry.example.com/team/app:1.4.2@sha256:9b2c...e41
 
 ::notes::
 
+<BitHologram src="/diagrams/diagram-c01a-layers.png" compact />
+
 <CodeNote at="1" label="registry / repository">
 <strong>Where</strong> and <strong>what</strong>. The registry is the host that
 stores images; the repository is the named path inside it. Omit the registry and
@@ -98,6 +100,8 @@ the hash of their bytes, so caching and integrity come for free. Tag vs digest
 returns in the lab's deliberate break.
 -->
 
+---
+layout: two-cols
 ---
 
 <span class="kw-kicker">What actually runs a container</span>
@@ -134,6 +138,10 @@ returns in the lab's deliberate break.
 The **container runtime** column reappears in the S03 node diagram — this is that box, opened up.
 
 </div>
+
+::right::
+
+<BitHologram src="/diagrams/diagram-c01b-kernel-primitives.png" />
 
 <!--
 Speaker: a container is not a kind of object the kernel knows about — it's an
