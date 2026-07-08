@@ -1,18 +1,38 @@
 <script setup lang="ts">
+import type { K8sKind } from './K8sIcon.vue'
+
 const props = defineProps<{
   heading?: string
-  /** Leading emoji or short glyph, e.g. "📦". */
+  /** Leading emoji or short glyph, e.g. "📦". Ignored when `kind` is set. */
   icon?: string
+  /**
+   * Official Kubernetes resource glyph (see K8sIcon). Use for cards that name a
+   * SPECIFIC resource (deploy, cm, secret, api, …); takes precedence over `icon`.
+   */
+  kind?: K8sKind
+  /**
+   * Glyph style when `kind` is set. Default `unlabeled` per the approved
+   * convention (glyphs inside cards/diagrams are bare); pass `labeled` for the
+   * control-plane/node component glyphs that ship labeled-only upstream.
+   */
+  kindVariant?: 'labeled' | 'unlabeled'
   /** accent (default) · ok · warn · danger · plain */
   variant?: 'accent' | 'ok' | 'warn' | 'danger' | 'plain'
 }>()
 </script>
 
-<!-- Concept card for grids: icon + heading + short body. -->
+<!-- Concept card for grids: icon/glyph + heading + short body. -->
 <template>
   <div class="kw-card" :class="`kw-card--${props.variant ?? 'accent'}`">
-    <div v-if="props.icon || props.heading" class="kw-card-head">
-      <span v-if="props.icon" class="kw-card-icon">{{ props.icon }}</span>
+    <div v-if="props.kind || props.icon || props.heading" class="kw-card-head">
+      <K8sIcon
+        v-if="props.kind"
+        :kind="props.kind"
+        :variant="props.kindVariant ?? 'unlabeled'"
+        size="1.4rem"
+        class="kw-card-glyph"
+      />
+      <span v-else-if="props.icon" class="kw-card-icon">{{ props.icon }}</span>
       <span v-if="props.heading" class="kw-card-heading">{{ props.heading }}</span>
     </div>
     <div class="kw-card-body">
@@ -58,6 +78,11 @@ const props = defineProps<{
 .kw-card-icon {
   font-size: 0.95rem;
   line-height: 1;
+}
+
+.kw-card-glyph {
+  flex: none;
+  margin: -0.15rem 0;
 }
 
 .kw-card-heading {

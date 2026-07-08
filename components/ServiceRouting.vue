@@ -79,7 +79,7 @@ const endpoints = computed(() => props.pods.filter((_, i) => isReady(i)).map((p)
           :class="{ 'is-out': !isReady(i), 'is-hot': routing && isReady(i) }"
         >
           <div class="kw-route-pod-head">
-            <img src="/icons/kubernetes-icon-white.svg" alt="" class="kw-route-pod-logo" />
+            <K8sIcon kind="pod" variant="unlabeled" size="0.95rem" alt="" class="kw-route-pod-logo" />
             <code class="kw-route-pod-name">{{ pod.name }}</code>
           </div>
           <div class="kw-route-pod-foot">

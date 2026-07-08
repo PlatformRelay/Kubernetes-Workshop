@@ -18,7 +18,7 @@ const phaseColor: Record<PodPhase, string> = {
 <template>
   <div class="kw-pod" :style="{ borderColor: phaseColor[props.phase] }">
     <div class="kw-pod-head">
-      <img src="/icons/kubernetes-icon-white.svg" alt="" class="kw-pod-logo" />
+      <K8sIcon kind="pod" variant="unlabeled" size="1rem" alt="" class="kw-pod-logo" />
       <code class="kw-pod-name">{{ props.name }}</code>
     </div>
     <code class="kw-pod-image">{{ props.image }}</code>
