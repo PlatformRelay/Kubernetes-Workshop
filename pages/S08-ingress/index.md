@@ -56,7 +56,7 @@ backends. Land it as "one door, many rooms." Lab 08 follows this section.
 # An Ingress is just rules — the controller does the work
 
 <div class="kw-cols-2 mt-3 text-sm">
-  <KwCard heading="Ingress (the object)" icon="📜">
+  <KwCard heading="Ingress (the object)" kind="ing">
     A set of HTTP routing <strong>rules</strong> you write: for this host and
     path, send traffic to that Service. Pure declaration — it moves no packets on
     its own.

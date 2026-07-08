@@ -67,25 +67,25 @@ to Gateways is a spec + a loop. The reconciliation slide makes the loop concrete
 
 <div class="kw-cols-2 mt-4">
   <v-click at="1">
-    <KwCard heading="API server" icon="🚪">
+    <KwCard heading="API server" kind="api" kindVariant="labeled">
       The <strong>front door</strong>. Every read and write goes through it — validated,
       authorized, then persisted. The only component that talks to etcd.
     </KwCard>
   </v-click>
   <v-click at="2">
-    <KwCard heading="etcd" icon="🗄️" variant="plain">
+    <KwCard heading="etcd" kind="etcd" kindVariant="labeled" variant="plain">
       The <strong>source of truth</strong>: a consistent key/value store holding every
       object's spec <em>and</em> status. Lose etcd, lose the cluster's memory.
     </KwCard>
   </v-click>
   <v-click at="3">
-    <KwCard heading="Scheduler" icon="📍">
+    <KwCard heading="Scheduler" kind="sched" kindVariant="labeled">
       Watches for Pods with <strong>no node yet</strong> and picks one — by resources,
       affinity, taints. It only <em>decides</em>; the kubelet does the running.
     </KwCard>
   </v-click>
   <v-click at="4">
-    <KwCard heading="Controller manager" icon="🔁">
+    <KwCard heading="Controller manager" kind="c-m" kindVariant="labeled">
       Runs the <strong>reconciliation loops</strong> — one per resource kind (Deployment,
       ReplicaSet, Job…). This is the engine of the next slide.
     </KwCard>
@@ -112,13 +112,13 @@ the loops we animate next. etcd as "memory" lands the spec-vs-status slide later
 
 <div class="kw-cols-3 mt-4">
   <v-click at="1">
-    <KwCard heading="kubelet" icon="🤖">
+    <KwCard heading="kubelet" kind="kubelet" kindVariant="labeled">
       The node's <strong>agent</strong>. Watches the API server for Pods assigned to its
       node and makes them real — then reports their <code>status</code> back.
     </KwCard>
   </v-click>
   <v-click at="2">
-    <KwCard heading="kube-proxy" icon="🕸️" variant="plain">
+    <KwCard heading="kube-proxy" kind="k-proxy" kindVariant="labeled" variant="plain">
       Programs the node's networking so a <strong>Service IP</strong> reaches the right
       Pods. We open this box in S07.
     </KwCard>
