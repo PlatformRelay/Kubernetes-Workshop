@@ -1,10 +1,13 @@
 <script setup lang="ts">
-const props = defineProps<{
-  /** Asset path, e.g. `/diagrams/diagram-c01a-layers.png`. */
-  src: string
-  /** Tighter panel for code-annotated rails and side columns. */
-  compact?: boolean
-}>()
+const props = withDefaults(
+  defineProps<{
+    /** Path under public, e.g. `/diagrams/diagram-c01a-layers.png`. */
+    src: string
+    /** Compact panel for dense code-annotated rails. */
+    compact?: boolean
+  }>(),
+  { compact: false },
+)
 
 const base = import.meta.env.BASE_URL
 
@@ -13,40 +16,42 @@ function resolveAsset(url: string) {
 }
 </script>
 
-<!-- Bit's hologram — AI-generated conceptual diagram in a dark panel. -->
+<!-- Bit's hologram: AI diagram panel with mandatory footer for content slides. -->
 <template>
-  <figure class="kw-bit-hologram kw-panel" :class="{ 'kw-bit-hologram--compact': props.compact }">
-    <img class="kw-bit-hologram-img" :src="resolveAsset(props.src)" alt="" />
-    <figcaption class="kw-ai-footer">AI generated</figcaption>
-  </figure>
+  <div class="kw-hologram" :class="{ 'kw-hologram--compact': props.compact }">
+    <img class="kw-hologram-image" :src="resolveAsset(props.src)" alt="" />
+    <div class="kw-ai-footer">AI generated</div>
+  </div>
 </template>
 
 <style scoped>
-.kw-bit-hologram {
+.kw-hologram {
   position: relative;
-  margin: 0;
-  padding: 0;
+  border: 1px solid var(--kw-border);
+  border-radius: var(--kw-radius-sm);
+  background: color-mix(in srgb, var(--kw-panel) 85%, var(--kw-accent) 15%);
   overflow: hidden;
+  min-width: 0;
 }
 
-.kw-bit-hologram-img {
+.kw-hologram-image {
   display: block;
   width: 100%;
   height: auto;
-  aspect-ratio: 16 / 9;
+  object-fit: cover;
+}
+
+.kw-hologram--compact .kw-hologram-image {
+  max-height: 11rem;
   object-fit: cover;
   object-position: center right;
 }
 
-.kw-bit-hologram--compact .kw-bit-hologram-img {
-  aspect-ratio: 4 / 3;
-}
-
-.kw-bit-hologram .kw-ai-footer {
+.kw-hologram .kw-ai-footer {
   position: absolute;
-  right: 0.5rem;
-  bottom: 0.45rem;
+  right: 0.45rem;
+  bottom: 0.35rem;
   font-size: 0.52rem;
-  padding: 0.1rem 0.35rem;
+  opacity: 0.85;
 }
 </style>
