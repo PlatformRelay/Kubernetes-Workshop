@@ -1,0 +1,19 @@
+{
+  "name": "kubernetes-practitioner-workshop",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "slidev --open",
+    "build": "slidev build",
+    "export": "slidev export"
+  },
+  "dependencies": {
+    "@slidev/cli": "^52.16.0",
+    "@slidev/theme-default": "latest",
+    "@vueuse/motion": "^2.2.6",
+    "vue": "^3.5.33"
+  },
+  "devDependencies": {
+    "playwright-chromium": "^1.61.1"
+  }
+}
