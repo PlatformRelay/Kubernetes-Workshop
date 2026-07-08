@@ -120,7 +120,7 @@ compact: true
 lab: labs/day-2/14-probes.md
 ---
 
-```yaml {none|2-3|4|5|6|7}
+```yaml {none|2|3|5|6-7}
 readinessProbe:
   httpGet:                    # mechanism: HTTP GET
     path: /ready.html
