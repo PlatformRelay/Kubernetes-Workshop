@@ -195,6 +195,27 @@ variants on the dark master and colour variants for product-identity slides. Do 
 modify CNCF artwork; preserve its license/attribution requirements. Copy only a small
 curated set into the deck's `public/` when needed.
 
+### Resource iconography (default for new sections)
+
+The official Kubernetes resource glyphs are vendored under
+`public/icons/resources/{labeled,unlabeled}/` (Apache-2.0). Render them with the
+`<K8sIcon kind="…" />` component (slugs = kubectl short names: `pod`, `deploy`, `rs`,
+`svc`, `ep`, `ing`, `cm`, `secret`, `ns`, `sts`, `pv`, `pvc`, `hpa`, `netpol`,
+control-plane `api`/`c-m`/`sched`/`kubelet`/`k-proxy`, infra `node`/`etcd`, …).
+
+- **Use a glyph wherever a slide, card, or diagram names a *specific* resource.**
+  Do **not** convert conceptual/decorative icons (practices, verb groups, consumption
+  modes, pain-points) — keep an emoji there. Over-conversion is a defect.
+- **Variant convention:** `labeled` for standalone / legend / gallery use; `unlabeled`
+  inside diagrams and cards. **Exception:** the control-plane/node component glyphs
+  (`api`, `c-m`, `c-c-m`, `sched`, `kubelet`, `k-proxy`) ship **labeled-only** upstream —
+  use `kindVariant="labeled"` for those even in cards.
+- **Cards:** `KwCard` takes a `kind` (+ optional `kindVariant`) prop that renders the
+  glyph in place of the emoji `icon` — e.g. `<KwCard heading="Deployment" kind="deploy">`.
+- **No glyph exists** for Gateway API (`GatewayClass`/`Gateway`/`HTTPRoute`) or for
+  Service *types* (ClusterIP/NodePort/… all collapse to one `svc`) — keep emoji there.
+- Reference pattern + live gallery: the **Iconography** section of `slides-templates.md`.
+
 ## Lab authoring contract
 
 Labs are standalone Markdown under `labs/day-N/NN-topic.md`, **not** embedded in the

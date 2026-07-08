@@ -59,12 +59,12 @@ and Secret (sensitive). Lab 10 follows this section.
 
 <div class="kw-cols-2 mt-3 text-sm">
   <v-click at="1">
-    <KwCard heading="ConfigMap" icon="🗺️">
+    <KwCard heading="ConfigMap" kind="cm">
       Non-sensitive key/value config: flags, URLs, tuning. Plain text in the object.
     </KwCard>
   </v-click>
   <v-click at="2">
-    <KwCard heading="Secret" icon="🔑" variant="warn">
+    <KwCard heading="Secret" kind="secret" variant="warn">
       Sensitive key/value: tokens, passwords, TLS keys. Same shape, <strong>base64</strong>
       values, extra handling — <em>not</em> extra secrecy (next slide).
     </KwCard>

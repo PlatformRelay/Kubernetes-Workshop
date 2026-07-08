@@ -52,21 +52,21 @@ hold in their hands. Lab 06 follows this section.
 
 <div class="kw-cols-3 mt-4">
   <v-click at="1">
-    <KwCard heading="Deployment" icon="🎛️">
+    <KwCard heading="Deployment" kind="deploy">
       What <strong>you</strong> edit. Holds the Pod <code>template</code> and the
       desired <code>replicas</code>. Manages rollouts — it owns
       <strong>ReplicaSets</strong>, not Pods directly.
     </KwCard>
   </v-click>
   <v-click at="2">
-    <KwCard heading="ReplicaSet" icon="🧬" variant="plain">
+    <KwCard heading="ReplicaSet" kind="rs" variant="plain">
       One per Pod-template version. Its only job: keep exactly
       <code>replicas</code> Pods of <em>its</em> template alive. A new image ⇒ a
       <strong>new ReplicaSet</strong>.
     </KwCard>
   </v-click>
   <v-click at="3">
-    <KwCard heading="Pods" icon="📦">
+    <KwCard heading="Pods" kind="pod">
       The S05 Pod, minted from the template. Each carries an
       <code>ownerReferences</code> back to its ReplicaSet — delete one and the
       owner remints it.
