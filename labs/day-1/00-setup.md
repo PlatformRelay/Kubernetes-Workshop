@@ -185,40 +185,56 @@ that is expected and correct (least privilege). We test RBAC properly in Lab 19.
 ## Step 4 — break it on purpose: a wrong context
 
 Every lab in this workshop has a **deliberate break→fix** step — failing safely now means you
-recognise the failure later. Here it's the most common one of all: `kubectl` pointed at a
-context that doesn't exist. Ask for a context that isn't there, watch it fail, then switch back.
+recognise the failure later. Here it's the most common one of all: `kubectl` with **no context
+selected**. Save your current context, unset it so `kubectl` has nowhere to talk to, watch it
+fail, then switch back.
 
 ```bash
-kubectl config use-context does-not-exist    # typo / stale name on purpose
-kubectl get pods                             # this now fails — read the error
+CURRENT=$(kubectl config current-context)   # remember your real context
+kubectl config unset current-context        # break it: no context is now selected
+kubectl get pods                            # this now fails — read the error
 ```
 
-**Task:** run both. The second command must **fail**. Read the error text before fixing it,
-then switch back to your real context and confirm `kubectl` works again.
+**Task:** run all three. The last command must **fail**. Read the error text before fixing it —
+you'll restore the context in the next block.
 
 <details><summary>Solution / expected output</summary>
 
 ```console
-$ kubectl config use-context does-not-exist
-error: no context exists with the name: "does-not-exist"
-
+$ CURRENT=$(kubectl config current-context)
+$ kubectl config unset current-context
+Property "current-context" unset.
 $ kubectl get pods
-error: current-context must exist ...   # or: The connection to the server ... was refused
+error: current-context must exist in order to minify
 ```
 
-Two different failure shapes, same root cause — kubectl isn't pointed at a live cluster:
-
-- **`no context exists` / `current-context must exist`** — the name is wrong or unset. Fix the
-  *context*.
-- **`The connection to the server ... was refused`** — the context is fine but the cluster is
-  unreachable (down, wrong port, VPN off). Fix the *cluster/network*.
-
-Switch back to the context you set in Step 2 and re-verify:
+With no `current-context`, `kubectl` doesn't know **which cluster** to talk to, so it refuses
+before it ever hits the network. A close cousin you'll meet in the wild is a context that *is*
+set but points nowhere reachable:
 
 ```console
-$ kubectl config use-context workshop-shared     # kind users: kind-workshop
-Switched to context "workshop-shared".
+The connection to the server localhost:8080 was refused - did you specify the right host or port?
 ```
+
+Same lesson, different layer: **no context** → fix the *context*; **connection refused** → the
+context is fine but the *cluster/network* isn't.
+</details>
+
+**Task:** switch back to your real context and confirm `kubectl` works again.
+
+```bash
+kubectl config use-context "$CURRENT"       # restore what you saved above
+```
+
+<details><summary>Solution / expected output</summary>
+
+```console
+$ kubectl config use-context "$CURRENT"
+Switched to context "workshop-shared".        # or "kind-workshop"
+```
+
+If `$CURRENT` is empty (e.g. a fresh terminal), pass the name directly:
+`kubectl config use-context workshop-shared` (shared) or `kind-workshop` (kind).
 </details>
 
 **Task (confirm you're really back):** prove the cluster is reachable again. The check differs

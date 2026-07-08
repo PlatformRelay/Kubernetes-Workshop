@@ -235,7 +235,8 @@ ENTRYPOINT ["/bin/app"]
 FROM golang:1.24 AS build
 WORKDIR /src
 COPY . .
-RUN go build -o /bin/app .
+# CGO_ENABLED=0 → a static binary that runs on a tiny base
+RUN CGO_ENABLED=0 go build -o /bin/app .
 
 # stage 2: ship only the binary — ~15 MB
 FROM alpine:3.20
