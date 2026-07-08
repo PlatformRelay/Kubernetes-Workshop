@@ -35,7 +35,9 @@ entry point in front of the Lab 07 Service.
 
 - `backends.yaml` — two nginx Deployments + Services (`web`, `web2`) with distinguishable
   home pages (via a small ConfigMap — previewed here, taught fully in Lab 10).
-- `ingress.yaml` — the Ingress routing `/` → `web` and `/v2` → `web2`.
+- `ingress.yaml` — the Ingress routing `/` → `web` and `/v2` → `web2` (the manifest the
+  slide magic-move builds).
+- `ingress-no-pathtype.yaml` — a deliberately broken copy with `pathType` removed (Step 5).
 
 ---
 
@@ -210,22 +212,35 @@ kind: Ingress
 metadata:
   name: web
 spec:
-  ingressClassName: nginx        # must match `kubectl get ingressclass`
+  ingressClassName: nginx          # must match `kubectl get ingressclass`
   rules:
-    - host: web.example.com      # shared cluster: use your assigned hostname
+    - host: web.example.com        # shared cluster: use your assigned hostname
       http:
         paths:
-          - path: /v2
+          - path: /v2              # more specific rule — wins for /v2*
             pathType: Prefix
-            backend: { service: { name: web2, port: { number: 80 } } }
-          - path: /
+            backend:
+              service:
+                name: web2
+                port:
+                  number: 80
+          - path: /                # catch-all — everything else
             pathType: Prefix
-            backend: { service: { name: web, port: { number: 80 } } }
+            backend:
+              service:
+                name: web
+                port:
+                  number: 80
 EOF
 
 kubectl apply -f ingress.yaml
 kubectl get ingress web
+kubectl describe ingress web      # confirm the rules, pathType, and assigned address
 ```
+
+> This is the same manifest the slide magic-move builds up field by field. Each path's
+> `backend` points at a **Service** (never a Pod directly), and every path **must** carry a
+> `pathType` — Step 5 proves what happens when it doesn't.
 
 <details><summary>Solution / expected output</summary>
 
@@ -233,11 +248,23 @@ kubectl get ingress web
 $ kubectl get ingress web
 NAME   CLASS   HOSTS             ADDRESS      PORTS   AGE
 web    nginx   web.example.com   localhost    80      15s
+
+$ kubectl describe ingress web
+Name:             web
+Ingress Class:    nginx
+Rules:
+  Host             Path  Backends
+  ----             ----  --------
+  web.example.com
+                   /v2   web2:80 (10.244.0.11:80,10.244.0.12:80)
+                   /     web:80  (10.244.0.9:80,10.244.0.10:80)
+...
 ```
 
-`ADDRESS` populates once the controller programs the rule (a few seconds). An empty `CLASS`
-or a missing `ADDRESS` that never fills is almost always a wrong `ingressClassName` or no
-controller — the #1 Ingress gotcha.
+`ADDRESS` populates once the controller programs the rule (a few seconds). `describe` echoes
+each path with its resolved backend endpoints and confirms `pathType` was accepted. An empty
+`CLASS` or a missing `ADDRESS` that never fills is almost always a wrong `ingressClassName` or
+no controller — the #1 Ingress gotcha.
 </details>
 
 ---
@@ -287,11 +314,95 @@ so there is nothing to route to. An Ingress only handles hosts/paths you declare
 else falls through to the default backend.
 </details>
 
+---
+
+## Step 5 — break it: forget `pathType`
+
+`pathType` has **no default** — the API server requires it on every path. Prove it: write a
+copy of the Ingress with the field removed and try to apply it.
+
+```bash
+cat > ingress-no-pathtype.yaml <<'EOF'
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: web
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: web.example.com
+      http:
+        paths:
+          - path: /                # pathType deliberately omitted
+            backend:
+              service:
+                name: web
+                port:
+                  number: 80
+EOF
+
+kubectl apply -f ingress-no-pathtype.yaml
+```
+
+**Task:** does the apply succeed? What is the error, and which line is it about?
+
+<details><summary>Solution / expected output</summary>
+
+```console
+$ kubectl apply -f ingress-no-pathtype.yaml
+The Ingress "web" is invalid: spec.rules[0].http.paths[0].pathType: Required value: pathType must be specified
+```
+
+The manifest is **rejected at apply time** — this is a schema validation failure, not a
+runtime 404. Nothing changes on the cluster: your working Ingress from Step 3 is still serving.
+Because `pathType` has no server-side default, an old example that omits it (they were legal
+in the deprecated `extensions/v1beta1` API) will not apply on a modern cluster.
+</details>
+
+**Fix it:** re-apply the good manifest and confirm routing still works.
+
+```bash
+kubectl apply -f ingress.yaml
+kubectl describe ingress web | grep -A4 Rules
+curl -H 'Host: web.example.com' http://localhost/v2
+```
+
+<details><summary>Solution / expected output</summary>
+
+```console
+$ kubectl apply -f ingress.yaml
+ingress.networking.k8s.io/web configured
+$ curl -H 'Host: web.example.com' http://localhost/v2
+hello from web2 (path /v2)
+```
+
+Restoring `pathType: Prefix` makes the manifest valid again; the controller re-programs the
+rule and `/v2` routes to `web2` as before.
+</details>
+
+**Question:** you could also *mistype* it — `pathType: Prefixx`. Same category of error?
+
+<details><summary>Answer</summary>
+
+```console
+$ kubectl apply -f - <<'EOF'
+... pathType: Prefixx ...
+EOF
+The Ingress "web" is invalid: spec.rules[0].http.paths[0].pathType: Unsupported value: "Prefixx": supported values: "Exact", "ImplementationSpecific", "Prefix"
+```
+
+Yes — both are rejected by the same schema validation, and the mistype error is even more
+helpful: it **lists the three valid values**. Whenever an Ingress won't apply, read the
+`spec.rules[...].pathType` line in the error first.
+</details>
+
 ## Expected observations
 
 - `kubectl get ingressclass` shows a controller class; the Ingress gets an `ADDRESS`.
 - `/` returns the `web` page, `/v2` returns the `web2` page — path routing works.
 - An undeclared host returns the controller's **404 default backend**.
+- A manifest missing (or mistyping) `pathType` is **rejected at apply time** — schema
+  validation, not a runtime error.
 - The Ingress object alone does nothing until a controller programs it (visible if you ever
   see `ADDRESS` stay empty).
 
@@ -299,6 +410,7 @@ else falls through to the default backend.
 
 ```bash
 kubectl delete -f ingress.yaml -f backends.yaml --ignore-not-found
+rm -f ingress-no-pathtype.yaml   # the broken copy never applied; just a local file
 # full namespace reset:
 kubectl delete ingress,svc,deploy,rs,pod,configmap --all -n "$NS" --ignore-not-found
 
