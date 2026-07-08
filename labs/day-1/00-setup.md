@@ -182,7 +182,79 @@ that is expected and correct (least privilege). We test RBAC properly in Lab 19.
 
 ---
 
-## Step 4 — reach the shared "ready" state
+## Step 4 — break it on purpose: a wrong context
+
+Every lab in this workshop has a **deliberate break→fix** step — failing safely now means you
+recognise the failure later. Here it's the most common one of all: `kubectl` pointed at a
+context that doesn't exist. Ask for a context that isn't there, watch it fail, then switch back.
+
+```bash
+kubectl config use-context does-not-exist    # typo / stale name on purpose
+kubectl get pods                             # this now fails — read the error
+```
+
+**Task:** run both. The second command must **fail**. Read the error text before fixing it,
+then switch back to your real context and confirm `kubectl` works again.
+
+<details><summary>Solution / expected output</summary>
+
+```console
+$ kubectl config use-context does-not-exist
+error: no context exists with the name: "does-not-exist"
+
+$ kubectl get pods
+error: current-context must exist ...   # or: The connection to the server ... was refused
+```
+
+Two different failure shapes, same root cause — kubectl isn't pointed at a live cluster:
+
+- **`no context exists` / `current-context must exist`** — the name is wrong or unset. Fix the
+  *context*.
+- **`The connection to the server ... was refused`** — the context is fine but the cluster is
+  unreachable (down, wrong port, VPN off). Fix the *cluster/network*.
+
+Switch back to the context you set in Step 2 and re-verify:
+
+```console
+$ kubectl config use-context workshop-shared     # kind users: kind-workshop
+Switched to context "workshop-shared".
+```
+</details>
+
+**Task (confirm you're really back):** prove the cluster is reachable again. The check differs
+slightly per environment.
+
+<details><summary>Solution / expected output — namespace path</summary>
+
+Confirm read scope in your namespace:
+
+```console
+$ kubectl get pods
+No resources found in student-07 namespace.
+```
+
+An empty list (not an error) means you're connected and scoped correctly.
+</details>
+
+<details><summary>Solution / expected output — kind path</summary>
+
+Confirm the cluster exists and the control plane answers:
+
+```console
+$ kind get clusters
+workshop
+
+$ kubectl cluster-info
+Kubernetes control plane is running at https://127.0.0.1:PORT
+CoreDNS is running at https://127.0.0.1:PORT/api/v1/namespaces/kube-system/services/kube-dns:dns/proxy
+```
+
+`cluster-info` printing endpoints (not a connection error) confirms you're back on a live cluster.
+</details>
+
+---
+
+## Step 5 — reach the shared "ready" state
 
 Everyone should now have an **empty** working namespace. Confirm nothing is running:
 
@@ -206,6 +278,7 @@ leftover objects on a shared namespace, run the panic reset in the next step.
 - `kubectl version` shows a client **and** a server version.
 - `kubectl config view --minify` shows your namespace (`$NS`) as the default.
 - `kubectl auth can-i create pods` returns `yes` in your namespace.
+- Pointing at a bad context **fails loudly**, and you can read the error and recover from it.
 - `kubectl get all` reports **no resources** — you are at the clean starting state.
 
 ---
