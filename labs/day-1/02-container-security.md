@@ -330,16 +330,24 @@ Now actually recover the secret from the image — no whiteout can stop this:
 
 ```bash
 mkdir -p /tmp/dig && $ENGINE save demo:secret-rm | tar -x -C /tmp/dig
-grep -ra "DEPLOY-SECRET-DO-NOT-SHIP" /tmp/dig | head -1
+# layer blobs may be plain OR gzipped depending on the engine — handle both:
+find /tmp/dig -type f -exec sh -c 'gzip -dc "$1" 2>/dev/null || cat "$1"' _ {} \; \
+  | grep -a "DEPLOY-SECRET-DO-NOT-SHIP" | head -1
 ```
 
 **Task:** the marker string is recovered straight out of the saved image's layer blobs.
 
+> **Engine note:** Docker's classic image store writes **uncompressed** layer tars, so a plain
+> `grep -ra /tmp/dig` also finds it. The containerd store and `nerdctl save` may **gzip** the blobs —
+> the `gzip -dc … || cat` above handles both. If you ever see "not found" here, suspect compression,
+> not safety.
+
 <details><summary>Solution / expected output</summary>
 
 ```console
-$ grep -ra "DEPLOY-SECRET-DO-NOT-SHIP" /tmp/dig | head -1
-/tmp/dig/blobs/sha256/9b2c...:DEPLOY-SECRET-DO-NOT-SHIP-abc123
+$ find /tmp/dig -type f -exec sh -c 'gzip -dc "$1" 2>/dev/null || cat "$1"' _ {} \; \
+    | grep -a "DEPLOY-SECRET-DO-NOT-SHIP" | head -1
+DEPLOY-SECRET-DO-NOT-SHIP-abc123
 ```
 
 Anyone who can pull the image can do exactly this. **Deleting a file in a later layer does not remove
@@ -352,18 +360,20 @@ Now prove the hardened image is clean — same recovery, no hit:
 
 ```bash
 mkdir -p /tmp/dig2 && $ENGINE save demo:hardened | tar -x -C /tmp/dig2
-grep -ra "DEPLOY-SECRET-DO-NOT-SHIP" /tmp/dig2 || echo "NOT FOUND — clean"
+find /tmp/dig2 -type f -exec sh -c 'gzip -dc "$1" 2>/dev/null || cat "$1"' _ {} \; \
+  | grep -a "DEPLOY-SECRET-DO-NOT-SHIP" || echo "NOT FOUND — clean"
 ```
 
 <details><summary>Solution / expected output</summary>
 
 ```console
-$ grep -ra "DEPLOY-SECRET-DO-NOT-SHIP" /tmp/dig2 || echo "NOT FOUND — clean"
+$ find /tmp/dig2 -type f -exec sh -c 'gzip -dc "$1" 2>/dev/null || cat "$1"' _ {} \; \
+    | grep -a "DEPLOY-SECRET-DO-NOT-SHIP" || echo "NOT FOUND — clean"
 NOT FOUND — clean
 ```
 
-(`grep` exits non-zero when it finds nothing, so the `|| echo` fires — don't pipe it through
-`head`, which would swallow that exit code.)
+(`grep` exits non-zero when it finds nothing, so the `|| echo` fires. Don't pipe the final `grep`
+through `head` — that would swallow grep's exit code and the message would never print.)
 
 The secret was mounted at `/run/secrets/deploy_key` **only during the `RUN`** in the build stage —
 it was never written to a layer, and the build stage itself is discarded. The shipped image has no
@@ -395,8 +405,9 @@ cosign generate-key-pair                        # writes cosign.key / cosign.pub
 
 $ENGINE tag demo:hardened localhost:5000/demo:hardened
 $ENGINE push localhost:5000/demo:hardened
-cosign sign --key cosign.key localhost:5000/demo:hardened
-cosign verify --key cosign.pub localhost:5000/demo:hardened
+# the local registry is plain HTTP, so cosign needs --allow-insecure-registry
+cosign sign --key cosign.key --allow-insecure-registry localhost:5000/demo:hardened
+cosign verify --key cosign.pub --allow-insecure-registry localhost:5000/demo:hardened
 ```
 
 **Task:** `verify` succeeds for the signed image; if you push a *different* image to the same tag,
@@ -405,7 +416,7 @@ cosign verify --key cosign.pub localhost:5000/demo:hardened
 <details><summary>Solution / expected output</summary>
 
 ```console
-$ cosign verify --key cosign.pub localhost:5000/demo:hardened
+$ cosign verify --key cosign.pub --allow-insecure-registry localhost:5000/demo:hardened
 Verification for localhost:5000/demo:hardened --
 The following checks were performed on the signatures:
   - The signatures were verified against the specified public key
