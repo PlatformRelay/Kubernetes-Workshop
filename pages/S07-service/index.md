@@ -52,20 +52,20 @@ door; the Pods behind it are free to come and go. Lab 07 follows this section.
 # Service types — pick by *who needs to reach it*
 
 <div class="kw-cols-2 mt-3 text-sm">
-  <KwCard heading="ClusterIP — the default" icon="🏠">
+  <KwCard heading="ClusterIP — the default" kind="svc">
     A stable <strong>in-cluster</strong> virtual IP. Reachable only from inside
     the cluster. This is what Lab 07 builds, and what every other type is built
     on top of.
   </KwCard>
-  <KwCard heading="NodePort" icon="🚪" variant="plain">
+  <KwCard heading="NodePort" kind="svc" variant="plain">
     ClusterIP <em>plus</em> a fixed port on <strong>every node</strong>. The
     low-level way in from outside — usually a building block, not an endpoint.
   </KwCard>
-  <KwCard heading="LoadBalancer" icon="🌐" variant="plain">
+  <KwCard heading="LoadBalancer" kind="svc" variant="plain">
     NodePort <em>plus</em> a cloud/provider external IP. The usual way to expose
     <strong>one</strong> service externally at L4.
   </KwCard>
-  <KwCard heading="ExternalName" icon="🔗" variant="plain">
+  <KwCard heading="ExternalName" kind="svc" variant="plain">
     No proxying — just a DNS <code>CNAME</code> to an external host. An in-cluster
     alias for something outside.
   </KwCard>

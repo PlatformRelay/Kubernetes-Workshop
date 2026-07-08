@@ -212,8 +212,12 @@ control-plane `api`/`c-m`/`sched`/`kubelet`/`k-proxy`, infra `node`/`etcd`, …)
   use `kindVariant="labeled"` for those even in cards.
 - **Cards:** `KwCard` takes a `kind` (+ optional `kindVariant`) prop that renders the
   glyph in place of the emoji `icon` — e.g. `<KwCard heading="Deployment" kind="deploy">`.
-- **No glyph exists** for Gateway API (`GatewayClass`/`Gateway`/`HTTPRoute`) or for
-  Service *types* (ClusterIP/NodePort/… all collapse to one `svc`) — keep emoji there.
+- **Service *types*** (ClusterIP/NodePort/LoadBalancer/ExternalName) all use the `svc`
+  glyph — they're all Services, so the shared glyph is correct; the heading names the
+  type. (Maintainer preference: favour the Kubernetes glyph over a differentiating emoji
+  here.)
+- **No glyph exists** for Gateway API (`GatewayClass`/`Gateway`/`HTTPRoute`) — keep emoji
+  there until the upstream icon set ships those kinds.
 - Reference pattern + live gallery: the **Iconography** section of `slides-templates.md`.
 
 ## Lab authoring contract
