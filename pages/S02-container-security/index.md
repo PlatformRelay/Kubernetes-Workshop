@@ -26,15 +26,16 @@ Lab: labs/day-1/02-container-security.md.
 ---
 layout: code-annotated
 heading: 'The image that ships your next incident'
+compact: true
 ---
 
 ```dockerfile {none|1|3|4|6}
-FROM golang:1.24                 # (1) fat base — a whole toolchain in the ship
+FROM golang:1.24
 WORKDIR /src
-COPY . .                         # (2) COPYs everything, secrets included
-COPY deploy_key /src/deploy_key  # (3) a build secret, baked into a layer
+COPY . .
+COPY deploy_key /src/deploy_key
 RUN go build -o /bin/app .
-ENTRYPOINT ["/bin/app"]          # (4) no USER → runs as root
+ENTRYPOINT ["/bin/app"]
 ```
 
 ::notes::
@@ -203,14 +204,15 @@ the real one. This "after" image is what the lab scans against the "before".
 ---
 layout: code-annotated
 heading: 'A deleted layer still ships'
+compact: true
 ---
 
-```bash {none|1|2|4|5}
-COPY deploy_key /src/deploy_key   # layer N   — the secret is now in the image
-RUN rm /src/deploy_key            # layer N+1 — "gone"
+```bash {none|1|2|3|4}
+COPY deploy_key /src/deploy_key   # layer N — secret is in the image
+RUN rm /src/deploy_key            # layer N+1 — hidden, not erased
 
-docker history --no-trunc demo:insecure   # layer N is right there
-docker save demo:insecure -o img.tar && tar xf img.tar   # → the key is recoverable
+docker history --no-trunc demo:insecure
+docker save demo:insecure -o img.tar && tar xf img.tar
 ```
 
 ::notes::
@@ -342,6 +344,7 @@ admit signed images) is S17/S25.
 ---
 layout: recap
 heading: 'Build-time security, in one arc'
+story: 'The on-call page wasn''t a runtime exploit — it was a bloated image that still carried a build secret in layer history.'
 next: 'S03 — the Kubernetes mental model: control plane, nodes, reconciliation'
 ---
 

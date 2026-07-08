@@ -89,34 +89,16 @@ ClusterIP only, which works identically in namespace and kind.
 
 ---
 
+<div class="kw-slide-dense">
+
 <span class="kw-kicker">Mental model</span>
 
 # A Service is a selector — the rest is bookkeeping
 
-```mermaid {scale: 0.7}
-flowchart LR
-  DNS["web.&lt;ns&gt;.svc.cluster.local"] --> SVC["Service<br/>ClusterIP (stable)"]
-  SVC -->|selector app=web| EPS["EndpointSlice<br/>live list of Pod IPs"]
-  EPS --> P1["Pod 10.244.0.7"]
-  EPS --> P2["Pod 10.244.0.8"]
-  EPS --> P3["Pod 10.244.0.9"]
-```
+<div class="mt-2">
+  <ServiceSelectorMap :step="$clicks" />
+</div>
 
-<div class="kw-cols-2 mt-3 text-sm">
-  <div v-click>
-
-The Service's `selector` is a **query**. A controller runs it continuously and
-writes the matching Pod IPs into **EndpointSlices** — the modern, shardable
-replacement for the legacy `Endpoints` object.
-
-  </div>
-  <div v-click>
-
-Cluster **DNS** gives the Service a name: `web.<ns>.svc.cluster.local`. Inside the
-same namespace the short name `web` resolves. The name and IP are stable; the
-**EndpointSlice** behind them is what changes.
-
-  </div>
 </div>
 
 <!--
@@ -211,6 +193,8 @@ proves the dark version — a wrong selector empties the slice entirely.
 showKubeProxy: false
 ---
 
+<div class="kw-slide-dense">
+
 <span class="kw-kicker">Optional deep-dive · off by default</span>
 
 # How the ClusterIP actually forwards
@@ -219,22 +203,21 @@ showKubeProxy: false
 
 <div class="kw-cols-2 mt-2 text-sm">
   <KwCard heading="kube-proxy programs the node" icon="⚙️">
-    The ClusterIP is <strong>virtual</strong> — nothing listens on it. On each
-    node <strong>kube-proxy</strong> watches Services + EndpointSlices and writes
-    <strong>iptables</strong> (or IPVS) rules that DNAT the ClusterIP to a random
-    ready Pod IP.
+    The ClusterIP is <strong>virtual</strong> — on each node <strong>kube-proxy</strong>
+    writes <strong>iptables</strong> (or IPVS) rules that DNAT to a ready Pod IP.
   </KwCard>
   <KwCard heading="iptables vs IPVS" icon="🔀" variant="plain">
-    <strong>iptables</strong> mode is the common default; <strong>IPVS</strong>
-    scales better for very large Service counts with real load-balancing
-    algorithms. Newer clusters may run <strong>nftables</strong> mode.
+    <strong>iptables</strong> is the common default; <strong>IPVS</strong> scales
+    better at large Service counts. Newer clusters may use <strong>nftables</strong>.
   </KwCard>
 </div>
 
-<div class="mt-4 kw-muted text-sm">
+<div class="mt-3 kw-muted text-sm">
 
-So "the Service load-balances" is really **per-node packet rules**, refreshed
-every time the EndpointSlice changes. No process sits in the data path.
+"Load-balancing" is really <strong>per-node packet rules</strong>, refreshed when the
+EndpointSlice changes — no proxy Pod in the data path.
+
+</div>
 
 </div>
 
@@ -251,6 +234,7 @@ that's why there's no bottleneck proxy Pod.
 ---
 layout: recap
 heading: 'Debrief — stable front door, live backend'
+story: 'After every rollout the Pod IPs changed, but `curl http://web` kept working — the selector rewrote the slice underneath.'
 next: 'S08 · Ingress — one L7 entry point routing by host and path'
 ---
 

@@ -280,22 +280,17 @@ memory. Contrast hard with S08's silent empty ADDRESS.
 ---
 layout: recap
 heading: 'Debrief — the red line is complete'
+story: 'One app, one manifest family — from a lone Pod to a typed Gateway front door, every step extended the last.'
+compact: true
 next: 'S10 · ConfigMap & Secret — separate config from the image (Day 2 continues)'
 ---
 
-- **Gateway API** is the typed, role-separated successor to Ingress: **GatewayClass**
-  (infra) → **Gateway** (operator: listeners, ports, TLS) → **HTTPRoute** (app: paths,
-  headers, weights), wired by `parentRefs`
-- It fronts the **same** `web`/`web2` Services — it **replaces** `ingress.yaml`, it does
-  not change the backends — red line **5/5**
-- Former annotations become **typed fields**: header/method matches and weighted splits
-  are first-class and validated
-- Like Ingress, it's **CRDs + a conformant controller** — nothing routes until a
-  controller owns the `gatewayClassName`
-- `status.conditions` (**Accepted / Programmed / ResolvedRefs**) tell you *why* — the
-  opacity Ingress never fixed
-- The Day-1 spine now runs end to end: **`pod` → `deployment` → `service` → `ingress` →
-  `gateway` + `httproute`** — one app, one growing manifest family
+- **Gateway API** — typed successor: **GatewayClass** → **Gateway** → **HTTPRoute**, wired by `parentRefs`
+- Fronts the **same** `web`/`web2` Services — replaces `ingress.yaml`, not the backends — red line **5/5**
+- Annotations become **typed fields**: header/method matches and weighted splits are first-class
+- **CRDs + conformant controller** — nothing routes until a controller owns `gatewayClassName`
+- **`status.conditions`** (**Accepted / Programmed / ResolvedRefs**) tell you *why*
+- Day-1 spine: **`pod` → `deployment` → `service` → `ingress` → `gateway` + `httproute`**
 
 <!--
 Speaker: this closes the red line that started with a single Pod. Walk it out loud one

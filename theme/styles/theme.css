@@ -149,6 +149,43 @@
   height: auto;
 }
 
+/* Icon above card — used on storage / StatefulSet mental-model grids. */
+.kw-icon-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.kw-icon-stack .kw-icon-stack-glyph {
+  flex: none;
+  margin-bottom: 0.1rem;
+  transform: translateY(-0.15rem);
+}
+
+.kw-icon-stack .kw-card {
+  width: 100%;
+}
+
+/* Slightly denser slide body when vertical space is tight. */
+.kw-slide-dense h1 {
+  font-size: 1.45rem;
+  margin-bottom: 0.35rem;
+}
+
+.kw-slide-dense .mt-4 {
+  margin-top: 0.65rem !important;
+}
+
+.kw-slide-dense .mt-3 {
+  margin-top: 0.5rem !important;
+}
+
+.kw-slide-dense .text-sm {
+  font-size: 0.78rem;
+}
+
 /* ----------------------------------------------------------- utilities --- */
 
 /* Shared panel surface for diagrams, cards, and animation scenes. */
