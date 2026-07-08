@@ -219,6 +219,8 @@ data:
 
 ::notes::
 
+<BitHologram src="/diagrams/diagram-c10b-secret-base64.png" compact />
+
 <CodeNote at="1" label="Secret ≈ ConfigMap">
 Same key/value shape as a ConfigMap. The differences are handling, not cryptography:
 it's kept out of most logs and gated by RBAC — that's it.
@@ -301,6 +303,8 @@ $ kubectl patch deploy web -p '{"spec":{"template":{"metadata":{"annotations":{"
 ```
 
 ::notes::
+
+<BitHologram src="/diagrams/diagram-c10-config-rotation.png" compact />
 
 <CodeNote at="1" label="env is frozen" variant="warn">
 Environment variables are read <strong>once</strong>, when the container starts. Editing

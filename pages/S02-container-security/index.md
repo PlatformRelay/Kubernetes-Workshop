@@ -218,6 +218,8 @@ docker save demo:insecure -o img.tar && tar xf img.tar
 
 ::notes::
 
+<BitHologram src="/diagrams/diagram-c02-whiteout-layer.png" compact />
+
 <CodeNote at="1" label="the layer that adds it" variant="danger">
 Adding the file creates a layer whose content <strong>is</strong> the secret. That
 layer is now part of the image's identity.

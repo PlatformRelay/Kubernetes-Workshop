@@ -46,6 +46,8 @@ hold in their hands. Lab 06 follows this section.
 -->
 
 ---
+layout: two-cols
+---
 
 <span class="kw-kicker">Mental model</span>
 
@@ -82,6 +84,10 @@ you edit the Deployment, and it drives the rest through the **reconciliation loo
 from S03.**
 
 </div>
+
+::right::
+
+<BitHologram src="/diagrams/diagram-c06-ownership-chain.png" />
 
 <!--
 Speaker: the key surprise is the *middle* object. People expect Deployment→Pods;
