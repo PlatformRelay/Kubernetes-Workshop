@@ -89,7 +89,8 @@ cat > Dockerfile.multistage <<'EOF'
 FROM golang:1.24 AS build
 WORKDIR /src
 COPY . .
-RUN go build -o /bin/app .
+# CGO_ENABLED=0 produces a static binary that runs on a minimal base
+RUN CGO_ENABLED=0 go build -o /bin/app .
 
 # stage 2: ship only the binary
 FROM alpine:3.20
@@ -190,8 +191,8 @@ $ $ENGINE exec demo id
 uid=10001(app) gid=10001(app) groups=10001(app)
 
 $ $ENGINE top demo
-UID     PID    PPID   CMD
-10001   1234   1210   /bin/app
+UID     PID    PPID   C   STIME   TTY   TIME       CMD
+10001   1234   1210   0   12:00   ?     00:00:00   /bin/app
 
 $ $ENGINE image inspect demo:1 --format '{{.Config.User}}'
 10001
@@ -207,7 +208,7 @@ win for an image — S02 goes deeper.
 
 ```console
 $ $ENGINE exec -it demo sh
-$ whoami        # 'app' (or 'I have no name!' if the UID has no /etc/passwd entry)
+$ whoami        # app  — the user 'useradd' created in the image
 $ echo $PORT    # 8080  — baked in by ENV
 $ exit
 ```
