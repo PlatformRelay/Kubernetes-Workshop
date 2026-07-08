@@ -50,7 +50,7 @@ this section.
 # One Pod, one shared context
 
 <div class="kw-cols-2 mt-4">
-  <KwCard heading="Containers that share a context" icon="📦">
+  <KwCard heading="Containers that share a context" kind="pod">
     A Pod is <strong>one or more</strong> containers that always land on the
     <strong>same node</strong> and share a <strong>network namespace</strong>
     (one Pod IP; containers reach each other on <code>localhost</code>) and can
@@ -262,7 +262,7 @@ describe → Events as the reflex. Everything here is exactly Lab 05, step by st
     </KwCard>
   </v-click>
   <v-click at="3">
-    <KwCard heading="imagePullSecrets" icon="🔑" variant="plain">
+    <KwCard heading="imagePullSecrets" kind="secret" variant="plain">
       Names a Secret holding registry credentials so the kubelet can pull from a
       <strong>private</strong> registry. Public images (like nginx) need none.
     </KwCard>
