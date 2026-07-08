@@ -1,5 +1,6 @@
 ---
 layout: section-cover
+image: /covers/section-02-customs-inspection.png
 day: Day 1
 section: '02'
 tier: recommended

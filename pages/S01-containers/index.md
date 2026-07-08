@@ -1,5 +1,6 @@
 ---
 layout: section-cover
+image: /covers/section-01-wild-crates.png
 day: Day 1
 section: '01'
 tier: recommended

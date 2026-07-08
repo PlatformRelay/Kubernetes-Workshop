@@ -1,5 +1,6 @@
 ---
 layout: section-cover
+image: /covers/section-04-command-wand.png
 day: Day 1
 section: '04'
 tier: core
