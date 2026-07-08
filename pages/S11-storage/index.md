@@ -54,44 +54,45 @@ real Pod delete.
 
 ---
 
+<div class="kw-slide-dense">
+
 <span class="kw-kicker">Mental model · request, storage, provisioner</span>
 
 # Three objects: PVC → PV → StorageClass
 
-<div class="mt-4 text-sm" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;">
+<div class="mt-3 text-sm" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.85rem;">
   <v-click at="1">
-    <div style="text-align:center;">
-      <K8sIcon kind="pvc" variant="unlabeled" size="3rem" />
-      <KwCard heading="PersistentVolumeClaim" icon="📝">
-        The <strong>request</strong>: "I need 1Gi, ReadWriteOnce." Written by the app team,
-        lives in the namespace next to the Deployment.
+    <div class="kw-icon-stack">
+      <K8sIcon kind="pvc" variant="unlabeled" size="3.4rem" class="kw-icon-stack-glyph" />
+      <KwCard heading="PersistentVolumeClaim" kind="pvc">
+        The <strong>request</strong>: size + access mode. Lives in the namespace next to the Deployment.
       </KwCard>
     </div>
   </v-click>
   <v-click at="2">
-    <div style="text-align:center;">
-      <K8sIcon kind="pv" variant="unlabeled" size="3rem" />
-      <KwCard heading="PersistentVolume" icon="💾">
-        The actual <strong>piece of storage</strong> (a disk, an NFS share). Cluster-scoped;
-        bound one-to-one to a satisfying claim.
+    <div class="kw-icon-stack">
+      <K8sIcon kind="pv" variant="unlabeled" size="3.4rem" class="kw-icon-stack-glyph" />
+      <KwCard heading="PersistentVolume" kind="pv">
+        The actual <strong>storage</strong> — cluster-scoped, bound 1:1 to a claim.
       </KwCard>
     </div>
   </v-click>
   <v-click at="3">
-    <div style="text-align:center;">
-      <div style="font-size:2.6rem;line-height:1;">⚙️</div>
+    <div class="kw-icon-stack">
+      <div class="kw-icon-stack-glyph" style="font-size:2.8rem;line-height:1;">⚙️</div>
       <KwCard heading="StorageClass" icon="🏭">
-        The <strong>provisioner</strong> + the disk "flavour" (SSD, HDD). On a claim it
-        <strong>dynamically creates</strong> the PV — no ops ticket.
+        The <strong>provisioner</strong> + disk flavour — dynamically creates the PV.
       </KwCard>
     </div>
   </v-click>
 </div>
 
-<div v-click="4" class="mt-4 kw-muted text-sm">
+<div v-click="4" class="mt-3 kw-muted text-sm">
 
-You write the **PVC**. The **StorageClass** provisions a matching **PV** on demand and
-binds it. Your Pod mounts the PVC by name and never sees the disk detail.
+You write the **PVC**. The **StorageClass** provisions a matching **PV** and binds it.
+The Pod mounts the claim by name.
+
+</div>
 
 </div>
 
@@ -108,6 +109,7 @@ glyphs. Lab: apply a PVC against the default StorageClass and watch the PV appea
 ---
 layout: code-annotated
 heading: 'Access modes and reclaim policy — the two knobs that bite'
+compact: true
 lab: labs/day-2/11-storage.md
 ---
 
@@ -251,36 +253,38 @@ before they run it.
 
 ---
 
+<div class="kw-slide-dense">
+
 <span class="kw-kicker">Dynamic provisioning · and a bridge to S12</span>
 
 # Who creates the PV — and when it binds
 
-<div class="kw-cols-2 mt-3 text-sm">
+<div class="kw-cols-2 mt-2 text-sm">
   <v-click at="1">
     <KwCard heading="Dynamic provisioning" icon="🏭">
-      No pre-made PVs. The StorageClass's provisioner creates one <strong>on demand</strong>
-      when your PVC appears — the norm on every managed cluster and in kind (local-path).
+      The StorageClass provisioner creates a PV <strong>on demand</strong> when your PVC
+      appears — the norm on managed clusters and in kind.
     </KwCard>
   </v-click>
   <v-click at="2">
     <KwCard heading="volumeBindingMode" icon="⏳" variant="warn">
-      <code>Immediate</code> binds as soon as the PVC exists.
-      <code>WaitForFirstConsumer</code> (kind's default) holds it <strong>Pending until a
-      Pod schedules</strong> — so the disk lands on the right node. Pending ≠ broken.
+      <code>Immediate</code> binds at once.
+      <code>WaitForFirstConsumer</code> stays <strong>Pending until a Pod schedules</strong>
+      — Pending ≠ broken.
     </KwCard>
   </v-click>
 </div>
 
-<div v-click="3" class="kw-cols-2 mt-4 text-sm">
+<div v-click="3" class="kw-cols-2 mt-3 text-sm">
   <KwCard heading="Deployments mount PVCs too" icon="📦">
-    A PVC isn't StatefulSet-only. But a Deployment shares <strong>one</strong> PVC across
-    all its replicas — fine for one replica or <code>ReadWriteMany</code>, awkward for many
-    RWO replicas.
+    Fine for one replica or <code>ReadWriteMany</code> — awkward when many RWO replicas
+    need separate disks.
   </KwCard>
   <KwCard heading="→ S12: per-Pod storage" icon="🔢" variant="ok">
-    When each replica needs its <strong>own</strong> identity and volume, a StatefulSet's
-    <code>volumeClaimTemplates</code> mints one PVC per Pod. That's next.
+    <code>volumeClaimTemplates</code> mints one PVC per Pod — that's next.
   </KwCard>
+</div>
+
 </div>
 
 <!--
@@ -297,6 +301,8 @@ it reuses this same PVC/StorageClass model. CKA/CKAD storage domain lands here.
 ---
 layout: recap
 heading: 'Debrief — data that outlives the Pod'
+story: 'The sentinel file survived a Pod delete because the PVC outlived the Pod — storage has its own lifecycle.'
+compact: true
 next: 'S12 · StatefulSet — stable identity + per-Pod storage (volumeClaimTemplates)'
 ---
 

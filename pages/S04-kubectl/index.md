@@ -61,39 +61,32 @@ which the output slide and the lab both lean on. Ties straight into S05's pod.ya
 
 ---
 
+<div class="kw-slide-dense">
+
 <span class="kw-kicker">Eight verbs cover almost everything</span>
 
 # The core verb tour
 
-<div class="kw-cols-3 mt-4">
+<div class="kw-cols-3 mt-3">
   <v-click at="1">
     <KwCard heading="Read" icon="🔍">
-      <strong>get</strong> — list/summarise objects.<br>
-      <strong>describe</strong> — one object in depth, with <em>Events</em>.<br>
-      <strong>explain</strong> — the schema for any field (the S03 habit).
+      <strong>get</strong> · <strong>describe</strong> · <strong>explain</strong> —
+      list, deep-dive with Events, and read the schema.
     </KwCard>
   </v-click>
   <v-click at="2">
     <KwCard heading="Change" icon="✏️">
-      <strong>apply</strong> — declare desired state from a file.<br>
-      <strong>diff</strong> — preview what <code>apply</code> would change.<br>
-      <strong>edit</strong> — patch a live object in your editor.
+      <strong>apply</strong> · <strong>diff</strong> · <strong>edit</strong> —
+      declare, preview, or patch live objects.
     </KwCard>
   </v-click>
   <v-click at="3">
     <KwCard heading="Run &amp; debug" icon="🐚" variant="plain">
-      <strong>logs</strong> — a container's stdout/stderr.<br>
-      <strong>exec</strong> — run a command <em>inside</em> a container.<br>
-      <span class="kw-muted">(+ <code>port-forward</code>, <code>cp</code> when you need them.)</span>
+      <strong>logs</strong> · <strong>exec</strong> · <strong>port-forward</strong> —
+      output, shell in, and tunnel when you need them.
     </KwCard>
   </v-click>
 </div>
-
-<div v-click="4" class="mt-6 kw-muted text-sm">
-
-`describe` and `logs` are your first two moves on **anything broken** — every
-break→fix lab from S05 on starts there. Reach for `diff` before `apply` on
-anything you care about.
 
 </div>
 
@@ -101,6 +94,23 @@ anything you care about.
 Speaker: keep to one line per verb. The pairing to land: get→describe→logs is the
 triage sequence; apply→diff is the safe-change sequence. `exec` returns in every
 lab that inspects a running container.
+-->
+
+---
+
+<span class="kw-kicker">Story · walk the verbs in order</span>
+
+# See the command, then the payoff
+
+<div class="mt-2">
+  <KubectlVerbDemo :step="$clicks" />
+</div>
+
+<!--
+Speaker: click through the on-call chain. Each step shows a realistic command and
+the snippet of output that actually answers the question — not a feature tour.
+Land the habit: get for the headline, describe for Events, logs for app truth,
+diff before apply when changing files.
 -->
 
 ---

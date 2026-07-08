@@ -53,45 +53,43 @@ and Secret (sensitive). Lab 10 follows this section.
 
 ---
 
+<div class="kw-slide-dense">
+
 <span class="kw-kicker">Mental model · two objects, two ways in</span>
 
 # ConfigMap and Secret — key/value, injected two ways
 
-<div class="kw-cols-2 mt-3 text-sm">
+<div class="kw-cols-2 mt-2 text-sm">
   <v-click at="1">
     <KwCard heading="ConfigMap" kind="cm">
-      Non-sensitive key/value config: flags, URLs, tuning. Plain text in the object.
+      Non-sensitive key/value: flags, URLs, tuning.
     </KwCard>
   </v-click>
   <v-click at="2">
     <KwCard heading="Secret" kind="secret" variant="warn">
-      Sensitive key/value: tokens, passwords, TLS keys. Same shape, <strong>base64</strong>
-      values, extra handling — <em>not</em> extra secrecy (next slide).
+      Sensitive values — <strong>base64</strong>, not encryption (next slide).
     </KwCard>
   </v-click>
 </div>
 
-<div class="kw-cols-2 mt-4 text-sm">
+<div class="kw-cols-2 mt-3 text-sm">
   <v-click at="3">
     <KwCard heading="As environment variables" icon="🌱">
-      <code>envFrom</code> (whole object) or <code>valueFrom</code> (one key). Simple —
-      but <strong>frozen at container start</strong>: a later change never reaches a
-      running Pod.
+      <code>envFrom</code> / <code>valueFrom</code> — simple, but <strong>frozen at start</strong>.
     </KwCard>
   </v-click>
   <v-click at="4">
     <KwCard heading="As mounted files" icon="📄">
-      Mount the object as a <strong>volume</strong>; each key becomes a file. A
-      whole-directory mount <strong>updates in place</strong> (~60–90s). A
-      <code>subPath</code> mount is copied once and <strong>never</strong> updates.
+      Whole-directory mount <strong>updates in place</strong>; <code>subPath</code> never does.
     </KwCard>
   </v-click>
 </div>
 
-<div v-click="5" class="mt-4 kw-muted text-sm">
+<div v-click="5" class="mt-3 kw-muted text-sm">
 
-Same two objects, same two consumption modes for both. The `subPath` caveat is the one
-that bites — remember it, we prove it in the lab.
+Same objects, two consumption modes. The <code>subPath</code> caveat is what the rotation lab proves.
+
+</div>
 
 </div>
 
@@ -283,23 +281,22 @@ doesn't restart Pods, so you end up managing config by version anyway.
 ---
 layout: code-annotated
 heading: 'Changing config does not restart your Pods'
+compact: true
 lab: labs/day-2/10-config.md
 ---
 
-```console {none|1-4|6-8|10-13}
-# 1) edit the ConfigMap value
-$ kubectl edit configmap web-config          # GREETING: hi  →  GREETING: hello
+```console {none|1-3|5-6|8-10}
+# 1) edit the ConfigMap
+$ kubectl edit configmap web-config    # GREETING: hi → hello
 $ kubectl exec deploy/web -- printenv GREETING
-hi                                            # UNCHANGED — env frozen at Pod start
+hi                                      # frozen at Pod start
 
-# 2) the directory-mounted file DOES update — just not instantly
+# 2) mounted file updates (~60–90s)
 $ kubectl exec deploy/web -- cat /etc/web-config/GREETING
-hello                                         # after ~60–90s (kubelet sync)
+hello
 
-# 3) force a rollout on purpose — bump a checksum annotation
-$ kubectl patch deploy web -p \
-  '{"spec":{"template":{"metadata":{"annotations":{"checksum/config":"<new-sha>"}}}}}'
-deployment.apps/web configured               # new Pods → fresh env
+# 3) force rollout — checksum annotation
+$ kubectl patch deploy web -p '{"spec":{"template":{"metadata":{"annotations":{"checksum/config":"<sha>"}}}}}'
 ```
 
 ::notes::
@@ -334,6 +331,7 @@ why env didn't change but the file did.
 ---
 layout: recap
 heading: 'Debrief — config lives outside the image'
+story: 'Ops edited the ConfigMap and wondered why the app still said "hi" — env was frozen; the mounted file caught up a minute later.'
 next: 'S11 · Storage — give the app a volume that survives a restart (Day 2 continues)'
 ---
 

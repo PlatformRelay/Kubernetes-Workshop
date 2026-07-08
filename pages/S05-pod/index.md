@@ -80,37 +80,41 @@ simple.
 
 ---
 
-<span class="kw-kicker">Lifecycle</span>
+<div class="kw-slide-dense">
+
+<span class="kw-kicker">Lifecycle · Mina's Pod `web`</span>
 
 # Phases, and what "restart" really means
 
-```mermaid {scale: 0.72}
-flowchart LR
-  Pending -->|scheduled + image pulled| Running
-  Running -->|process exits 0| Succeeded
-  Running -->|process exits non-zero / killed| Failed
-  Running -.->|node unreachable| Unknown
-```
+<div class="mt-2">
+  <PodLifecycle :step="$clicks" />
+</div>
 
-<div class="kw-cols-2 mt-4 text-sm">
+<div class="kw-cols-2 mt-3 text-sm">
   <div v-click>
 
-**Phase** is a coarse summary in `status.phase`:
-`Pending → Running → Succeeded` / `Failed` (and `Unknown` when the node stops
-reporting). It's a headline — the real detail lives in the container statuses
-and `Events`.
+**Phase** (`status.phase`) is a coarse headline:
+`Pending → Running → Succeeded` / `Failed` — detail lives in container statuses
+and **Events**.
 
   </div>
   <div v-click>
 
-**`restartPolicy`** (`Always` · `OnFailure` · `Never`) restarts the
-**container in place** — it never recreates the **Pod**. Default is `Always`.
-Delete the Pod object and *nothing* brings it back. Hold that thought.
+**`restartPolicy`** restarts the **container in place** — never the **Pod**.
+Delete the Pod object and *nothing* brings it back. That's the S06 gap.
 
   </div>
 </div>
 
+</div>
+
 <!--
+Speaker: click through Mina's story — Pending while scheduling/pulling, Running
+when Ready, a crash that bumps RESTARTS but keeps the same Pod, then delete and
+nothing recreates it. Image prompt (optional cover art): dark technical slide,
+single Pod glyph moving through four states on a timeline, graphite background,
+Kubernetes blue accent, no text in the image.
+
 Speaker: draw the line hard between "container restarted" (RESTARTS counter goes
 up, same Pod) and "Pod recreated" (a controller's job — not a Pod's). That
 distinction is the whole punchline of this section and the reason Deployment
@@ -323,6 +327,7 @@ status → read Events. Lab 05 has them do this hands-on and fix it.
 ---
 layout: recap
 heading: 'Debrief — the Pod you delete stays deleted'
+story: 'Mina fixed the crash, but deleting `web` still left the app down — no controller was watching.'
 next: 'S06 · Deployment — a controller that keeps your Pod alive'
 ---
 

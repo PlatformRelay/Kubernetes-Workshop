@@ -56,46 +56,45 @@ not a shared one. Hold the answer — the next slide names the three guarantees.
 
 ---
 
+<div class="kw-slide-dense">
+
 <span class="kw-kicker">Mental model · three guarantees a Deployment can't give</span>
 
 # StatefulSet = stable name + stable DNS + own storage
 
-<div class="mt-4 text-sm" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;">
+<div class="mt-3 text-sm" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.85rem;">
   <v-click at="1">
-    <div style="text-align:center;">
-      <K8sIcon kind="sts" variant="unlabeled" size="3rem" />
-      <KwCard heading="Stable ordinal names" icon="🔢">
-        Pods are <code>web-0</code>, <code>web-1</code>, <code>web-2</code> — created
-        <strong>in order</strong>, and a replacement keeps its <strong>exact name</strong>,
-        never a random suffix.
+    <div class="kw-icon-stack">
+      <K8sIcon kind="sts" variant="unlabeled" size="3.4rem" class="kw-icon-stack-glyph" />
+      <KwCard heading="Stable ordinal names" kind="sts">
+        Pods are <code>web-0</code>, <code>web-1</code>… — created <strong>in order</strong>,
+        replaced with the <strong>same name</strong>.
       </KwCard>
     </div>
   </v-click>
   <v-click at="2">
-    <div style="text-align:center;">
-      <K8sIcon kind="svc" variant="unlabeled" size="3rem" />
-      <KwCard heading="Stable per-Pod DNS" icon="🌐">
-        A <strong>headless Service</strong> gives each Pod a fixed name
-        <code>web-0.web.&lt;ns&gt;.svc.cluster.local</code> — peers dial each other directly.
+    <div class="kw-icon-stack">
+      <K8sIcon kind="svc" variant="unlabeled" size="3.4rem" class="kw-icon-stack-glyph" />
+      <KwCard heading="Stable per-Pod DNS" kind="svc">
+        Headless Service → <code>web-0.web.&lt;ns&gt;.svc…</code> — peers dial by name.
       </KwCard>
     </div>
   </v-click>
   <v-click at="3">
-    <div style="text-align:center;">
-      <K8sIcon kind="pvc" variant="unlabeled" size="3rem" />
-      <KwCard heading="Per-Pod storage" icon="💾">
-        <code>volumeClaimTemplates</code> mints <strong>one PVC per ordinal</strong>
-        (<code>data-web-0</code>, <code>data-web-1</code>…) that <strong>follows the Pod</strong>
-        across restarts.
+    <div class="kw-icon-stack">
+      <K8sIcon kind="pvc" variant="unlabeled" size="3.4rem" class="kw-icon-stack-glyph" />
+      <KwCard heading="Per-Pod storage" kind="pvc">
+        <code>volumeClaimTemplates</code> → <code>data-web-0</code>, … — sticky to the ordinal.
       </KwCard>
     </div>
   </v-click>
 </div>
 
-<div v-click="4" class="mt-4 kw-muted text-sm">
+<div v-click="4" class="mt-3 kw-muted text-sm">
 
-Same reconciliation model as everything else — the guarantee is **identity**: a given
-ordinal always maps to the same name, the same DNS record, and the same volume.
+Same reconciliation model — the guarantee is <strong>identity</strong>: ordinal → name, DNS, volume.
+
+</div>
 
 </div>
 
@@ -114,19 +113,20 @@ only new idea is "one per Pod, sticky to the ordinal." CKA/CKAD workloads domain
 ---
 layout: code-annotated
 heading: 'The four fields that make identity work'
+compact: true
 lab: labs/day-2/12-statefulset.md
 ---
 
-```yaml {none|5|6|9|11-13|all}
+```yaml {none|5|6|9|11-12}
 apiVersion: apps/v1
 kind: StatefulSet
 metadata: { name: web, labels: { app: s12 } }
 spec:
-  serviceName: web                  # the headless Service that owns per-Pod DNS
+  serviceName: web
   replicas: 3
   selector: { matchLabels: { app: s12 } }
   template: { metadata: { labels: { app: s12 } }, spec: { containers: [...] } }
-  volumeClaimTemplates:             # a PVC STENCIL — one minted per ordinal
+  volumeClaimTemplates:
     - metadata: { name: data }
       spec:
         accessModes: ['ReadWriteOnce']
@@ -274,38 +274,37 @@ A Deployment Pod, by contrast, would return as web-<newhash> with an empty (or s
 
 ---
 
+<div class="kw-slide-dense">
+
 <span class="kw-kicker">Lifecycle · ordered, and how rollouts differ</span>
 
 # Ordered by default — and the knobs that change it
 
-<div class="kw-cols-2 mt-3 text-sm">
+<div class="kw-cols-2 mt-2 text-sm">
   <v-click at="1">
     <KwCard heading="Ordered create & delete" icon="🔢">
-      Scale up creates <code>web-0…web-N</code> <strong>in order</strong>, each waiting for the
-      previous to be Ready; scale down removes them in <strong>reverse</strong>
-      (<code>web-2</code> first). Rollouts replace Pods highest-ordinal-first, one at a time.
+      Scale up <code>web-0…N</code> <strong>in order</strong>; scale down in
+      <strong>reverse</strong>. Rollouts replace highest ordinal first.
     </KwCard>
   </v-click>
   <v-click at="2">
     <KwCard heading="podManagementPolicy" icon="⚙️" variant="warn">
-      <code>OrderedReady</code> (default) is the strict sequence above.
-      <code>Parallel</code> creates/deletes all Pods at once — faster when peers don't need a
-      quorum to come up in order.
+      <code>OrderedReady</code> (default) vs <code>Parallel</code> — faster when peers
+      don't need strict sequencing.
     </KwCard>
   </v-click>
 </div>
 
-<div v-click="3" class="kw-cols-2 mt-4 text-sm">
+<div v-click="3" class="kw-cols-2 mt-3 text-sm">
   <KwCard heading="Partitioned rollout" icon="🧪">
-    <code>updateStrategy.rollingUpdate.partition: N</code> updates only ordinals
-    <strong>≥ N</strong> — a built-in canary: update <code>web-2</code>, soak it, then lower
-    the partition to roll the rest.
+    <code>partition: N</code> updates ordinals <strong>≥ N</strong> — built-in canary.
   </KwCard>
   <KwCard heading="Storage is NOT auto-cleaned" icon="🗑️" variant="danger">
-    Deleting the StatefulSet (or scaling down) leaves the PVCs behind by default — your data is
-    safe, but you clean up claims yourself. <code>persistentVolumeClaimRetentionPolicy</code>
-    can automate it.
+    PVCs survive StatefulSet delete by default — set
+    <code>persistentVolumeClaimRetentionPolicy</code> or clean up manually.
   </KwCard>
+</div>
+
 </div>
 
 <!--
@@ -324,6 +323,7 @@ it so nobody thinks manual-delete is the only option. Lab: cleanup deletes PVCs 
 ---
 layout: recap
 heading: 'Debrief — identity-bearing workloads'
+story: 'Deleting web-1 felt catastrophic until it came back same-name with the same sentinel on data-web-1 — identity and disk stayed coupled.'
 next: 'S13 · Resources & limits — right-size what you run (requests, limits, QoS)'
 ---
 

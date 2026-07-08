@@ -6,6 +6,8 @@ const props = defineProps<{
   heading?: string
   /** Optional lab reference, e.g. "labs/day-1/07-service.md". */
   lab?: string
+  /** Tighter code + rail for dense annotated slides. */
+  compact?: boolean
 }>()
 </script>
 
@@ -15,7 +17,7 @@ const props = defineProps<{
   (```yaml {none|2-4|6-9}```) so note 1 + lines 2-4 light up on the same click.
 -->
 <template>
-  <div class="slidev-layout kw-code-annotated">
+  <div class="slidev-layout kw-code-annotated" :class="{ 'kw-code-annotated--compact': props.compact }">
     <header class="kw-ca-header">
       <h1 v-if="props.heading">{{ props.heading }}</h1>
       <slot name="title" />
@@ -71,5 +73,37 @@ const props = defineProps<{
   position: absolute;
   right: 1.6rem;
   bottom: 1.2rem;
+}
+
+.kw-code-annotated--compact .kw-ca-header h1 {
+  font-size: 1.3rem;
+  margin-bottom: 0.4rem;
+}
+
+.kw-code-annotated--compact .kw-ca-cols {
+  gap: 0.9rem;
+  align-items: start;
+}
+
+.kw-code-annotated--compact .kw-ca-code :deep(pre.slidev-code) {
+  font-size: 0.78em;
+  line-height: 1.42;
+  max-height: 52vh;
+  overflow: auto;
+}
+
+.kw-code-annotated--compact .kw-ca-rail {
+  gap: 0.45rem;
+  max-height: 52vh;
+  overflow: auto;
+}
+
+.kw-code-annotated--compact .kw-ca-rail :deep(.kw-code-note) {
+  padding: 0.45rem 0.65rem;
+}
+
+.kw-code-annotated--compact .kw-ca-rail :deep(.kw-code-note-body) {
+  font-size: 0.74rem;
+  line-height: 1.35;
 }
 </style>
