@@ -1,10 +1,11 @@
 ---
 theme: default
-title: Kubernetes Practitioner Workshop
+title: Kubernetes Practitioner Workshop — 3-day cut
 info: |
   Open source, vendor-neutral Kubernetes workshop.
-  Superset root deck: imports every section S00–S27. Toggle any section
-  with `hide: true` on its import block below.
+  Canonical 3-day boil-down: all core sections plus selected recommended
+  ones (~390 min/day at ~50/50). Hidden sections stay fully authored in the
+  superset; flip `hide:` to recompose the cut.
 colorSchema: dark
 transition: slide-left
 fonts:
@@ -15,7 +16,7 @@ layout: section-cover
 
 # Kubernetes Practitioner Workshop
 
-The full content superset — sections S00–S27, each individually toggleable.
+The canonical 3-day cut — core sections plus selected recommended ones.
 
 ---
 # S00 · Welcome & setup · core · Day 1
@@ -26,13 +27,13 @@ hide: false
 ---
 # S01 · Containers · recommended · Day 1
 src: ./pages/S01-containers/index.md
-hide: false
+hide: true
 ---
 
 ---
 # S02 · Container security & supply chain · recommended · Day 1
 src: ./pages/S02-container-security/index.md
-hide: false
+hide: true
 ---
 
 ---
@@ -110,13 +111,13 @@ hide: false
 ---
 # S15 · Jobs & CronJobs · recommended · Day 2
 src: ./pages/S15-jobs/index.md
-hide: false
+hide: true
 ---
 
 ---
 # S16 · Autoscaling (HPA) · optional · Day 2
 src: ./pages/S16-hpa/index.md
-hide: false
+hide: true
 ---
 
 ---
@@ -128,13 +129,13 @@ hide: false
 ---
 # S18 · NetworkPolicy · recommended · Day 3
 src: ./pages/S18-networkpolicy/index.md
-hide: false
+hide: true
 ---
 
 ---
 # S19 · RBAC · optional · Day 3
 src: ./pages/S19-rbac/index.md
-hide: false
+hide: true
 ---
 
 ---
@@ -164,7 +165,7 @@ hide: false
 ---
 # S24 · Operator dev 101 (kubebuilder) · optional · Day 3
 src: ./pages/S24-kubebuilder/index.md
-hide: false
+hide: true
 ---
 
 ---

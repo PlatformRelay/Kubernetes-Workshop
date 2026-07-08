@@ -1,6 +1,7 @@
 # Dependencies & build output
 node_modules/
 dist/
+dist-*/
 *.local
 stuff
 .claude
@@ -16,6 +17,7 @@ components.d.ts
 *.pdf
 .slides-export/
 slidev-export/
+slides-*-export/
 
 # OS & editors
 .DS_Store

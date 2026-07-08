@@ -3,9 +3,15 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "slidev --open",
-    "build": "slidev build",
-    "export": "slidev export"
+    "dev": "slidev slides.md --open",
+    "dev:3day": "slidev slides-3day.md --open",
+    "dev:templates": "slidev slides-templates.md --open",
+    "build": "slidev build slides.md",
+    "build:3day": "slidev build slides-3day.md --base /3day/ --out dist-3day",
+    "build:templates": "slidev build slides-templates.md --base /templates/ --out dist-templates",
+    "export": "slidev export slides.md",
+    "export:3day": "slidev export slides-3day.md --output slides-3day-export",
+    "export:templates": "slidev export slides-templates.md --output slides-templates-export"
   },
   "dependencies": {
     "@slidev/cli": "^52.16.0",

@@ -2,9 +2,14 @@
 
 Guidance for any agent or contributor working in this repository.
 
-This is an **open source, vendor-neutral, 3-day beginner Kubernetes workshop**. It
-ships as a Slidev slide deck plus a separate set of hands-on labs in Markdown. The
+This is an **open source, vendor-neutral, beginner-to-intermediate Kubernetes workshop**.
+It ships as a Slidev slide deck plus a separate set of hands-on labs in Markdown. The
 workshop is **50% presentation, 50% practice**.
+
+Content is authored as a **superset** and boiled down per delivery: every section is a
+self-contained, **toggleable** unit, and one or more **root decks** compose them (a full
+`slides.md` and a boiled-down `slides-3day.md`). See
+[Deck architecture](#deck-architecture--compartmentalized-sections).
 
 ## Non-negotiable guardrails
 
@@ -24,23 +29,27 @@ filenames, and **commit messages**.
    ecosystem conventions. Legacy source material is inspiration only — update anything
    outdated.
 6. **Alignment, not exam prep.** Coverage is aligned with CKAD/CKA domains as a design
-   check, but certification prep is not the organizing principle.
+   check, but certification prep is not the organizing principle. **Verify the current
+   Kubernetes / CKx curriculum version at authoring time — do not hard-pin a version in the
+   docs.**
 
 ## Where things live
 
 | Path | Purpose | Tracked? |
 | --- | --- | --- |
 | `AGENT.md` | This file — contributor guidance. | yes |
-| *(deck)* | The Slidev deck: `slides.md` + `pages/day-*/` (see note). | yes |
+| *(root decks)* | `slides.md` (superset) + `slides-3day.md` (boil-down): headmatter + `src:` includes. | yes |
+| `pages/SNN-topic/` | One self-contained, toggleable **section** per folder (`index.md`). | yes |
 | `labs/day-*/` | Standalone Markdown labs (not embedded in the deck). | yes |
 | `agent-context/` | Planning, roadmap, user stories, outline, image prompts, source analysis. **Local working material.** | no (gitignored) |
 | `references/` | Vendored reference theme/pattern gallery and CNCF artwork, for rehearsal. | no (gitignored) |
 | `.claude/` | Local tooling/skills. | no (gitignored) |
 
-> **Deck location note:** the deck currently sits in the initial Slidev starter
-> folder and is still the stock template. Restructuring it to root-level `slides.md` +
-> `pages/day-*/` (per the outline) is milestone M1/M2 — do this before authoring
-> curriculum. Do not treat the starter's demo slides as workshop content.
+> **Deck location note:** the deck lives at the repo root. `slides.md` (superset) and
+> `slides-3day.md` (canonical 3-day cut) compose the `pages/SNN-topic/` section library;
+> `slides-templates.md` is the design-system gallery (reusable layouts + the
+> animation-technology spike) — reference material, not workshop content. All sections
+> `S00`–`S27` exist as stubs; author content into them milestone by milestone (Day 1 first).
 
 ## Source of truth for scope
 
@@ -50,10 +59,13 @@ The plan lives in `agent-context/` (gitignored, local). Read it before authoring
 - `agent-context/user-stories.md` — the backlog. **US-0 comes first**: build reusable
   slide templates (using the Kubernetes/CNCF icons) and a pod-replacement animation
   spike before curriculum content.
-- `agent-context/presentation-outline.md` — the full 3-day section-by-section outline.
-  The spine is the **red line**: `Pod → Deployment → Service → Ingress → Gateway API`.
-  Also holds the **lab authoring contract** and the CKAD/CKA alignment appendix.
-- `agent-context/section-image-prompts.md` — Mœbius continuous-story covers.
+- `agent-context/presentation-outline.md` — the full section-by-section outline as a
+  **compartmentalized superset** (`S00`–`S27`), each section tagged with a **Tier**
+  (`core`/`recommended`/`optional`) and **Suggested day**. The spine is the **red line**:
+  `Pod → Deployment → Service → Ingress → Gateway API` (S05–S09). Also holds the **deck
+  architecture**, the **lab authoring contract**, the CKAD/CKA alignment appendix, and the
+  **canonical 3-day cut** (Appendix C).
+- `agent-context/section-image-prompts.md` — Mœbius continuous-story covers (`S00`–`S27`).
 
 ## Teaching model
 
@@ -66,6 +78,34 @@ The plan lives in `agent-context/` (gitignored, local). Read it before authoring
   needs it; then mark the lab **kind-only** and provide a namespace-safe read-only
   alternative.
 
+## Deck architecture — compartmentalized sections
+
+The deck is a **superset** of toggleable sections composed by one or more **root decks**.
+
+- **One folder per section:** `pages/SNN-topic/index.md` (e.g. `pages/S01-containers/index.md`).
+  Each `index.md` is self-contained — its own section-divider slide + content — and **must not**
+  depend on another section's slide numbers.
+- **Root decks are mostly includes:** headmatter (theme/config) followed by one import block
+  per section:
+
+  ```md
+  ---
+  src: ./pages/S01-containers/index.md
+  hide: false      # flip to true to drop the whole Containers section
+  ---
+  ```
+
+  Slidev merges the import block's frontmatter into **every** imported slide, so `hide: true`
+  (or `disabled: true`) on the block drops the entire section at parse time. Page-range imports
+  work too: `src: ./pages/S07-service/index.md#1,4-6`.
+- **Multiple root decks over one section library:** `slides.md` imports every section (the
+  superset); `slides-3day.md` imports only the [canonical 3-day cut](agent-context/presentation-outline.md#appendix-c--canonical-3-day-cut).
+  Each builds independently with `slidev <file>.md`. Add a new cut by adding one
+  `slides-<variant>.md`, never by copying sections.
+- **Tiers:** every section is `core`, `recommended`, or `optional`. Keep the outline's Section
+  map, the Tier tags, and the image-prompt numbering (`S00`–`S27`) in sync when adding or
+  moving sections.
+
 ## Slidev authoring rules
 
 - Prefer Markdown, frontmatter, layouts, and Vue components over inline HTML and
@@ -74,7 +114,7 @@ The plan lives in `agent-context/` (gitignored, local). Read it before authoring
 
   ```md
   ---
-  src: ./pages/day-1/03-pod.md
+  src: ./pages/S05-pod/index.md
   hideInToc: true
   ---
   ```
@@ -125,7 +165,7 @@ spec:
 
 ::right::
 
-Lab: `labs/day-1/03-pod.md`
+Lab: `labs/day-1/05-pod.md`
 ```
 
 Each later resource in the red line **extends the previous manifest** so learners see
