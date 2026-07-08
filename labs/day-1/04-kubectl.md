@@ -20,7 +20,9 @@ never `apply` it, so it's safe in any namespace.
   namespace.
 - **Lab 03** helps (you met `explain`, `api-resources`, and spec/status) but isn't
   required.
-- Both environments behave identically here (read + dry-run only). No cluster-admin.
+- Both environments follow the same steps (read + dry-run only) and reach the same
+  pass/fail results. A couple of commands print a **different error message** on a
+  shared cluster than on kind — each is called out where it happens. No cluster-admin.
 
 ```bash
 export NS=<your-namespace>        # same value as Lab 00 (kind users: workshop)
@@ -168,6 +170,11 @@ control-plane Pods with a label selector. On a **shared** cluster (no `kube-syst
 access), filter your own namespace instead — e.g. `kubectl get configmap -l foo=bar`
 (expect an empty list, proving the filter works).
 
+> **Shared cluster:** `get nodes` is cluster-scoped and may return
+> `Error ... "nodes" is forbidden` for your namespace-scoped role (same as Lab 03).
+> If so, practise `jsonpath` on a namespaced object you *can* read instead:
+> `kubectl get configmap kube-root-ca.crt -o jsonpath='{.metadata.name}{"\n"}'`.
+
 <details><summary>Solution / expected output</summary>
 
 ```console
@@ -211,7 +218,7 @@ kubectl run probe --image=nginx:1.29 --namespace=no-such-namespace --dry-run=ser
 ```
 
 **Task:** run both. The **client** line must succeed; the **server** line must fail.
-Read the server error.
+Read the server error — its exact text depends on your environment.
 
 <details><summary>Solution / expected output</summary>
 
@@ -220,16 +227,28 @@ $ kubectl run probe --image=nginx:1.29 --namespace=no-such-namespace --dry-run=c
 client exit: 0
 
 $ kubectl run probe --image=nginx:1.29 --namespace=no-such-namespace --dry-run=server -o yaml >/dev/null; echo "server exit: $?"
+# kind (you own the cluster):
 Error from server (NotFound): namespaces "no-such-namespace" not found
+# shared cluster (namespace-scoped role):
+Error from server (Forbidden): pods is forbidden: User "..." cannot create
+resource "pods" in ... the namespace "no-such-namespace"
 server exit: 1
 ```
 
-**Client** built the object locally and was happy — it never asked the cluster whether
-`no-such-namespace` exists. **Server** dry-run sent it through the API server, which
-checks the namespace and rejects it. Same command, two very different questions:
+The **result is identical** — client passes (`0`), server fails (`1`) — but the
+**message differs**, and that difference is itself the lesson:
+
+- On **kind**, the request clears authorization and is rejected later, at admission,
+  for the missing namespace → `NotFound`.
+- On a **shared** cluster, authorization runs **first** and your role can't write to
+  `no-such-namespace` at all → `Forbidden`, before the namespace check is even reached.
+
+Either way, the point holds: **`--dry-run=server` evaluated the request against live
+cluster state — identity, permissions, existence — and the client never could.** Two
+very different questions:
 
 - `--dry-run=client` → *"does this render into a valid-looking object?"*
-- `--dry-run=server` → *"would the cluster actually accept this right now?"*
+- `--dry-run=server` → *"would the cluster actually accept this from me, right now?"*
 
 **Fix:** target your real namespace — now both pass:
 

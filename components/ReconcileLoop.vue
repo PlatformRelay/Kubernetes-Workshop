@@ -9,8 +9,8 @@ import { computed } from 'vue'
  *
  * step 0: Observe (desired 3, observed 2 — a Pod was lost)
  * step 1: Diff    (desired ≠ observed → delta +1)
- * step 2: Act     (create 1 → observed 3)
- * step 3: Repeat  (desired = observed, keep watching)
+ * step 2: Act     (still observed 2 — creating the +1 to close the gap)
+ * step 3: Repeat  (observed 3, desired = observed, keep watching)
  */
 const props = withDefaults(
   defineProps<{
@@ -24,8 +24,9 @@ const props = withDefaults(
 
 const stages = ['Observe', 'Diff', 'Act'] as const
 
-// step 0 and 1 see one Pod missing; from step 2 on the world is converged.
-const observed = computed(() => (props.step >= 2 ? props.desired : props.desired - 1))
+// A Pod is missing through Observe/Diff/Act (steps 0-2); it converges only at
+// Repeat (step 3), so "Act" still shows the gap it is in the middle of closing.
+const observed = computed(() => (props.step >= 3 ? props.desired : props.desired - 1))
 const delta = computed(() => props.desired - observed.value)
 
 // Which stage is lit. step 0 → Observe, 1 → Diff, 2 → Act, ≥3 → Observe again.
