@@ -225,12 +225,12 @@ A later layer records a <em>whiteout</em> that hides the file from the final
 filesystem — but layer N, with the secret, is <strong>still there and pullable</strong>.
 </CodeNote>
 
-<CodeNote at="4" label="history reveals it">
+<CodeNote at="3" label="history reveals it">
 <code>history</code> lists every layer and the instruction that built it. The
 <code>COPY deploy_key</code> layer is visible to anyone with the image.
 </CodeNote>
 
-<CodeNote at="5" label="the real fix" variant="ok">
+<CodeNote at="4" label="the real fix" variant="ok">
 You can't delete your way out — you must never <strong>add</strong> the secret to
 a shipped layer. Build-time secret mounts (FIX 2) or a discarded build stage are
 the only real fixes. The lab proves this end to end.
