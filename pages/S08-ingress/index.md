@@ -161,11 +161,7 @@ spec:
         paths:
           - path: /                # catch-all — the S07 `web` Service
             pathType: Prefix
-            backend:
-              service:
-                name: web
-                port:
-                  number: 80
+            backend: { service: { name: web, port: { number: 80 } } }
 ```
 
 ```yaml
@@ -181,18 +177,10 @@ spec:
         paths:
           - path: /v2              # more specific rule — wins for /v2*
             pathType: Prefix
-            backend:
-              service:
-                name: web2
-                port:
-                  number: 80
+            backend: { service: { name: web2, port: { number: 80 } } }
           - path: /                # catch-all — everything else
             pathType: Prefix
-            backend:
-              service:
-                name: web
-                port:
-                  number: 80
+            backend: { service: { name: web, port: { number: 80 } } }
 ```
 
 ```yaml
@@ -211,18 +199,10 @@ spec:
         paths:
           - path: /v2
             pathType: Prefix
-            backend:
-              service:
-                name: web2
-                port:
-                  number: 80
+            backend: { service: { name: web2, port: { number: 80 } } }
           - path: /
             pathType: Prefix
-            backend:
-              service:
-                name: web
-                port:
-                  number: 80
+            backend: { service: { name: web, port: { number: 80 } } }
 ```
 ````
 
