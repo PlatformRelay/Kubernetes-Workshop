@@ -395,10 +395,10 @@ metadata:
 spec:
   replicas: 1
   selector:
-    matchLabels: { app: s14, role: slow }
+    matchLabels: { app: s14-slow, role: slow }
   template:
     metadata:
-      labels: { app: s14, role: slow }
+      labels: { app: s14-slow, role: slow }
     spec:
       containers:
         - name: web
@@ -445,10 +445,10 @@ metadata:
 spec:
   replicas: 1
   selector:
-    matchLabels: { app: s14, role: slow }
+    matchLabels: { app: s14-slow, role: slow }
   template:
     metadata:
-      labels: { app: s14, role: slow }
+      labels: { app: s14-slow, role: slow }
     spec:
       containers:
         - name: web
@@ -514,19 +514,6 @@ of the startup probe.
 - `kubectl describe pod` Events are the diagnosis: `Readiness probe failed…` /
   `Liveness probe failed…` is the first place to look when `Running` isn't serving.
 
-## Cleanup / panic reset
-
-```bash
-# scoped cleanup — everything this lab made is labelled app=s14
-kubectl delete deployment,svc -l app=s14 -n "$NS" --ignore-not-found
-rm -f deployment-probes.yaml service.yaml slowstart.yaml slowstart-noguard.yaml
-rm -rf broken
-
-# panic reset (namespace): also removes anything else left in your namespace
-# kubectl delete deployment,svc,pod --all -n "$NS" --ignore-not-found
-# panic reset (kind): make kind-down && make kind-up   # or: kind delete cluster
-```
-
 ## Stretch (optional) — a rollout that stalls on readiness
 
 Readiness gates the rollout itself. Break readiness for the **whole** Deployment and watch the
@@ -589,3 +576,19 @@ deployment.apps/web configured
 deployment "web" successfully rolled out
 ```
 </details>
+
+## Cleanup / panic reset
+
+Run this last — it removes everything the lab created (the `slow` Deployment carries
+`app: s14` on the object itself, so the label selector catches it too).
+
+```bash
+# scoped cleanup — everything this lab made is labelled app=s14
+kubectl delete deployment,svc -l app=s14 -n "$NS" --ignore-not-found
+rm -f deployment-probes.yaml service.yaml slowstart.yaml slowstart-noguard.yaml
+rm -rf broken
+
+# panic reset (namespace): also removes anything else left in your namespace
+# kubectl delete deployment,svc,pod --all -n "$NS" --ignore-not-found
+# panic reset (kind): make kind-down && make kind-up   # or: kind delete cluster
+```
