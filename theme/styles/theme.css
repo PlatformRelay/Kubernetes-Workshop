@@ -1,0 +1,295 @@
+/**
+ * Workshop master theme — dark, technical, vendor-neutral.
+ *
+ * One accent (Kubernetes blue) does all the pointing; green/amber/red are
+ * reserved for semantic status (ok / caution / broken). Everything else is
+ * graphite surfaces, hairline borders, and uppercase mono kickers.
+ */
+
+:root {
+  /* Surfaces */
+  --kw-bg: #0b0e14;
+  --kw-bg-soft: #10151d;
+  --kw-panel: #141a24;
+  --kw-panel-2: #1a2130;
+  --kw-border: #263041;
+  --kw-border-soft: #1c2431;
+
+  /* Text */
+  --kw-text: #e6edf3;
+  --kw-text-dim: #97a4b5;
+  --kw-text-faint: #66738a;
+
+  /* Accent + semantics */
+  --kw-accent: #326ce5; /* Kubernetes blue */
+  --kw-accent-bright: #7aa5f8;
+  --kw-ok: #3fb950;
+  --kw-warn: #d29922;
+  --kw-danger: #f85149;
+
+  --kw-radius: 10px;
+  --kw-radius-sm: 6px;
+}
+
+/* ---------------------------------------------------------------- base --- */
+
+.slidev-layout {
+  position: relative; /* overlay callouts anchor to the slide */
+  background: var(--kw-bg);
+  color: var(--kw-text);
+}
+
+.slidev-layout h1 {
+  color: var(--kw-text);
+  font-weight: 700;
+  letter-spacing: -0.015em;
+}
+
+.slidev-layout h2,
+.slidev-layout h3 {
+  color: var(--kw-text);
+  font-weight: 650;
+}
+
+.slidev-layout a {
+  color: var(--kw-accent-bright);
+  border-bottom: 1px solid color-mix(in srgb, var(--kw-accent-bright) 40%, transparent);
+  text-decoration: none;
+}
+
+.slidev-layout strong {
+  color: var(--kw-text);
+}
+
+.slidev-layout blockquote {
+  background: var(--kw-bg-soft);
+  border-left: 3px solid var(--kw-accent);
+  border-radius: 0 var(--kw-radius-sm) var(--kw-radius-sm) 0;
+  color: var(--kw-text-dim);
+}
+
+.slidev-layout ul > li::marker {
+  color: var(--kw-accent-bright);
+}
+
+.slidev-layout ol > li::marker {
+  color: var(--kw-text-faint);
+  font-weight: 600;
+}
+
+.slidev-layout code:not(pre code) {
+  background: var(--kw-panel);
+  color: var(--kw-accent-bright);
+  border: 1px solid var(--kw-border-soft);
+  padding: 0.08em 0.35em;
+  border-radius: 4px;
+  font-size: 0.85em;
+}
+
+.slidev-layout table {
+  font-size: 0.85em;
+}
+
+.slidev-layout th {
+  color: var(--kw-text-dim);
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.78em;
+  letter-spacing: 0.08em;
+  border-bottom: 1px solid var(--kw-border);
+}
+
+.slidev-layout td {
+  border-bottom: 1px solid color-mix(in srgb, var(--kw-border) 50%, transparent);
+}
+
+/* ---------------------------------------------------------------- code --- */
+
+.slidev-layout pre.slidev-code {
+  background: var(--kw-panel) !important;
+  border: 1px solid var(--kw-border);
+  border-radius: var(--kw-radius);
+  padding: 0.85rem 1.1rem;
+  line-height: 1.55;
+}
+
+.slidev-layout .shiki-magic-move-container {
+  background: var(--kw-panel) !important;
+  border: 1px solid var(--kw-border);
+  border-radius: var(--kw-radius);
+  padding: 0.85rem 1.1rem;
+  line-height: 1.55;
+}
+
+/* Click-driven line highlighting: lit lines get an accent wash + edge bar,
+   everything else recedes. This carries the "watch this field" teaching move. */
+.slidev-layout .slidev-code .line.highlighted {
+  background: color-mix(in srgb, var(--kw-accent) 16%, transparent);
+  box-shadow: inset 3px 0 0 var(--kw-accent);
+}
+
+.slidev-layout .slidev-code:has(.line.highlighted) .line:not(.highlighted) {
+  opacity: 0.35;
+}
+
+.slidev-layout .slidev-code .line.highlighted.kw-line-danger {
+  background: color-mix(in srgb, var(--kw-danger) 14%, transparent);
+  box-shadow: inset 3px 0 0 var(--kw-danger);
+}
+
+/* ------------------------------------------------------------- mermaid --- */
+
+.slidev-layout .mermaid {
+  display: flex;
+  justify-content: center;
+}
+
+.slidev-layout .mermaid svg {
+  max-height: 44vh;
+  height: auto;
+}
+
+/* ----------------------------------------------------------- utilities --- */
+
+/* Shared panel surface for diagrams, cards, and animation scenes. */
+.kw-panel {
+  background: var(--kw-panel);
+  border: 1px solid var(--kw-border);
+  border-radius: var(--kw-radius);
+}
+
+/* Small uppercase label — kickers, chips, rail headers. */
+.kw-kicker {
+  font-family: var(--slidev-code-font-family, monospace);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--kw-accent-bright);
+}
+
+.kw-muted {
+  color: var(--kw-text-dim);
+}
+
+/* Subtle engineering dot-grid backdrop (covers, canvases). */
+.kw-grid-bg {
+  background-color: var(--kw-bg);
+  background-image: radial-gradient(
+    color-mix(in srgb, var(--kw-border) 55%, transparent) 1px,
+    transparent 1px
+  );
+  background-size: 24px 24px;
+}
+
+.kw-cols-2,
+.kw-cols-3 {
+  display: grid;
+  gap: 1rem;
+  align-items: stretch;
+}
+
+.kw-cols-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.kw-cols-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+/* Inline flow: box → box → box. */
+.kw-flow {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.kw-flow-arrow {
+  color: var(--kw-text-faint);
+  font-size: 1.15rem;
+  user-select: none;
+}
+
+/* Small mono-labelled object chip for architecture scenes (Pods, Services…). */
+.kw-obj {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--slidev-code-font-family, monospace);
+  font-size: 0.72rem;
+  color: var(--kw-text);
+  background: var(--kw-panel-2);
+  border: 1px solid var(--kw-border);
+  border-left: 3px solid var(--kw-accent);
+  border-radius: var(--kw-radius-sm);
+  padding: 0.3rem 0.6rem;
+  white-space: nowrap;
+}
+
+.kw-obj--ok {
+  border-left-color: var(--kw-ok);
+}
+
+.kw-obj--warn {
+  border-left-color: var(--kw-warn);
+}
+
+.kw-obj--danger {
+  border-left-color: var(--kw-danger);
+}
+
+.kw-obj--dim {
+  border-left-color: var(--kw-text-faint);
+  color: var(--kw-text-dim);
+}
+
+/* Mandatory label for AI-generated artwork. */
+.kw-ai-footer {
+  position: absolute;
+  right: 0.9rem;
+  bottom: 0.7rem;
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--kw-text-dim);
+  background: color-mix(in srgb, var(--kw-bg) 75%, transparent);
+  border: 1px solid var(--kw-border);
+  border-radius: 4px;
+  padding: 0.15rem 0.45rem;
+  z-index: 20;
+}
+
+/* -------------------------------------------------------- global chrome --- */
+
+.kw-global-footer,
+.kw-global-page {
+  position: fixed;
+  bottom: 0.7rem;
+  z-index: 40;
+  pointer-events: none;
+  font-family: var(--slidev-code-font-family, monospace);
+  font-size: 0.58rem;
+  letter-spacing: 0.08em;
+  color: var(--kw-text-faint);
+}
+
+.kw-global-footer {
+  left: 1.5rem;
+}
+
+.kw-global-page {
+  right: 1.5rem;
+}
+
+.kw-global-progress {
+  position: fixed;
+  left: 0;
+  bottom: 0;
+  height: 2px;
+  background: var(--kw-accent);
+  opacity: 0.5;
+  z-index: 40;
+  pointer-events: none;
+  transition: width 0.4s ease;
+}

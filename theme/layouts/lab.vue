@@ -1,6 +1,6 @@
 <script setup lang="ts">
 const props = defineProps<{
-  /** Lab file path, e.g. "labs/day-1/03-pod.md". */
+  /** Lab file path, e.g. "labs/day-1/05-pod.md". */
   lab?: string
   /** Rough duration, e.g. "25 min". */
   duration?: string
@@ -13,9 +13,9 @@ const props = defineProps<{
   <div class="slidev-layout kw-lab">
     <div class="kw-lab-window kw-panel">
       <div class="kw-lab-titlebar">
-        <span class="kw-lab-dot" style="background: #f85149" />
-        <span class="kw-lab-dot" style="background: #d29922" />
-        <span class="kw-lab-dot" style="background: #3fb950" />
+        <span class="kw-lab-dot" style="background: var(--kw-danger)" />
+        <span class="kw-lab-dot" style="background: var(--kw-warn)" />
+        <span class="kw-lab-dot" style="background: var(--kw-ok)" />
         <code v-if="props.lab" class="kw-lab-path">{{ props.lab }}</code>
         <div class="kw-lab-chips">
           <span v-if="props.env" class="kw-lab-chip">{{ props.env }}</span>
@@ -66,6 +66,7 @@ const props = defineProps<{
   font-size: 0.75rem;
   color: var(--kw-text-dim);
   background: none;
+  border: none;
 }
 
 .kw-lab-chips {

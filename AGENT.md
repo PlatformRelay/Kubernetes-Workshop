@@ -80,6 +80,8 @@ filenames, and **commit messages**.
 | `AGENT.md` | This file — contributor guidance. | yes |
 | *(root decks)* | `slides.md` (superset) + `slides-3day.md` (boil-down): headmatter + `src:` includes. | yes |
 | `pages/SNN-topic/` | One self-contained, toggleable **section** per folder (`index.md`). | yes |
+| `theme/` | **Local Slidev theme** (`slidev-theme-k8s-workshop`): master styles, layouts, UI components. Root decks use `theme: ./theme`. | yes |
+| `components/` | Deck-level Vue components (animated teaching diagrams). | yes |
 | `labs/day-*/` | Standalone Markdown labs (not embedded in the deck). | yes |
 | `agent-context/` | Planning, roadmap, user stories, outline, image prompts, source analysis. **Local working material.** | no (gitignored) |
 | `references/` | Vendored reference theme/pattern gallery and CNCF artwork, for rehearsal. | no (gitignored) |
