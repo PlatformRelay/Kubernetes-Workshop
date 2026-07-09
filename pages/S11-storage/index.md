@@ -126,8 +126,6 @@ spec:
 
 ::notes::
 
-<BitHologram src="/diagrams/diagram-c11-storage-knobs.png" compact />
-
 <CodeNote at="1" label="StorageClass name">
 Names the provisioner. Omit it and you get the cluster <strong>default</strong>
 StorageClass; name one that doesn't exist and the claim hangs <code>Pending</code> forever

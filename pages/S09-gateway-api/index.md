@@ -53,8 +53,6 @@ routing *idea*, just a better-typed home for it. Lab 09 follows this section.
 -->
 
 ---
-layout: two-cols
----
 
 <span class="kw-kicker">Mental model · one object became three roles</span>
 
@@ -91,10 +89,6 @@ each in its **own typed object**, in its **own namespace**, wired together by a
 `parentRefs` reference. No shared flat object, no annotation free-for-all.
 
 </div>
-
-::right::
-
-<BitHologram src="/diagrams/diagram-c09-gateway-roles.png" />
 
 <!--
 Speaker: reveal the three cards, then the payoff. Map each back to Ingress: GatewayClass

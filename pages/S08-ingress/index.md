@@ -51,8 +51,6 @@ backends. Land it as "one door, many rooms." Lab 08 follows this section.
 -->
 
 ---
-layout: two-cols
----
 
 <span class="kw-kicker">Mental model · the catch that bites everyone</span>
 
@@ -79,10 +77,6 @@ An **`IngressClass`** ties the two together: your Ingress names a class
 Ingress gotcha, and the first thing to check when "the Ingress doesn't work."
 
 </div>
-
-::right::
-
-<BitHologram src="/diagrams/diagram-c08-ingress-controller.png" />
 
 <!--
 Speaker: this is THE Ingress mental model and the source of most confusion. The
