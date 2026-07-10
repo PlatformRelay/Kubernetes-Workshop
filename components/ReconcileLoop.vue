@@ -18,8 +18,20 @@ const props = withDefaults(
     desired?: number
     resource?: string
     controller?: string
+    // Where desired/observed state is read FROM. Defaults keep the S03 built-in
+    // controller framing (spec vs status); S21 passes desiredSource="Git" so the
+    // same loop teaches GitOps (Git is the desired-state source) without a fork.
+    desiredSource?: string
+    observedSource?: string
   }>(),
-  { step: 0, desired: 3, resource: 'Pod', controller: 'ReplicaSet controller' },
+  {
+    step: 0,
+    desired: 3,
+    resource: 'Pod',
+    controller: 'ReplicaSet controller',
+    desiredSource: 'spec',
+    observedSource: 'status',
+  },
 )
 
 const stages = ['Observe', 'Diff', 'Act'] as const
@@ -65,7 +77,7 @@ const converged = computed(() => props.step >= 3)
 
     <div class="kw-loop-caption">
       <template v-if="step <= 0">
-        <strong>Observe</strong> — read desired (<code>spec</code>) and actual (<code>status</code>). A {{ resource }} was lost.
+        <strong>Observe</strong> — read desired (<code>{{ desiredSource }}</code>) and actual (<code>{{ observedSource }}</code>). A {{ resource }} was lost.
       </template>
       <template v-else-if="step === 1">
         <strong>Diff</strong> — desired {{ desired }} ≠ observed {{ observed }}: the loop computes a delta of +{{ delta }}.
