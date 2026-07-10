@@ -14,6 +14,7 @@ two backends, and learn the hard truth that an `Ingress` object does nothing wit
 entry point in front of the Lab 07 Service.
 
 > **Environment honesty.** Ingress needs a cluster-wide **ingress controller**.
+>
 > - **kind:** you install one yourself (admin) — this path recreates your kind cluster with
 >   an ingress-ready config, so it is **kind-only** for the install step.
 > - **Shared cluster:** the controller already exists; your facilitator gives you a

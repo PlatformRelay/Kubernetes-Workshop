@@ -456,6 +456,7 @@ cluster-scoped): the PV inherits the StorageClass's policy, so read it there. Su
 $ kubectl get sc <your-default-sc> -o jsonpath='{.reclaimPolicy}'; echo
 Delete
 ```
+
 </details>
 
 ## Expected observations

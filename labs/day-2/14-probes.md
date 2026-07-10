@@ -575,6 +575,7 @@ $ kubectl apply -f deployment-probes.yaml && kubectl rollout status deployment/w
 deployment.apps/web configured
 deployment "web" successfully rolled out
 ```
+
 </details>
 
 ## Cleanup / panic reset

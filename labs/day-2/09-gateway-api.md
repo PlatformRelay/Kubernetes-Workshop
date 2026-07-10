@@ -16,6 +16,7 @@ break the `gatewayClassName` to watch `Accepted` flip. Red-line step **5 of 5** 
 front door **replaces** Lab 08's `ingress.yaml`; the backends do not change.
 
 > **Environment honesty.** Gateway API is **CRDs + a controller**, exactly like Ingress.
+>
 > - **kind:** you install both yourself (admin) — this path is **kind-only** for the
 >   install step.
 > - **Shared cluster:** the CRDs and a controller are **pre-provided**; your facilitator
@@ -232,6 +233,7 @@ $ kubectl describe gateway web | sed -n '/Conditions/,/Listeners/p'
     Type: Accepted     Status: True   Reason: Accepted
     Type: Programmed   Status: True   Reason: Programmed
 ```
+
 </details>
 
 ---

@@ -20,9 +20,11 @@ and the `latest` **tag** — by breaking them on purpose.
 - A terminal you can copy-paste into. Lab 00 is not required for this one.
 
 > **Which engine?** Every command below uses `$ENGINE` so it works for all three. Set it once:
+>
 > ```bash
 > export ENGINE=docker      # or: export ENGINE=podman   /   export ENGINE=nerdctl
 > ```
+>
 > Podman and nerdctl are near drop-in replacements for the `docker` CLI used here.
 
 ## Files used
@@ -247,6 +249,7 @@ IMAGE     CREATED         CREATED BY                        SIZE
 <id>      1 minute ago    COPY . .                          380B     <-- your source
 ...       (base golang:1.24 layers below)
 ```
+
 </details>
 
 Now change the source and rebuild:

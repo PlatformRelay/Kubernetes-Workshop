@@ -26,9 +26,11 @@ This is the build-time half of security. Day 3 (S17/S25) enforces the runtime ha
 - **Optional** (Step 6 only): [cosign](https://docs.sigstore.dev/) for signing. Skippable.
 
 > **Which engine?** Every command uses `$ENGINE` so it works for all three. Set it once:
+>
 > ```bash
 > export ENGINE=docker      # or: export ENGINE=podman   /   export ENGINE=nerdctl
 > ```
+>
 > `--mount=type=secret` and `--secret` (Step 3) are BuildKit features — on Docker they're on by
 > default; Podman and nerdctl support the same `--secret` flag.
 
@@ -226,6 +228,7 @@ Total: 0 (HIGH: 0, CRITICAL: 0)
 ```
 
 Three fixes, compounding:
+
 - **Multi-stage** — the toolchain stays in the `build` stage and is discarded (~860 MB → ~9 MB).
 - **Distroless static base** — almost no OS packages means almost nothing for the scanner to flag.
 - **Non-root `USER 65532`** — an escape from this container lands as an unprivileged UID, not root.
