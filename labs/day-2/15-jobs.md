@@ -422,7 +422,7 @@ The Job schedules Pods in waves of `parallelism` (2 at a time) until it reaches 
 (6 successes), then stops. `kubectl get pods -l app=s15` shows six `Completed` worker Pods. This
 is the built-in fan-out for embarrassingly-parallel batch work — no external queue needed for
 the simple fixed-count case. (For a dynamic work queue, drop `completions` and have workers pull
-until the queue is empty.) Clean up: `kubectl delete job batch -l app=s15`.
+until the queue is empty.) Clean up: `kubectl delete job batch`.
 </details>
 
 ---
