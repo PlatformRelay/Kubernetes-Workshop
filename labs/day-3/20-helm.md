@@ -519,7 +519,10 @@ artifacts by tag/digest. This is the recommended distribution model today — on
 auth story for both images and charts. Clean up: `helm uninstall web2`, then
 `docker rm -f registry`.
 
-> **Non-enforcing / restricted namespace:** if a namespace enforces PSA `restricted` (from
-> S17), the plain chart still admits — `nginx-unprivileged` runs as non-root UID 101. If you
-> swap in a root image, add the `securityContext` from Lab 17 to `values.yaml`/the template.
+> **Restricted namespace:** if a namespace enforces PSA `restricted` (from S17), the plain
+> chart is **rejected** — even though `nginx-unprivileged` runs as non-root UID 101, the
+> template sets **no `securityContext`**, and a non-root image is necessary but not sufficient.
+> `restricted` also gates `runAsNonRoot: true`, `allowPrivilegeEscalation: false`,
+> `capabilities.drop: ["ALL"]`, and `seccompProfile.type: RuntimeDefault`. To make it admit,
+> add those four fields (the `securityContext` from Lab 17) to `values.yaml`/the template.
 </details>
