@@ -203,6 +203,7 @@ your namespace in `Completed` Pods. **Suspend it now so it stops firing while yo
 $ kubectl patch cronjob report -p '{"spec":{"suspend":true}}'
 cronjob.batch/report patched
 ```
+
 </details>
 
 ---
@@ -348,6 +349,7 @@ differ?
   concurrently — fine for a fast, idempotent job, dangerous for a slow stateful one.
 - **`Replace`**: the CronJob **kills the still-running** Job and starts a fresh one, so only the
   newest run survives — useful when only the latest result matters.
+
 </details>
 
 ## Expected observations

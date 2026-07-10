@@ -256,6 +256,7 @@ very different questions:
 $ kubectl run probe --image=nginx:1.29 -n "$NS" --dry-run=server -o yaml >/dev/null; echo "exit: $?"
 exit: 0
 ```
+
 </details>
 
 **Question:** you're about to `apply` an important manifest. Which dry-run do you run
@@ -305,6 +306,7 @@ and namespace before Lab 05, which is the first lab that actually **creates** an
 ```bash
 kubectl config view --minify | grep namespace:
 ```
+
 </details>
 
 ## Stretch (optional)

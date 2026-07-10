@@ -56,6 +56,7 @@ workshop-cp       Ready    control-plane   4h    v1.3x.y   172.18.0.2    Debian 
   shows many worker nodes and their roles.
 - **CONTAINER-RUNTIME** shows `containerd://…` (or `cri-o://…`) — the CRI runtime the
   kubelet drives. Kubernetes doesn't run containers itself; it tells this runtime to.
+
 </details>
 
 <details><summary>Shared cluster: got <code>Error ... "nodes" is forbidden</code>?</summary>
@@ -304,6 +305,7 @@ decided *which node* the Pod's `spec` runs on?
 - The **scheduler** set `spec.nodeName` — it watched for a Pod with no node and bound
   one. It only *decides*; the kubelet does the running. Both talk **only** to the API
   server, never to etcd directly.
+
 </details>
 
 ---

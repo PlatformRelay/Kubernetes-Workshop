@@ -125,6 +125,7 @@ qos-besteffort   BestEffort
 - **Guaranteed** — *every* container sets *both* cpu & memory, and for each `request == limit`.
 - **BestEffort** — *no* container sets *any* request or limit.
 - **Burstable** — anything in between (at least one request/limit set, but not Guaranteed).
+
 </details>
 
 **Question:** if you delete the `limits` from `qos-guaranteed` but keep the `requests`, what
@@ -138,6 +139,7 @@ QoS class does it become — and what if instead you delete the `requests` and k
 - **limits only** (no requests) → still **Guaranteed**. This is the gotcha: when you set a
   limit but no request, Kubernetes **copies the limit into the request**, so `request == limit`
   holds and both are set → Guaranteed. Setting only limits is a valid way to get Guaranteed.
+
 </details>
 
 ---
@@ -349,6 +351,7 @@ exist. Fix by requesting within budget:
 $ sed 's/512Mi/128Mi/g' quota-buster.yaml | kubectl apply -f -
 pod/quota-buster created
 ```
+
 </details>
 
 **Question:** what happens if you submit a Pod with **no** `resources` while this quota is in
