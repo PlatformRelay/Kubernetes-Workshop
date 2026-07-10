@@ -1,0 +1,51 @@
+name: CI
+
+# Fast gate on every PR and every push to main: lint the labs and build all
+# three root decks so a broken deck or malformed lab fails review. PDF export
+# (slow, needs a headless browser) is intentionally left to the release job.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Slidev + pnpm must run non-interactively; pnpm 11 otherwise prompts on its
+  # dependency-build allowlist. (GitHub Actions also sets CI=true itself.)
+  CI: "true"
+
+jobs:
+  lint:
+    name: Lint labs (markdown)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+
+  build:
+    name: Build root decks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Build superset, 3-day cut, and templates gallery
+        run: |
+          pnpm run build
+          pnpm run build:3day
+          pnpm run build:templates
