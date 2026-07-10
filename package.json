@@ -2,6 +2,7 @@
   "name": "kubernetes-practitioner-workshop",
   "type": "module",
   "private": true,
+  "packageManager": "pnpm@11.9.0",
   "scripts": {
     "dev": "slidev slides.md --open",
     "dev:3day": "slidev slides-3day.md --open",
@@ -11,7 +12,9 @@
     "build:templates": "slidev build slides-templates.md --base /templates/ --out dist-templates",
     "export": "slidev export slides.md",
     "export:3day": "slidev export slides-3day.md --output slides-3day-export",
-    "export:templates": "slidev export slides-templates.md --output slides-templates-export"
+    "export:templates": "slidev export slides-templates.md --output slides-templates-export",
+    "lint": "markdownlint-cli2",
+    "lint:fix": "markdownlint-cli2 --fix"
   },
   "dependencies": {
     "@slidev/cli": "^52.16.0",
@@ -20,6 +23,7 @@
     "vue": "^3.5.33"
   },
   "devDependencies": {
+    "markdownlint-cli2": "^0.23.0",
     "playwright-chromium": "^1.61.1"
   }
 }

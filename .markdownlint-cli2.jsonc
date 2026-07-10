@@ -1,0 +1,32 @@
+{
+  // markdownlint-cli2 config for the workshop.
+  //
+  // SCOPE: only the standalone labs are linted. The Slidev deck sources
+  // (`slides*.md` and `pages/**/*.md`) use Slidev's multi-frontmatter syntax —
+  // every slide is separated by a `---` fence and may carry its own YAML
+  // headmatter. markdownlint only understands the FIRST frontmatter block, so it
+  // mis-reads every slide separator as a thematic break / setext heading and
+  // floods the report with false positives. There is no rule toggle that fixes
+  // this, so the deck sources are excluded by scoping the globs to `labs/`.
+  // The labs are plain, standalone CommonMark where linting earns real value.
+  "globs": ["labs/**/*.md"],
+  "config": {
+    "default": true,
+    // Labs embed long command lines, wide YAML blocks, and reference tables.
+    "MD013": false,
+    // Labs use <details>/<summary> spoilers by authoring contract (AGENT.md).
+    "MD033": false,
+    // Repeated step sub-headings ("Check", "Solution") recur under different
+    // parent steps — allow duplicates as long as they are not siblings.
+    "MD024": { "siblings_only": true },
+    // Labs intentionally show `$ command` prompts in some transcripts; this
+    // rule is purely stylistic and fights that convention.
+    "MD014": false,
+    // Tabs are significant inside some fenced code (Makefiles, tab-indented
+    // heredocs) — only flag hard tabs in prose, not in code blocks.
+    "MD010": { "code_blocks": false },
+    // Labs use consecutive-but-separate callout blockquotes; the blank line
+    // between two adjacent blockquotes is intentional, not an accidental split.
+    "MD028": false
+  }
+}
