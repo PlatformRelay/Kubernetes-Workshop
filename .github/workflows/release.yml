@@ -1,0 +1,53 @@
+name: Release
+
+# Runs ONLY on version tags (e.g. `v1.2.0`). Exports the two delivery decks —
+# the full superset and the canonical 3-day cut — to PDF and attaches them to a
+# GitHub Release. Ordinary pushes never release; cut a release by tagging:
+#
+#   git tag v1.2.0 && git push origin v1.2.0
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write # create the release and upload the PDF assets
+
+env:
+  CI: "true"
+
+jobs:
+  release:
+    name: Export PDFs and publish release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: Install Chromium system dependencies
+        # The browser binary itself is fetched by playwright-chromium's
+        # postinstall; this adds the OS libraries slidev export needs headless.
+        run: pnpm exec playwright install-deps chromium
+
+      - name: Export decks to PDF
+        # slidev appends `.pdf`; GITHUB_REF_NAME is the tag (e.g. v1.2.0).
+        run: |
+          pnpm exec slidev export slides.md \
+            --output "kubernetes-workshop-full-${GITHUB_REF_NAME}"
+          pnpm exec slidev export slides-3day.md \
+            --output "kubernetes-workshop-3day-${GITHUB_REF_NAME}"
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            kubernetes-workshop-full-*.pdf
+            kubernetes-workshop-3day-*.pdf
+          fail_on_unmatched_files: true
+          generate_release_notes: true
