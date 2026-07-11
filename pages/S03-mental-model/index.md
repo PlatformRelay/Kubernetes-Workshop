@@ -134,7 +134,7 @@ the loops we animate next. etcd as "memory" lands the spec-vs-status slide later
 
 <div v-click="4" class="mt-6 kw-muted text-sm">
 
-That runtime box is the same **CRI chain from the container runtime** — `kubelet → CRI → OCI runtime →
+That runtime box is the same **CRI chain from the containers section** — `kubelet → CRI → OCI runtime →
 namespaces + cgroups`. Kubernetes schedules Pods; the node's runtime is still just
 Linux isolating processes.
 
