@@ -524,6 +524,7 @@ $ENGINE rm -f lab-registry 2>/dev/null || true
 $ENGINE rmi -f demo:insecure demo:secret-rm demo:hardened localhost:5000/demo:hardened 2>/dev/null || true
 
 # remove extracted layers, generated artifacts, and the project
+rm -f sbom.json                                   # SBOM from Step 4
 rm -rf /tmp/dig /tmp/dig2 && cd .. && rm -rf app
 ```
 

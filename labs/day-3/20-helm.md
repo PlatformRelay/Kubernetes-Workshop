@@ -460,6 +460,10 @@ One `Secret` per revision, right there in your namespace — this **is** the rel
 # one command removes the workload AND all the revision history
 helm uninstall web
 
+# if you did the OCI stretch: remove the second release and the local registry
+helm uninstall web2 2>/dev/null || true      # the release installed from oci://localhost:5000
+docker rm -f registry 2>/dev/null || true    # the throwaway registry:2 container
+
 # tidy the local files
 rm -rf demo-app values-prod.yaml demo-app-*.tgz
 
