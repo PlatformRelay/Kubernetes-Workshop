@@ -400,6 +400,8 @@ helpful: it **lists the three valid values**. Whenever an Ingress won't apply, r
 ```bash
 kubectl delete -f ingress.yaml -f backends.yaml --ignore-not-found
 rm -f ingress-no-pathtype.yaml   # the broken copy never applied; just a local file
+kubectl delete secret web-tls --ignore-not-found   # TLS Secret from the stretch (if you did it)
+rm -f tls.key tls.crt                              # self-signed cert files from the stretch
 # full namespace reset:
 kubectl delete ingress,svc,deploy,rs,pod,configmap --all -n "$NS" --ignore-not-found
 
