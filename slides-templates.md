@@ -753,15 +753,15 @@ heading: 'Variant A — pure Vue + CSS transitions'
 
 ---
 layout: code-walkthrough
-heading: 'Variant B — @vueuse/motion'
+heading: 'Variant B — @vueuse/motion (rejected)'
 ---
-
-<PodReplaceMotion />
 
 <div class="mt-4 text-sm kw-muted">
 
-`v-motion` variants with spring physics. Nice easing for free — but leave animations need extra
-wiring, and it adds a runtime dependency.
+`v-motion` variants with spring physics would give nice easing for free — but leave animations
+need extra wiring, and it adds a runtime dependency. **Rejected** in ADR 0001, so the live demo
+component was removed; kept here only as a labelled tradeoff row in the comparison table below.
+See `docs/decisions/0001-animation-technology.md`.
 
 </div>
 

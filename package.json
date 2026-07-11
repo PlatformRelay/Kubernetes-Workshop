@@ -19,7 +19,6 @@
   "dependencies": {
     "@slidev/cli": "^52.16.0",
     "@slidev/theme-default": "latest",
-    "@vueuse/motion": "^2.2.6",
     "vue": "^3.5.33"
   },
   "devDependencies": {
