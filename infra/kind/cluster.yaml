@@ -1,0 +1,31 @@
+# Local workshop cluster (ADR 0006) — single node; every lab is
+# single-node-safe.
+#
+# NOTE: the node image is intentionally NOT set here. kind configs cannot
+# interpolate variables, so the Makefile passes `--image` from the digest
+# pin in infra/versions.env (`make kind-up`). Do not add an `image:` field —
+# it would silently shadow the pin.
+#
+# The cluster name must match WORKSHOP_CLUSTER_NAME in infra/versions.env.
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: workshop
+nodes:
+  - role: control-plane
+    # Label the node so ingress/gateway controllers that select
+    # `ingress-ready=true` (the standard kind pattern) schedule here.
+    kubeadmConfigPatches:
+      - |
+        kind: InitConfiguration
+        nodeRegistration:
+          kubeletExtraArgs:
+            node-labels: "ingress-ready=true"
+    # Publish 80/443 on the host so the ingress (day 1) and Gateway API
+    # (day 2) labs can curl http://localhost without port-forwards.
+    extraPortMappings:
+      - containerPort: 80
+        hostPort: 80
+        protocol: TCP
+      - containerPort: 443
+        hostPort: 443
+        protocol: TCP
