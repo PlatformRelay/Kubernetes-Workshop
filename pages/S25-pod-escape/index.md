@@ -290,7 +290,7 @@ manifest is what changed. This magic-move IS the lab's escape → block → hard
 
 ---
 
-<span class="kw-kicker">The same restricted gate from S17 — now admitting the hardened Pod</span>
+<span class="kw-kicker">The same restricted gate from Pod security — now admitting the hardened Pod</span>
 
 # The admission gate holds the line
 
@@ -333,19 +333,19 @@ demands least privilege — one namespace label closes the door the escape Pod w
 
 <div class="kw-cols-2 mt-3 text-sm">
   <v-click at="1">
-    <KwCard heading="S02 · image hygiene" icon="📦" variant="ok">
+    <KwCard heading="Image hygiene" icon="📦" variant="ok">
       Non-root <code>USER</code>, minimal base, no shell/tools to pivot with, scanned for known CVEs.
       A smaller image is a smaller foothold.
     </KwCard>
   </v-click>
   <v-click at="2">
-    <KwCard heading="S17 · restricted PSS + admission" kind="ns" variant="ok">
+    <KwCard heading="Restricted PSS + admission" kind="ns" variant="ok">
       <code>enforce: restricted</code> forbids <code>privileged</code>, <code>hostPath</code>, host
       namespaces, and demands drop-ALL + non-root + seccomp. <strong>This is the primary block.</strong>
     </KwCard>
   </v-click>
   <v-click at="3">
-    <KwCard heading="S18 · NetworkPolicy" kind="netpol" variant="ok">
+    <KwCard heading="NetworkPolicy" kind="netpol" variant="ok">
       Default-deny east-west traffic so a foothold can't freely scan and pivot to other Pods or the
       metadata endpoint.
     </KwCard>

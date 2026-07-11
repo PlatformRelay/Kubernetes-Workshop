@@ -262,7 +262,7 @@ watches the gate flip from Forbidden to created.
 
 <div class="kw-slide-dense">
 
-<span class="kw-kicker">Callback to S02 · admission ≠ runtime</span>
+<span class="kw-kicker">Callback to image hygiene · admission ≠ runtime</span>
 
 # `runAsNonRoot` is a promise the image must keep
 

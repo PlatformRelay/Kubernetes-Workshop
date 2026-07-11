@@ -256,7 +256,7 @@ before they run it.
 
 <div class="kw-slide-dense">
 
-<span class="kw-kicker">Dynamic provisioning · and a bridge to S12</span>
+<span class="kw-kicker">Dynamic provisioning · and a bridge to StatefulSets</span>
 
 # Who creates the PV — and when it binds
 
@@ -281,7 +281,7 @@ before they run it.
     Fine for one replica or <code>ReadWriteMany</code> — awkward when many RWO replicas
     need separate disks.
   </KwCard>
-  <KwCard heading="→ S12: per-Pod storage" icon="🔢" variant="ok">
+  <KwCard heading="→ StatefulSet: per-Pod storage" icon="🔢" variant="ok">
     <code>volumeClaimTemplates</code> mints one PVC per Pod — that's next.
   </KwCard>
 </div>

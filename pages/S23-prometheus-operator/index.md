@@ -81,7 +81,7 @@ Next: the mental model, called back to S22 explicitly.
 
 <div class="kw-slide-dense">
 
-<span class="kw-kicker">Mental model · S22 made concrete — a CRD + a controller you didn't write</span>
+<span class="kw-kicker">Mental model · the operator pattern made concrete — a CRD + a controller you didn't write</span>
 
 # The operator watches CRs and **generates the scrape config**
 
@@ -104,7 +104,7 @@ Next: the mental model, called back to S22 explicitly.
 
 <div v-click="3" class="mt-4 text-sm">
 
-<span class="kw-kicker">this is literally S22</span>
+<span class="kw-kicker">this is literally the operator pattern</span>
 
 Recall the equation: **operator = CRD + custom controller running observe → diff → act.** Here the
 **CRDs** are `ServiceMonitor`/`PodMonitor` (your intent) and the **controller** is the Prometheus

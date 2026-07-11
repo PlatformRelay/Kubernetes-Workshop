@@ -84,7 +84,7 @@ loop run the runbook forever. Next: recall the loop that makes this possible.
 
 ---
 
-<span class="kw-kicker">Recall from S03 · the one loop everything runs on</span>
+<span class="kw-kicker">Recall from the mental model · the one loop everything runs on</span>
 
 # The control loop is the foundation: observe → diff → act
 

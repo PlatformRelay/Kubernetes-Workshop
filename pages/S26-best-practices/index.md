@@ -512,7 +512,7 @@ labels right. The fixed Deployment on these slides IS the lab's fixed file.
 
 ---
 
-<span class="kw-kicker">The same restricted gate from S17 — it checks the Pod, not the Deployment</span>
+<span class="kw-kicker">The same restricted gate from Pod security — it checks the Pod, not the Deployment</span>
 
 # The checklist meets admission
 
