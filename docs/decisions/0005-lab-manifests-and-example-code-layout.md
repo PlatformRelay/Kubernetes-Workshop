@@ -1,8 +1,13 @@
 # ADR 0005: Lab manifests and example-code layout
 
-- **Status:** accepted
+- **Status:** superseded by [0009](0009-single-file-lab-convention.md)
 - **Scope:** the internal layout of a lab folder — where a lab's Markdown, manifests, example
   application code, and reference solutions live, and how slides reference them.
+
+> **Superseded.** This ADR mandated a per-lab folder tree (`manifests/`, `broken/`, `solutions/`,
+> `src/`). No shipped lab adopted it — the corpus uses a single Markdown file per lab with in-file
+> manifest heredocs. [ADR 0009](0009-single-file-lab-convention.md) records the convention the
+> corpus actually uses and supersedes this one. Kept for history.
 
 ## Context
 
