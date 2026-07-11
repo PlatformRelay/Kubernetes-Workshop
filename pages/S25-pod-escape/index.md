@@ -440,7 +440,7 @@ category on your own criteria — this workshop endorses none. Keep it vendor-ne
 
 ---
 layout: recap
-heading: 'Debrief — you saw the escape so you could close it'
+heading: 'Recap — you saw the escape so you could close it'
 story: 'A privileged Pod with the host root mounted read the node''s filesystem. Then one namespace label — enforce: restricted — rejected that exact Pod at admission, before it could ever exist.'
 next: 'Day 3 security track complete — image hygiene (S02), pod security (S17), network policy (S18), and the escape they defend against, all one story'
 ---

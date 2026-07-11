@@ -23,7 +23,7 @@ Beats: problem (no resources → contention + unschedulable) · mental model (re
 scheduling, limits drive enforcement) · code-annotated (the requests/limits block on the web
 Deployment) · magic-move (no resources → +requests → +limits) · ResourcePressure animation
 (throttle vs OOMKill asymmetry) · QoS classes (Guaranteed/Burstable/BestEffort, precise
-rules) · namespace guardrails (LimitRange vs ResourceQuota) · debrief → lab.
+rules) · namespace guardrails (LimitRange vs ResourceQuota) · recap → lab.
 Animation: ResourcePressure.vue (new, self-contained). DEVIATION from the story's suggested
 "scheduling fits/doesn't-fit" animation: the memorable state transition in S13 is the
 throttle-vs-kill asymmetry, not scheduling — so the animation illustrates that instead.
@@ -375,12 +375,12 @@ interaction the lab exploits: once a quota constrains say requests.memory, a Pod
 fails with "must specify requests.memory", while a Pod that SETS IT TOO HIGH fails with
 "exceeded quota" — two different errors, and LimitRange's defaults are what save you from the
 first. Both reject at admission, so the Pod never exists — contrast that with the OOMKill,
-which happens to a Pod that very much exists. That contrast is the debrief question.
+which happens to a Pod that very much exists. That contrast is the recap question.
 -->
 
 ---
 layout: recap
-heading: 'Debrief — reserve, cap, and know the enforcement path'
+heading: 'Recap — reserve, cap, and know the enforcement path'
 story: 'The OOMKilled container came back (RESTARTS 1); the Pod that broke the quota never existed at all — runtime vs admission enforcement.'
 next: 'S14 · Health probes — readiness, liveness, startup, and how they gate traffic vs restart'
 ---
@@ -394,7 +394,7 @@ next: 'S14 · Health probes — readiness, liveness, startup, and how they gate 
 <!--
 Speaker: land the through-line. The mental hook is the two enforcement moments: admission
 (before the object exists — quota/LimitRange say "no, never") vs runtime (the object exists
-and misbehaves — throttle or OOMKill). That's literally the debrief question in the lab: "why
+and misbehaves — throttle or OOMKill). That's literally the recap question in the lab: "why
 was the OOMKilled container restarted but the quota-violating Pod never created?" — because one
 is enforced by the kubelet at runtime and the other by the API server at admission. Right-size
 by watching real usage (kubectl top, metrics) and set requests to the steady state, limits to

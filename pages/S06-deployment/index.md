@@ -20,7 +20,7 @@ Outcome: learners can wrap a Pod in a Deployment, explain the
 Deployment→ReplicaSet→Pod chain, drive a rolling update, and roll back.
 Beats: problem (bare Pods don't heal/scale) · ownership chain · magic-move
 extend pod.yaml → deployment.yaml · rolling update animation (US-X2) ·
-rollout verbs + recommended labels · scaling (spec vs status) · debrief to S07.
+rollout verbs + recommended labels · scaling (spec vs status) · recap to S07.
 Red line: the deployment.yaml built here IS labs/day-1/06-deployment's manifest,
 and it wraps S05's pod.yaml unchanged under spec.template. CKx: CKAD Deployments,
 rolling updates & rollbacks.
@@ -324,7 +324,7 @@ Note HPA later automates the replica number.
 
 ---
 layout: recap
-heading: 'Debrief — you edit desire, the controller does the work'
+heading: 'Recap — you edit desire, the controller does the work'
 next: 'S07 · Service — a stable address in front of these churning Pods'
 ---
 

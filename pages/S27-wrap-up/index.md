@@ -254,7 +254,7 @@ You started at *"what is a container"* and you can now **author, run, secure, de
 <div class="mt-4 text-sm">
 
 - **Feedback & contributions welcome** — this deck and its labs are **open source**. Open an issue or a PR: a confusing step, a better break→fix, a section you'd add.
-- **Keep the rhythm:** explain → run → **observe → break it → fix it** → debrief. It works outside this room too.
+- **Keep the rhythm:** explain → run → **observe → break it → fix it** → recap. It works outside this room too.
 - **Everything is yours to keep** — the slides, every lab, and the S26 production checklist.
 
 </div>

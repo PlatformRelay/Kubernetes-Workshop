@@ -25,7 +25,7 @@ Beats: problem (fs + emptyDir are ephemeral) · mental model (PVC=request → PV
 StorageClass=provisioner) · access modes + reclaim policy · magic-move (emptyDir → PVC
 referencing a StorageClass, mounted) · PVC-binding animation (bind → write → delete Pod →
 data survives) · provisioning + binding mode (WaitForFirstConsumer; Deployments mount
-PVCs too → sets up S12) · debrief → lab.
+PVCs too → sets up S12) · recap → lab.
 Optional shared animation: PvcBinding.vue (new, self-contained). CKx: CKA/CKAD storage —
 PV, PVC, StorageClass, access modes, reclaim policy, dynamic provisioning.
 -->
@@ -301,7 +301,7 @@ it reuses this same PVC/StorageClass model. CKA/CKAD storage domain lands here.
 
 ---
 layout: recap
-heading: 'Debrief — data that outlives the Pod'
+heading: 'Recap — data that outlives the Pod'
 story: 'The sentinel file survived a Pod delete because the PVC outlived the Pod — storage has its own lifecycle.'
 compact: true
 next: 'S12 · StatefulSet — stable identity + per-Pod storage (volumeClaimTemplates)'

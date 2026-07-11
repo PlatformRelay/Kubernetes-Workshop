@@ -26,7 +26,7 @@ cluster/namespace + syncPolicy) · three behaviours (sync / self-heal / drift) �
 magic-move building the Application manifest (== the lab's application.yaml) ·
 reconcile-loop animation with GIT as the desired-state source (reuse ReconcileLoop,
 callback to S03, forward to S22) · sync status vs health status (two axes) ·
-OpenGitOps four principles · debrief → S22 · lab.
+OpenGitOps four principles · recap → S22 · lab.
 
 Animation: REUSE ReconcileLoop (US-X1, built in S03) — pass controller="Argo CD",
 resource="replica", desiredSource="Git". This is the reuse guardrail in action: the
@@ -456,13 +456,13 @@ OpenGitOps working group pinned four principles: (1) DECLARATIVE — desired sta
 PULLED AUTOMATICALLY — agents pull it (vs a CI job pushing with cluster creds); (4)
 CONTINUOUSLY RECONCILED — agents keep converging actual toward desired. Argo CD and Flux
 are two implementations; the principles are tool-agnostic. Tie the bow: this entire
-section is principle #4 (the reconcile loop) enforcing #1–3. Next: debrief and hand to
+section is principle #4 (the reconcile loop) enforcing #1–3. Next: recap and hand to
 the lab.
 -->
 
 ---
 layout: recap
-heading: 'Debrief — Git is the source of truth, the cluster converges to it'
+heading: 'Recap — Git is the source of truth, the cluster converges to it'
 story: 'Push-based apply left drift undetected. We flipped the arrow: an in-cluster agent (Argo CD) watches an Application''s Git source and continuously reconciles the cluster toward it — sync applies Git, drift detection reports divergence, and self-heal reverts hand-edits automatically. The same S03 reconcile loop, with Git in the desired slot.'
 next: 'S22 · The operator pattern — the same reconcile loop again, this time driven by your own CRD'
 ---

@@ -32,7 +32,7 @@ back explicitly) · the four CRDs (Prometheus/ServiceMonitor/PodMonitor/Alertman
 golden signals + metrics vs logs vs traces · the two standard sources (kube-state-metrics +
 node-exporter) · code-annotated (a ServiceMonitor selecting a Service by label + named port) ·
 magic-move (ServiceMonitor selects Service → target appears in Prometheus → one PromQL query
-returns data) · a taste of PromQL (rate() over a counter) · debrief → lab.
+returns data) · a taste of PromQL (rate() over a counter) · recap → lab.
 Animation: NONE (guardrail: S23 is "made concrete" — magic-move + comparison + cards). Do NOT
 author a Vue component. ReconcileLoop reuse is optional and not used here; the teaching device is
 the ServiceMonitor→scrape-config generation, shown via the code-annotated + magic-move slides.
@@ -477,12 +477,12 @@ spike. {code="200"} is a label matcher — PromQL is a label-selection language,
 label-thinking as Services and NetworkPolicy, applied to time-series. Land the golden-signals tie:
 sum(rate(http_requests_total[5m])) = total traffic (signal 2); the same with code=~"5.." over total
 = the error rate (signal 3). One function turns a boring counter into the two most important signals.
-This is the query the learner runs against their own app in the lab. Next: debrief, then go do it.
+This is the query the learner runs against their own app in the lab. Next: recap, then go do it.
 -->
 
 ---
 layout: recap
-heading: 'Debrief — declare monitoring intent; let the operator write the config'
+heading: 'Recap — declare monitoring intent; let the operator write the config'
 story: 'Hand-editing scrape config against ephemeral Pods is impossible. So monitoring became declarative: you apply a ServiceMonitor CR that selects a Service by label and names its metrics port, and the Prometheus Operator — the S22 pattern shipped for real — watches it and generates the scrape config. The target appears in Prometheus, and one rate() query turns the scraped counter into a live request rate.'
 next: 'S24 · Operator dev 101 — you''ve USED operators (cert-manager, Prometheus); now peek at building one with kubebuilder'
 ---

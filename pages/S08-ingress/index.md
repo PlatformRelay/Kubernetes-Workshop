@@ -262,7 +262,7 @@ it reuses the same routing mental model. Bridge to S09 as red line 5/5 — Day 2
 
 ---
 layout: recap
-heading: 'Debrief — the full Day-1 spine, one manifest family'
+heading: 'Recap — the full Day-1 spine, one manifest family'
 next: 'S09 · Gateway API — the typed, role-separated successor to Ingress (red line 5/5)'
 ---
 

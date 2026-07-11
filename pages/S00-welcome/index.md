@@ -131,7 +131,7 @@ kind-only, or namespace: read-only. Nobody is left behind either way.
 <div v-click="4" class="mt-6 kw-muted text-sm">
 
 The teaching rhythm repeats all day: **explain → run → observe → break it on
-purpose → fix it → debrief.** The breakage is the point — that's where the
+purpose → fix it → recap.** The breakage is the point — that's where the
 learning is.
 
 </div>

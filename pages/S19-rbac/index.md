@@ -385,7 +385,7 @@ calls the API from inside a Pod to make this concrete.
 
 ---
 layout: recap
-heading: 'Debrief — the default is deny; you grant on purpose'
+heading: 'Recap — the default is deny; you grant on purpose'
 story: 'A ServiceAccount starts with nothing. A read-only Role listed the allowed verbs, a RoleBinding joined the two, and can-i --as proved it: get pods yes, delete pods no. Adding one verb to the Role flipped the answer — no restart, no rebind.'
 next: 'S21 · GitOps with Argo CD — a controller that reconciles your cluster as a ServiceAccount, scoped by exactly this RBAC'
 ---

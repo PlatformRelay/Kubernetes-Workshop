@@ -23,7 +23,7 @@ Beats: problem (Pod IPs are ephemeral — S06 churn proved it) · types (Cluster
 NodePort/LoadBalancer/ExternalName/headless) · mechanics (selector →
 EndpointSlices → Pods + DNS name) · magic-move add service.yaml · service-routing
 animation (US-X3, incl readiness variant → S14) · optional kube-proxy deep-dive
-(off by default) · debrief to S08.
+(off by default) · recap to S08.
 Red line: the service.yaml built here IS labs/day-1/07-service's manifest; it
 selects the S06 Deployment's app: web Pods. CKx: CKAD/CKA Services & networking.
 -->
@@ -234,7 +234,7 @@ that's why there's no bottleneck proxy Pod.
 
 ---
 layout: recap
-heading: 'Debrief — stable front door, live backend'
+heading: 'Recap — stable front door, live backend'
 story: 'After every rollout the Pod IPs changed, but `curl http://web` kept working — the selector rewrote the slice underneath.'
 next: 'S08 · Ingress — one L7 entry point routing by host and path'
 ---

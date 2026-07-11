@@ -27,7 +27,7 @@ Beats: problem (config baked in → rebuild per env) · mental model (two object
 consumption modes, subPath caveat) · magic-move (extend the web Deployment: +envFrom
 → +mounted file → +Secret env) · security (base64 ≠ encryption; Secret types) ·
 immutability (immutable: true tradeoff) · rotation gotcha (what updates, what doesn't;
-checksum trick) · debrief → lab.
+checksum trick) · recap → lab.
 No shared animation (per outline S10 has none; the rotation story is a live console
 sequence, not a state-machine). CKx: CKAD application-configuration.
 -->
@@ -331,7 +331,7 @@ why env didn't change but the file did.
 
 ---
 layout: recap
-heading: 'Debrief — config lives outside the image'
+heading: 'Recap — config lives outside the image'
 story: 'Ops edited the ConfigMap and wondered why the app still said "hi" — env was frozen; the mounted file caught up a minute later.'
 next: 'S11 · Storage — give the app a volume that survives a restart (Day 2 continues)'
 ---

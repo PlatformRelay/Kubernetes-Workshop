@@ -29,7 +29,7 @@ model (CRD + custom controller = operator) · code-annotated (a raw CRD register
 kind) · magic-move (CRD definition → sample CR → conceptual reconcile pseudo-code acting
 on it) · controller vs operator (operator = encoded operational knowledge) · CNCF
 Capability Levels 1→5 (conceptual, NO vendor names) · reconcile-loop animation driving a
-custom resource (reuse ReconcileLoop) · debrief → lab.
+custom resource (reuse ReconcileLoop) · recap → lab.
 
 Animation: REUSE ReconcileLoop (US-X1, built in S03; S21 reuses it for GitOps). Here pass
 controller="Backup operator", resource="Backup", desired=1, desiredSource="spec (your CR)",
@@ -450,12 +450,12 @@ upload, prune) → Repeat (in sync, keep watching, remake anything that vanishes
 through-line out loud: S03 = built-in loop; S21 = same loop with Git; S22 = same loop with
 YOUR CRD. One mechanism, three desired-state sources. Forward pointer straight into the lab:
 cert-manager is exactly this — its controller reconciles a Certificate into a Secret, and if
-you delete the Secret the loop recreates it. Next: debrief, then go feel it.
+you delete the Secret the loop recreates it. Next: recap, then go feel it.
 -->
 
 ---
 layout: recap
-heading: 'Debrief — extend the API, then let the loop run your runbook'
+heading: 'Recap — extend the API, then let the loop run your runbook'
 story: 'Some day-2 jobs — backup, failover, upgrade — aren''t any built-in kind; they''re a runbook that needs domain knowledge. An operator captures that: a CRD extends the API with a new kind, and a custom controller runs the S03 reconcile loop over instances of it, with your operational expertise in the "act" step. Same loop as S03 and S21 — new desired state.'
 next: 'S23 · A production operator in the wild — the same pattern, shipped and battle-tested'
 ---

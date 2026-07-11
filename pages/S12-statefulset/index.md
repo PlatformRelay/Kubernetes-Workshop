@@ -26,7 +26,7 @@ Beats: problem (interchangeable Pods are wrong for identity/data) · mental mode
 guarantees) · magic-move (headless Service clusterIP:None → StatefulSet serviceName +
 volumeClaimTemplates) · StatefulIdentity animation (ordered create → sentinel → delete
 web-1 → same name/PVC reattach) · ordered lifecycle + podManagementPolicy + partition ·
-PVC retention gotcha (currency) · debrief → lab.
+PVC retention gotcha (currency) · recap → lab.
 Animation: StatefulIdentity.vue (new, self-contained — the AC's "manifest-extends
 animation" has no existing component; S11 set the precedent of a per-section animation).
 CKx: CKAD/CKA workloads — StatefulSets, headless Services, volumeClaimTemplates.
@@ -323,7 +323,7 @@ it so nobody thinks manual-delete is the only option. Lab: cleanup deletes PVCs 
 
 ---
 layout: recap
-heading: 'Debrief — identity-bearing workloads'
+heading: 'Recap — identity-bearing workloads'
 story: 'Deleting web-1 felt catastrophic until it came back same-name with the same sentinel on data-web-1 — identity and disk stayed coupled.'
 next: 'S13 · Resources & limits — right-size what you run (requests, limits, QoS)'
 ---

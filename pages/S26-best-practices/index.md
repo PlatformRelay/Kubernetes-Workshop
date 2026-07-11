@@ -597,7 +597,7 @@ rollout, not once a year. That's the professional habit the whole course was bui
 
 ---
 layout: recap
-heading: 'Debrief — the whole course, as one list you run every time'
+heading: 'Recap — the whole course, as one list you run every time'
 story: 'One flawed Deployment failed a dozen checklist lines at once; fixed one line per step, it became production-ready — and the same restricted gate that rejected it now admits it.'
 next: 'S27 · Wrap-up & next steps — the red line, the Day-3 layers, and a checklist that ties them together'
 ---

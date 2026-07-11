@@ -384,7 +384,7 @@ are current CNCF-ecosystem tools; only HPA is built into core and in scope here.
 
 ---
 layout: recap
-heading: 'Debrief — and that closes Day 2'
+heading: 'Recap — and that closes Day 2'
 story: 'The herd grew from 2 to 10 under load and drifted back to 2 after the window — the replica count is no longer a number you guess, it is a signal the cluster tracks.'
 next: 'Day 3 · S17 Pod security — lock down what a container may do at runtime'
 ---

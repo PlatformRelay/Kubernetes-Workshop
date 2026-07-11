@@ -23,7 +23,7 @@ Beats: problem (root + writable rootfs on a shared kernel → foreshadows S25) �
 (container vs pod-level securityContext; PSS ladder privileged/baseline/restricted) ·
 code-annotated (the four restricted gates) · magic-move (insecure → four gates PASS restricted →
 +readOnlyRootFilesystem, BEYOND restricted) · S02 callback + the runtime landmine · PSA via
-namespace labels (enforce/warn/audit) · AdmissionGate animation · debrief → S25 · lab.
+namespace labels (enforce/warn/audit) · AdmissionGate animation · recap → S25 · lab.
 Animation: AdmissionGate.vue (new, self-contained) — request → PSA check → deny then admit.
 ACCURACY LOCKS (verified against the current Pod Security Standards doc):
 - `restricted` gates EXACTLY four spec fields for a plain Pod: runAsNonRoot:true,
@@ -393,7 +393,7 @@ the whole loop the learner runs in Lab 17.
 
 ---
 layout: recap
-heading: 'Debrief — least privilege, and who enforces it when'
+heading: 'Recap — least privilege, and who enforces it when'
 story: 'The insecure Pod was refused before it existed (admission); the same Pod, hardened, walked straight in. readOnlyRootFilesystem then broke the app at runtime — a different layer, a different fix.'
 next: 'S18 · NetworkPolicy — the network complement: default-deny pod-to-pod traffic and explicit allows'
 ---

@@ -23,7 +23,7 @@ history limits), and know when a Job beats a Deployment.
 Beats: problem (a Deployment restarts forever — wrong for finite work) · mental model (Job =
 run-to-completion, CronJob = scheduled Jobs) · code-annotated (Job knobs, restartPolicy caveat)
 · magic-move (one-shot Job → wrap in a CronJob jobTemplate) · CronJob controls (concurrency,
-history, timeZone) · decision beat (Job vs Deployment vs CronJob) · debrief → lab.
+history, timeZone) · decision beat (Job vs Deployment vs CronJob) · recap → lab.
 CKx: CKAD Workloads (batch) — explicit exam item.
 -->
 
@@ -349,7 +349,7 @@ they'll run a Job, schedule a CronJob, and force a failure into BackoffLimitExce
 
 ---
 layout: recap
-heading: 'Debrief — some work is supposed to finish'
+heading: 'Recap — some work is supposed to finish'
 story: 'The report Job exited 0 and stayed Complete; wrapped in a CronJob it reran every night — a Deployment would have looped it forever.'
 next: 'S16 · Autoscaling (HPA) — scale a running Deployment on live CPU demand'
 ---

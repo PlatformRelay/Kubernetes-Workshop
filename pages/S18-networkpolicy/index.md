@@ -25,7 +25,7 @@ policy to select a Pod flips that direction to default-deny; policies are additi
 code-annotated (the two-line default-deny) · magic-move (build allow-frontend-to-backend field by
 field; final frame == the lab's file) · selectors (podSelector vs namespaceSelector; the AND/OR
 gotcha; ingress vs egress) · CNI caveat (unenforced = silent no-op → the lab self-tests) ·
-NetworkFence animation · debrief → S25 · lab.
+NetworkFence animation · recap → S25 · lab.
 Animation: NetworkFence.vue (new, self-contained) — flat → default-deny fence → one gate open.
 NOT a reuse of AdmissionGate.vue: that is admission-time (a Pod CREATE request denied before it
 exists); this is runtime pod-to-pod TRAFFIC allowed/dropped by the CNI — a different layer, so a
@@ -367,7 +367,7 @@ the only thing that changed is which policies select it. That's the whole loop o
 
 ---
 layout: recap
-heading: 'Debrief — deny by selecting, allow on purpose'
+heading: 'Recap — deny by selecting, allow on purpose'
 story: 'The flat network let everything reach the backend. One default-deny policy fenced it off — every caller timed out. A single allow-from-frontend rule opened exactly one gate, and only the frontend got back in.'
 next: 'S19 · RBAC — from "who may connect" to "who may act": identities, verbs, and least-privilege bindings'
 ---

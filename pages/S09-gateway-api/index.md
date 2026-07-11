@@ -280,7 +280,7 @@ memory. Contrast hard with S08's silent empty ADDRESS.
 
 ---
 layout: recap
-heading: 'Debrief — the red line is complete'
+heading: 'Recap — the red line is complete'
 story: 'One app, one manifest family — from a lone Pod to a typed Gateway front door, every step extended the last.'
 compact: true
 next: 'S10 · ConfigMap & Secret — separate config from the image (Day 2 continues)'

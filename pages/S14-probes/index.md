@@ -24,7 +24,7 @@ code-annotated (a readiness probe, every field decoded) · magic-move (+readines
 → +startup on the through-line web Deployment) · ServiceRouting animation REUSED (readiness
 fail drains one Pod from the EndpointSlice, zero downtime — the US-X3 variant the component was
 built for) · two-divergent-arrows fork (readiness ✗ = out of endpoints, no restart / liveness
-✗ = restart) · misconfig beat · debrief → lab.
+✗ = restart) · misconfig beat · recap → lab.
 Animation: ServiceRouting.vue REUSED per the AGENT.md reuse guardrail and the US-S14 AC
 ("reused animation, US-X3 variant, extends S07"); no new component. The liveness half of the
 "two divergent arrows" is a static KwCard fork, not a second animation.
@@ -396,7 +396,7 @@ the Events. That's the muscle memory the lab builds.
 
 ---
 layout: recap
-heading: 'Debrief — Running is a floor, not a promise'
+heading: 'Recap — Running is a floor, not a promise'
 story: 'Deleting one Pod''s readiness file drained it with zero downtime; pointing liveness at a dead port bounced the container until we fixed it — same symptom, opposite cure.'
 next: 'S15 · Jobs & CronJobs — workloads that run to completion, not forever'
 ---

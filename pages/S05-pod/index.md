@@ -21,7 +21,7 @@ lifecycle, and diagnose ImagePullBackOff.
 Beats: problem (K8s runs Pods, not containers) · mental model (shared context) ·
 lifecycle (phases + restartPolicy) · magic-move canonical pod.yaml ·
 run + observe · init/sidecar/imagePullSecrets · break (ImagePullBackOff) ·
-debrief punchline to Deployment. No shared animation.
+recap punchline to Deployment. No shared animation.
 Red-line seed: the pod.yaml built here IS labs/day-1/05-pod's manifest —
 S06/S07/S08 all extend it. CKx: CKAD Pod design & lifecycle.
 -->
@@ -327,7 +327,7 @@ status → read Events. Lab 05 has them do this hands-on and fix it.
 
 ---
 layout: recap
-heading: 'Debrief — the Pod you delete stays deleted'
+heading: 'Recap — the Pod you delete stays deleted'
 story: 'Mina fixed the crash, but deleting `web` still left the app down — no controller was watching.'
 next: 'S06 · Deployment — a controller that keeps your Pod alive'
 ---
