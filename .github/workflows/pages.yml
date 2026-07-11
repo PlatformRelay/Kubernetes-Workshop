@@ -44,10 +44,15 @@ jobs:
         uses: actions/configure-pages@v5
 
       - name: Build all three decks under the Pages base path
-        # base_path is the repo sub-path, e.g. "/kubernetes-workshop". The
-        # superset serves at the root; the cuts nest under it as sub-paths.
+        # The base path MUST carry the exact case of the repo name: GitHub Pages
+        # serves project sites at a case-sensitive path, and this repo is
+        # "Kubernetes-Workshop", so the site lives at /Kubernetes-Workshop/.
+        # We deliberately do NOT use steps.pages.outputs.base_path — it comes
+        # back lowercased ("/kubernetes-workshop"), so the SPA shell loaded but
+        # every asset 404'd and the deck rendered blank. github.event.repository
+        # .name preserves the canonical case and is set on push + dispatch.
         env:
-          BASE: ${{ steps.pages.outputs.base_path }}
+          BASE: /${{ github.event.repository.name }}
         run: |
           pnpm exec slidev build slides.md \
             --base "${BASE}/" --out site

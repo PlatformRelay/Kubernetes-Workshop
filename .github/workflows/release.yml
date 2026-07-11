@@ -1,8 +1,11 @@
 name: Release
 
-# Runs ONLY on version tags (e.g. `v1.2.0`). Exports the two delivery decks —
-# the full superset and the canonical 3-day cut — to PDF and attaches them to a
-# GitHub Release. Ordinary pushes never release; cut a release by tagging:
+# Runs ONLY on version tags (e.g. `v1.2.0`). Ships the delivery decks — the full
+# superset and the canonical 3-day cut — as two artifacts on a GitHub Release:
+#   1. PDF exports of each deck (print / hand-out friendly)
+#   2. a single .zip of the built static HTML decks with relative asset paths,
+#      so anyone can unzip it and open index.html offline (no server needed)
+# Ordinary pushes never release; cut a release by tagging:
 #
 #   git tag v1.2.0 && git push origin v1.2.0
 
@@ -43,11 +46,26 @@ jobs:
           pnpm exec slidev export slides-3day.md \
             --output "kubernetes-workshop-3day-${GITHUB_REF_NAME}"
 
+      - name: Build static HTML decks and bundle them
+        # Relative base ("./") makes every asset path relative, so the decks
+        # open straight from the filesystem after unzip — no web server, no
+        # base-path guesswork. Full deck at the bundle root; the 3-day cut and
+        # templates gallery nest under it, mirroring the Pages layout.
+        run: |
+          pnpm exec slidev build slides.md \
+            --base ./ --out site
+          pnpm exec slidev build slides-3day.md \
+            --base ./ --out site/3day
+          pnpm exec slidev build slides-templates.md \
+            --base ./ --out site/templates
+          ( cd site && zip -qr "../kubernetes-workshop-site-${GITHUB_REF_NAME}.zip" . )
+
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
             kubernetes-workshop-full-*.pdf
             kubernetes-workshop-3day-*.pdf
+            kubernetes-workshop-site-*.zip
           fail_on_unmatched_files: true
           generate_release_notes: true
