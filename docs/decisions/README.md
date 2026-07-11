@@ -23,10 +23,11 @@ shaped the way it is — not just *what* it looks like.
 | [0002](0002-repository-and-content-structure.md) | Repository and content structure | accepted |
 | [0003](0003-deck-composition-superset-and-boil-down.md) | Deck composition: superset + boil-down over one section library | accepted |
 | [0004](0004-parallel-slide-and-lab-authoring.md) | Slides and exercises are authored in parallel as a paired unit | accepted |
-| [0005](0005-lab-manifests-and-example-code-layout.md) | Lab manifests and example-code layout | accepted |
+| [0005](0005-lab-manifests-and-example-code-layout.md) | Lab manifests and example-code layout | superseded by 0009 |
 | [0006](0006-workshop-environment-and-iac.md) | Workshop environment provisioning and IaC | accepted |
 | [0007](0007-kubernetes-currency-and-version-pinning.md) | Kubernetes currency and version-pinning policy | accepted |
 | [0008](0008-validation-and-ci.md) | Validation and CI strategy | accepted |
+| [0009](0009-single-file-lab-convention.md) | Single-file labs with in-file manifest heredocs | accepted |
 
 ## Template
 
