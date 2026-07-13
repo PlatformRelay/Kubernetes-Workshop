@@ -160,7 +160,7 @@ spec:
     - host: web.example.com        # shared cluster: use your assigned hostname
       http:
         paths:
-          - path: /                # catch-all — the S07 `web` Service
+          - path: /                # catch-all — the `web` Service
             pathType: Prefix
             backend: { service: { name: web, port: { number: 80 } } }
 ```
@@ -248,7 +248,7 @@ an Ingress routes to Services, never straight to Pods.
 <div v-click class="mt-4 kw-muted text-sm">
 
 The fix is a typed, role-separated successor: **Gateway API** — red line **5/5**,
-next up in **S09.**
+next up.
 
 </div>
 
@@ -262,15 +262,15 @@ it reuses the same routing mental model. Bridge to S09 as red line 5/5 — Day 2
 
 ---
 layout: recap
-heading: 'Debrief — the full Day-1 spine, one manifest family'
-next: 'S09 · Gateway API — the typed, role-separated successor to Ingress (red line 5/5)'
+heading: 'Recap — the full Day-1 spine, one manifest family'
+next: 'Gateway API — the typed, role-separated successor to Ingress (red line 5/5)'
 ---
 
 - An **Ingress** is L7 HTTP rules (host + path + required `pathType`) that route to
   **Services** — the north-south front door a `ClusterIP` couldn't be
 - It is **inert without a controller**; `IngressClass` links them, and a missing
   controller = an Ingress with no address and no traffic (check that first)
-- `ingress.yaml` routes `/` to the S07 **`web`** Service and `/v2` to a second
+- `ingress.yaml` routes `/` to the **`web`** Service and `/v2` to a second
   backend, and can terminate **TLS** — red line 4/5
 - Day 1 built one growing family: **`pod.yaml` → `deployment.yaml` → `service.yaml`
   → `ingress.yaml`** — problem, mental model, minimal YAML, run, observe, break, fix

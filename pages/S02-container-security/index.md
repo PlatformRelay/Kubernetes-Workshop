@@ -107,7 +107,7 @@ and the root user are the two that graduate into runtime attacks (S17/S25).
 <div v-click="5" class="mt-5 kw-muted text-sm">
 
 These are all things you do at **build time**. Kubernetes enforces the runtime
-half later — Pod Security Standards, NetworkPolicy, admission (S17/S25).
+half later — Pod Security Standards, NetworkPolicy, admission.
 
 </div>
 
@@ -346,7 +346,7 @@ admit signed images) is S17/S25.
 layout: recap
 heading: 'Build-time security, in one arc'
 story: 'The on-call page wasn''t a runtime exploit — it was a bloated image that still carried a build secret in layer history.'
-next: 'S03 — the Kubernetes mental model: control plane, nodes, reconciliation'
+next: 'The Kubernetes mental model: control plane, nodes, reconciliation'
 ---
 
 - **Minimal / distroless base** → fewer packages, fewer CVEs, nothing to pivot through
@@ -358,8 +358,8 @@ next: 'S03 — the Kubernetes mental model: control plane, nodes, reconciliation
 <div class="mt-4 kw-muted text-sm">
 
 This is the **build-time** half. Kubernetes enforces the **runtime** half later —
-Pod Security Standards + NetworkPolicy (**S17**), the pod-escape walkthrough
-(**S25**), and the production-readiness checklist (**S26**). CKx: security
+Pod Security Standards + NetworkPolicy, the pod-escape walkthrough,
+and the production-readiness checklist. CKx: security
 foundations — image hygiene precedes runtime hardening.
 
 </div>

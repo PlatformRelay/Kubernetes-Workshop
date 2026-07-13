@@ -26,7 +26,7 @@ cluster/namespace + syncPolicy) · three behaviours (sync / self-heal / drift) �
 magic-move building the Application manifest (== the lab's application.yaml) ·
 reconcile-loop animation with GIT as the desired-state source (reuse ReconcileLoop,
 callback to S03, forward to S22) · sync status vs health status (two axes) ·
-OpenGitOps four principles · debrief → S22 · lab.
+OpenGitOps four principles · recap → S22 · lab.
 
 Animation: REUSE ReconcileLoop (US-X1, built in S03) — pass controller="Argo CD",
 resource="replica", desiredSource="Git". This is the reuse guardrail in action: the
@@ -103,7 +103,7 @@ CONTINUOUSLY made itself match a Git repo? Next: flip push to pull.
 
 <div v-click="3" class="mt-4 text-sm">
 
-**It's the S03 reconcile loop, one level up.** There, a controller drove *observed* toward
+**It's the same reconcile loop, one level up.** There, a controller drove *observed* toward
 *desired = `spec`*. Here, **Argo CD** drives the whole cluster toward *desired = **Git***.
 Same observe → diff → act → repeat — the desired state just moved into a versioned,
 reviewable, auditable repo.
@@ -336,7 +336,7 @@ enough; the agent does the rest. Next: that "agent does the rest" IS the S03 loo
 <v-clicks>
 
 - **Git says 3 replicas; someone scaled to 2 by hand.** Argo *observes* the gap between Git and the cluster — that's drift.
-- **Diff → act.** It re-applies Git and recreates the missing replica. Nobody ran `kubectl` — the loop closed the gap, exactly like S03.
+- **Diff → act.** It re-applies Git and recreates the missing replica. Nobody ran `kubectl` — the loop closed the gap, exactly like a built-in controller.
 - **It never stops.** This is `selfHeal: true`: hand-edit a managed resource and Argo drags it back to Git, forever.
 
 </v-clicks>
@@ -456,15 +456,15 @@ OpenGitOps working group pinned four principles: (1) DECLARATIVE — desired sta
 PULLED AUTOMATICALLY — agents pull it (vs a CI job pushing with cluster creds); (4)
 CONTINUOUSLY RECONCILED — agents keep converging actual toward desired. Argo CD and Flux
 are two implementations; the principles are tool-agnostic. Tie the bow: this entire
-section is principle #4 (the reconcile loop) enforcing #1–3. Next: debrief and hand to
+section is principle #4 (the reconcile loop) enforcing #1–3. Next: recap and hand to
 the lab.
 -->
 
 ---
 layout: recap
-heading: 'Debrief — Git is the source of truth, the cluster converges to it'
-story: 'Push-based apply left drift undetected. We flipped the arrow: an in-cluster agent (Argo CD) watches an Application''s Git source and continuously reconciles the cluster toward it — sync applies Git, drift detection reports divergence, and self-heal reverts hand-edits automatically. The same S03 reconcile loop, with Git in the desired slot.'
-next: 'S22 · The operator pattern — the same reconcile loop again, this time driven by your own CRD'
+heading: 'Recap — Git is the source of truth, the cluster converges to it'
+story: 'Push-based apply left drift undetected. We flipped the arrow: an in-cluster agent (Argo CD) watches an Application''s Git source and continuously reconciles the cluster toward it — sync applies Git, drift detection reports divergence, and self-heal reverts hand-edits automatically. The same reconcile loop, with Git in the desired slot.'
+next: 'The operator pattern — the same reconcile loop again, this time driven by your own CRD'
 ---
 
 - **Push → pull.** GitOps puts desired state in **Git** and has an in-cluster agent pull
@@ -475,7 +475,7 @@ next: 'S22 · The operator pattern — the same reconcile loop again, this time 
   · **self-heal** (`selfHeal: true` reverts hand-edits; `prune` deletes what left Git)
 - **Two independent statuses:** **sync** (Synced/OutOfSync — matches Git?) vs **health**
   (Healthy/Progressing/Degraded — workloads OK?); read both
-- **It's the S03 loop** with Git as `spec` — and **OpenGitOps** makes the four principles
+- **It's the same reconcile loop** with Git as `spec` — and **OpenGitOps** makes the four principles
   tool-agnostic (Argo CD, Flux, …)
 - **CKx tie-in:** GitOps is ecosystem/adjacent (not a hard CKA/CKAD domain), but the
   **reconcile-loop** mental model is core CKA cluster-architecture

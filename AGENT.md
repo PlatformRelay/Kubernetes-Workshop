@@ -74,7 +74,7 @@ The plan lives in `agent-context/` (gitignored, local). Read it before authoring
 - Each day is ~50% slides / ~50% hands-on. Every concept block names the lab that
   follows it.
 - Module rhythm: **problem → mental model → minimal YAML → run it → observe → break it
-  → fix it → debrief**.
+  → fix it → recap**.
 - **Environments:** every lab must run in an assigned **namespace** on a shared
   cluster *or* a local **kind** cluster. Never require cluster-admin unless the topic
   needs it; then mark the lab **kind-only** and provide a namespace-safe read-only

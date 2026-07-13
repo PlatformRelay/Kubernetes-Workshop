@@ -26,7 +26,7 @@ Beats: problem (interchangeable Pods are wrong for identity/data) · mental mode
 guarantees) · magic-move (headless Service clusterIP:None → StatefulSet serviceName +
 volumeClaimTemplates) · StatefulIdentity animation (ordered create → sentinel → delete
 web-1 → same name/PVC reattach) · ordered lifecycle + podManagementPolicy + partition ·
-PVC retention gotcha (currency) · debrief → lab.
+PVC retention gotcha (currency) · recap → lab.
 Animation: StatefulIdentity.vue (new, self-contained — the AC's "manifest-extends
 animation" has no existing component; S11 set the precedent of a per-section animation).
 CKx: CKAD/CKA workloads — StatefulSets, headless Services, volumeClaimTemplates.
@@ -40,7 +40,7 @@ kicker: The problem
 A Deployment's Pods are **cattle** — some workloads are **pets**.
 
 A Deployment gives you `web-6f8c9b7d5-abcde`, `web-6f8c9b7d5-xk2mp` — **random,
-interchangeable** names, and (from S11) they all share **one** PVC. That's perfect for a
+interchangeable** names, and (from the storage section) they all share **one** PVC. That's perfect for a
 stateless web tier. But a database replica, a message broker, or a cache cluster needs the
 opposite: a **stable name** it keeps across restarts, a **fixed address** its peers can
 find, and its **own** disk that follows it. That's a **StatefulSet**.
@@ -150,11 +150,11 @@ The controller creates <code>web-0</code> → <code>web-1</code> → <code>web-2
 <CodeNote at="3" label="volumeClaimTemplates ≠ volumes">
 Not a <code>volumes:</code> entry — a <strong>template</strong>. Each ordinal gets its own
 PVC <code>&lt;name&gt;-&lt;sts&gt;-&lt;ordinal&gt;</code> (<code>data-web-0</code>, …), each
-dynamically provisioned exactly like S11.
+dynamically provisioned exactly like the storage section.
 </CodeNote>
 
-<CodeNote at="4" label="the claim reuses S11" variant="ok">
-Same <code>accessModes</code> + <code>resources</code> + StorageClass model as the S11 PVC —
+<CodeNote at="4" label="the claim reuses the storage PVC" variant="ok">
+Same <code>accessModes</code> + <code>resources</code> + StorageClass model as the storage PVC —
 the only new idea is <strong>one per Pod</strong>, sticky to the ordinal across restarts.
 </CodeNote>
 
@@ -323,16 +323,16 @@ it so nobody thinks manual-delete is the only option. Lab: cleanup deletes PVCs 
 
 ---
 layout: recap
-heading: 'Debrief — identity-bearing workloads'
+heading: 'Recap — identity-bearing workloads'
 story: 'Deleting web-1 felt catastrophic until it came back same-name with the same sentinel on data-web-1 — identity and disk stayed coupled.'
-next: 'S13 · Resources & limits — right-size what you run (requests, limits, QoS)'
+next: 'Resources & limits — right-size what you run (requests, limits, QoS)'
 ---
 
-- **Deployment** Pods = interchangeable, random names, **shared** PVC (S11) — wrong for
+- **Deployment** Pods = interchangeable, random names, **shared** PVC — wrong for
   identity or per-instance data
 - **StatefulSet** = **stable ordinal names** (`web-0…`) + **stable per-Pod DNS** (headless
   Service: `clusterIP: None` + `serviceName`) + **per-Pod PVCs** (`volumeClaimTemplates`)
-- `volumeClaimTemplates` mints **one PVC per ordinal** (reuses S11), **sticky** across restarts
+- `volumeClaimTemplates` mints **one PVC per ordinal** (reuses the storage PVC), **sticky** across restarts
 - Ordered create/delete (`OrderedReady`; `Parallel` opts out); `partition` = built-in **canary**
 - Delete a Pod → **same name + same PVC** → data survives; PVCs are **not** auto-deleted
   (clean up, or set `persistentVolumeClaimRetentionPolicy`)

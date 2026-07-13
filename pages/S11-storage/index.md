@@ -25,7 +25,7 @@ Beats: problem (fs + emptyDir are ephemeral) · mental model (PVC=request → PV
 StorageClass=provisioner) · access modes + reclaim policy · magic-move (emptyDir → PVC
 referencing a StorageClass, mounted) · PVC-binding animation (bind → write → delete Pod →
 data survives) · provisioning + binding mode (WaitForFirstConsumer; Deployments mount
-PVCs too → sets up S12) · debrief → lab.
+PVCs too → sets up S12) · recap → lab.
 Optional shared animation: PvcBinding.vue (new, self-contained). CKx: CKA/CKAD storage —
 PV, PVC, StorageClass, access modes, reclaim policy, dynamic provisioning.
 -->
@@ -256,7 +256,7 @@ before they run it.
 
 <div class="kw-slide-dense">
 
-<span class="kw-kicker">Dynamic provisioning · and a bridge to S12</span>
+<span class="kw-kicker">Dynamic provisioning · and a bridge to StatefulSets</span>
 
 # Who creates the PV — and when it binds
 
@@ -281,7 +281,7 @@ before they run it.
     Fine for one replica or <code>ReadWriteMany</code> — awkward when many RWO replicas
     need separate disks.
   </KwCard>
-  <KwCard heading="→ S12: per-Pod storage" icon="🔢" variant="ok">
+  <KwCard heading="→ StatefulSet: per-Pod storage" icon="🔢" variant="ok">
     <code>volumeClaimTemplates</code> mints one PVC per Pod — that's next.
   </KwCard>
 </div>
@@ -301,10 +301,10 @@ it reuses this same PVC/StorageClass model. CKA/CKAD storage domain lands here.
 
 ---
 layout: recap
-heading: 'Debrief — data that outlives the Pod'
+heading: 'Recap — data that outlives the Pod'
 story: 'The sentinel file survived a Pod delete because the PVC outlived the Pod — storage has its own lifecycle.'
 compact: true
-next: 'S12 · StatefulSet — stable identity + per-Pod storage (volumeClaimTemplates)'
+next: 'StatefulSet — stable identity + per-Pod storage (volumeClaimTemplates)'
 ---
 
 - The container filesystem and **`emptyDir`** are **ephemeral** — gone when the Pod is
@@ -318,7 +318,7 @@ next: 'S12 · StatefulSet — stable identity + per-Pod storage (volumeClaimTemp
   schedules** — normal, not a failure
 - Swapping `emptyDir` → `persistentVolumeClaim` leaves the container mount **unchanged** —
   storage is pluggable behind the mount
-- Next: give each replica its **own** identity and volume with a **StatefulSet** (S12)
+- Next: give each replica its **own** identity and volume with a **StatefulSet**
 
 <!--
 Speaker: the takeaway they'll reach for in an incident: "my data vanished" is almost always

@@ -27,7 +27,7 @@ Beats: problem (config baked in → rebuild per env) · mental model (two object
 consumption modes, subPath caveat) · magic-move (extend the web Deployment: +envFrom
 → +mounted file → +Secret env) · security (base64 ≠ encryption; Secret types) ·
 immutability (immutable: true tradeoff) · rotation gotcha (what updates, what doesn't;
-checksum trick) · debrief → lab.
+checksum trick) · recap → lab.
 No shared animation (per outline S10 has none; the rotation story is a live console
 sequence, not a state-machine). CKx: CKAD application-configuration.
 -->
@@ -233,7 +233,7 @@ it's kept out of most logs and gated by RBAC — that's it.
 <CodeNote at="3" label="typed for a purpose" variant="ok">
 <code>type</code> tells consumers what's inside: <code>Opaque</code> (arbitrary),
 <code>kubernetes.io/tls</code> (cert/key for a listener), <code>.../dockerconfigjson</code>
-(a registry pull secret — remember <code>imagePullSecrets</code> from S05).
+(a registry pull secret — remember <code>imagePullSecrets</code> from the Pod).
 </CodeNote>
 
 <!--
@@ -331,9 +331,9 @@ why env didn't change but the file did.
 
 ---
 layout: recap
-heading: 'Debrief — config lives outside the image'
+heading: 'Recap — config lives outside the image'
 story: 'Ops edited the ConfigMap and wondered why the app still said "hi" — env was frozen; the mounted file caught up a minute later.'
-next: 'S11 · Storage — give the app a volume that survives a restart (Day 2 continues)'
+next: 'Storage — give the app a volume that survives a restart (Day 2 continues)'
 ---
 
 - **ConfigMap** (non-secret) and **Secret** (sensitive) hold key/value config so one image
@@ -346,7 +346,7 @@ next: 'S11 · Storage — give the app a volume that survives a restart (Day 2 c
   roll a new value as a new object
 - **Updates don't restart Pods:** env is **frozen at start**, whole-dir files update in
   ~60–90s, `subPath` never updates — force a rollout with a **checksum annotation**
-- Next: the app is configurable — now make its **data durable** with a volume (S11)
+- Next: the app is configurable — now make its **data durable** with a volume
 
 <!--
 Speaker: leave them with the update matrix — it's the practical takeaway they'll reach for

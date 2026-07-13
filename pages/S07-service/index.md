@@ -23,7 +23,7 @@ Beats: problem (Pod IPs are ephemeral — S06 churn proved it) · types (Cluster
 NodePort/LoadBalancer/ExternalName/headless) · mechanics (selector →
 EndpointSlices → Pods + DNS name) · magic-move add service.yaml · service-routing
 animation (US-X3, incl readiness variant → S14) · optional kube-proxy deep-dive
-(off by default) · debrief to S08.
+(off by default) · recap to S08.
 Red line: the service.yaml built here IS labs/day-1/07-service's manifest; it
 selects the S06 Deployment's app: web Pods. CKx: CKAD/CKA Services & networking.
 -->
@@ -75,7 +75,7 @@ door; the Pods behind it are free to come and go. Lab 07 follows this section.
 <div v-click class="mt-4 kw-muted text-sm">
 
 **Headless** (`clusterIP: None`) is the odd one out: no virtual IP at all — DNS
-returns the **Pod IPs directly**. It's how **StatefulSets (S12)** give each Pod a
+returns the **Pod IPs directly**. It's how **StatefulSets** give each Pod a
 stable name.
 
 </div>
@@ -133,7 +133,7 @@ metadata:
     app: web
 spec:
   selector:
-    app: web            # the SAME label the S06 Deployment stamps on its Pods
+    app: web            # the SAME label the Deployment stamps on its Pods
 ```
 
 ```yaml
@@ -234,13 +234,13 @@ that's why there's no bottleneck proxy Pod.
 
 ---
 layout: recap
-heading: 'Debrief — stable front door, live backend'
+heading: 'Recap — stable front door, live backend'
 story: 'After every rollout the Pod IPs changed, but `curl http://web` kept working — the selector rewrote the slice underneath.'
-next: 'S08 · Ingress — one L7 entry point routing by host and path'
+next: 'Ingress — one L7 entry point routing by host and path'
 ---
 
 - A **Service** is a stable ClusterIP + DNS name over a churning set of Pods —
-  the fix for the ephemeral IPs S06 kept changing
+  the fix for the ephemeral IPs the Deployment kept changing
 - The `selector` is a **query**; matching Pod IPs land in an **EndpointSlice**
   (not the legacy `Endpoints`), refreshed live as Pods and readiness change
 - `service.yaml` sits **beside** `deployment.yaml` and selects its `app: web`

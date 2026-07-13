@@ -131,7 +131,7 @@ kind-only, or namespace: read-only. Nobody is left behind either way.
 <div v-click="4" class="mt-6 kw-muted text-sm">
 
 The teaching rhythm repeats all day: **explain → run → observe → break it on
-purpose → fix it → debrief.** The breakage is the point — that's where the
+purpose → fix it → recap.** The breakage is the point — that's where the
 learning is.
 
 </div>
@@ -252,7 +252,7 @@ showRefresher: true
 
 <div class="mt-4 kw-muted text-sm">
 
-That's enough to start. **Sections S01–S02 go deep** on images, layers,
+That's enough to start. **The container sections go deep** on images, layers,
 runtimes, and hardening — flip <code>showRefresher: false</code> in this slide's
 frontmatter to hide this beat for a stronger cohort.
 

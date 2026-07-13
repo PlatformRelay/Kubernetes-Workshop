@@ -23,7 +23,7 @@ installed instance; revision = a versioned snapshot) · code-annotated (the temp
 Deployment) · magic-move (rendered output: defaults → --set replicaCount → --set image.tag =
 the revisions) · releases & revisions (install rev1 → upgrade rev2 → rollback = a NEW rev) ·
 distribution (repos AND OCI registries) · Kustomize contrast + when NOT to template · helm
-template vs helm install --dry-run · debrief → S21 · lab.
+template vs helm install --dry-run · recap → S21 · lab.
 Animation: NONE (per outline — the value→manifest render is a code transition, not a state
 machine worth a component). The chart the slides teach IS the chart the lab installs.
 ACCURACY LOCKS (verified against Helm v4.2.2 in this environment):
@@ -418,7 +418,7 @@ Works with no cluster at all — perfect for diffing and code review.
 
 <CodeNote at="2" label="install --dry-run=server" variant="warn">
 Renders <em>and</em> submits to the API server for <strong>validation/admission</strong>
-(schema, PSA from S17, webhooks) — then throws it away. Nothing is stored, no release created.
+(schema, PSA, webhooks) — then throws it away. Nothing is stored, no release created.
 </CodeNote>
 
 <div v-click="3" class="mt-2 text-sm kw-muted">
@@ -440,9 +440,9 @@ the chart before installing it for real.
 
 ---
 layout: recap
-heading: 'Debrief — one template, many values, reversible releases'
+heading: 'Recap — one template, many values, reversible releases'
 story: 'The copy-pasted-per-env YAML became one chart with a values file. Install created release revision 1; each upgrade re-rendered and stored a new revision; rollback replayed an old snapshot as a new revision — history intact.'
-next: 'S21 · GitOps with Argo CD — put the desired state in Git and let the cluster reconcile toward it'
+next: 'GitOps with Argo CD — put the desired state in Git and let the cluster reconcile toward it'
 ---
 
 - A **chart** = `Chart.yaml` + `values.yaml` + `templates/`; a **release** is one installed

@@ -29,7 +29,7 @@ model (CRD + custom controller = operator) · code-annotated (a raw CRD register
 kind) · magic-move (CRD definition → sample CR → conceptual reconcile pseudo-code acting
 on it) · controller vs operator (operator = encoded operational knowledge) · CNCF
 Capability Levels 1→5 (conceptual, NO vendor names) · reconcile-loop animation driving a
-custom resource (reuse ReconcileLoop) · debrief → lab.
+custom resource (reuse ReconcileLoop) · recap → lab.
 
 Animation: REUSE ReconcileLoop (US-X1, built in S03; S21 reuses it for GitOps). Here pass
 controller="Backup operator", resource="Backup", desired=1, desiredSource="spec (your CR)",
@@ -84,7 +84,7 @@ loop run the runbook forever. Next: recall the loop that makes this possible.
 
 ---
 
-<span class="kw-kicker">Recall from S03 · the one loop everything runs on</span>
+<span class="kw-kicker">Recall from the mental model · the one loop everything runs on</span>
 
 # The control loop is the foundation: observe → diff → act
 
@@ -107,7 +107,7 @@ loop run the runbook forever. Next: recall the loop that makes this possible.
 
 <div v-click="3" class="mt-4 text-sm">
 
-**Kubernetes is already a platform of reconcile loops** — S03 taught the shape, S21 reused
+**Kubernetes is already a platform of reconcile loops** — the mental model taught the shape, GitOps reused
 it with **Git** in the desired slot. This section reuses it a third time with **your own
 resource** in the desired slot. Same loop; new state to reconcile.
 
@@ -433,7 +433,7 @@ though learners will know examples. Next: watch the loop drive a custom resource
 <div class="mt-6 text-sm">
 <v-clicks>
 
-- **You applied a `Backup` CR; the operator observes it.** Desired = 1 backup for today; observed = 0. That's the gap — exactly S03, but the kind is *yours*.
+- **You applied a `Backup` CR; the operator observes it.** Desired = 1 backup for today; observed = 0. That's the gap — exactly the reconcile loop, but the kind is *yours*.
 - **Diff → act.** The controller runs its runbook: take the snapshot, upload it, prune old ones. Nobody ran a script by hand — the loop did.
 - **It never stops.** Delete the resulting artefact and the loop notices the gap and remakes it. In the lab you'll delete a cert-manager **Secret** and watch it reappear.
 
@@ -450,14 +450,14 @@ upload, prune) → Repeat (in sync, keep watching, remake anything that vanishes
 through-line out loud: S03 = built-in loop; S21 = same loop with Git; S22 = same loop with
 YOUR CRD. One mechanism, three desired-state sources. Forward pointer straight into the lab:
 cert-manager is exactly this — its controller reconciles a Certificate into a Secret, and if
-you delete the Secret the loop recreates it. Next: debrief, then go feel it.
+you delete the Secret the loop recreates it. Next: recap, then go feel it.
 -->
 
 ---
 layout: recap
-heading: 'Debrief — extend the API, then let the loop run your runbook'
-story: 'Some day-2 jobs — backup, failover, upgrade — aren''t any built-in kind; they''re a runbook that needs domain knowledge. An operator captures that: a CRD extends the API with a new kind, and a custom controller runs the S03 reconcile loop over instances of it, with your operational expertise in the "act" step. Same loop as S03 and S21 — new desired state.'
-next: 'S23 · A production operator in the wild — the same pattern, shipped and battle-tested'
+heading: 'Recap — extend the API, then let the loop run your runbook'
+story: 'Some day-2 jobs — backup, failover, upgrade — aren''t any built-in kind; they''re a runbook that needs domain knowledge. An operator captures that: a CRD extends the API with a new kind, and a custom controller runs the reconcile loop over instances of it, with your operational expertise in the "act" step. Same loop as the mental model and GitOps — new desired state.'
+next: 'A production operator in the wild — the same pattern, shipped and battle-tested'
 ---
 
 - **Why operators exist:** built-in kinds cover generic patterns; **domain runbooks**

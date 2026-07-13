@@ -44,7 +44,7 @@ kicker: The capstone · everything, as one list
 
 You've built the whole line — now make it **production-ready**.
 
-**Pod → Deployment → Service → Ingress → Gateway** (S05–S09) carried the app; Day 3 added
+**Pod → Deployment → Service → Ingress → Gateway** carried the app; Day 3 added
 **security**, **policy**, **delivery**, and **observability** on top. This section is the
 **synthesis**: no new resource, just **one checklist** that every prior layer contributes a line to —
 and a single real manifest we'll run it against, before and after.
@@ -72,13 +72,13 @@ The lab (labs/day-3/26-capstone.md) hands the learner the SAME flawed manifest t
   <v-click at="1">
     <KwCard heading="Probes — readiness / liveness / startup" kind="pod" variant="ok">
       Readiness gates traffic, liveness restarts a wedged container, startup shields a slow boot.
-      <code>Running</code> ≠ healthy. <span class="kw-muted">(S14)</span>
+      <code>Running</code> ≠ healthy.
     </KwCard>
   </v-click>
   <v-click at="2">
     <KwCard heading="Requests & limits" kind="pod" variant="ok">
       Reserve what you need (scheduling), cap what you use (enforcement). No resources → BestEffort,
-      first evicted. <span class="kw-muted">(S13)</span>
+      first evicted.
     </KwCard>
   </v-click>
   <v-click at="3">
@@ -96,7 +96,7 @@ The lab (labs/day-3/26-capstone.md) hands the learner the SAME flawed manifest t
   <v-click at="5">
     <KwCard heading="Rollout strategy" kind="deploy" variant="ok">
       <code>RollingUpdate</code> with sane <code>maxUnavailable</code>/<code>maxSurge</code> — plus
-      <code>revisionHistoryLimit</code> so old ReplicaSets don't pile up. <span class="kw-muted">(S06)</span>
+      <code>revisionHistoryLimit</code> so old ReplicaSets don't pile up.
     </KwCard>
   </v-click>
   <v-click at="6">
@@ -139,25 +139,23 @@ Every one of these is a line the flawed manifest gets wrong. Next: the security 
   <v-click at="2">
     <KwCard heading="Immutable image digest" icon="🔏" variant="ok">
       Pin by <code>@sha256:…</code>, not a movable tag — the running bytes can't change under you.
-      <span class="kw-muted">(S02)</span>
     </KwCard>
   </v-click>
   <v-click at="3">
     <KwCard heading="Restricted securityContext" kind="pod" variant="ok">
       Non-root, no priv-esc, drop <code>ALL</code> caps, <code>RuntimeDefault</code> seccomp — the
-      four fields <code>restricted</code> gates. <span class="kw-muted">(S17)</span>
+      four fields <code>restricted</code> gates.
     </KwCard>
   </v-click>
   <v-click at="4">
     <KwCard heading="NetworkPolicy" kind="netpol" variant="ok">
       Default-deny, then an explicit allow — so a foothold can't roam a flat pod network.
-      <span class="kw-muted">(S18)</span>
     </KwCard>
   </v-click>
   <v-click at="5">
     <KwCard heading="Config & secret hygiene" kind="secret" variant="ok">
       Config in <code>ConfigMap</code>/<code>Secret</code>, not baked into the image or the manifest;
-      mount least privilege; never log secrets. <span class="kw-muted">(S11/S12)</span>
+      mount least privilege; never log secrets.
     </KwCard>
   </v-click>
   <v-click at="6">
@@ -194,13 +192,13 @@ scan the namespace. Config/secret hygiene (S11/S12): externalize config, don't b
   <v-click at="1">
     <KwCard heading="GitOps delivery" icon="🔁" variant="ok">
       The manifest lives in <strong>Git</strong>; an in-cluster agent reconciles the cluster to it —
-      auditable, revertable, self-healing. <span class="kw-muted">(S21)</span>
+      auditable, revertable, self-healing.
     </KwCard>
   </v-click>
   <v-click at="2">
     <KwCard heading="Observability" icon="📈" variant="ok">
       Expose <code>/metrics</code>; a <code>ServiceMonitor</code> selects the Service by label so
-      new Pods are scraped automatically. <span class="kw-muted">(S23)</span>
+      new Pods are scraped automatically.
     </KwCard>
   </v-click>
   <v-click at="3">
@@ -267,16 +265,16 @@ spec:
 
 <CodeNote at="1" label="④ mutable image tag" variant="danger">
 <code>:latest</code> can change under you — the bytes you scanned aren't the bytes that run.
-<strong>S02</strong> says pin by <code>@sha256:…</code>.
+<strong>Image hygiene</strong> says pin by <code>@sha256:…</code>.
 </CodeNote>
 
 <CodeNote at="2" label="⑤ no resources · ⑥ no probes" variant="danger">
-No <code>requests/limits</code> → <strong>BestEffort</strong>, first evicted (S13). No probes →
-<code>Running</code> is the only (misleading) signal (S14).
+No <code>requests/limits</code> → <strong>BestEffort</strong>, first evicted. No probes →
+<code>Running</code> is the only (misleading) signal.
 </CodeNote>
 
 <CodeNote at="3" label="⑦ no securityContext · ⑧ no shutdown" variant="danger">
-Runs as default user, full caps, no seccomp → <code>restricted</code> rejects it (S17). No
+Runs as default user, full caps, no seccomp → <code>restricted</code> rejects it. No
 <code>preStop</code>/grace → dropped connections on every rollout.
 </CodeNote>
 
@@ -304,7 +302,7 @@ these one at a time, grouped by checklist: health, then security, then availabil
 
 ---
 layout: code-walkthrough
-heading: 'Fix I · health — one fix per step (S13, S14, graceful shutdown)'
+heading: 'Fix I · health — one fix per step (resources, probes, graceful shutdown)'
 lab: labs/day-3/26-capstone.md
 ---
 
@@ -318,7 +316,7 @@ containers:
 ```
 
 ```yaml
-# 1: +resources — reserve + cap (S13). No longer BestEffort.
+# 1: +resources — reserve + cap. No longer BestEffort.
 containers:
   - name: web
     image: nginxinc/nginx-unprivileged:latest
@@ -329,7 +327,7 @@ containers:
 ```
 
 ```yaml
-# 2: +probes — readiness gates traffic, liveness restarts, startup shields boot (S14)
+# 2: +probes — readiness gates traffic, liveness restarts, startup shields boot
     resources:
       requests: { cpu: 50m, memory: 64Mi }
       limits:   { cpu: 200m, memory: 128Mi }
@@ -373,7 +371,7 @@ before caps are dropped matters not, sleep needs nothing. Next group: security.
 
 ---
 layout: code-walkthrough
-heading: 'Fix II · security — one fix per step (labels, S02, S17)'
+heading: 'Fix II · security — one fix per step (labels, image digest, securityContext)'
 lab: labs/day-3/26-capstone.md
 ---
 
@@ -402,14 +400,14 @@ metadata:
 ```
 
 ```yaml
-# 2: +digest pin — immutable bytes, not a movable tag (S02)
+# 2: +digest pin — immutable bytes, not a movable tag
         - name: web
           # RESOLVE at rehearsal: docker buildx imagetools inspect … / crane digest
           image: nginxinc/nginx-unprivileged:1.27@sha256:0000000000000000000000000000000000000000000000000000000000000000
 ```
 
 ```yaml
-# 3: +restricted securityContext — pod-level: non-root user + seccomp (S17)
+# 3: +restricted securityContext — pod-level: non-root user + seccomp
     spec:
       securityContext:
         runAsNonRoot: true
@@ -421,7 +419,7 @@ metadata:
 ```
 
 ```yaml
-# 4: +restricted securityContext — container-level: no priv-esc, drop ALL caps (S17)
+# 4: +restricted securityContext — container-level: no priv-esc, drop ALL caps
         - name: web
           image: nginxinc/nginx-unprivileged:1.27@sha256:0000000000000000000000000000000000000000000000000000000000000000
           securityContext:
@@ -457,7 +455,7 @@ spec:
 ```
 
 ```yaml
-# 1: +replicas, +strategy, +spread — HA across nodes, controlled rollout (availability, S06)
+# 1: +replicas, +strategy, +spread — HA across nodes, controlled rollout (availability)
 spec:
   replicas: 3
   revisionHistoryLimit: 5
@@ -485,7 +483,7 @@ spec:
 ```
 
 ```yaml
-# 3: +NetworkPolicy — a SEPARATE object: default-deny ingress for these Pods (S18)
+# 3: +NetworkPolicy — a SEPARATE object: default-deny ingress for these Pods
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata: { name: web-default-deny }
@@ -512,7 +510,7 @@ labels right. The fixed Deployment on these slides IS the lab's fixed file.
 
 ---
 
-<span class="kw-kicker">The same restricted gate from S17 — it checks the Pod, not the Deployment</span>
+<span class="kw-kicker">The same restricted gate from Pod security — it checks the Pod, not the Deployment</span>
 
 # The checklist meets admission
 
@@ -564,13 +562,13 @@ a review discipline, not one control. The lab proves this by dry-running the Pod
   </v-click>
   <v-click at="2">
     <KwCard heading="Gate it in review / CI" icon="✅" variant="ok">
-      Turn lines into checks: <code>restricted</code> admission (S17), a policy engine, a linter,
+      Turn lines into checks: <code>restricted</code> admission, a policy engine, a linter,
       required labels — so the list can't be skipped under deadline.
     </KwCard>
   </v-click>
   <v-click at="3">
     <KwCard heading="Reconcile it with GitOps" icon="🔁" variant="ok">
-      The reviewed manifest is the Git source of truth (S21); the agent keeps the cluster matching it
+      The reviewed manifest is the Git source of truth; the agent keeps the cluster matching it
       and self-heals drift. The checklist ships <em>with</em> the code.
     </KwCard>
   </v-click>
@@ -597,18 +595,18 @@ rollout, not once a year. That's the professional habit the whole course was bui
 
 ---
 layout: recap
-heading: 'Debrief — the whole course, as one list you run every time'
+heading: 'Recap — the whole course, as one list you run every time'
 story: 'One flawed Deployment failed a dozen checklist lines at once; fixed one line per step, it became production-ready — and the same restricted gate that rejected it now admits it.'
-next: 'S27 · Wrap-up & next steps — the red line, the Day-3 layers, and a checklist that ties them together'
+next: 'Wrap-up & next steps — the red line, the Day-3 layers, and a checklist that ties them together'
 ---
 
-- The capstone is **synthesis**, not a new resource: the **red line** (S05–S09) plus every Day-3
+- The capstone is **synthesis**, not a new resource: the **red line** plus every Day-3
   layer, as **one checklist** — availability · security · operations
-- **Availability:** probes (S14) · requests/limits (S13) · **PDB** · anti-affinity/**topology spread**
+- **Availability:** probes · requests/limits · **PDB** · anti-affinity/**topology spread**
   · rollout strategy + `revisionHistoryLimit` · **>1 replica**
-- **Security:** recommended **labels** · **digest** pin (S02) · **restricted** securityContext (S17) ·
-  **NetworkPolicy** (S18) · config/secret hygiene
-- **Operations:** **GitOps** (S21) · **observability** (S23) · **graceful shutdown**
+- **Security:** recommended **labels** · **digest** pin · **restricted** securityContext ·
+  **NetworkPolicy** · config/secret hygiene
+- **Operations:** **GitOps** · **observability** · **graceful shutdown**
   (`terminationGracePeriodSeconds` + `preStop`) · **cost** (right-size)
 - **`restricted` admission enforces one line for you; the rest is review discipline** — ship the
   checklist as a repo artifact and gate it in CI/GitOps

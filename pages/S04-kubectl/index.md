@@ -44,7 +44,7 @@ rightBadge: 'kubectl apply -f'
 - You keep the desired state in **files** and `apply` them.
 - The file is the source of truth — **version it, review it, re-apply it**.
 - Re-running `apply` is safe and converges to the same result (idempotent).
-- This is how every real workload ships — and what S05 onward builds.
+- This is how every real workload ships — and what everything from the Pod onward builds.
 
 <div class="mt-4 text-sm" v-click>
 
@@ -216,7 +216,7 @@ kubectl get pods -l app=web,tier=frontend
 
 <CodeNote at="1" label="equality">
 <code>-l key=value</code> — the everyday filter. Selects objects carrying that
-exact label. This is how a Service finds its Pods (S07) and how every lab's
+exact label. This is how a Service finds its Pods and how every lab's
 cleanup scopes a delete.
 </CodeNote>
 

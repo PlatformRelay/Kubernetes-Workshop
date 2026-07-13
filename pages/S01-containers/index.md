@@ -131,7 +131,7 @@ returns in the lab's deliberate break.
 <div v-click="4" class="mt-6 kw-muted text-sm">
 
 `kubelet → CRI (containerd/CRI-O) → OCI runtime (runc/crun) → namespaces + cgroups`.
-The **container runtime** column reappears in the S03 node diagram — this is that box, opened up.
+The **container runtime** column reappears in the mental model's node diagram — this is that box, opened up.
 
 </div>
 
@@ -262,7 +262,7 @@ The toolchain, source, and any build-time secrets stay behind.
 
 <div class="mt-4 kw-muted">
 
-S02 takes this further — distroless bases, scanning, and provenance.
+Container security takes this further — distroless bases, scanning, and provenance.
 
 </div>
 

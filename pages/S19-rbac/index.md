@@ -359,8 +359,8 @@ break, can-i, fix, can-i.
 
 <span class="kw-kicker">where this shows up next</span>
 
-This is not academic. **Argo CD (S21)** reconciles your cluster **as a ServiceAccount**;
-**operators (S22)** run their controllers **as a ServiceAccount**. Both need a precisely-scoped
+This is not academic. **Argo CD** reconciles your cluster **as a ServiceAccount**;
+**operators** run their controllers **as a ServiceAccount**. Both need a precisely-scoped
 Role — get it too narrow and they can't reconcile, too wide and they're the blast radius. Same
 Role → SA → binding you just built.
 
@@ -385,9 +385,9 @@ calls the API from inside a Pod to make this concrete.
 
 ---
 layout: recap
-heading: 'Debrief — the default is deny; you grant on purpose'
+heading: 'Recap — the default is deny; you grant on purpose'
 story: 'A ServiceAccount starts with nothing. A read-only Role listed the allowed verbs, a RoleBinding joined the two, and can-i --as proved it: get pods yes, delete pods no. Adding one verb to the Role flipped the answer — no restart, no rebind.'
-next: 'S21 · GitOps with Argo CD — a controller that reconciles your cluster as a ServiceAccount, scoped by exactly this RBAC'
+next: 'GitOps with Argo CD — a controller that reconciles your cluster as a ServiceAccount, scoped by exactly this RBAC'
 ---
 
 - RBAC is **subject × verb × resource, joined by a binding** — the default is **deny**, so a
@@ -397,7 +397,7 @@ next: 'S21 · GitOps with Argo CD — a controller that reconciles your cluster 
 - A **Role grants nothing** without a **RoleBinding** — the join is the step beginners forget
 - **`kubectl auth can-i … --as=…`** verifies effective permissions without guessing or applying
 - Every Pod runs as a **ServiceAccount**; the `default` SA is near-powerless — give workloads
-  their **own** scoped SA (**Argo CD S21**, **operators S22** do exactly this)
+  their **own** scoped SA (**Argo CD**, **operators** do exactly this)
 - Least privilege beats `cluster-admin`: a too-wide binding turns one Pod into the blast radius
 
 <!--

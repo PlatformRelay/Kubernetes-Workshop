@@ -73,7 +73,7 @@ the setup lab (`export NS=<your-namespace>`; kind users use `export NS=workshop`
 ## How the labs work
 
 The workshop teaches a repeatable rhythm: **explain → run → observe → break → fix →
-debrief**. The labs are the "run / observe / break / fix" part. Every lab follows the
+recap**. The labs are the "run / observe / break / fix" part. Every lab follows the
 same shape:
 
 1. **Title & metadata** — the matching section ID, an estimated time, and the

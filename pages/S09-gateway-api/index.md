@@ -107,7 +107,7 @@ lab: labs/day-2/09-gateway-api.md
 
 ````md magic-move
 ```yaml
-# S08 — one flat object; anything past host/path becomes an annotation
+# Ingress — one flat object; anything past host/path becomes an annotation
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -142,7 +142,7 @@ spec:
   parentRefs: [ { name: web } ]      # ← attach to the Gateway above
   rules:
     - matches: [ { path: { type: PathPrefix, value: / } } ]
-      backendRefs: [ { name: web, port: 80 } ]     # the SAME S07 Service
+      backendRefs: [ { name: web, port: 80 } ]     # the SAME Service
 ```
 
 ```yaml
@@ -223,7 +223,7 @@ The lab makes the same two curls (with and without the header) real.
 
 <div v-click class="mt-4 kw-muted text-sm">
 
-Same two-part shape as S08 — **API vs implementation** — so the same gotcha applies:
+Same two-part shape as Ingress — **API vs implementation** — so the same gotcha applies:
 a `gatewayClassName` no controller owns leaves your Gateway **unreconciled** — no address,
 empty status, nothing routes (the tell is `kubectl get gatewayclass`). That's the deliberate
 break in Lab 09.
@@ -280,10 +280,10 @@ memory. Contrast hard with S08's silent empty ADDRESS.
 
 ---
 layout: recap
-heading: 'Debrief — the red line is complete'
+heading: 'Recap — the red line is complete'
 story: 'One app, one manifest family — from a lone Pod to a typed Gateway front door, every step extended the last.'
 compact: true
-next: 'S10 · ConfigMap & Secret — separate config from the image (Day 2 continues)'
+next: 'ConfigMap & Secret — separate config from the image (Day 2 continues)'
 ---
 
 - **Gateway API** — typed successor: **GatewayClass** → **Gateway** → **HTTPRoute**, wired by `parentRefs`

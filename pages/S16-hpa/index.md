@@ -66,7 +66,7 @@ Hold that framing — HPA owns the replica count so you don't have to.
     <KwCard heading="Watch → compare → act" kind="hpa" variant="ok">
       Every ~15s the HPA reads a <strong>metric</strong> (avg CPU across the Pods), compares it to
       your <strong>target</strong>, and writes a new <code>replicas</code> onto the Deployment.
-      Same observe → diff → act loop as S03 — the workload's size is now the reconciled state.
+      Same observe → diff → act loop as every other controller — the workload's size is now the reconciled state.
     </KwCard>
   </v-click>
   <v-click at="2">
@@ -154,7 +154,7 @@ The clamp on the formula. <code>minReplicas</code> keeps a floor of capacity; <c
 caps blast radius (and cost). The HPA never scales outside this band.
 </CodeNote>
 
-<CodeNote at="4" label="Utilization = % of requests.cpu — the S13 tie-back" variant="danger">
+<CodeNote at="4" label="Utilization = % of requests.cpu — the resources tie-back" variant="danger">
 <code>averageUtilization: 50</code> means "hold average CPU at <strong>50% of each Pod's
 <code>requests.cpu</code></strong>." No <code>requests.cpu</code> on the Pod → the % has no
 denominator → HPA shows <code>TARGETS &lt;unknown&gt;</code> and <strong>cannot scale</strong>.
@@ -384,22 +384,22 @@ are current CNCF-ecosystem tools; only HPA is built into core and in scope here.
 
 ---
 layout: recap
-heading: 'Debrief — and that closes Day 2'
+heading: 'Recap — and that closes Day 2'
 story: 'The herd grew from 2 to 10 under load and drifted back to 2 after the window — the replica count is no longer a number you guess, it is a signal the cluster tracks.'
-next: 'Day 3 · S17 Pod security — lock down what a container may do at runtime'
+next: 'Day 3 · Pod security — lock down what a container may do at runtime'
 ---
 
 - **HPA = a reconcile loop on `replicas`:** watch avg CPU → `ceil(current × util/target)` → clamp to `[min,max]`
-- **Utilization is % of `requests.cpu`** — no request → `TARGETS <unknown>` → no scaling (the S13 tie-back)
+- **Utilization is % of `requests.cpu`** — no request → `TARGETS <unknown>` → no scaling (the resources tie-back)
 - **`autoscaling/v2`**, `scaleTargetRef` the Deployment, and **don't** also hand-set `replicas`
 - **Asymmetric by design:** scale up fast (window 0), scale **down** slow (window **300s**) — that's why the fleet lingers
 - **Neighbours:** VPA right-sizes Pods · Cluster Autoscaler adds nodes — HPA only adds Pods
 
 <div class="mt-4 text-sm kw-muted">
 
-**Day 2 layered onto one running app:** Gateway API routing (S09) · ConfigMap/Secret (S10) ·
-storage & StatefulSet (S11–S12) · requests/limits & QoS (S13) · probes (S14) · Jobs/CronJobs
-(S15) · **and now it autoscales (S16)**. The `web` app now routes, persists, self-heals, and
+**Day 2 layered onto one running app:** Gateway API routing · ConfigMap/Secret ·
+storage & StatefulSet · requests/limits & QoS · probes · Jobs/CronJobs
+· **and now it autoscales**. The `web` app now routes, persists, self-heals, and
 right-sizes to load.
 
 </div>

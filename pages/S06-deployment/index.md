@@ -20,7 +20,7 @@ Outcome: learners can wrap a Pod in a Deployment, explain the
 Deployment→ReplicaSet→Pod chain, drive a rolling update, and roll back.
 Beats: problem (bare Pods don't heal/scale) · ownership chain · magic-move
 extend pod.yaml → deployment.yaml · rolling update animation (US-X2) ·
-rollout verbs + recommended labels · scaling (spec vs status) · debrief to S07.
+rollout verbs + recommended labels · scaling (spec vs status) · recap to S07.
 Red line: the deployment.yaml built here IS labs/day-1/06-deployment's manifest,
 and it wraps S05's pod.yaml unchanged under spec.template. CKx: CKAD Deployments,
 rolling updates & rollbacks.
@@ -68,7 +68,7 @@ hold in their hands. Lab 06 follows this section.
   </v-click>
   <v-click at="3">
     <KwCard heading="Pods" kind="pod">
-      The S05 Pod, minted from the template. Each carries an
+      The Pod, minted from the template. Each carries an
       <code>ownerReferences</code> back to its ReplicaSet — delete one and the
       owner remints it.
     </KwCard>
@@ -79,7 +79,7 @@ hold in their hands. Lab 06 follows this section.
 
 `Deployment → ReplicaSet → Pods`. You almost never touch a ReplicaSet by hand —
 you edit the Deployment, and it drives the rest through the **reconciliation loop
-from S03.**
+from the mental model.**
 
 </div>
 
@@ -98,7 +98,7 @@ lab: labs/day-1/06-deployment.md
 
 ````md magic-move
 ```yaml
-# pod.yaml from S05 — the red-line seed we extend
+# pod.yaml — the red-line seed we extend
 apiVersion: v1
 kind: Pod
 metadata:
@@ -132,7 +132,7 @@ spec:
   selector:
     matchLabels:
       app: web             # NEW — which Pods this Deployment owns
-  template:                # everything below is the S05 Pod, indented one level
+  template:                # everything below is the Pod, indented one level
     metadata:
       labels:
         app: web           # the Pod's own labels — must satisfy the selector
@@ -301,7 +301,7 @@ metadata:
 
 The **recommended labels** (`app.kubernetes.io/*`) are a shared vocabulary every
 tool understands — dashboards, `kubectl get -l`, and the Service selector in
-**S07 next.**
+the **next section.**
 
 </div>
 
@@ -311,7 +311,7 @@ tool understands — dashboards, `kubectl get -l`, and the Service selector in
 <div v-click="3" class="mt-5">
   <KwChip variant="ok">spec.replicas = desired</KwChip>
   <KwChip>status.replicas = observed</KwChip>
-  <KwChip variant="warn">HPA (S16) writes replicas for you</KwChip>
+  <KwChip variant="warn">HPA writes replicas for you</KwChip>
 </div>
 
 <!--
@@ -324,13 +324,13 @@ Note HPA later automates the replica number.
 
 ---
 layout: recap
-heading: 'Debrief — you edit desire, the controller does the work'
-next: 'S07 · Service — a stable address in front of these churning Pods'
+heading: 'Recap — you edit desire, the controller does the work'
+next: 'Service — a stable address in front of these churning Pods'
 ---
 
 - A **Deployment** owns **ReplicaSets** which own **Pods**; you edit the
   Deployment and the reconciliation loop does the rest
-- `deployment.yaml` **wraps S05's `pod.yaml` unchanged** inside `spec.template` —
+- `deployment.yaml` **wraps `pod.yaml` unchanged** inside `spec.template` —
   red line 2/5, and Lab 07's Service will select these same `app: web` Pods
 - A new image ⇒ a **new ReplicaSet**; `maxSurge`/`maxUnavailable` keep the app up
   through the rollout, and the old RS stays at 0 so `rollout undo` is instant

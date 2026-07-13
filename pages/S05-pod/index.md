@@ -21,7 +21,7 @@ lifecycle, and diagnose ImagePullBackOff.
 Beats: problem (K8s runs Pods, not containers) · mental model (shared context) ·
 lifecycle (phases + restartPolicy) · magic-move canonical pod.yaml ·
 run + observe · init/sidecar/imagePullSecrets · break (ImagePullBackOff) ·
-debrief punchline to Deployment. No shared animation.
+recap punchline to Deployment. No shared animation.
 Red-line seed: the pod.yaml built here IS labs/day-1/05-pod's manifest —
 S06/S07/S08 all extend it. CKx: CKAD Pod design & lifecycle.
 -->
@@ -102,7 +102,7 @@ and **Events**.
   <div v-click>
 
 **`restartPolicy`** restarts the **container in place** — never the **Pod**.
-Delete the Pod object and *nothing* brings it back. That's the S06 gap.
+Delete the Pod object and *nothing* brings it back. That's the gap the Deployment fills.
 
   </div>
 </div>
@@ -278,7 +278,7 @@ describe → Events as the reflex. Everything here is exactly Lab 05, step by st
 
 Notice what a Pod **can't** do: heal itself, scale, or roll out a new version.
 A bare Pod is a teaching tool — real workloads are owned by a controller. That's
-**S06, next.**
+**Deployment, next.**
 
 </div>
 
@@ -327,16 +327,16 @@ status → read Events. Lab 05 has them do this hands-on and fix it.
 
 ---
 layout: recap
-heading: 'Debrief — the Pod you delete stays deleted'
+heading: 'Recap — the Pod you delete stays deleted'
 story: 'Mina fixed the crash, but deleting `web` still left the app down — no controller was watching.'
-next: 'S06 · Deployment — a controller that keeps your Pod alive'
+next: 'Deployment — a controller that keeps your Pod alive'
 ---
 
 - A Pod is the **atom of scheduling**: co-scheduled containers sharing network
   and volumes — usually just one container
 - `restartPolicy` restarts a **container**; nothing restarts a **deleted Pod**
-- `pod.yaml` is the **red-line seed** — S06 wraps it in a Deployment template
-  unchanged, and S07/S08 build on that
+- `pod.yaml` is the **red-line seed** — the Deployment wraps it in a template
+  unchanged, and the Service and Ingress build on that
 - Read failures the same way every time: **status → `describe` → Events**
 
 <!--

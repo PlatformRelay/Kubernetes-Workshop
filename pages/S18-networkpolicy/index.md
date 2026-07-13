@@ -25,7 +25,7 @@ policy to select a Pod flips that direction to default-deny; policies are additi
 code-annotated (the two-line default-deny) · magic-move (build allow-frontend-to-backend field by
 field; final frame == the lab's file) · selectors (podSelector vs namespaceSelector; the AND/OR
 gotcha; ingress vs egress) · CNI caveat (unenforced = silent no-op → the lab self-tests) ·
-NetworkFence animation · debrief → S25 · lab.
+NetworkFence animation · recap → S25 · lab.
 Animation: NetworkFence.vue (new, self-contained) — flat → default-deny fence → one gate open.
 NOT a reuse of AdmissionGate.vue: that is admission-time (a Pod CREATE request denied before it
 exists); this is runtime pod-to-pod TRAFFIC allowed/dropped by the CNI — a different layer, so a
@@ -56,7 +56,7 @@ By default, **every Pod can reach every other Pod** — across namespaces, no fi
 
 The Kubernetes pod network is **flat**: your `frontend`, the `backend`, the database, and a Pod
 you've never heard of can all open a connection to each other. Nothing you've built so far changed
-that. So the moment **one** Pod is compromised — the exact scenario S17 was hardening against — it
+that. So the moment **one** Pod is compromised — the exact scenario Pod security was hardening against — it
 can scan the whole cluster and talk to anything that will answer.
 
 <!--
@@ -367,9 +367,9 @@ the only thing that changed is which policies select it. That's the whole loop o
 
 ---
 layout: recap
-heading: 'Debrief — deny by selecting, allow on purpose'
+heading: 'Recap — deny by selecting, allow on purpose'
 story: 'The flat network let everything reach the backend. One default-deny policy fenced it off — every caller timed out. A single allow-from-frontend rule opened exactly one gate, and only the frontend got back in.'
-next: 'S19 · RBAC — from "who may connect" to "who may act": identities, verbs, and least-privilege bindings'
+next: 'RBAC — from "who may connect" to "who may act": identities, verbs, and least-privilege bindings'
 ---
 
 - The pod network is **flat by default** — every Pod can reach every Pod; NetworkPolicy is the
@@ -381,7 +381,7 @@ next: 'S19 · RBAC — from "who may connect" to "who may act": identities, verb
 - **`policyTypes` scopes the direction** — deny ingress and egress/DNS still work; lock egress and
   you must re-allow DNS
 - Enforced by the **CNI only** — `kubectl apply` succeeds even when nothing enforces; **test it**
-- Pairs with **S17** (workload hardening) and is a named defence in **S25** (pod escape)
+- Pairs with **Pod security** (workload hardening) and is a named defence against a **pod escape**
 
 <!--
 Speaker: land the two-part model that carries into S25. S17 hardened what a Pod IS; S18 controls

@@ -121,7 +121,7 @@ the loops we animate next. etcd as "memory" lands the spec-vs-status slide later
   <v-click at="2">
     <KwCard heading="kube-proxy" kind="k-proxy" kindVariant="labeled" variant="plain">
       Programs the node's networking so a <strong>Service IP</strong> reaches the right
-      Pods. We open this box in S07.
+      Pods. We open this box in the Service section.
     </KwCard>
   </v-click>
   <v-click at="3">
@@ -134,7 +134,7 @@ the loops we animate next. etcd as "memory" lands the spec-vs-status slide later
 
 <div v-click="4" class="mt-6 kw-muted text-sm">
 
-That runtime box is the same **CRI chain from S01** — `kubelet → CRI → OCI runtime →
+That runtime box is the same **CRI chain from the containers section** — `kubelet → CRI → OCI runtime →
 namespaces + cgroups`. Kubernetes schedules Pods; the node's runtime is still just
 Linux isolating processes.
 
@@ -160,7 +160,7 @@ mirror of the control-plane loops: it too observes desired vs actual, per node.
 <v-clicks>
 
 - **Nobody told it to create a Pod.** The loop noticed the gap and closed it — that is *self-healing*, for free.
-- **The same loop runs for every kind.** Deployment, Job, PVC, and later your own operators (S21) and GitOps (S22) all reconcile this way.
+- **The same loop runs for every kind.** Deployment, Job, PVC, and later your own operators and GitOps all reconcile this way.
 - **It never stops.** Delete a Pod by hand and it comes back — the loop is always watching, comparing, converging.
 
 </v-clicks>

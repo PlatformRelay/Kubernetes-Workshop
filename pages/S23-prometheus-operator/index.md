@@ -32,7 +32,7 @@ back explicitly) · the four CRDs (Prometheus/ServiceMonitor/PodMonitor/Alertman
 golden signals + metrics vs logs vs traces · the two standard sources (kube-state-metrics +
 node-exporter) · code-annotated (a ServiceMonitor selecting a Service by label + named port) ·
 magic-move (ServiceMonitor selects Service → target appears in Prometheus → one PromQL query
-returns data) · a taste of PromQL (rate() over a counter) · debrief → lab.
+returns data) · a taste of PromQL (rate() over a counter) · recap → lab.
 Animation: NONE (guardrail: S23 is "made concrete" — magic-move + comparison + cards). Do NOT
 author a Vue component. ReconcileLoop reuse is optional and not used here; the teaching device is
 the ServiceMonitor→scrape-config generation, shown via the code-annotated + magic-move slides.
@@ -81,7 +81,7 @@ Next: the mental model, called back to S22 explicitly.
 
 <div class="kw-slide-dense">
 
-<span class="kw-kicker">Mental model · S22 made concrete — a CRD + a controller you didn't write</span>
+<span class="kw-kicker">Mental model · the operator pattern made concrete — a CRD + a controller you didn't write</span>
 
 # The operator watches CRs and **generates the scrape config**
 
@@ -104,12 +104,12 @@ Next: the mental model, called back to S22 explicitly.
 
 <div v-click="3" class="mt-4 text-sm">
 
-<span class="kw-kicker">this is literally S22</span>
+<span class="kw-kicker">this is literally the operator pattern</span>
 
 Recall the equation: **operator = CRD + custom controller running observe → diff → act.** Here the
 **CRDs** are `ServiceMonitor`/`PodMonitor` (your intent) and the **controller** is the Prometheus
 Operator. Its **"act"** step is: *turn the CRs into a live Prometheus scrape config.* You met the
-pattern in S22 with an illustrative `Backup`; this is the same pattern, **shipped and running in
+pattern earlier with an illustrative `Backup`; this is the same pattern, **shipped and running in
 production everywhere.**
 
 </div>
@@ -477,19 +477,19 @@ spike. {code="200"} is a label matcher — PromQL is a label-selection language,
 label-thinking as Services and NetworkPolicy, applied to time-series. Land the golden-signals tie:
 sum(rate(http_requests_total[5m])) = total traffic (signal 2); the same with code=~"5.." over total
 = the error rate (signal 3). One function turns a boring counter into the two most important signals.
-This is the query the learner runs against their own app in the lab. Next: debrief, then go do it.
+This is the query the learner runs against their own app in the lab. Next: recap, then go do it.
 -->
 
 ---
 layout: recap
-heading: 'Debrief — declare monitoring intent; let the operator write the config'
-story: 'Hand-editing scrape config against ephemeral Pods is impossible. So monitoring became declarative: you apply a ServiceMonitor CR that selects a Service by label and names its metrics port, and the Prometheus Operator — the S22 pattern shipped for real — watches it and generates the scrape config. The target appears in Prometheus, and one rate() query turns the scraped counter into a live request rate.'
-next: 'S24 · Operator dev 101 — you''ve USED operators (cert-manager, Prometheus); now peek at building one with kubebuilder'
+heading: 'Recap — declare monitoring intent; let the operator write the config'
+story: 'Hand-editing scrape config against ephemeral Pods is impossible. So monitoring became declarative: you apply a ServiceMonitor CR that selects a Service by label and names its metrics port, and the Prometheus Operator — the operator pattern shipped for real — watches it and generates the scrape config. The target appears in Prometheus, and one rate() query turns the scraped counter into a live request rate.'
+next: 'Operator dev 101 — you''ve USED operators (cert-manager, Prometheus); now peek at building one with kubebuilder'
 ---
 
 - **The problem:** ephemeral Pods make **static scrape config** unmaintainable — monitoring must be
   **declarative and label-driven**, like everything else in Kubernetes
-- **S22 made concrete:** the **Prometheus Operator** watches `ServiceMonitor`/`PodMonitor` CRs and
+- **The operator pattern made concrete:** the **Prometheus Operator** watches `ServiceMonitor`/`PodMonitor` CRs and
   **generates the scrape config** — CRD + controller, exactly the operator equation
 - **Four CRDs** in `monitoring.coreos.com/v1`: **`Prometheus`** (the server), **`ServiceMonitor`**
   (targets via a Service), **`PodMonitor`** (targets by Pod), **`Alertmanager`** (alert routing)

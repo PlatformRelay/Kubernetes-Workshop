@@ -60,9 +60,9 @@ story: 'A single Pod became a Deployment, got a stable Service address, was expo
   <span class="text-2xl">🚪</span> <strong>Gateway API</strong>
 </div>
 
-- **Pod** (S05) the smallest deployable unit → **Deployment** (S06) self-heals & rolls out → **Service** (S07) a stable address for moving Pods → **Ingress** (S08) HTTP from outside → **Gateway API** (S09) the modern, role-oriented successor
-- Hung off that spine: **ConfigMap/Secret** (S10), **storage** (S11) & **StatefulSet** (S12), **resources** (S13), **health probes** (S14), **Jobs/CronJobs** (S15), **autoscaling** (S16)
-- The one idea under all of it: **declare desired state; a controller reconciles reality to match** (S03)
+- **Pod** the smallest deployable unit → **Deployment** self-heals & rolls out → **Service** a stable address for moving Pods → **Ingress** HTTP from outside → **Gateway API** the modern, role-oriented successor
+- Hung off that spine: **ConfigMap/Secret**, **storage** & **StatefulSet**, **resources**, **health probes**, **Jobs/CronJobs**, **autoscaling**
+- The one idea under all of it: **declare desired state; a controller reconciles reality to match**
 
 <!--
 Speaker: walk the icons left to right — this is the spine every learner watched grow in the footer
@@ -80,15 +80,15 @@ heading: 'Days 2–3 — operate it like production'
 columns: 2
 ---
 
-- **Security foundations** — small non-root images (S02), Pod security & PSS (S17), a controlled **pod escape** blocked by `restricted` (S25)
-- **Network & identity** — **NetworkPolicy** default-deny (S18), **RBAC** least-privilege identities (S19)
-- **Packaging & delivery** — **Helm** templated releases (S20), **GitOps** with Argo CD reconciling from Git (S21)
-- **Extending Kubernetes** — the **operator pattern** (S22), the **Prometheus Operator** for observability (S23), building one with **kubebuilder** (S24)
-- **Production readiness** — the **best-practices capstone** (S26): probes, PDBs, digests, NetworkPolicy, graceful shutdown, as one checklist
+- **Security foundations** — small non-root images, Pod security & PSS, a controlled **pod escape** blocked by `restricted`
+- **Network & identity** — **NetworkPolicy** default-deny, **RBAC** least-privilege identities
+- **Packaging & delivery** — **Helm** templated releases, **GitOps** with Argo CD reconciling from Git
+- **Extending Kubernetes** — the **operator pattern**, the **Prometheus Operator** for observability, building one with **kubebuilder**
+- **Production readiness** — the **best-practices capstone**: probes, PDBs, digests, NetworkPolicy, graceful shutdown, as one checklist
 
 <div class="mt-4 kw-muted text-sm" v-click>
 
-Same reconciliation loop, three times over: built-in controllers (S03), **Git** as desired state (S21), and **your own CRD** as desired state (S22).
+Same reconciliation loop, three times over: built-in controllers, **Git** as desired state, and **your own CRD** as desired state.
 
 </div>
 
@@ -112,13 +112,13 @@ to BUILD an operator, not just consume one.
 
 | Exam domain | Where it lives in this workshop |
 | --- | --- |
-| **CKAD** · Application design & build | Containers & images (S01), Pod lifecycle (S05), Jobs/CronJobs (S15) |
-| **CKAD** · Application deployment | Deployments & rollouts (S06), Helm (S20), GitOps (S21) |
-| **CKAD** · Observability & maintenance | Probes (S14), resources (S13), Prometheus Operator (S23) |
-| **CKAD/CKA** · Config & security | ConfigMap/Secret (S10), Pod security & PSS (S17), RBAC (S19), image hygiene (S02) |
-| **CKAD/CKA** · Services & networking | Service (S07), Ingress (S08), Gateway API (S09), NetworkPolicy (S18) |
-| **CKA** · Cluster architecture | Control plane & reconciliation (S03), kubectl (S04), RBAC (S19) |
-| **CKA** · Storage | PV/PVC/StorageClass (S11), StatefulSet volumes (S12) |
+| **CKAD** · Application design & build | Containers & images, Pod lifecycle, Jobs/CronJobs |
+| **CKAD** · Application deployment | Deployments & rollouts, Helm, GitOps |
+| **CKAD** · Observability & maintenance | Probes, resources, Prometheus Operator |
+| **CKAD/CKA** · Config & security | ConfigMap/Secret, Pod security & PSS, RBAC, image hygiene |
+| **CKAD/CKA** · Services & networking | Service, Ingress, Gateway API, NetworkPolicy |
+| **CKA** · Cluster architecture | Control plane & reconciliation, kubectl, RBAC |
+| **CKA** · Storage | PV/PVC/StorageClass, StatefulSet volumes |
 | **CKA** · Troubleshooting | Every lab's deliberate **break → fix** step |
 
 </div>
@@ -145,12 +145,12 @@ map shows they've already met the material; the next step is timed practice, not
 
 <div class="kw-cols-3 mt-4 text-sm">
   <KwCard heading="Service mesh" icon="🕸️">
-    mTLS, traffic-splitting, and L7 policy across services. The Gateway API (S09)
+    mTLS, traffic-splitting, and L7 policy across services. The Gateway API
     is the on-ramp; a mesh is the next layer when service-to-service security and
     fine-grained routing become the problem.
   </KwCard>
   <KwCard heading="Multi-cluster & scale" icon="🌍">
-    Federation, fleet management, and cross-region delivery. GitOps (S21) is the
+    Federation, fleet management, and cross-region delivery. GitOps is the
     foundation the multi-cluster tooling builds on.
   </KwCard>
   <KwCard heading="Cluster operations" icon="🛠️" variant="plain">
@@ -184,7 +184,7 @@ this", so it reads as a map forward, not a confession of holes.
 <div class="kw-cols-3 mt-4 text-sm">
   <KwCard heading="Read the source of truth" icon="📚">
     The <strong>official Kubernetes documentation</strong> — Concepts, Tasks, and
-    the interactive Tutorials. The <code>kubectl explain</code> habit (S04) is the
+    the interactive Tutorials. The <code>kubectl explain</code> habit is the
     docs in your terminal.
   </KwCard>
   <KwCard heading="Structured learning" icon="🧭">
@@ -201,7 +201,7 @@ this", so it reads as a map forward, not a confession of holes.
 
 <div class="mt-5 text-sm" v-click>
 
-The highest-leverage next step isn't a course — it's **running a real workload through the S26 checklist**. This whole deck and its labs are yours to keep and re-run.
+The highest-leverage next step isn't a course — it's **running a real workload through the best-practices checklist**. This whole deck and its labs are yours to keep and re-run.
 
 </div>
 
@@ -225,7 +225,7 @@ rightBadge: also fine
 ---
 
 - A **deadline and a syllabus** can be motivating — and you've already met most of the material (see the map).
-- The gap to close is **speed under time pressure**, not new concepts: timed practice, `kubectl` fluency (S04), and the docs you're allowed to use in the exam.
+- The gap to close is **speed under time pressure**, not new concepts: timed practice, `kubectl` fluency, and the docs you're allowed to use in the exam.
 - **CKAD** leans to authoring workloads; **CKA** adds cluster administration (the operations track we flagged).
 
 ::right::
@@ -254,8 +254,8 @@ You started at *"what is a container"* and you can now **author, run, secure, de
 <div class="mt-4 text-sm">
 
 - **Feedback & contributions welcome** — this deck and its labs are **open source**. Open an issue or a PR: a confusing step, a better break→fix, a section you'd add.
-- **Keep the rhythm:** explain → run → **observe → break it → fix it** → debrief. It works outside this room too.
-- **Everything is yours to keep** — the slides, every lab, and the S26 production checklist.
+- **Keep the rhythm:** explain → run → **observe → break it → fix it** → recap. It works outside this room too.
+- **Everything is yours to keep** — the slides, every lab, and the best-practices production checklist.
 
 </div>
 
