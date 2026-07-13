@@ -15,6 +15,13 @@ set -eu
 
 echo "kind $*" >> "${MOCK_LOG:?stub requires MOCK_LOG}"
 
+# Record which provider kind was pinned to, so tests can assert the bootstrap
+# propagated the detected engine (KIND_EXPERIMENTAL_PROVIDER) instead of letting
+# kind re-detect. Only logged when the caller set it.
+if [ -n "${KIND_EXPERIMENTAL_PROVIDER:-}" ]; then
+  echo "kind-provider ${KIND_EXPERIMENTAL_PROVIDER}" >> "$MOCK_LOG"
+fi
+
 state_dir="${BATS_TEST_TMPDIR:-$(dirname "$MOCK_LOG")}"
 marker="$state_dir/.kind-cluster-created"
 

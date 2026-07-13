@@ -181,8 +181,14 @@ licensing_note() {
   esac
 }
 
+# The engine our probe (docker info / podman info) selected. Exported so the
+# cluster step pins kind to the SAME engine instead of letting kind re-detect by
+# CLI presence — otherwise "docker CLI present but daemon down, podman up" makes
+# kind pick dead docker while the probe (and the user) chose podman.
+WORKSHOP_ENGINE=""
+
 preflight() {
-  local os engine
+  local os
   os="$(detect_os)"
   say "Preflight — OS: ${os}, arch: $(uname -m 2>/dev/null || echo unknown)"
 
@@ -197,16 +203,26 @@ preflight() {
 
   check_resources "$os"
 
-  engine="$(detect_engine || true)"
-  if [ -z "$engine" ]; then
+  WORKSHOP_ENGINE="$(detect_engine || true)"
+  if [ -z "$WORKSHOP_ENGINE" ]; then
     err "no reachable container engine (tried docker, then podman)."
     say "Start Docker Desktop or 'podman machine start' (rootful for kind), then retry."
     licensing_note "$os"
     return 1
   fi
-  ok "container engine reachable: ${engine}"
+  ok "container engine reachable: ${WORKSHOP_ENGINE}"
   licensing_note "$os"
   return 0
+}
+
+# Emit the kind provider override for the detected engine. kind defaults to
+# docker; only podman needs KIND_EXPERIMENTAL_PROVIDER. Prints a `KEY=VALUE`
+# token (or nothing) so callers can prepend it to the make invocation.
+kind_provider_env() {
+  case "$WORKSHOP_ENGINE" in
+    podman) printf 'KIND_EXPERIMENTAL_PROVIDER=podman' ;;
+    *) : ;;
+  esac
 }
 
 # --- Tools (mise) ------------------------------------------------------------
@@ -251,9 +267,15 @@ install_tools() {
 }
 
 # --- Cluster (delegated to the Makefile) -------------------------------------
+# Pin kind to the engine our preflight selected (see WORKSHOP_ENGINE). We prefix
+# the env token via `env` so kind cannot silently re-detect a different, dead
+# engine. `env FOO=bar` with an empty token list is a harmless no-op, so the
+# docker (default) path is unaffected.
 cluster_up() {
+  local provider
+  provider="$(kind_provider_env)"
   spin "Creating the kind cluster (make kind-up)" \
-    make -C "$REPO_ROOT" kind-up || {
+    env ${provider:+"$provider"} make -C "$REPO_ROOT" kind-up || {
     err "kind cluster creation failed — see output above."
     return 1
   }

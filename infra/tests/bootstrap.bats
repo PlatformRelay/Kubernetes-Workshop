@@ -81,10 +81,31 @@ setup() {
 @test "engine probe falls back to podman when docker is down" {
   export MOCK_DOCKER_UP=0   # docker present but unreachable
   export MOCK_PODMAN_UP=1
+  export MOCK_CLUSTER_EXISTS=0
   run "$ROOT/workshop" up
   [ "$status" -eq 0 ]
   grep -q "docker info" "$MOCK_LOG"    # tried docker first
   grep -q "podman info" "$MOCK_LOG"    # then fell through to podman
+}
+
+@test "the chosen engine is propagated to kind (podman -> KIND_EXPERIMENTAL_PROVIDER)" {
+  # docker CLI present but daemon down, podman up: probe picks podman, and kind
+  # MUST be pinned to podman rather than re-detecting dead docker.
+  export MOCK_DOCKER_UP=0
+  export MOCK_PODMAN_UP=1
+  export MOCK_CLUSTER_EXISTS=0
+  run "$ROOT/workshop" up
+  [ "$status" -eq 0 ]
+  grep -q "^kind-provider podman" "$MOCK_LOG"
+}
+
+@test "the docker (default) path sets no kind provider override" {
+  export MOCK_ENGINE_UP=1   # docker reachable — the default engine
+  export MOCK_CLUSTER_EXISTS=0
+  run "$ROOT/workshop" up
+  [ "$status" -eq 0 ]
+  # kind's own default is docker, so no KIND_EXPERIMENTAL_PROVIDER is injected.
+  ! grep -q "^kind-provider" "$MOCK_LOG"
 }
 
 @test "up fails clearly when no container engine is reachable" {
