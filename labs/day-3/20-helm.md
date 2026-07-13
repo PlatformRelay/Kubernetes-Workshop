@@ -19,8 +19,8 @@ and every install/upgrade/rollback is a numbered, reversible revision.**
 
 ## Prerequisites
 
-- `helm` v3.8+ (this lab was authored against **Helm 4**; `helm version` should print `v3.8`
-  or newer — OCI support, used in the stretch, is GA from 3.8).
+- `helm` v3.8+ (the workshop pins **Helm 3.21.x** via `mise`; `helm version` should print
+  `v3.8` or newer — OCI support, used in the stretch, is GA from 3.8).
 - `kubectl`, and a place to install into:
   - **namespace path:** your assigned namespace on the shared cluster (Helm needs no
     cluster-admin — it applies as *you*, with your RBAC).
@@ -51,7 +51,7 @@ Deployment + Service from Day 1 — a chart is your same manifests, parameterise
 ```bash
 export NS=<your-assigned-namespace>
 kubectl config set-context --current --namespace="$NS"
-helm version        # expect v3.8+ (authored against Helm 4)
+helm version        # expect v3.8+ (workshop pins Helm 3.21.x)
 ```
 
 ### kind path
