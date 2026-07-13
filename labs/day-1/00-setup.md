@@ -15,26 +15,78 @@ verified starting state**.
 
 ## Prerequisites
 
-- `kubectl` installed and on your `PATH`.
 - **One** of the two environments:
   - **Shared cluster:** a kubeconfig from your facilitator and an **assigned namespace**
-    (e.g. `student-07`). You do **not** need cluster-admin.
-  - **Local kind cluster:** [`kind`](https://kind.sigs.k8s.io) and a container engine
-    (Docker or Podman) installed. You have full admin over your own cluster.
+    (e.g. `student-07`), plus `kubectl` on your `PATH`. You do **not** need cluster-admin.
+  - **Local kind cluster:** a **container engine** (Docker or Podman) and this repo cloned.
+    You run **one command** (`./workshop up`) — it installs the pinned tools (kubectl, kind,
+    …) and creates your cluster. See [`../../docs/setup.md`](../../docs/setup.md) for engine
+    choice (incl. the Docker Desktop licensing note) and the Windows/WSL2 path.
 - A terminal you can copy-paste into. No prior labs.
 
 ## Files used
 
-- `kind-cluster.yaml` — a minimal kind cluster config (created inline in Step 2, kind path
-  only). No other files.
+- **None.** On the kind path, the cluster config lives in `infra/kind/cluster.yaml` and is
+  managed for you by `./workshop`; you create no files in this lab.
+
+---
+
+## Step 0 — first task: confirm your machine is lab-ready
+
+Every later lab has a spoiler; so does this one. **Get to a verified starting state before
+any content.** Do the task that matches your environment.
+
+### kind path — one command
+
+From the repo root, bring up (or re-check) your local cluster:
+
+```bash
+./workshop up          # preflight → pinned tools → kind cluster → doctor
+```
+
+`up` finishes by running `./workshop doctor`, which checks the engine, tool versions, the
+cluster, its nodes, and a throwaway smoke Pod. A green summary means you're ready.
+
+<details><summary>Solution / expected output — kind path</summary>
+
+```console
+$ ./workshop up
+workshop up — bring up a local, lab-ready kind cluster
+[ OK ] container engine reachable: docker
+[ OK ] toolchain installed and verified against mise.lock
+[ OK ] kind cluster 'workshop' ready
+
+Running doctor to confirm the environment is lab-ready…
+[PASS] container engine reachable (docker)
+[PASS] kind v0.32.0 matches pin (v0.32.0)
+[PASS] kubectl v1.36.1 matches pin (v1.36.1)
+[PASS] kind cluster 'workshop' exists
+[PASS] cluster answers the API (context kind-workshop)
+[PASS] all nodes Ready (1/1)
+[PASS] smoke Pod ran to completion and was cleaned up
+
+doctor: 7 passed, 0 warnings, 0 failed
+[ OK ] environment is ready — start with labs/day-1/00-setup.md
+```
+
+Re-run `./workshop doctor` any time to re-check. A `[WARN]` (e.g. a version drift) is fine;
+a `[FAIL]` prints a targeted fix hint — the common one is "run: make kind-up", which
+`./workshop up` does for you.
+</details>
+
+### Shared-cluster path — reach your cluster
+
+`./workshop doctor` is for the local kind cluster only, so on a shared cluster your first
+task is instead to confirm `kubectl` reaches the cluster your facilitator gave you. That is
+exactly Step 1 below — start there.
 
 ---
 
 ## Step 1 — confirm kubectl and reach a cluster
 
 Set a shell variable for your working namespace now; **every later command reuses `$NS`.**
-On the shared cluster, use the namespace your facilitator assigned. On kind, we create one
-in Step 2 — use `workshop` there.
+On the shared cluster, use the namespace your facilitator assigned. On kind, your cluster
+came up in Step 0 — we create a `workshop` namespace in Step 2; use `workshop` there.
 
 ```bash
 export NS=<your-namespace>        # e.g. student-07  (kind users: export NS=workshop)
@@ -109,19 +161,10 @@ the one that will be used by default from now on.
 
 ### kind environment (local cluster)
 
-Create a single-node cluster from a pinned config, then make a `workshop` namespace your
-default:
+Your cluster already exists — `./workshop up` created it in Step 0 and switched your kubectl
+context to `kind-workshop`. Now just create a `workshop` namespace and make it your default:
 
 ```bash
-cat > kind-cluster.yaml <<'EOF'
-kind: Cluster
-apiVersion: kind.x-k8s.io/v1alpha4
-name: workshop
-nodes:
-  - role: control-plane
-EOF
-
-kind create cluster --config kind-cluster.yaml
 kubectl create namespace workshop
 kubectl config set-context --current --namespace=workshop
 kubectl config view --minify | grep namespace:
@@ -130,24 +173,19 @@ kubectl config view --minify | grep namespace:
 <details><summary>Solution / expected output</summary>
 
 ```console
-$ kind create cluster --config kind-cluster.yaml
-Creating cluster "workshop" ...
- ✓ Ensuring node image ...
- ✓ Preparing nodes ...
- ✓ Starting control-plane ...
- ✓ Installing CNI ...
- ✓ Installing StorageClass ...
-Set kubectl context to "kind-workshop"
-
 $ kubectl create namespace workshop
 namespace/workshop created
+
+$ kubectl config set-context --current --namespace=workshop
+Context "kind-workshop" modified.
 
 $ kubectl config view --minify | grep namespace:
     namespace: workshop
 ```
 
-`kind create cluster` automatically switches your kubectl context to `kind-workshop`, so the
-`set-context` command then just changes the **default namespace** within it.
+`./workshop up` already pointed kubectl at `kind-workshop`, so `set-context` here just
+changes the **default namespace** within that context. (If you ever need to recreate the
+cluster from scratch, `./workshop down && ./workshop up` is the full reset.)
 </details>
 
 ---
@@ -318,11 +356,12 @@ kubectl delete deploy,rs,sts,ds,job,cronjob,pod,svc,ingress,configmap,secret,pvc
 On kind, the fastest possible reset is to throw the cluster away and rebuild it (≈30 s):
 
 ```console
-$ kind delete cluster --name workshop
-$ kind create cluster --config kind-cluster.yaml   # then re-do Step 2's namespace commands
+$ ./workshop down && ./workshop up   # then re-do Step 2's namespace commands
 ```
 
-Never do this on a shared cluster — you would delete everyone's work. There, the scoped
+`./workshop down` deletes the cluster (it asks you to confirm; add `--yes` to skip the
+prompt) and `./workshop up` recreates it from the same pinned config. Never do this on a
+shared cluster — you would delete everyone's work. There, the scoped
 `kubectl delete ... -n $NS` above is the correct reset.
 </details>
 

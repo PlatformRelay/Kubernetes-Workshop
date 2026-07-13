@@ -114,7 +114,9 @@ Four ways in, depending on why you are here:
   [PDF releases](https://github.com/PlatformRelay/Kubernetes-Workshop/releases).
 - **Participate** — do the hands-on labs: start at the
   [participant guide](./labs/README.md), then run
-  [`labs/day-1/00-setup.md`](./labs/day-1/00-setup.md) end to end.
+  [`labs/day-1/00-setup.md`](./labs/day-1/00-setup.md) end to end. On a local
+  cluster, [`docs/setup.md`](./docs/setup.md) gets you from a fresh laptop to a
+  lab-ready kind cluster with one command (`./workshop up`).
 - **Facilitate** — run the workshop for a room: the
   [facilitator guide](./docs/facilitator-guide.md) covers environment setup, pacing, and
   the per-lab add-on checklist.

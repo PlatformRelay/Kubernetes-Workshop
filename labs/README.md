@@ -31,6 +31,9 @@ cluster's API server.
 
 - [`kind`](https://kind.sigs.k8s.io) and a **container engine** (Docker or Podman).
 - You have full admin over your own cluster, so kind-only labs (add-on installs) work.
+- **One command sets this up:** [`../docs/setup.md`](../docs/setup.md) takes you from a
+  fresh laptop to a lab-ready kind cluster with `./workshop up` (engine choice incl. the
+  Docker Desktop licensing note, the pinned toolchain, and the Windows/WSL2 path).
 
 **For the container labs (S01/S02) — no cluster needed:**
 
