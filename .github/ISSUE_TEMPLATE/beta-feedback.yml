@@ -1,0 +1,166 @@
+name: Beta feedback
+description: Report feedback on a workshop section or lab from a beta run or rehearsal.
+title: "[beta] <section/lab>: <one-line summary>"
+labels:
+  - beta-feedback
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping us harden the workshop. Please file **one issue per
+        section/lab** so feedback stays actionable. If your feedback is
+        cross-cutting (spans several sections), say so in the summary and pick
+        the closest section below.
+
+        The six feedback dimensions below map to how we judge a lab: was it
+        **clear**, were the **commands correct**, did the **time** match, did
+        **prerequisites** hold, was the **learning difficulty** right, and was
+        the **visual quality** (slides/diagrams) good.
+  - type: dropdown
+    id: section
+    attributes:
+      label: Section / lab
+      description: Which section or lab is this feedback about? IDs match the syllabus (S00–S27).
+      options:
+        - "S00 — Welcome & setup (labs/day-1/00-setup.md)"
+        - "S01 — Containers (labs/day-1/01-containers.md)"
+        - "S02 — Container security & supply chain (labs/day-1/02-container-security.md)"
+        - "S03 — Kubernetes mental model (labs/day-1/03-cluster-tour.md)"
+        - "S04 — kubectl (labs/day-1/04-kubectl.md)"
+        - "S05 — Pod (labs/day-1/05-pod.md)"
+        - "S06 — Deployment (labs/day-1/06-deployment.md)"
+        - "S07 — Service (labs/day-1/07-service.md)"
+        - "S08 — Ingress (labs/day-1/08-ingress.md)"
+        - "S09 — Gateway API (labs/day-2/09-gateway-api.md)"
+        - "S10 — ConfigMap & Secret (labs/day-2/10-config.md)"
+        - "S11 — Storage (labs/day-2/11-storage.md)"
+        - "S12 — StatefulSet (labs/day-2/12-statefulset.md)"
+        - "S13 — Resources & limits (labs/day-2/13-resources.md)"
+        - "S14 — Health probes (labs/day-2/14-probes.md)"
+        - "S15 — Jobs & CronJobs (labs/day-2/15-jobs.md)"
+        - "S16 — Autoscaling / HPA (labs/day-2/16-hpa.md)"
+        - "S17 — Pod security (labs/day-3/17-pod-security.md)"
+        - "S18 — NetworkPolicy (labs/day-3/18-networkpolicy.md)"
+        - "S19 — RBAC (labs/day-3/19-rbac.md)"
+        - "S20 — Helm (labs/day-3/20-helm.md)"
+        - "S21 — GitOps with Argo CD (labs/day-3/21-gitops.md)"
+        - "S22 — The operator pattern (labs/day-3/22-operator-concept.md)"
+        - "S23 — Prometheus Operator (labs/day-3/23-prometheus.md)"
+        - "S24 — Operator dev 101 / kubebuilder — DEFERRED STUB (labs/day-3/24-kubebuilder.md)"
+        - "S25 — Security & pod escape (labs/day-3/25-pod-escape.md)"
+        - "S26 — Best practices / capstone (labs/day-3/26-capstone.md)"
+        - "S27 — Wrap-up & next steps (slides only, no lab)"
+        - "Cross-cutting / not tied to one section"
+    validations:
+      required: true
+  - type: dropdown
+    id: environment
+    attributes:
+      label: Environment
+      description: Which lab environment did you run this in?
+      options:
+        - "Local kind"
+        - "Shared namespace"
+        - "Slides only (no lab run)"
+        - "Not applicable"
+    validations:
+      required: true
+  - type: dropdown
+    id: clarity
+    attributes:
+      label: Clarity
+      description: Were the instructions and explanations clear and unambiguous?
+      options:
+        - "Clear — no confusion"
+        - "Mostly clear — minor wording issues"
+        - "Confusing in places (explain below)"
+        - "Unclear — I got stuck (explain below)"
+    validations:
+      required: true
+  - type: dropdown
+    id: command-correctness
+    attributes:
+      label: Command correctness
+      description: Did the commands, manifests, and expected output work as written?
+      options:
+        - "Everything worked as written"
+        - "Worked, but expected output differed (note below)"
+        - "A command or manifest failed (details below)"
+        - "Did not run the commands"
+    validations:
+      required: true
+  - type: input
+    id: time-required
+    attributes:
+      label: Time required (minutes)
+      description: >-
+        How long did this section actually take (slides + lab)? A rough measured
+        number is fine. If you tracked slides and lab separately, note both.
+      placeholder: "e.g. slides 28, lab 34 (measured)"
+    validations:
+      required: false
+  - type: dropdown
+    id: prerequisites
+    attributes:
+      label: Prerequisite problems
+      description: Did the stated prerequisites (tools, add-ons, environment) hold?
+      options:
+        - "No problems — prerequisites held"
+        - "A prerequisite was missing or wrong (details below)"
+        - "An add-on install failed or was slow (details below)"
+        - "Not applicable"
+    validations:
+      required: true
+  - type: dropdown
+    id: learning-difficulty
+    attributes:
+      label: Learning difficulty
+      description: Was the difficulty pitched right for a beginner-to-intermediate learner?
+      options:
+        - "Well pitched"
+        - "Too easy / under-explained"
+        - "Too hard / needs more scaffolding"
+        - "Uneven (explain below)"
+    validations:
+      required: true
+  - type: dropdown
+    id: visual-quality
+    attributes:
+      label: Visual quality
+      description: Were the slides, diagrams, and comics readable and correct (no overflow, legible)?
+      options:
+        - "Good — clear and legible"
+        - "Minor issues (typos, small overflow)"
+        - "A slide/diagram was broken or unreadable (details below)"
+        - "Did not view the slides"
+    validations:
+      required: true
+  - type: textarea
+    id: details
+    attributes:
+      label: Details
+      description: >-
+        Describe the issue. For a failed command, paste the command you ran and
+        the actual output. Note the step number where relevant.
+      placeholder: |
+        Step 3 — `kubectl get svc` returned no endpoints.
+        Ran: kubectl get endpoints web -n $NS
+        Got: <paste output>
+    validations:
+      required: true
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: Suggested fix (optional)
+      description: If you have a concrete suggestion, put it here.
+    validations:
+      required: false
+  - type: checkboxes
+    id: confirmations
+    attributes:
+      label: Before you file
+      options:
+        - label: I searched existing issues and this is not a duplicate.
+          required: true
+        - label: This is about a single section/lab (or I flagged it as cross-cutting above).
+          required: true
