@@ -125,6 +125,8 @@ run. It's a **fail-closed** check: unknown context → refuse.
 loosest standard, `privileged` — so the API server won't stop the dangerous Pod.
 
 ```bash
+./context-check.sh || { echo "guard failed — stopping"; exit 1; }
+
 kubectl label --overwrite namespace "$NS" \
   pod-security.kubernetes.io/enforce=privileged
 kubectl get namespace "$NS" -o jsonpath='{.metadata.labels}' | tr ',' '\n' | grep pod-security
@@ -262,6 +264,8 @@ first**, then tighten the namespace, then try to re-create the *identical* Pod a
 refuse it.
 
 ```bash
+./context-check.sh || { echo "guard failed — stopping"; exit 1; }
+
 # 1) remove the running escape Pod (admission won't touch what already exists)
 kubectl delete -f pod-escape.yaml
 
