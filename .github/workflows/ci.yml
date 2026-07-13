@@ -33,6 +33,18 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
 
+  link-check:
+    name: Link-check front-door docs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # Zero-dependency Node script — no pnpm install needed. Fails on a missing
+      # internal target, a broken relative anchor, or an unresolved <pages-url>.
+      - run: node scripts/link-check.mjs
+
   infra:
     name: Infra scripts (shellcheck + bats)
     runs-on: ubuntu-latest

@@ -17,7 +17,8 @@
     "render:clicks": "slidev export slides.md --format png --per-slide --with-clicks --output dist-render",
     "render:3day": "slidev export slides-3day.md --format png --per-slide --output dist-render-3day",
     "lint": "markdownlint-cli2",
-    "lint:fix": "markdownlint-cli2 --fix"
+    "lint:fix": "markdownlint-cli2 --fix",
+    "link-check": "node scripts/link-check.mjs"
   },
   "dependencies": {
     "@slidev/cli": "^52.16.0",
