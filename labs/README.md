@@ -7,8 +7,13 @@ against your own environment.
 Each lab is a **standalone Markdown file** you can read top to bottom and copy-paste
 your way through. You do not need the slides to run them.
 
+> **New here? Start with [`day-1/00-setup.md`](./day-1/00-setup.md).** It verifies your
+> tooling, context, and namespace before any real content — and teaches the panic reset
+> you reuse everywhere. Then work through the labs in order (each extends the previous).
+
 - **Schedule & section map:** [`../docs/syllabus.md`](../docs/syllabus.md)
 - **Running the workshop (facilitators):** [`../docs/facilitator-guide.md`](../docs/facilitator-guide.md)
+- **Project overview & preview:** [`../README.md`](../README.md)
 
 ## Prerequisites
 
@@ -127,13 +132,26 @@ The setup lab defines the reusable panic reset; later labs point back to it.
 ## Layout
 
 Labs are grouped by day, matching the [3-day cut](../docs/syllabus.md#the-canonical-3-day-cut).
-The numeric prefix is the section ID (Lab `NN` ↔ section `SNN`).
+The numeric prefix is the section ID (Lab `NN` ↔ section `SNN`). Every authored lab below
+is a direct link — click straight into any one:
 
-| Directory | Covers | Contents |
-| --- | --- | --- |
-| [`day-1/`](./day-1/) | Foundations, containers, core red line | `00-setup` → `08-ingress` |
-| [`day-2/`](./day-2/) | Modern routing, running workloads well | `09-gateway-api` → `16-hpa` |
-| [`day-3/`](./day-3/) | Security, delivery, operators, best practices | `17-pod-security` → `26-capstone` |
+### Day 1 — Foundations, containers, core red line
+
+- [`00-setup`](./day-1/00-setup.md) — verify tooling, context & namespace *(start here)*
+- [`01-containers`](./day-1/01-containers.md) · [`02-container-security`](./day-1/02-container-security.md) *(local, no cluster)*
+- [`03-cluster-tour`](./day-1/03-cluster-tour.md) · [`04-kubectl`](./day-1/04-kubectl.md)
+- [`05-pod`](./day-1/05-pod.md) · [`06-deployment`](./day-1/06-deployment.md) · [`07-service`](./day-1/07-service.md) · [`08-ingress`](./day-1/08-ingress.md)
+
+### Day 2 — Modern routing, running workloads well
+
+- [`09-gateway-api`](./day-2/09-gateway-api.md) · [`10-config`](./day-2/10-config.md) · [`11-storage`](./day-2/11-storage.md) · [`12-statefulset`](./day-2/12-statefulset.md)
+- [`13-resources`](./day-2/13-resources.md) · [`14-probes`](./day-2/14-probes.md) · [`15-jobs`](./day-2/15-jobs.md) · [`16-hpa`](./day-2/16-hpa.md)
+
+### Day 3 — Security, delivery, operators, best practices
+
+- [`17-pod-security`](./day-3/17-pod-security.md) · [`18-networkpolicy`](./day-3/18-networkpolicy.md) · [`19-rbac`](./day-3/19-rbac.md)
+- [`20-helm`](./day-3/20-helm.md) · [`21-gitops`](./day-3/21-gitops.md) · [`22-operator-concept`](./day-3/22-operator-concept.md) · [`23-prometheus`](./day-3/23-prometheus.md)
+- [`24-kubebuilder`](./day-3/24-kubebuilder.md) *(deferred stub)* · [`25-pod-escape`](./day-3/25-pod-escape.md) · [`26-capstone`](./day-3/26-capstone.md)
 
 Because the deck is a **superset** (more sections than fit in three days), some labs are
 outside the default 3-day cut (e.g. Jobs, HPA, RBAC). These are fully authored and

@@ -113,44 +113,44 @@ Each section pairs concept slides with a standalone lab under
 
 | ID | Outcome | Lab | Slides | Lab time |
 | --- | --- | --- | --- | --- |
-| S00 | Everyone can reach their environment and run kubectl. | `labs/day-1/00-setup.md` | 20 | 15 |
-| S01 | Explain what a container image *is* and build one. | `labs/day-1/01-containers.md` | 30 | 25 |
-| S02 | Build/choose images that are small, non-root, and scanned (build-time security). | `labs/day-1/02-container-security.md` | 30 | 25 |
-| S03 | Describe the control plane, nodes, and reconciliation. | `labs/day-1/03-cluster-tour.md` | 30 | 20 |
-| S04 | Fluent discovery, inspection, and change with kubectl. | `labs/day-1/04-kubectl.md` | 25 | 25 |
-| S05 | Author, inspect, and delete a Pod; know its lifecycle. | `labs/day-1/05-pod.md` | 30 | 25 |
-| S06 | Run and update a Deployment; understand ReplicaSets and rollouts. | `labs/day-1/06-deployment.md` | 35 | 30 |
-| S07 | Give Pods a stable address; debug selector→endpoint routing. | `labs/day-1/07-service.md` | 30 | 30 |
-| S08 | Expose HTTP north-south through an Ingress controller. | `labs/day-1/08-ingress.md` | 25 | 25 |
+| S00 | Everyone can reach their environment and run kubectl. | [`labs/day-1/00-setup.md`](../labs/day-1/00-setup.md) | 20 | 15 |
+| S01 | Explain what a container image *is* and build one. | [`labs/day-1/01-containers.md`](../labs/day-1/01-containers.md) | 30 | 25 |
+| S02 | Build/choose images that are small, non-root, and scanned (build-time security). | [`labs/day-1/02-container-security.md`](../labs/day-1/02-container-security.md) | 30 | 25 |
+| S03 | Describe the control plane, nodes, and reconciliation. | [`labs/day-1/03-cluster-tour.md`](../labs/day-1/03-cluster-tour.md) | 30 | 20 |
+| S04 | Fluent discovery, inspection, and change with kubectl. | [`labs/day-1/04-kubectl.md`](../labs/day-1/04-kubectl.md) | 25 | 25 |
+| S05 | Author, inspect, and delete a Pod; know its lifecycle. | [`labs/day-1/05-pod.md`](../labs/day-1/05-pod.md) | 30 | 25 |
+| S06 | Run and update a Deployment; understand ReplicaSets and rollouts. | [`labs/day-1/06-deployment.md`](../labs/day-1/06-deployment.md) | 35 | 30 |
+| S07 | Give Pods a stable address; debug selector→endpoint routing. | [`labs/day-1/07-service.md`](../labs/day-1/07-service.md) | 30 | 30 |
+| S08 | Expose HTTP north-south through an Ingress controller. | [`labs/day-1/08-ingress.md`](../labs/day-1/08-ingress.md) | 25 | 25 |
 
 ### Day 2 — Modern routing and running workloads well
 
 | ID | Outcome | Lab | Slides | Lab time |
 | --- | --- | --- | --- | --- |
-| S09 | Route with the Gateway API and explain why it succeeds Ingress. | `labs/day-2/09-gateway-api.md` | 30 | 25 |
-| S10 | Inject configuration and secrets; know the caveats. | `labs/day-2/10-config.md` | 25 | 25 |
-| S11 | Attach durable storage and reason about the storage stack. | `labs/day-2/11-storage.md` | 30 | 30 |
-| S12 | Run a stateful workload with stable identity and per-Pod storage. | `labs/day-2/12-statefulset.md` | 30 | 30 |
-| S13 | Set requests/limits and reason about scheduling and QoS. | `labs/day-2/13-resources.md` | 30 | 30 |
-| S14 | Configure liveness, readiness, and startup probes correctly. | `labs/day-2/14-probes.md` | 30 | 30 |
-| S15 | Run batch and scheduled workloads. | `labs/day-2/15-jobs.md` | 20 | 20 |
-| S16 | Scale a workload on demand with an HPA. | `labs/day-2/16-hpa.md` | 20 | 20 |
+| S09 | Route with the Gateway API and explain why it succeeds Ingress. | [`labs/day-2/09-gateway-api.md`](../labs/day-2/09-gateway-api.md) | 30 | 25 |
+| S10 | Inject configuration and secrets; know the caveats. | [`labs/day-2/10-config.md`](../labs/day-2/10-config.md) | 25 | 25 |
+| S11 | Attach durable storage and reason about the storage stack. | [`labs/day-2/11-storage.md`](../labs/day-2/11-storage.md) | 30 | 30 |
+| S12 | Run a stateful workload with stable identity and per-Pod storage. | [`labs/day-2/12-statefulset.md`](../labs/day-2/12-statefulset.md) | 30 | 30 |
+| S13 | Set requests/limits and reason about scheduling and QoS. | [`labs/day-2/13-resources.md`](../labs/day-2/13-resources.md) | 30 | 30 |
+| S14 | Configure liveness, readiness, and startup probes correctly. | [`labs/day-2/14-probes.md`](../labs/day-2/14-probes.md) | 30 | 30 |
+| S15 | Run batch and scheduled workloads. | [`labs/day-2/15-jobs.md`](../labs/day-2/15-jobs.md) | 20 | 20 |
+| S16 | Scale a workload on demand with an HPA. | [`labs/day-2/16-hpa.md`](../labs/day-2/16-hpa.md) | 20 | 20 |
 
 ### Day 3 — Security, delivery, operators, best practices
 
 | ID | Outcome | Lab | Slides | Lab time |
 | --- | --- | --- | --- | --- |
-| S17 | Harden a Pod and understand Pod Security Standards. | `labs/day-3/17-pod-security.md` | 30 | 25 |
-| S18 | Isolate workloads at the network layer (default-deny + explicit allows). | `labs/day-3/18-networkpolicy.md` | 25 | 25 |
-| S19 | Grant least-privilege access with RBAC. | `labs/day-3/19-rbac.md` | 25 | 25 |
-| S20 | Install and customize apps with Helm; upgrade and roll back. | `labs/day-3/20-helm.md` | 30 | 30 |
-| S21 | Drive desired state from Git; understand sync and drift. | `labs/day-3/21-gitops.md` | 30 | 25 |
-| S22 | Explain what an operator is and why it matters. | `labs/day-3/22-operator-concept.md` | 25 | 15 |
-| S23 | See an operator manage a real system; learn observability basics. | `labs/day-3/23-prometheus.md` | 30 | 25 |
-| S24 † | Scaffold a tiny operator and understand reconcile. | `labs/day-3/24-kubebuilder.md` | 40 | 40 |
-| S25 | Understand how weak Pod settings enable escape, and how to prevent it. | `labs/day-3/25-pod-escape.md` | 35 | 30 |
-| S26 | Critically review real manifests against a production checklist. | `labs/day-3/26-capstone.md` | 30 | 40 |
-| S27 | Know where to go next. | *(none — open Q&A / office hours)* | 20 | — |
+| S17 | Harden a Pod and understand Pod Security Standards. | [`labs/day-3/17-pod-security.md`](../labs/day-3/17-pod-security.md) | 30 | 25 |
+| S18 | Isolate workloads at the network layer (default-deny + explicit allows). | [`labs/day-3/18-networkpolicy.md`](../labs/day-3/18-networkpolicy.md) | 25 | 25 |
+| S19 | Grant least-privilege access with RBAC. | [`labs/day-3/19-rbac.md`](../labs/day-3/19-rbac.md) | 25 | 25 |
+| S20 | Install and customize apps with Helm; upgrade and roll back. | [`labs/day-3/20-helm.md`](../labs/day-3/20-helm.md) | 30 | 30 |
+| S21 | Drive desired state from Git; understand sync and drift. | [`labs/day-3/21-gitops.md`](../labs/day-3/21-gitops.md) | 30 | 25 |
+| S22 | Explain what an operator is and why it matters. | [`labs/day-3/22-operator-concept.md`](../labs/day-3/22-operator-concept.md) | 25 | 15 |
+| S23 | See an operator manage a real system; learn observability basics. | [`labs/day-3/23-prometheus.md`](../labs/day-3/23-prometheus.md) | 30 | 25 |
+| S24 † | Scaffold a tiny operator and understand reconcile. | [`labs/day-3/24-kubebuilder.md`](../labs/day-3/24-kubebuilder.md) *(stub)* | 40 | 40 |
+| S25 | Understand how weak Pod settings enable escape, and how to prevent it. | [`labs/day-3/25-pod-escape.md`](../labs/day-3/25-pod-escape.md) | 35 | 30 |
+| S26 | Critically review real manifests against a production checklist. | [`labs/day-3/26-capstone.md`](../labs/day-3/26-capstone.md) | 30 | 40 |
+| S27 | Know where to go next. | *(none — slides-only: open Q&A / office hours)* | 20 | — |
 
 † **S24 is a deferred stub.** The slides and lab are outlined but not yet fully authored —
 it needs a Go + kubebuilder toolchain and is scheduled for a later milestone. Its timing is
