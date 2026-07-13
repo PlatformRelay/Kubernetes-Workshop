@@ -2,6 +2,7 @@
 # Mock `kubectl` for bats tests. Records every invocation to $MOCK_LOG and
 # fakes responses driven by MOCK_* environment variables:
 #   MOCK_KUBECTL_VERSION=...        -> client version string
+#   MOCK_KUBECTL_CONTEXT=...        -> `kubectl config current-context`
 #   MOCK_CLUSTER_REACHABLE_EXIT=N   -> exit code for `kubectl cluster-info`
 #   MOCK_NODES_READY=0              -> nodes report NotReady
 #   MOCK_SMOKE_EXIT=N               -> exit code for `kubectl wait` (smoke Pod)
@@ -23,6 +24,12 @@ done
 case "${args[0]:-}" in
   version)
     echo "Client Version: ${MOCK_KUBECTL_VERSION:-v1.36.1}"
+    ;;
+  config)
+    # `kubectl config current-context` for the context guard
+    if [ "${args[1]:-}" = "current-context" ]; then
+      echo "${MOCK_KUBECTL_CONTEXT:-kind-${WORKSHOP_CLUSTER_NAME:-workshop}}"
+    fi
     ;;
   cluster-info)
     exit "${MOCK_CLUSTER_REACHABLE_EXIT:-0}"
