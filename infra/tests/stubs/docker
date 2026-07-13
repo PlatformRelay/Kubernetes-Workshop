@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# Mock `docker` for bats tests. Records every invocation to $MOCK_LOG.
+#   MOCK_ENGINE_UP=0 -> `docker info` fails (engine unreachable)
+set -eu
+
+echo "docker $*" >> "${MOCK_LOG:?stub requires MOCK_LOG}"
+
+if [ "${MOCK_ENGINE_UP:-1}" != "1" ]; then
+  exit 1
+fi
