@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# Mock `mise` for bats tests. Records every invocation to $MOCK_LOG and fakes
+# just enough of the surface bootstrap.sh uses:
+#   mise --version       -> a version line
+#   mise trust           -> success (no-op)
+#   mise install [--locked] -> exit MOCK_MISE_EXIT (default 0)
+set -eu
+
+echo "mise $*" >> "${MOCK_LOG:?stub requires MOCK_LOG}"
+
+case "${1:-}" in
+  --version | version)
+    echo "2026.7.5 mock"
+    ;;
+  trust)
+    exit 0
+    ;;
+  install)
+    exit "${MOCK_MISE_EXIT:-0}"
+    ;;
+  *)
+    exit 0
+    ;;
+esac

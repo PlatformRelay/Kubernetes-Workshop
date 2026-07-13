@@ -4,9 +4,25 @@
 #   MOCK_CLUSTER_EXISTS=1  -> `kind get clusters` lists the workshop cluster
 #   MOCK_KIND_VERSION=...  -> version string reported by `kind version`
 #   MOCK_KIND_EXIT=N       -> exit code for create/delete
+#
+# Statefulness (so an end-to-end `./workshop up` behaves): a successful
+# `kind create cluster` records a per-test marker that makes later
+# `kind get clusters` report the cluster, and `kind delete cluster` clears it.
+# The marker lives in $BATS_TEST_TMPDIR (per-test; never leaks across tests),
+# falling back to a $MOCK_LOG sibling. This lets the `up` create-then-doctor
+# flow pass without pre-seeding MOCK_CLUSTER_EXISTS=1.
 set -eu
 
 echo "kind $*" >> "${MOCK_LOG:?stub requires MOCK_LOG}"
+
+state_dir="${BATS_TEST_TMPDIR:-$(dirname "$MOCK_LOG")}"
+marker="$state_dir/.kind-cluster-created"
+
+cluster_exists() {
+  [ -f "$marker" ] && return 0
+  [ "${MOCK_CLUSTER_EXISTS:-0}" = "1" ] && return 0
+  return 1
+}
 
 case "${1:-}" in
   version)
@@ -14,12 +30,19 @@ case "${1:-}" in
     ;;
   get)
     # `kind get clusters`
-    if [ "${MOCK_CLUSTER_EXISTS:-0}" = "1" ]; then
+    if cluster_exists; then
       echo "workshop"
     fi
     ;;
-  create | delete)
-    exit "${MOCK_KIND_EXIT:-0}"
+  create)
+    rc="${MOCK_KIND_EXIT:-0}"
+    [ "$rc" = "0" ] && : > "$marker"
+    exit "$rc"
+    ;;
+  delete)
+    rc="${MOCK_KIND_EXIT:-0}"
+    [ "$rc" = "0" ] && rm -f "$marker"
+    exit "$rc"
     ;;
   *)
     exit 0
