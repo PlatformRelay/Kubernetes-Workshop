@@ -33,6 +33,20 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
 
+  infra:
+    name: Infra scripts (shellcheck + bats)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install bats
+        run: sudo apt-get update && sudo apt-get install -y bats
+      - name: Shellcheck infra scripts and test stubs
+        run: |
+          find infra -type f \( -name '*.sh' -o -name '*.bash' \) -print0 | xargs -0 shellcheck
+          shellcheck infra/tests/stubs/*
+      - name: Run bats tests (mocked binaries — no cluster needed)
+        run: bats infra/tests
+
   build:
     name: Build root decks
     runs-on: ubuntu-latest

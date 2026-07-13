@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# Mock `kind` for bats tests. Records every invocation to $MOCK_LOG and
+# fakes responses driven by MOCK_* environment variables:
+#   MOCK_CLUSTER_EXISTS=1  -> `kind get clusters` lists the workshop cluster
+#   MOCK_KIND_VERSION=...  -> version string reported by `kind version`
+#   MOCK_KIND_EXIT=N       -> exit code for create/delete
+set -eu
+
+echo "kind $*" >> "${MOCK_LOG:?stub requires MOCK_LOG}"
+
+case "${1:-}" in
+  version)
+    echo "kind ${MOCK_KIND_VERSION:-v0.32.0} go1.24.4 linux/amd64"
+    ;;
+  get)
+    # `kind get clusters`
+    if [ "${MOCK_CLUSTER_EXISTS:-0}" = "1" ]; then
+      echo "workshop"
+    fi
+    ;;
+  create | delete)
+    exit "${MOCK_KIND_EXIT:-0}"
+    ;;
+  *)
+    exit 0
+    ;;
+esac
