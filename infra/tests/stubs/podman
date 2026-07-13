@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
 # Mock `podman` for bats tests — same contract as the docker stub, so a
 # machine with a real podman on PATH cannot leak into the engine check.
-#   MOCK_ENGINE_UP=0 -> `podman info` fails (engine unreachable)
+#   MOCK_ENGINE_UP=0  -> both engines' `info` fails (engine unreachable)
+#   MOCK_PODMAN_UP=0  -> only podman's `info` fails; defaults to MOCK_ENGINE_UP
+#                        so existing tests are unchanged.
 set -eu
 
 echo "podman $*" >> "${MOCK_LOG:?stub requires MOCK_LOG}"
 
-if [ "${MOCK_ENGINE_UP:-1}" != "1" ]; then
+if [ "${MOCK_PODMAN_UP:-${MOCK_ENGINE_UP:-1}}" != "1" ]; then
   exit 1
 fi

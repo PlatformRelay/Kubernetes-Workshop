@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
 # Mock `docker` for bats tests. Records every invocation to $MOCK_LOG.
-#   MOCK_ENGINE_UP=0 -> `docker info` fails (engine unreachable)
+#   MOCK_ENGINE_UP=0 -> both engines' `info` fails (engine unreachable)
+#   MOCK_DOCKER_UP=0 -> only docker's `info` fails (probe should fall to podman);
+#                       defaults to MOCK_ENGINE_UP so existing tests are unchanged.
 set -eu
 
 echo "docker $*" >> "${MOCK_LOG:?stub requires MOCK_LOG}"
 
-if [ "${MOCK_ENGINE_UP:-1}" != "1" ]; then
+if [ "${MOCK_DOCKER_UP:-${MOCK_ENGINE_UP:-1}}" != "1" ]; then
   exit 1
 fi

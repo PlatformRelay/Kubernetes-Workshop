@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+# Mock `gum` for bats tests. Records every invocation to $MOCK_LOG.
+#
+# The bootstrap only ever reaches gum on an INTERACTIVE run (TTY + not CI + not
+# WORKSHOP_NONINTERACTIVE). The bats suite drives the NON-interactive contract,
+# where gum must never be called — so a call to this stub during a
+# non-interactive test is itself a failure signal the tests can assert on.
+#
+# For the rare interactive-path test we still make it behave:
+#   gum spin --title T -- cmd...  -> runs cmd (after the `--`)
+#   gum confirm PROMPT            -> exit MOCK_GUM_CONFIRM_EXIT (default 0 = yes)
+#   gum choose ...                -> echoes MOCK_GUM_CHOICE (default first arg)
+set -eu
+
+echo "gum $*" >> "${MOCK_LOG:?stub requires MOCK_LOG}"
+
+case "${1:-}" in
+  spin)
+    # Everything after a literal `--` is the real command to run.
+    shift
+    while [ "$#" -gt 0 ]; do
+      if [ "$1" = "--" ]; then
+        shift
+        break
+      fi
+      shift
+    done
+    if [ "$#" -gt 0 ]; then
+      exec "$@"
+    fi
+    ;;
+  confirm)
+    exit "${MOCK_GUM_CONFIRM_EXIT:-0}"
+    ;;
+  choose)
+    shift
+    echo "${MOCK_GUM_CHOICE:-${1:-}}"
+    ;;
+  *)
+    exit 0
+    ;;
+esac

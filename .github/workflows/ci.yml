@@ -56,6 +56,9 @@ jobs:
         run: |
           find infra -type f \( -name '*.sh' -o -name '*.bash' \) -print0 | xargs -0 shellcheck
           shellcheck infra/tests/stubs/*
+          # The top-level ./workshop wrapper is outside the infra glob above, so
+          # lint it explicitly (US-ENV-2).
+          shellcheck ./workshop
       - name: Run bats tests (mocked binaries — no cluster needed)
         run: bats infra/tests
 
