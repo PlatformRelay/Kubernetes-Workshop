@@ -241,7 +241,7 @@ install_tools() {
   ensure_mise || return 1
   # --locked pins to mise.lock (real checksums); mise trust is required for a
   # config it has not seen. Run from the repo root so it finds mise.toml.
-  ( cd "$REPO_ROOT" && mise trust >/dev/null 2>&1 || true )
+  ( cd "$REPO_ROOT" && mise trust >/dev/null 2>&1 ) || true
   spin "Installing pinned toolchain (mise install --locked)" \
     sh -c "cd '$REPO_ROOT' && mise install --locked" || {
     err "mise install failed — see the output above; check mise.lock covers your platform."
