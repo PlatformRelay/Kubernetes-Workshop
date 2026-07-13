@@ -1,0 +1,48 @@
+# mise.toml — the participant toolchain, pinned and checksummed (US-ENV-2).
+#
+# `./workshop up` runs `mise install` to give every participant the exact same
+# tools on macOS / Linux / WSL2, without a per-tool install dance. mise resolves
+# each tool through its aqua backend and records real per-platform checksums in
+# the sibling `mise.lock` — so an install is reproducible and tamper-evident.
+#
+# Single source of truth for the Kubernetes tools (ADR 0007): the kind and
+# kubectl pins below MUST match infra/versions.env exactly. Do not bump them
+# here alone — change infra/versions.env and mirror it here in the same commit,
+# then regenerate the lock:
+#
+#     mise lock            # refresh mise.lock checksums for the current platforms
+#
+# Version format is aqua's: bare semver, no leading "v" (and jq without "jq-").
+#
+# The lockfile is authoritative: `mise install --locked` (used in CI and by
+# ./workshop under WORKSHOP_NONINTERACTIVE=1) fails if a tool has no pre-resolved
+# entry for the current platform, so drift is caught, not silently installed.
+
+[settings]
+# Write/refresh mise.lock on install so checksums stay pinned across platforms.
+lockfile = true
+# aqua is the default backend for every tool below; be explicit for clarity.
+disable_backends = []
+
+[tools]
+# --- Kubernetes core (pins MIRROR infra/versions.env — keep in lockstep) ------
+# kubectl v1.36.1  (infra/versions.env KUBECTL_VERSION)
+kubectl = "1.36.1"
+# kind v0.32.0     (infra/versions.env KIND_VERSION)
+kind = "0.32.0"
+
+# --- Lab tooling (pinned to current stable at 2026-07-13) ---------------------
+# helm: pinned to the latest 3.x on purpose. labs/README.md and Labs S20/S23
+# target "helm v3.8+"; helm 4.x is a breaking major and is NOT adopted in this
+# lane. Bumping to 4.x is a deliberate, separately-flagged decision.
+helm = "3.21.3"
+# k9s: terminal UI for clusters (optional but handy in labs).
+k9s = "0.51.0"
+# jq: JSON wrangling in several labs.
+jq = "1.8.2"
+# yq: YAML wrangling / manifest edits in several labs.
+yq = "4.53.3"
+# gum: bootstrap UX (gum choose/spin/confirm). Pure interactive sugar — the
+# workshop scripts also run fully non-interactively without it. v0.17 is the
+# stable, feature-complete line called out in the environment proposal.
+gum = "0.17.0"
