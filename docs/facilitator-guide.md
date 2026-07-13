@@ -245,6 +245,52 @@ pass**. Be aware of the following, consistent with the honesty callouts already 
 - **S24 (kubebuilder) is a stub** and **S25 (pod escape) is strictly kind-only** — plan
   those two accordingly.
 
+## Beta-exit criteria — removing the beta label
+
+The workshop currently ships under a **controlled-beta** banner (see the README's
+[beta note](../README.md#kubernetes-practitioner-workshop)). This section defines when that
+banner may come off. It is the mirror image of the README banner's limitations: each
+limitation stated there is resolved by a gate below, so the two documents cannot drift —
+when every gate here is met, the banner's limitations no longer hold.
+
+> **The discipline.** Every gate below is an **objective yes/no against a named artifact**,
+> and every gate **maps to a story ID**. **No gate is "we feel ready."** Removing the beta
+> label is an evidence-based transition, not a judgement call — if you cannot point at the
+> named evidence and say "yes", the gate is unmet and the label stays.
+
+### The gates
+
+All gates must be **met** to drop the beta label. As of this writing **none is met** — the
+[validation matrix](./validation-matrix.md) is entirely `unrun` / `server-dry-run` and the
+[full rehearsal](#rehearsal-debt-read-before-you-teach) has not been run — so this is an
+unchecked list, honestly reflecting today's state.
+
+| ✓ | Gate | Story ID | Objective check (named evidence) |
+| --- | --- | --- | --- |
+| [ ] | **Full clean-environment rehearsal passed** | **US-BETA-6** | A completed copy of the [timing-results template](./timing-results-template.md) for a real run **and** maintainer sign-off that, following the [rehearsal checklist](./rehearsal-checklist.md), every canonical lab reached its expected observations and cleanup returned a clean state. US-BETA-6 is the human release gate; a passing build/dry-run is explicitly **not** sufficient. |
+| [ ] | **Validation matrix all-green** | **US-BETA-3 + US-ENV-4** | Every row in the [validation matrix](./validation-matrix.md) is at `kind-smoke` — **no** `unrun` or `server-dry-run` state remains. US-ENV-4's nightly chainsaw smoke is what moves the rows; US-BETA-3 is the tracker it fills. |
+| [ ] | **Beta feedback triaged** | **US-BETA-5** | Every issue filed via the [beta-feedback template](../.github/ISSUE_TEMPLATE/beta-feedback.yml) during the beta is **closed or explicitly accepted-deferred** — none left open and unassessed. |
+| [ ] | **S24 finished or accepted-deferred** | **US-S24** | The S24 (kubebuilder) lab is **authored** (no longer a stub) **or** there is a recorded maintainer decision to exit beta with S24 deferred. Either resolves the gate; an unaddressed stub does not. |
+| [ ] | **Repo description + discovery topics set** | **US-BETA-2** | `gh repo view --json description,repositoryTopics` returns the exact strings recorded in US-BETA-2 (a manual maintainer step). |
+
+### Promotion is gated behind the rehearsal
+
+**Broad promotion — a public Reddit post, paid or sponsored promotion, any wide launch — is
+explicitly gated behind US-BETA-6 (a successful end-to-end rehearsal).** Sharing the repo
+privately with a beta cohort is fine before then; broad promotion is not. The workshop may
+be *usable* before it is *promotable*: promotion waits on the rehearsal specifically, not on
+a general sense of polish.
+
+### If the rehearsal has not passed (blocked action)
+
+**If the US-BETA-6 clean-environment rehearsal has not passed, then a proposal to remove the
+beta label is a BLOCKED action.** Do not remove the banner, and do not begin broad
+promotion. The blocking response must **name the unmet gate** — e.g. *"Blocked: US-BETA-6
+(full clean-environment rehearsal) has not passed — the [validation matrix](./validation-matrix.md)
+still shows `unrun` rows and no completed [timing-results](./timing-results-template.md)
+exists."* Naming the specific gate is required so the block is actionable, not a vague "not
+yet".
+
 ## Quick pre-delivery checklist
 
 1. **Choose your cut** from the [3-day options](./syllabus.md#the-canonical-3-day-cut);
