@@ -4,16 +4,24 @@ Everything you need to **run** this workshop: room and environment setup, pacing
 against the schedule, which labs need cluster-wide add-ons (and what to pre-install),
 and how to provision a shared cluster so every attendee has a namespace they own.
 
-This is the facilitator entry point. It is a companion to the two participant-facing
-documents — read all three:
+This is the facilitator entry point. It is a companion to the participant-facing and
+project-overview documents — know where each one takes you:
 
-- [`syllabus.md`](./syllabus.md) — the public schedule: section map (S00–S27), tiers,
-  per-section timings, the canonical 3-day cut, and CKA/CKAD alignment.
-- [`../labs/README.md`](../labs/README.md) — the participant entry point: prerequisites,
-  the two environments, and how the labs work.
+- [`../README.md`](../README.md) — **project front door**: what the workshop is, the live
+  deck/PDF previews, audience & prerequisites, and the beta status. Send newcomers here.
+- [`syllabus.md`](./syllabus.md) — the **public schedule**: section map (S00–S27), tiers,
+  per-section timings (each linked to its lab), the canonical 3-day cut, and CKA/CKAD
+  alignment.
+- [`../labs/README.md`](../labs/README.md) — the **participant entry point**: prerequisites,
+  the two environments, how the labs work, and a direct index of every authored lab.
 - [`decisions/`](./decisions/) — architecture decision records; in particular
   [`0006-workshop-environment-and-iac.md`](./decisions/0006-workshop-environment-and-iac.md)
   describes the intended environment model this guide operationalizes.
+
+> **Quick wayfinding.** *Just previewing?* → [README](../README.md) → the live decks.
+> *Doing the labs?* → [labs README](../labs/README.md) → [`00-setup`](../labs/day-1/00-setup.md).
+> *Running the room?* → you're in the right place; pair this with the
+> [syllabus](./syllabus.md) for timings. *Contributing content?* → [`../AGENT.md`](../AGENT.md).
 
 > **Honesty up front.** The environment automation described in ADR 0006 — an `infra/`
 > tree with `make kind-up` / `make ns-provision` verbs — is **planned, not yet built**.
