@@ -48,7 +48,9 @@ The lab turns on one contrast: the settings that make an escape possible are **e
 
 ## Files used
 
-- `context-check.sh` — refuses to proceed unless the current context is a `kind-…` context.
+- `context-check.sh` — refuses to proceed unless the current context is a `kind-…` context. This is
+  the workshop's shared safety guard, kept byte-identical to the tested canonical
+  [`infra/context-guard.sh`](../../infra/context-guard.sh).
 - `pod-escape.yaml` — the `privileged` + `hostPath: /` Pod. **Dangerous by design.**
 - `pod-hardened.yaml` — the same workload, hardened to satisfy `restricted` → admitted.
 
@@ -67,7 +69,11 @@ kubectl config set-context --current --namespace="$NS"
 kubectl get nodes
 ```
 
-Now write the guard. **Every offensive step below runs this first.**
+Now write the guard. **Every offensive step below runs this first.** This is the workshop's
+**shared** kind-only safety guard — its canonical, shellcheck'd and bats-tested source of truth
+lives at [`infra/context-guard.sh`](../../infra/context-guard.sh); the heredoc below is
+byte-identical to it, so the lab stays a standalone, copy-pasteable artifact (ADR 0009) while the
+guard is still tested in CI.
 
 ```bash
 cat > context-check.sh <<'EOF'
