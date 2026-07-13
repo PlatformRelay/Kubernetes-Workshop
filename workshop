@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# ./workshop — one-command entrypoint for the local (kind) lab environment.
+#
+# THIN wrapper by design: all logic lives in infra/bootstrap.sh so the existing
+# infra shellcheck + bats coverage applies. This file only locates the repo and
+# dispatches up | down | doctor (and --help).
+#
+#   ./workshop up        # preflight → pinned tools → kind cluster → doctor
+#   ./workshop down       # delete the cluster (confirmed)
+#   ./workshop doctor     # is my machine lab-ready?
+#
+# See docs/setup.md for engine choice, the WSL2 path, and troubleshooting.
+
+set -euo pipefail
+
+WORKSHOP_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+exec "$WORKSHOP_ROOT/infra/bootstrap.sh" "$@"
