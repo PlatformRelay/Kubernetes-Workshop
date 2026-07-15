@@ -98,6 +98,8 @@ lab that inspects a running container.
 -->
 
 ---
+clicks: 3
+---
 
 <span class="kw-kicker">Story · walk the verbs in order</span>
 
@@ -108,46 +110,27 @@ lab that inspects a running container.
 </div>
 
 <!--
-Speaker: click through the on-call chain. Each step shows a realistic command and
-the snippet of output that actually answers the question — not a feature tour.
-Land the habit: get for the headline, describe for Events, logs for app truth,
-diff before apply when changing files.
+Speaker: click through the on-call chain (three clicks: describe → logs →
+diff/apply). Each step shows a realistic command and the snippet of output that
+actually answers the question — not a feature tour. Land the habit: get for the
+headline, describe for Events, logs for app truth, diff before apply when
+changing files. `clicks: 3` reserves the budget — without it `$clicks` stays 0
+and the demo never leaves `get`.
 -->
 
 ---
-layout: code-walkthrough
-heading: 'Output modes — grow one command to get exactly what you need'
-lab: labs/day-1/04-kubectl.md
+clicks: 9
 ---
 
-````md magic-move
-```bash
-# default: a human table
-kubectl get pods
-```
+<span class="kw-kicker">Grow one command · type, Enter, read</span>
 
-```bash
-# -o wide: same table, more columns (node, IP)
-kubectl get pods -o wide
-```
+# Output modes — get exactly what you need
 
-```bash
-# -o yaml: the full object as the API server stores it
-kubectl get pods -o yaml
-```
+<div class="mt-2">
+  <KubectlOutputDemo :step="$clicks" />
+</div>
 
-```bash
-# -o jsonpath: extract exactly one field, script-friendly
-kubectl get pods -o jsonpath='{.items[*].spec.nodeName}'
-```
-
-```bash
-# the same query, one node's name — no grep/awk needed
-kubectl get nodes -o jsonpath='{.items[0].metadata.name}'
-```
-````
-
-<div class="mt-4 text-sm" v-click>
+<div class="mt-3 text-sm kw-muted">
 
 `-o json` is the same as `yaml` for tools that want JSON. **`jsonpath`** turns
 `kubectl` into a precise data source — the lab uses it to pull a single value.
@@ -155,9 +138,11 @@ kubectl get nodes -o jsonpath='{.items[0].metadata.name}'
 </div>
 
 <!--
-Speaker: build it up — table for eyes, yaml for the whole truth, jsonpath for one
-value. The jsonpath path mirrors the object tree they saw with `explain` in S03
-(`.spec.nodeName`). `-o wide` is the cheapest habit: always more context for free.
+Speaker: each mode is two clicks — (1) the command is typed, cursor blinking;
+(2) Enter — sample output appears. Then the next flag. Path: table → wide →
+yaml → jsonpath → one value. The jsonpath path mirrors the object tree they saw
+with `explain` in S03 (`.spec.nodeName`). `-o wide` is the cheapest habit:
+always more context for free. `clicks: 9` = five modes × (type + Enter) − 1.
 -->
 
 ---

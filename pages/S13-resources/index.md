@@ -309,6 +309,7 @@ QoS class; it's derived and shown in `describe pod`. The lab confirms all three 
 
 ---
 layout: comparison
+class: kw-cmp-compact
 heading: 'Namespace guardrails — so nobody has to remember'
 leftHeading: 'LimitRange'
 leftBadge: 'per-object'
@@ -316,8 +317,7 @@ rightHeading: 'ResourceQuota'
 rightBadge: 'namespace total'
 ---
 
-**Defaults & bounds for each object.** Applies at admission to every Pod/container in the
-namespace.
+Defaults & bounds **per container**, at admission.
 
 ```yaml
 apiVersion: v1
@@ -326,25 +326,21 @@ metadata: { name: defaults }
 spec:
   limits:
     - type: Container
-      default:            # limit if omitted
-        cpu: 500m
-        memory: 256Mi
-      defaultRequest:     # request if omitted
-        cpu: 100m
-        memory: 128Mi
+      default: { cpu: 500m, memory: 256Mi }
+      defaultRequest: { cpu: 100m, memory: 128Mi }
       max: { cpu: '2', memory: 1Gi }
 ```
 
 <v-clicks>
 
-- **Injects** requests/limits into Pods that omit them — a BestEffort Pod becomes Burstable.
-- Rejects any container that asks **above `max`** / below `min`.
+- **Injects** requests/limits when omitted → BestEffort becomes Burstable.
+- Rejects containers **above `max`** / below `min`.
 
 </v-clicks>
 
 ::right::
 
-**One aggregate cap for the whole namespace.** The sum across all Pods can't exceed it.
+One **namespace-wide** aggregate cap — sum of all Pods.
 
 ```yaml
 apiVersion: v1
@@ -361,8 +357,8 @@ spec:
 
 <v-clicks>
 
-- Once a quota names a resource, **every** Pod **must** set it — omit it → `must specify…`.
-- Exceed the remaining budget → admission error `exceeded quota:` (nothing is created).
+- Quota names a resource → every Pod **must** set it (`must specify…`).
+- Over budget → admission `exceeded quota:` (nothing created).
 
 </v-clicks>
 

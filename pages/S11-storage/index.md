@@ -232,6 +232,8 @@ applies exactly these pieces, writes a sentinel to /data, and deletes the Pod.
 -->
 
 ---
+clicks: 3
+---
 
 <span class="kw-kicker">Watch it bind · data survives a Pod delete</span>
 
@@ -242,14 +244,16 @@ applies exactly these pieces, writes a sentinel to /data, and deletes the Pod.
 </div>
 
 <!--
-Speaker: drive the animation with clicks. (0) The PVC is Pending — with a
-WaitForFirstConsumer StorageClass (kind's local-path default) binding waits for a Pod, so
-Pending here is NORMAL, not a fault. (1) The Pod schedules → the provisioner mints a PV →
-the PVC goes Bound → the container writes data.txt. (2) Delete the Pod: the PVC and PV are
-separate objects with their own lifecycle, so they and the data persist. (3) The
-Deployment recreates the Pod; it re-binds the SAME claim and the file is still there. This
-is precisely the lab's core proof — call it out so learners know what "correct" looks like
-before they run it.
+Speaker: drive the animation with clicks (`clicks: 3` — without it the slide has
+no other clickable and advances away while `$clicks` stays 0). (0) The PVC is
+Pending — with a WaitForFirstConsumer StorageClass (kind's local-path default)
+binding waits for a Pod, so Pending here is NORMAL, not a fault. (1) The Pod
+schedules → the provisioner mints a PV → the PVC goes Bound → the container
+writes data.txt. (2) Delete the Pod: the PVC and PV are separate objects with
+their own lifecycle, so they and the data persist. (3) The Deployment recreates
+the Pod; it re-binds the SAME claim and the file is still there. This is
+precisely the lab's core proof — call it out so learners know what "correct"
+looks like before they run it.
 -->
 
 ---

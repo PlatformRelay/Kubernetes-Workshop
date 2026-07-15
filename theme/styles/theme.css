@@ -186,6 +186,49 @@
   font-size: 0.78rem;
 }
 
+/* Compact two-column comparison — fits dense YAML + bullets without overflow. */
+.kw-cmp-compact .kw-cmp-header h1 {
+  font-size: 1.22rem;
+  margin-bottom: 0.4rem;
+}
+
+.kw-cmp-compact .kw-cmp-cols {
+  gap: 0.75rem;
+}
+
+.kw-cmp-compact .kw-cmp-panel {
+  padding: 0.55rem 0.75rem;
+}
+
+.kw-cmp-compact .kw-cmp-panel-head {
+  margin-bottom: 0.4rem;
+  padding-bottom: 0.35rem;
+}
+
+.kw-cmp-compact .kw-cmp-panel-head h2 {
+  font-size: 0.92rem;
+}
+
+.kw-cmp-compact .kw-cmp-panel-body {
+  font-size: 0.76rem;
+  line-height: 1.35;
+}
+
+.kw-cmp-compact .kw-cmp-panel-body pre.slidev-code,
+.kw-cmp-compact .kw-cmp-panel-body .shiki {
+  font-size: 0.68em !important;
+  line-height: 1.32 !important;
+}
+
+.kw-cmp-compact .kw-cmp-panel-body ul {
+  margin: 0.35rem 0 0;
+  padding-left: 1.1rem;
+}
+
+.kw-cmp-compact .kw-cmp-panel-body li {
+  margin: 0.15rem 0;
+}
+
 /* ----------------------------------------------------------- utilities --- */
 
 /* Shared panel surface for diagrams, cards, and animation scenes. */

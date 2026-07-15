@@ -80,6 +80,8 @@ simple.
 -->
 
 ---
+clicks: 3
+---
 
 <div class="kw-slide-dense">
 
@@ -112,9 +114,11 @@ Delete the Pod object and *nothing* brings it back. That's the gap the Deploymen
 <!--
 Speaker: click through Mina's story — Pending while scheduling/pulling, Running
 when Ready, a crash that bumps RESTARTS but keeps the same Pod, then delete and
-nothing recreates it. Image prompt (optional cover art): dark technical slide,
-single Pod glyph moving through four states on a timeline, graphite background,
-Kubernetes blue accent, no text in the image.
+nothing recreates it. Three clicks reach Deleted (`clicks: 3`); two `v-click`
+aside cards alone would stop the animation at Running/restart. Image prompt
+(optional cover art): dark technical slide, single Pod glyph moving through
+four states on a timeline, graphite background, Kubernetes blue accent, no text
+in the image.
 
 Speaker: draw the line hard between "container restarted" (RESTARTS counter goes
 up, same Pod) and "Pod recreated" (a controller's job — not a Pod's). That
