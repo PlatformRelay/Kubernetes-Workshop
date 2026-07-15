@@ -45,6 +45,11 @@ here is invented — every version/URL is cited from the repo as it ships today.
 > rehearsed under US-BETA-6. Everything is therefore `server-dry-run` or `unrun`, which
 > reconciles with M7.
 
+**Traceability (N1).** Every row's validation-state assignment is auditable against a
+named source: `server-dry-run` rows trace to the roadmap M4/M5 per-section progress notes
+(which record the exact cluster version each manifest was dry-run against) plus AR-05;
+`unrun` and `kind-smoke` rows trace to the honesty rule above.
+
 ## Canonical version pins (`infra/versions.env`)
 
 These are the only versions the repo pins centrally (ADR 0007). Every cluster lab runs
