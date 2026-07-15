@@ -127,8 +127,10 @@ The deck is a **superset** of toggleable sections composed by one or more **root
 - Use Shiki line highlighting (`yaml {1-3|5-8|all}`) for YAML and shell walkthroughs.
 - Use Mermaid for simple static flow/sequence diagrams only.
 - Use custom Vue + CSS components for **animated state transitions** (rolling update,
-  reconciliation, probes → endpoints, scheduling, request routing). Reuse the shared
-  animation components rather than re-implementing per slide.
+  reconciliation, probes → endpoints, scheduling, request routing). Reuse a shared
+  animation component when the state transition is the **same** as one already built.
+  When a transition is genuinely new (e.g. PVC binding ≠ StatefulSet identity ≠ admission
+  gate), author a **new self-contained component** and carry a **one-line rationale** for it.
 - Keep on-slide text concise; put facilitator detail in speaker notes.
 
 ### YAML teaching pattern
