@@ -1,0 +1,181 @@
+# workshop-web image pipeline (US-ENV-8a, lab-environment proposal §7 + §9).
+#
+# Builds the demo image that replaces the retired nginx images: multi-arch
+# (amd64+arm64), three tags (v1/v2/v3 — the rollout labs need visibly
+# different versions), Trivy-gated (fail HIGH+), cosign-signed (keyless),
+# SBOM attested, pushed to ghcr.io/platformrelay/workshop-web.
+#
+# Runs on any branch when the image source changes so the image exists as
+# soon as the US-ENV-8a lane is pushed (US-NGX consumes it before merge);
+# tags are stable (v1/v2/v3) and digest pins live in infra/versions.env.
+name: workshop-web image
+
+on:
+  push:
+    paths:
+      - infra/images/workshop-web/**
+      - .github/workflows/workshop-web.yml
+  workflow_dispatch:
+
+concurrency:
+  group: workshop-web-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  IMAGE: ghcr.io/platformrelay/workshop-web
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Go vet + test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: infra/images/workshop-web/go.mod
+      - name: gofmt (fail on diff)
+        working-directory: infra/images/workshop-web
+        run: test -z "$(gofmt -l .)"
+      - name: go vet
+        working-directory: infra/images/workshop-web
+        run: go vet ./...
+      - name: go test
+        working-directory: infra/images/workshop-web
+        run: go test ./...
+
+  build:
+    name: Build, scan, sign, push ${{ matrix.version }}
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write # push to GHCR
+      id-token: write # cosign keyless signing
+    strategy:
+      matrix:
+        version: [v1, v2, v3]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push (multi-arch)
+        id: push
+        uses: docker/build-push-action@v6
+        with:
+          context: infra/images/workshop-web
+          platforms: linux/amd64,linux/arm64
+          push: true
+          build-args: |
+            VERSION=${{ matrix.version }}
+          tags: ${{ env.IMAGE }}:${{ matrix.version }}
+      - name: Trivy gate (fail HIGH+)
+        uses: aquasecurity/trivy-action@0.33.1
+        with:
+          image-ref: ${{ env.IMAGE }}@${{ steps.push.outputs.digest }}
+          format: table
+          exit-code: "1"
+          severity: HIGH,CRITICAL
+        env:
+          TRIVY_USERNAME: ${{ github.actor }}
+          TRIVY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3
+      - name: Sign (keyless)
+        run: cosign sign --yes "$IMAGE@${{ steps.push.outputs.digest }}"
+      - name: Generate SBOM (SPDX)
+        uses: anchore/sbom-action@v0
+        with:
+          image: ${{ env.IMAGE }}@${{ steps.push.outputs.digest }}
+          format: spdx-json
+          output-file: sbom.spdx.json
+          upload-artifact: false
+      - name: Attest SBOM
+        run: cosign attest --yes --type spdxjson --predicate sbom.spdx.json "$IMAGE@${{ steps.push.outputs.digest }}"
+      - name: Report digest
+        run: |
+          {
+            echo "### ${IMAGE}:${{ matrix.version }}"
+            echo '```'
+            echo "WORKSHOP_WEB_IMAGE_${{ matrix.version }}=${IMAGE}:${{ matrix.version }}@${{ steps.push.outputs.digest }}"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  smoke:
+    # Proves the US-ENV-8a acceptance bullets on a real cluster: the image
+    # admits clean into a PSA `restricted` namespace, serves pod name +
+    # version on :8080, and POST /fail flips /ready to non-200.
+    name: kind smoke (PSA restricted)
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create kind cluster
+        uses: helm/kind-action@v1
+        with:
+          cluster_name: workshop-web-smoke
+      - name: Create PSA-restricted namespace + pull secret
+        run: |
+          kubectl create namespace smoke
+          kubectl label namespace smoke \
+            pod-security.kubernetes.io/enforce=restricted \
+            pod-security.kubernetes.io/warn=restricted
+          kubectl -n smoke create secret docker-registry ghcr \
+            --docker-server=ghcr.io \
+            --docker-username='${{ github.actor }}' \
+            --docker-password='${{ secrets.GITHUB_TOKEN }}'
+      - name: Run workshop-web in the restricted namespace
+        run: |
+          cat <<'EOF' | kubectl apply -f -
+          apiVersion: v1
+          kind: Pod
+          metadata:
+            name: web
+            namespace: smoke
+          spec:
+            imagePullSecrets:
+              - name: ghcr
+            containers:
+              - name: web
+                image: ghcr.io/platformrelay/workshop-web:v1
+                ports:
+                  - containerPort: 8080
+                readinessProbe:
+                  httpGet:
+                    path: /ready
+                    port: 8080
+                securityContext:
+                  allowPrivilegeEscalation: false
+                  readOnlyRootFilesystem: true
+                  capabilities:
+                    drop: ["ALL"]
+            securityContext:
+              runAsNonRoot: true
+              seccompProfile:
+                type: RuntimeDefault
+          EOF
+          kubectl -n smoke wait --for=condition=Ready pod/web --timeout=120s
+      - name: Verify response body and readiness toggle
+        run: |
+          kubectl -n smoke port-forward pod/web 8080:8080 &
+          sleep 3
+          body="$(curl -sf http://127.0.0.1:8080/)"
+          echo "$body"
+          echo "$body" | grep -q 'workshop-web v1'
+          echo "$body" | grep -q 'pod: web'
+          curl -sf http://127.0.0.1:8080/ready
+          curl -sf -X POST http://127.0.0.1:8080/fail
+          code="$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/ready)"
+          test "$code" = "503"
+          curl -sf -X POST http://127.0.0.1:8080/recover
+          curl -sf http://127.0.0.1:8080/ready
