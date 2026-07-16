@@ -15,7 +15,11 @@ core Kubernetes workloads.
   — [full deck PDF](https://github.com/PlatformRelay/Kubernetes-Workshop/releases/download/v0.1.0/kubernetes-workshop-full-v0.1.0.pdf)
   · [3-day cut PDF](https://github.com/PlatformRelay/Kubernetes-Workshop/releases/download/v0.1.0/kubernetes-workshop-3day-v0.1.0.pdf)
 
-![A content slide from the workshop deck](docs/images/deck-preview.png)
+![Animated tour of the workshop deck — real slides stepping through their click animations](docs/images/deck-showcase.gif)
+
+<sub>Real deck, no hand-taken screenshots: the tour is re-rendered from the slide sources on
+every CI run (`pnpm showcase:gif`). A static preview frame lives at
+[`docs/images/deck-preview.png`](docs/images/deck-preview.png).</sub>
 
 > [!WARNING]
 > **Controlled beta.** This workshop has **not yet completed a full 3-day
@@ -138,6 +142,7 @@ pnpm dev:templates      # template gallery & animation spike
 pnpm build              # static build (build:3day / build:templates likewise)
 pnpm export             # PDF export (needs playwright-chromium)
 pnpm render             # export per-slide PNGs to dist-render/ (needs playwright-chromium)
+pnpm showcase:gif       # re-render the README's animated deck tour (docs/images/deck-showcase.gif)
 pnpm lint               # markdownlint the labs (lint:fix to auto-correct)
 pnpm link-check         # verify internal doc links & anchors (no <pages-url> placeholders)
 ```
@@ -167,7 +172,7 @@ Three GitHub Actions workflows (`.github/workflows/`):
 
 | Workflow | Trigger | What it does |
 | --- | --- | --- |
-| `ci.yml` | PR + push to `main` | Lint the labs, build all three root decks, and link-check the front-door docs — a broken deck, malformed lab, or dead internal link fails the check. |
+| `ci.yml` | PR + push to `main` | Lint the labs, build all three root decks, and link-check the front-door docs — a broken deck, malformed lab, or dead internal link fails the check. A separate job re-renders the README showcase GIF from the deck sources (`pnpm showcase:gif`) and uploads it as an artifact, keeping the animated preview reproducible. |
 | `pages.yml` | push to `main` (+ manual) | Build the decks as a static site and deploy to GitHub Pages under the `/Kubernetes-Workshop/` base path. |
 | `release.yml` | tag `v*` | Export the superset and 3-day decks to PDF and attach them (plus the built site) to a GitHub Release. |
 

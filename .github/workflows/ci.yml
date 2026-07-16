@@ -1,8 +1,10 @@
 name: CI
 
 # Fast gate on every PR and every push to main: lint the labs and build all
-# three root decks so a broken deck or malformed lab fails review. PDF export
-# (slow, needs a headless browser) is intentionally left to the release job.
+# three root decks so a broken deck or malformed lab fails review. A separate
+# job re-renders the README's animated showcase GIF from the deck sources
+# (US-OSS-2: the committed GIF must stay reproducible from a clean checkout).
+# Full PDF export (slow) is intentionally left to the release job.
 
 on:
   push:
@@ -78,3 +80,33 @@ jobs:
           pnpm run build
           pnpm run build:3day
           pnpm run build:templates
+
+  showcase-gif:
+    # US-OSS-2: the README's animated deck tour must be reproducible from a
+    # clean checkout with zero manual steps. This regenerates it end-to-end
+    # (slidev export → per-click PNG frames → sharp GIF assembly) and uploads
+    # the result, so a drifted showcase page range or a broken pipeline fails
+    # the PR instead of rotting silently. The committed GIF is refreshed by
+    # running `pnpm showcase:gif` locally and committing the result.
+    name: Render README showcase GIF
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Install Chromium system dependencies
+        # The browser binary itself is fetched by playwright-chromium's
+        # postinstall; this adds the OS libraries slidev export needs headless.
+        run: pnpm exec playwright install-deps chromium
+      - name: Render the showcase GIF from the deck sources
+        run: pnpm showcase:gif
+      - name: Upload the rendered GIF
+        uses: actions/upload-artifact@v4
+        with:
+          name: deck-showcase-gif
+          path: docs/images/deck-showcase.gif
+          if-no-files-found: error
