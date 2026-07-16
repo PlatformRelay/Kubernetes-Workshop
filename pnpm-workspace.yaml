@@ -1,7 +1,10 @@
 shamefullyHoist: true
 
-# pnpm v11 errors on unapproved dependency build scripts, so allowlist the one
-# we rely on: `playwright-chromium` (downloads the browser that `slidev export`
-# needs for PDF/PNG/PPTX output).
+# pnpm v11 errors on unapproved dependency build scripts, so allowlist the
+# ones we rely on: `playwright-chromium` (downloads the browser that
+# `slidev export` needs for PDF/PNG/PPTX output) and `sharp` (its install
+# script just verifies/falls back from the prebuilt libvips binaries that the
+# showcase-GIF assembly uses — scripts/make-showcase-gif.mjs).
 allowBuilds:
   playwright-chromium: true
+  sharp: true
