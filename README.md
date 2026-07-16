@@ -17,8 +17,9 @@ core Kubernetes workloads.
 
 ![Animated tour of the workshop deck — real slides stepping through their click animations](docs/images/deck-showcase.gif)
 
-<sub>Real deck, no hand-taken screenshots: the tour is re-rendered from the slide sources on
-every CI run (`pnpm showcase:gif`). A static preview frame lives at
+<sub>Real deck, no hand-taken screenshots: every CI run re-renders this tour from the slide
+sources to prove it stays reproducible; the committed copy is refreshed with the same
+command (`pnpm showcase:gif`). A static preview frame lives at
 [`docs/images/deck-preview.png`](docs/images/deck-preview.png).</sub>
 
 > [!WARNING]

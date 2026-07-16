@@ -58,6 +58,8 @@ execFileSync(
     "--wait", "700", // let fonts/CSS transitions settle before capture
     "--output", framesDir,
   ],
+  // CI=true keeps slidev/pnpm strictly non-interactive (pnpm 11 otherwise
+  // prompts on its dependency-build allowlist) — mirrors ci.yml's env.
   { cwd: repoRoot, stdio: "inherit", env: { ...process.env, CI: "true" } },
 );
 
@@ -66,6 +68,8 @@ execFileSync(
 // slidev names frames by slide (and click) number; sort by the numeric parts
 // so `10` never sorts before `2`.
 const numericParts = (name) => (name.match(/\d+/g) ?? []).map(Number);
+// Slide number = first numeric group in the filename.
+const slideOf = (name) => numericParts(name)[0];
 const frames = readdirSync(framesDir)
   .filter((f) => f.endsWith(".png"))
   .sort((a, b) => {
@@ -78,22 +82,37 @@ const frames = readdirSync(framesDir)
     return a.localeCompare(b);
   });
 
-if (frames.length < MIN_FRAMES || frames.length > MAX_FRAMES) {
+// Drift guard: slidev SILENTLY drops an out-of-range page import (its range
+// parser filters rather than errors), so a restructured section would quietly
+// thin the GIF. Require exactly one rendered slide per `src:` import in
+// slides-showcase.md — derived from the deck file itself so this can't drift.
+const expectedSlides = (
+  readFileSync(join(repoRoot, "slides-showcase.md"), "utf8").match(/^src: /gm) ?? []
+).length;
+const renderedSlides = new Set(frames.map(slideOf)).size;
+if (renderedSlides !== expectedSlides) {
   console.error(
-    `Unexpected frame count ${frames.length} (expected ${MIN_FRAMES}–${MAX_FRAMES}). ` +
-      "Did a showcase page range in slides-showcase.md drift?",
+    `Rendered ${renderedSlides} slide(s) but slides-showcase.md declares ${expectedSlides} imports — ` +
+      "a showcase page range no longer resolves (section restructured?). Update slides-showcase.md.",
   );
   process.exit(1);
 }
-console.log(`Assembling ${frames.length} frames → ${outGif}`);
+
+if (frames.length < MIN_FRAMES || frames.length > MAX_FRAMES) {
+  console.error(
+    `Unexpected frame count ${frames.length} (expected ${MIN_FRAMES}–${MAX_FRAMES}). ` +
+      "Did a showcase slide's click budget change drastically?",
+  );
+  process.exit(1);
+}
+console.log(`Assembling ${frames.length} frames (${renderedSlides} slides) → ${outGif}`);
 
 // --- 3. Assemble the GIF with the pinned sharp devDependency ---------------
 
 const { default: sharp } = await import("sharp");
 
-// Slide number = first numeric group in the filename; the last frame of each
-// slide (final click state) holds longer so the finished diagram is readable.
-const slideOf = (name) => numericParts(name)[0];
+// The last frame of each slide (final click state) holds longer so the
+// finished diagram is readable.
 const delays = frames.map((f, i) => {
   const isSlideEnd = i === frames.length - 1 || slideOf(frames[i + 1]) !== slideOf(f);
   return isSlideEnd ? SLIDE_END_DELAY_MS : CLICK_DELAY_MS;
