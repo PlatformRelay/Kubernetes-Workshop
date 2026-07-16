@@ -6,8 +6,9 @@ info: |
   the real section library, used only to render the README's animated
   deck-showcase GIF (`pnpm showcase:gif` → scripts/make-showcase-gif.mjs).
   Page ranges reference slide numbers inside each section's index.md; if a
-  section is restructured, update the range here (the GIF pipeline fails on a
-  dead range, and CI re-renders the GIF on every run).
+  section is restructured, update the range here. The pipeline asserts one
+  rendered slide per `src:` import (slidev silently drops a dead range), so a
+  stale range fails the run — and CI re-renders the GIF on every push/PR.
 src: ./pages/S00-welcome/index.md#1
 ---
 
