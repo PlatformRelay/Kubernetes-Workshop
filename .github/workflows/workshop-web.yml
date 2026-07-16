@@ -165,6 +165,12 @@ jobs:
                 type: RuntimeDefault
           EOF
           kubectl -n smoke wait --for=condition=Ready pod/web --timeout=120s
+      - name: Diagnostics on failure
+        if: failure()
+        run: |
+          kubectl -n smoke describe pod web || true
+          kubectl -n smoke get events --sort-by=.lastTimestamp || true
+          kubectl -n smoke logs web --all-containers || true
       - name: Verify response body and readiness toggle
         run: |
           kubectl -n smoke port-forward pod/web 8080:8080 &

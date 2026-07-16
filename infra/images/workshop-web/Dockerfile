@@ -19,5 +19,9 @@ ARG VERSION=dev
 ENV VERSION=${VERSION}
 COPY --from=build /workshop-web /workshop-web
 EXPOSE 8080
-USER nonroot:nonroot
+# Numeric UID:GID (the distroless nonroot user) — kubelet can only verify
+# `runAsNonRoot: true` against a NUMERIC image user; the symbolic form
+# `nonroot:nonroot` fails admission-time verification with
+# CreateContainerConfigError ("cannot verify user is non-root").
+USER 65532:65532
 ENTRYPOINT ["/workshop-web"]
