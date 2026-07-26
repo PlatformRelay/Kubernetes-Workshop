@@ -17,6 +17,16 @@
     "references/**",
     "bin/**"
   ],
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["before 6am on Monday"]
+  },
+  "postUpgradeTasks": {
+    "description": "Refresh mise.lock whenever mise.toml pins change (native mise also runs mise lock when the host allowlists it)",
+    "commands": ["mise lock"],
+    "fileFilters": ["mise.lock", "mise.toml"],
+    "executionMode": "branch"
+  },
   "customManagers": [
     {
       "customType": "regex",
@@ -80,102 +90,47 @@
       "datasourceTemplate": "docker",
       "versioningTemplate": "docker",
       "autoReplaceStringTemplate": "{{{depName}}}:{{{newValue}}}@{{{newDigest}}}"
-    },
-    {
-      "customType": "regex",
-      "description": "mise.toml — kubectl (mirrors versions.env KUBECTL_VERSION)",
-      "fileMatch": ["/^(?:.*/)?mise\\.toml$/"],
-      "matchStrings": [
-        "kubectl = \"(?<currentValue>[0-9]+\\.[0-9]+\\.[0-9]+)\""
-      ],
-      "datasourceTemplate": "github-releases",
-      "depNameTemplate": "kubernetes/kubernetes",
-      "extractVersionTemplate": "^v(?<version>.*)$"
-    },
-    {
-      "customType": "regex",
-      "description": "mise.toml — kind (mirrors versions.env KIND_VERSION)",
-      "fileMatch": ["/^(?:.*/)?mise\\.toml$/"],
-      "matchStrings": [
-        "kind = \"(?<currentValue>[0-9]+\\.[0-9]+\\.[0-9]+)\""
-      ],
-      "datasourceTemplate": "github-releases",
-      "depNameTemplate": "kubernetes-sigs/kind",
-      "extractVersionTemplate": "^v(?<version>.*)$"
-    },
-    {
-      "customType": "regex",
-      "description": "mise.toml — helm (stay on 3.x; majors gated below)",
-      "fileMatch": ["/^(?:.*/)?mise\\.toml$/"],
-      "matchStrings": [
-        "helm = \"(?<currentValue>[0-9]+\\.[0-9]+\\.[0-9]+)\""
-      ],
-      "datasourceTemplate": "github-releases",
-      "depNameTemplate": "helm/helm",
-      "extractVersionTemplate": "^v(?<version>.*)$"
-    },
-    {
-      "customType": "regex",
-      "description": "mise.toml — k9s",
-      "fileMatch": ["/^(?:.*/)?mise\\.toml$/"],
-      "matchStrings": [
-        "k9s = \"(?<currentValue>[0-9]+\\.[0-9]+\\.[0-9]+)\""
-      ],
-      "datasourceTemplate": "github-releases",
-      "depNameTemplate": "derailed/k9s",
-      "extractVersionTemplate": "^v(?<version>.*)$"
-    },
-    {
-      "customType": "regex",
-      "description": "mise.toml — jq",
-      "fileMatch": ["/^(?:.*/)?mise\\.toml$/"],
-      "matchStrings": [
-        "jq = \"(?<currentValue>[0-9]+\\.[0-9]+\\.[0-9]+)\""
-      ],
-      "datasourceTemplate": "github-releases",
-      "depNameTemplate": "jqlang/jq",
-      "extractVersionTemplate": "^jq-(?<version>.*)$"
-    },
-    {
-      "customType": "regex",
-      "description": "mise.toml — yq",
-      "fileMatch": ["/^(?:.*/)?mise\\.toml$/"],
-      "matchStrings": [
-        "yq = \"(?<currentValue>[0-9]+\\.[0-9]+\\.[0-9]+)\""
-      ],
-      "datasourceTemplate": "github-releases",
-      "depNameTemplate": "mikefarah/yq",
-      "extractVersionTemplate": "^v(?<version>.*)$"
-    },
-    {
-      "customType": "regex",
-      "description": "mise.toml — gum",
-      "fileMatch": ["/^(?:.*/)?mise\\.toml$/"],
-      "matchStrings": [
-        "gum = \"(?<currentValue>[0-9]+\\.[0-9]+\\.[0-9]+)\""
-      ],
-      "datasourceTemplate": "github-releases",
-      "depNameTemplate": "charmbracelet/gum",
-      "extractVersionTemplate": "^v(?<version>.*)$"
     }
   ],
   "packageRules": [
     {
-      "description": "Helm 4.x is a deliberate adoption decision — do not propose majors",
-      "matchPackageNames": ["helm/helm"],
+      "description": "Helm 4.x is a deliberate adoption decision — do not propose majors (mise short name + github-releases name)",
+      "matchPackageNames": ["helm", "helm/helm"],
       "matchUpdateTypes": ["major"],
       "enabled": false
     },
     {
-      "description": "Weekly batch of non-major pin / digest bumps (versions.env + mise)",
-      "matchManagers": ["custom.regex"],
+      "description": "workshop-web teaching tags stay v1/v2/v3 — digest refreshes only",
+      "matchPackageNames": ["ghcr.io/platformrelay/workshop-web"],
+      "matchUpdateTypes": [
+        "major",
+        "minor",
+        "patch",
+        "pin",
+        "pinDigest",
+        "rollback",
+        "bump",
+        "replacement"
+      ],
+      "enabled": false
+    },
+    {
+      "description": "workshop-web digest-only updates (preserve v1/v2/v3 tags)",
+      "matchPackageNames": ["ghcr.io/platformrelay/workshop-web"],
+      "matchUpdateTypes": ["digest"],
+      "enabled": true
+    },
+    {
+      "description": "Weekly batch of non-major pin / digest bumps (versions.env regex + native mise)",
+      "matchManagers": ["custom.regex", "mise"],
       "matchUpdateTypes": ["minor", "patch", "digest"],
       "groupName": "workshop environment pins"
     },
     {
       "description": "Major pin bumps stay ungrouped — one PR per package for review",
-      "matchManagers": ["custom.regex"],
+      "matchManagers": ["custom.regex", "mise"],
       "matchUpdateTypes": ["major"],
+      "groupName": null,
       "automerge": false
     },
     {
@@ -193,6 +148,7 @@
       "description": "npm majors stay separate; never automerge",
       "matchManagers": ["npm"],
       "matchUpdateTypes": ["major"],
+      "groupName": null,
       "automerge": false
     }
   ]

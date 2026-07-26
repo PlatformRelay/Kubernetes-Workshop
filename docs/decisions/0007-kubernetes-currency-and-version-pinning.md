@@ -48,9 +48,12 @@ environment deterministic.
   (deprecations, defaults, graduations). The review is a checklist item in the rehearsal
   milestone, not an ad-hoc fix.
 - **Automated pin proposals.** Root [`renovate.json`](../../renovate.json) runs weekly and opens
-  PRs that bump `infra/versions.env` / `mise.toml` pins (including digest-pinned images) via
-  regex managers. Those PRs must pass CI; they never automerge to `main`. Human review still
-  owns major bumps and rehearsal sign-off.
+  PRs that bump pins. `infra/versions.env` (release tags + digest-pinned images) uses regex
+  managers; `mise.toml` / `mise.lock` use Renovate's native **mise** manager (plus a
+  `mise lock` post-upgrade task) so `--locked` installs stay valid. Self-hosted Renovate must
+  allowlist `mise` in `allowedUnsafeExecutions` (Mend-hosted apps enable this by default).
+  Those PRs must pass CI; they never automerge to `main`. Human review still owns major bumps
+  and rehearsal sign-off.
 
 ## Consequences
 
