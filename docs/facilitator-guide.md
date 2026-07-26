@@ -274,7 +274,7 @@ unchecked list, honestly reflecting today's state.
 | [ ] | **Validation matrix all-green** | **US-BETA-3 + US-ENV-4** | Every row in the [validation matrix](./validation-matrix.md) is at `kind-smoke` — **no** `unrun` or `server-dry-run` state remains. US-ENV-4's nightly chainsaw smoke is what moves the rows; US-BETA-3 is the tracker it fills. |
 | [ ] | **Beta feedback triaged** | **US-BETA-5** | Every issue filed via the [beta-feedback template](../.github/ISSUE_TEMPLATE/beta-feedback.yml) during the beta is **closed or explicitly accepted-deferred** — none left open and unassessed. |
 | [ ] | **S24 finished or accepted-deferred** | **US-S24** | The S24 (kubebuilder) lab is **authored** (no longer a stub) **or** there is a recorded maintainer decision to exit beta with S24 deferred. Either resolves the gate; an unaddressed stub does not. |
-| [ ] | **Repo description + discovery topics set** | **US-BETA-2** | `gh repo view --json description,repositoryTopics` returns the exact strings recorded in US-BETA-2 (a manual maintainer step). |
+| [ ] | **Repo description + discovery topics set** | **US-BETA-2** | `gh repo view --json description,repositoryTopics` matches the exact description and ten topics recorded under **One-time repository setup** in the [README](../README.md) (re-apply with `gh repo edit` after a repo re-create). |
 
 ### Promotion is gated behind the rehearsal
 

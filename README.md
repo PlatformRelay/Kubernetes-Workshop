@@ -183,7 +183,8 @@ git push origin v1.0.0   # → Release "v1.0.0" with both PDFs attached
 The Pages base path carries the exact repo-name case (`Kubernetes-Workshop`); a lowercased
 base path is a defect (see [`.github/workflows/pages.yml`](./.github/workflows/pages.yml)).
 
-> **One-time repository setup** (two manual steps no workflow can perform):
+> **One-time repository setup** (manual steps no workflow can perform — re-apply
+> after a repo re-create so discovery metadata survives):
 >
 > 1. **Settings → Pages → Build and deployment → Source = "GitHub Actions".**
 > 2. The workflows integrate on **`main`** (CI, Pages, and the release tag are
@@ -191,6 +192,32 @@ base path is a defect (see [`.github/workflows/pages.yml`](./.github/workflows/p
 >    Branches) so PR checks target it and the `github-pages` environment is
 >    allowed to deploy — its branch protection defaults to the default branch
 >    only. (Alternatively, add `main` to that environment's allowed branches.)
+> 3. **Repository description + discovery topics** (US-BETA-2). Exact strings:
+>
+>    - Description:
+>      `Free, vendor-neutral, hands-on Kubernetes workshop with 28 modules, a three-day curriculum, standalone labs, Slidev decks and PDF releases.`
+>    - Topics (order does not matter):
+>      `kubernetes`, `kubernetes-training`, `workshop`, `devops`, `cloud-native`,
+>      `containers`, `gitops`, `kubernetes-security`, `slidev`, `education`
+>
+>    Apply and validate:
+>
+>    ```bash
+>    gh repo edit \
+>      --description "Free, vendor-neutral, hands-on Kubernetes workshop with 28 modules, a three-day curriculum, standalone labs, Slidev decks and PDF releases." \
+>      --add-topic kubernetes \
+>      --add-topic kubernetes-training \
+>      --add-topic workshop \
+>      --add-topic devops \
+>      --add-topic cloud-native \
+>      --add-topic containers \
+>      --add-topic gitops \
+>      --add-topic kubernetes-security \
+>      --add-topic slidev \
+>      --add-topic education
+>
+>    gh repo view --json description,repositoryTopics
+>    ```
 
 Markdown linting (`pnpm lint`, `markdownlint-cli2`) covers the standalone
 `labs/` only. The Slidev deck sources are excluded: markdownlint parses just the
