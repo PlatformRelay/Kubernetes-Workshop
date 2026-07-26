@@ -424,8 +424,7 @@
 /* -------------------------------------------------------- global chrome --- */
 
 .kw-global-footer,
-.kw-global-provenance,
-.kw-global-page {
+.kw-global-right {
   position: fixed;
   bottom: 0.7rem;
   z-index: 40;
@@ -440,13 +439,26 @@
   left: 1.5rem;
 }
 
-/* Version · short-SHA — left of the page counter; low density, export-visible. */
+/* Provenance + page as one right-side flex group — gap replaces fixed right offsets
+ * so long labels (e.g. v0.2.0-beta.1 · abcdef0) cannot crowd the counter. */
+.kw-global-right {
+  right: 1.5rem;
+  display: flex;
+  align-items: baseline;
+  gap: 1.1rem;
+  max-width: min(42%, 22rem);
+}
+
 .kw-global-provenance {
-  right: 5.25rem;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .kw-global-page {
-  right: 1.5rem;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .kw-global-progress {

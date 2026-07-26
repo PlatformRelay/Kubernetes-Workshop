@@ -40,8 +40,10 @@ const provenance = computed(() => {
 <template>
   <template v-if="!hideFooter">
     <div class="kw-global-footer" aria-hidden="true">{{ deckTitle }}</div>
-    <div class="kw-global-provenance" aria-hidden="true">{{ provenance }}</div>
-    <div class="kw-global-page" aria-hidden="true">{{ page }} / {{ total }}</div>
+    <div class="kw-global-right" aria-hidden="true">
+      <div class="kw-global-provenance">{{ provenance }}</div>
+      <div class="kw-global-page">{{ page }} / {{ total }}</div>
+    </div>
   </template>
   <div class="kw-global-progress" :style="{ width: `${progress}%` }" aria-hidden="true" />
 </template>
