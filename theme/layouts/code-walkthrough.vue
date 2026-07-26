@@ -43,16 +43,15 @@ const props = defineProps<{
   min-height: 0;
 }
 
-/* Code is the star of this layout: give it room, but keep print/export inside the box. */
+/* Code is the star of this layout: give it room. */
 .kw-cw-body :deep(.slidev-code-wrapper),
 .kw-cw-body :deep(.shiki-magic-move-container) {
   max-height: 100%;
 }
 
-.kw-cw-body :deep(pre.slidev-code),
-.kw-cw-body :deep(.shiki-magic-move-container) {
-  font-size: 0.82em;
-  line-height: 1.4;
+.kw-cw-body :deep(pre.slidev-code) {
+  font-size: 0.95em;
+  line-height: 1.5;
 }
 
 .kw-cw-lab {
