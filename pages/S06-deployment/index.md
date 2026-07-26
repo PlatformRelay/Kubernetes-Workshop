@@ -110,9 +110,9 @@ metadata:
 spec:
   containers:
     - name: web
-      image: nginx:1.27
+      image: ghcr.io/platformrelay/workshop-web:v1
       ports:
-        - containerPort: 80
+        - containerPort: 8080
       resources:
         requests:
           cpu: 50m
@@ -141,9 +141,9 @@ spec:
     spec:
       containers:
         - name: web
-          image: nginx:1.27
+          image: ghcr.io/platformrelay/workshop-web:v1
           ports:
-            - containerPort: 80
+            - containerPort: 8080
           resources:
             requests:
               cpu: 50m
@@ -172,9 +172,9 @@ spec:
     spec:
       containers:
         - name: web
-          image: nginx:1.27
+          image: ghcr.io/platformrelay/workshop-web:v1
           ports:
-            - containerPort: 80
+            - containerPort: 8080
           resources:
             requests:
               cpu: 50m
@@ -243,7 +243,7 @@ lab: labs/day-1/06-deployment.md
 ---
 
 ```bash {none|1|2|3|4}
-kubectl set image deployment/web web=nginx:1.28
+kubectl set image deployment/web web=ghcr.io/platformrelay/workshop-web:v2
 kubectl rollout status deployment/web
 kubectl rollout history deployment/web
 kubectl rollout undo deployment/web
@@ -306,7 +306,7 @@ no Pods created by hand.
 metadata:
   labels:
     app.kubernetes.io/name: web
-    app.kubernetes.io/version: "1.27"
+    app.kubernetes.io/version: "v1"
     app.kubernetes.io/component: frontend
 ```
 
@@ -367,6 +367,6 @@ env: namespace ✓ / kind ✓
 
 - Extend `pod.yaml` into `deployment.yaml`; watch **Deployment → ReplicaSet → 3 Pods**
 - Delete a Pod — the ReplicaSet remints it; **scale** to 5 and back
-- **Roll out** `nginx:1.28`, watch two ReplicaSets churn, read `rollout history`
+- **Roll out** `workshop-web:v2`, watch two ReplicaSets churn, read `rollout history`
 - **Break it:** roll a bad tag → rollout **stalls** while old Pods keep serving → `rollout undo`
 - Keep `deployment.yaml` for Lab 07.

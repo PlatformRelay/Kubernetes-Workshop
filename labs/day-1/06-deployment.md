@@ -51,9 +51,9 @@ spec:
     spec:
       containers:
         - name: web
-          image: nginx:1.27
+          image: ghcr.io/platformrelay/workshop-web:v1
           ports:
-            - containerPort: 80
+            - containerPort: 8080
           resources:
             requests:
               cpu: 50m
@@ -147,7 +147,7 @@ In one terminal, start watching ReplicaSets; in another, change the image.
 kubectl get rs -l app=web -w
 
 # Terminal B:
-kubectl set image deployment/web web=nginx:1.28
+kubectl set image deployment/web web=ghcr.io/platformrelay/workshop-web:v2
 kubectl rollout status deployment/web
 ```
 
@@ -158,8 +158,8 @@ kubectl rollout status deployment/web
 ```console
 # Terminal A (watch):
 NAME             DESIRED   CURRENT   READY   AGE
-web-6f8c9d5b7c   3         3         3       8m      # old RS (nginx:1.27)
-web-7d4bf9c8f5   1         1         0       0s      # new RS (nginx:1.28) scales up...
+web-6f8c9d5b7c   3         3         3       8m      # old RS (workshop-web:v1)
+web-7d4bf9c8f5   1         1         0       0s      # new RS (workshop-web:v2) scales up...
 web-6f8c9d5b7c   2         3         3       8m      # ...old scales down in step
 web-7d4bf9c8f5   3         3         3       20s
 web-6f8c9d5b7c   0         0         0       8m      # old RS emptied, kept for rollback
@@ -184,13 +184,13 @@ kubectl rollout undo deployment/web
 kubectl rollout status deployment/web
 ```
 
-**Task:** verify the image actually reverted to `nginx:1.27`.
+**Task:** verify the image actually reverted to `ghcr.io/platformrelay/workshop-web:v1`.
 
 <details><summary>Solution / expected output</summary>
 
 ```console
 $ kubectl get deployment web -o jsonpath='{.spec.template.spec.containers[0].image}{"\n"}'
-nginx:1.27
+ghcr.io/platformrelay/workshop-web:v1
 ```
 
 `rollout undo` promoted the old ReplicaSet back to 3 replicas and scaled the new one to 0 —
@@ -206,7 +206,7 @@ Roll out an image tag that does not exist and watch the rollout **stall** rather
 the running app.
 
 ```bash
-kubectl set image deployment/web web=nginx:9.99-nope
+kubectl set image deployment/web web=ghcr.io/platformrelay/workshop-web:v9.99-nope
 kubectl rollout status deployment/web --timeout=30s ; echo "exit=$?"
 kubectl get pods -l app=web
 ```
@@ -263,7 +263,7 @@ Pod counts.
 ```bash
 kubectl patch deployment web --type=merge \
   -p '{"spec":{"strategy":{"rollingUpdate":{"maxSurge":2,"maxUnavailable":0}}}}'
-kubectl set image deployment/web web=nginx:1.28
+kubectl set image deployment/web web=ghcr.io/platformrelay/workshop-web:v2
 kubectl get pods -l app=web -w
 ```
 

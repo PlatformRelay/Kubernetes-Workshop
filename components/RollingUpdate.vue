@@ -13,7 +13,7 @@ import { NEW_TAG, OLD_TAG } from './usePodReplace'
  * `step` renders a meaningful static state, so PDF/static export is faithful.
  * Parameterized (desired / oldTag / newTag) for reuse.
  *
- * step 0: old RS = 3 Running · new RS = 0         (steady state, v1.27)
+ * step 0: old RS = 3 Running · new RS = 0         (steady state, workshop-web:v1)
  * step 1: new RS surges +1 (maxSurge)             (old 3, new 1 creating → 4 total)
  * step 2: new Pod Ready → one old Pod terminates  (old 2, new 3 → converging)
  * step 3: migration complete                      (old RS drained to 0, kept for rollback)
