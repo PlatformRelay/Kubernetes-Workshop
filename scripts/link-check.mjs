@@ -2,7 +2,7 @@
 // Deterministic, offline link checker for the workshop's front-door docs.
 //
 // It validates, across README.md + docs/syllabus.md + docs/facilitator-guide.md
-// + labs/README.md:
+// + docs/beta-limitations.md + labs/README.md:
 //   1. No unresolved `<pages-url>` (or any `<…>`-style URL) placeholder remains.
 //   2. Every internal (relative) link target file exists on disk.
 //   3. Every in-document `#anchor` resolves to a heading in the target file,
@@ -23,6 +23,7 @@ const DOCS = [
   'README.md',
   'docs/syllabus.md',
   'docs/facilitator-guide.md',
+  'docs/beta-limitations.md',
   'labs/README.md',
 ];
 

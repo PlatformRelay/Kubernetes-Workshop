@@ -65,20 +65,12 @@ jobs:
             --base ./ --out site/templates
           ( cd site && zip -qr "../kubernetes-workshop-site-${GITHUB_REF_NAME}.zip" . )
 
-      # softprops prepends body_path to generate_release_notes output. Only wire
-      # the beta-limitations block for pre-release tags so a future stable cut
-      # does not inherit stale caveats.
+      # softprops prepends body_path to generate_release_notes output. Decision
+      # lives in scripts/release-notes-flags.sh (bats-covered) so the
+      # pre-release branch cannot silently disappear from the workflow.
       - name: Select release notes preamble
         id: notes
-        run: |
-          tag="${GITHUB_REF_NAME}"
-          if [[ "$tag" == *-* ]]; then
-            echo "prerelease=true" >> "$GITHUB_OUTPUT"
-            echo "body_path=docs/beta-limitations.md" >> "$GITHUB_OUTPUT"
-          else
-            echo "prerelease=false" >> "$GITHUB_OUTPUT"
-            echo "body_path=" >> "$GITHUB_OUTPUT"
-          fi
+        run: bash scripts/release-notes-flags.sh "${GITHUB_REF_NAME}"
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2

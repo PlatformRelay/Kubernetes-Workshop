@@ -61,6 +61,8 @@ jobs:
           # The top-level ./workshop wrapper is outside the infra glob above, so
           # lint it explicitly (US-ENV-2).
           shellcheck ./workshop
+          # Release tag→flags helper used by release.yml (US-BETA-7).
+          shellcheck ./scripts/release-notes-flags.sh
       - name: Run bats tests (mocked binaries — no cluster needed)
         run: bats infra/tests
 
