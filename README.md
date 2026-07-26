@@ -24,21 +24,11 @@ command (`pnpm showcase:gif`). A static preview frame lives at
 
 > [!WARNING]
 > **Controlled beta.** This workshop has **not yet completed a full 3-day
-> clean-environment rehearsal**. Specifically:
->
-> - **Timings are unrehearsed planning estimates, not measured facts.** The per-section
->   slide/lab minutes and the ~390 min/day day totals are targets to pace against, not
->   observations from a delivered run.
-> - **The add-on-heavy labs have not all been smoke-tested end-to-end on a clean `kind`
->   cluster** (S08, S09, S16, S18, S21, S22, S23). Their manifests are dry-run validated
->   and the commands are correct, but exact install timings and a few verbatim
->   `describe`/error strings may differ.
-> - **S24 (Operator dev / kubebuilder) is a deferred stub** — it needs a Go + kubebuilder
->   toolchain and is scheduled for a later milestone. Do not schedule it as a full
->   hands-on lab until it is authored.
->
-> These limitations are stated plainly rather than hidden. Confirming the cut and the
-> add-on installs against a live environment is explicit, still-open pre-delivery work.
+> clean-environment rehearsal**. Unrehearsed timing estimates, add-on-heavy labs not yet
+> kind-smoked, and the deferred S24 stub are listed in full in
+> [`docs/beta-limitations.md`](./docs/beta-limitations.md) — the same block is prepended
+> to every beta GitHub Release. Confirming the cut against a live environment is
+> still-open pre-delivery work.
 
 ## Audience & prerequisites
 
@@ -106,8 +96,8 @@ The deck's design system — a local Slidev theme with layouts, components, and
 code-annotation patterns — lives in `theme/` and is showcased slide by slide in the
 [template gallery](https://platformrelay.github.io/Kubernetes-Workshop/templates/).
 
-See the [controlled-beta note](#kubernetes-practitioner-workshop) above for what has and
-has not been rehearsed.
+See [`docs/beta-limitations.md`](./docs/beta-limitations.md) for what has and has not been
+rehearsed.
 
 ## Choose your path
 

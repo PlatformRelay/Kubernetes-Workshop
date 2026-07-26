@@ -7,7 +7,12 @@ name: Release
 #      so anyone can unzip it and open index.html offline (no server needed)
 # Ordinary pushes never release; cut a release by tagging:
 #
-#   git tag v1.2.0 && git push origin v1.2.0
+#   git tag v0.2.0-beta.1 && git push origin v0.2.0-beta.1   # pre-release
+#   git tag v1.2.0 && git push origin v1.2.0                 # stable
+#
+# A tag whose name contains `-` (semver pre-release, e.g. v0.2.0-beta.1) is
+# published with prerelease: true, and docs/beta-limitations.md is prepended to
+# the auto-generated notes so the honesty block is never lost.
 
 on:
   push:
@@ -60,6 +65,21 @@ jobs:
             --base ./ --out site/templates
           ( cd site && zip -qr "../kubernetes-workshop-site-${GITHUB_REF_NAME}.zip" . )
 
+      # softprops prepends body_path to generate_release_notes output. Only wire
+      # the beta-limitations block for pre-release tags so a future stable cut
+      # does not inherit stale caveats.
+      - name: Select release notes preamble
+        id: notes
+        run: |
+          tag="${GITHUB_REF_NAME}"
+          if [[ "$tag" == *-* ]]; then
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+            echo "body_path=docs/beta-limitations.md" >> "$GITHUB_OUTPUT"
+          else
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+            echo "body_path=" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -69,3 +89,5 @@ jobs:
             kubernetes-workshop-site-*.zip
           fail_on_unmatched_files: true
           generate_release_notes: true
+          prerelease: ${{ steps.notes.outputs.prerelease }}
+          body_path: ${{ steps.notes.outputs.body_path }}

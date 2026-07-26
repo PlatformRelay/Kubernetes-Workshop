@@ -249,11 +249,12 @@ pass**. Be aware of the following, consistent with the honesty callouts already 
 
 ## Beta-exit criteria — removing the beta label
 
-The workshop currently ships under a **controlled-beta** banner (see the README's
-[beta note](../README.md#kubernetes-practitioner-workshop)). This section defines when that
-banner may come off. It is the mirror image of the README banner's limitations: each
-limitation stated there is resolved by a gate below, so the two documents cannot drift —
-when every gate here is met, the banner's limitations no longer hold.
+The workshop currently ships under a **controlled-beta** banner (see
+[`docs/beta-limitations.md`](./beta-limitations.md) and the README's short
+[warning](../README.md#kubernetes-practitioner-workshop)). This section defines when that
+banner may come off. It is the mirror image of the [beta-limitations](./beta-limitations.md)
+list: each limitation stated there is resolved by a gate below, so the documents cannot
+drift — when every gate here is met, those limitations no longer hold.
 
 > **The discipline.** Every gate below is an **objective yes/no against a named artifact**,
 > and every gate **maps to a story ID**. **No gate is "we feel ready."** Removing the beta
