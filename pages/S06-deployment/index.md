@@ -94,6 +94,8 @@ gets its own RS. Show ownerReferences later in the lab with
 layout: code-walkthrough
 heading: 'Extend the Pod — same spec, now inside a template'
 lab: labs/day-1/06-deployment.md
+class: s06-walkthrough-fit
+zoom: 0.82
 ---
 
 ````md magic-move
@@ -195,23 +197,34 @@ match template labels or the API server rejects it.
 -->
 
 ---
+class: kw-slide-dense s06-roll-fit
+zoom: 0.86
+---
 
 <span class="kw-kicker">The payoff · rolling update</span>
 
 # Change the image → zero-downtime rollout
 
-<div class="mt-2">
-  <RollingUpdate :step="$clicks" />
+<div class="mt-2 s06-roll-points-grid">
+  <div v-click="1">
+
+**`maxSurge`** lets the new ReplicaSet add Pods *above* desired first — capacity never dips.
+
+  </div>
+  <div v-click="2">
+
+**`maxUnavailable`** caps how many old Pods may be down at once — here, one leaves only after a new one is `Ready`.
+
+  </div>
+  <div v-click="3">
+
+The **old ReplicaSet is kept at 0**, which is exactly what makes `rollout undo` instant.
+
+  </div>
 </div>
 
-<div class="mt-4 text-sm">
-<v-clicks at="1">
-
-- **`maxSurge`** lets the new ReplicaSet add Pods *above* desired first — capacity never dips.
-- **`maxUnavailable`** caps how many old Pods may be down at once — here, one leaves only after a new one is `Ready`.
-- The **old ReplicaSet is kept at 0**, which is exactly what makes `rollout undo` instant.
-
-</v-clicks>
+<div class="mt-2">
+  <RollingUpdate :step="$clicks" />
 </div>
 
 <!--

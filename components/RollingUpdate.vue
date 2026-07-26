@@ -136,51 +136,51 @@ const total = computed(() => oldPods.value.length + newPods.value.length)
 .kw-roll {
   display: flex;
   flex-direction: column;
-  gap: 0.9rem;
+  gap: 0.55rem;
 }
 
 .kw-roll-cols {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 1.2rem;
+  gap: 1rem;
 }
 
 .kw-roll-col {
   display: flex;
   flex-direction: column;
-  gap: 0.6rem;
+  gap: 0.4rem;
 }
 
 .kw-roll-pods {
   display: flex;
   flex-direction: column;
-  gap: 0.55rem;
-  min-height: 13rem;
+  gap: 0.35rem;
+  min-height: 9.5rem;
   position: relative;
 }
 
 .kw-roll-empty {
-  font-size: 0.74rem;
+  font-size: 0.7rem;
   color: var(--kw-text-faint);
   border: 1px dashed var(--kw-border);
   border-radius: var(--kw-radius-sm);
-  padding: 0.55rem 0.7rem;
+  padding: 0.45rem 0.6rem;
 }
 
 .kw-roll-state {
   display: flex;
-  gap: 0.6rem;
+  gap: 0.5rem;
   align-items: center;
   flex-wrap: wrap;
 }
 
 .kw-roll-chip {
-  font-size: 0.82rem;
+  font-size: 0.74rem;
   color: var(--kw-text-dim);
   background: var(--kw-bg-soft);
   border: 1px solid var(--kw-border);
   border-radius: var(--kw-radius-sm);
-  padding: 0.25rem 0.7rem;
+  padding: 0.2rem 0.55rem;
   transition: all 0.4s ease;
 }
 
@@ -195,9 +195,10 @@ const total = computed(() => oldPods.value.length + newPods.value.length)
 }
 
 .kw-roll-caption {
-  font-size: 0.82rem;
+  font-size: 0.76rem;
   color: var(--kw-text-dim);
-  min-height: 2.4rem;
+  min-height: 1.8rem;
+  line-height: 1.35;
 }
 
 .kw-roll-pods-enter-active,
