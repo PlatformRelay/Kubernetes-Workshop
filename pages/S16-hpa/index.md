@@ -192,7 +192,7 @@ spec:
     spec:
       containers:
         - name: web
-          image: registry.k8s.io/hpa-example   # a CPU-burning demo (static nginx won't move)
+          image: registry.k8s.io/hpa-example   # a CPU-burning demo (workshop-web barely moves)
           resources:
             requests: { cpu: 200m }    # <- the denominator the HPA scales against
 ```
@@ -233,7 +233,7 @@ spec:
 <!--
 Speaker: three frames, one wiring diagram. (1) The Deployment — note the image is the canonical
 CPU-burning demo (registry.k8s.io/hpa-example, a php-apache that does real work per request), NOT
-the static nginx from the red line: a static server answers a wget in microseconds and never moves
+the workshop-web demo app from the red line: a trivial status server answers a wget in microseconds and never moves
 CPU, so the HPA would sit flat and the whole demo would silently no-op. This is the lab's target,
 and the requests.cpu: 200m is the denominator from the previous slide. (2) The HPA takes ownership
 of replicas — from here you do NOT set replicas by hand. (3) The load generator: a throwaway

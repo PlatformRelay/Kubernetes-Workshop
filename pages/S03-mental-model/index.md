@@ -185,7 +185,7 @@ lab: labs/day-1/03-cluster-tour.md
 kind: Pod
 spec:                     # DESIRED — you write this
   containers:
-    - image: nginx:1.29
+    - image: ghcr.io/platformrelay/workshop-web:v1
 status:                   # OBSERVED — the system writes this
   phase: Running
   podIP: 10.244.1.7

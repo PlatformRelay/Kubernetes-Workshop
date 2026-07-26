@@ -116,14 +116,14 @@ apiVersion: apps/v1
 kind: Deployment
 metadata: { name: web, labels: { app: s10 } }
 spec:
-  replicas: 1                       # one replica → exec/env is deterministic
+  replicas: 1                       # one replica → one Pod answers every request
   selector: { matchLabels: { app: s10 } }
   template:
     metadata: { labels: { app: s10 } }
     spec:
       containers:
         - name: web
-          image: nginx:1.27
+          image: ghcr.io/platformrelay/workshop-web:v1
 ```
 
 ```yaml
@@ -139,7 +139,7 @@ spec:
     spec:
       containers:
         - name: web
-          image: nginx:1.27
+          image: ghcr.io/platformrelay/workshop-web:v1
           envFrom:
             - configMapRef: { name: web-config }   # every key → an env var
 ```
@@ -157,11 +157,16 @@ spec:
     spec:
       containers:
         - name: web
-          image: nginx:1.27
+          image: ghcr.io/platformrelay/workshop-web:v1
           envFrom:
             - configMapRef: { name: web-config }
           volumeMounts:
             - { name: config, mountPath: /etc/web-config }   # dir mount, no subPath
+        - name: toolbox   # the app image is shell-less — a sidecar to read the files
+          image: busybox:1.37
+          command: ["sleep", "infinity"]
+          volumeMounts:
+            - { name: config, mountPath: /etc/web-config }
       volumes:
         - { name: config, configMap: { name: web-config } }
 ```
@@ -179,12 +184,17 @@ spec:
     spec:
       containers:
         - name: web
-          image: nginx:1.27
+          image: ghcr.io/platformrelay/workshop-web:v1
           envFrom:
             - configMapRef: { name: web-config }
           env:
             - name: API_TOKEN
               valueFrom: { secretKeyRef: { name: web-secret, key: API_TOKEN } }
+          volumeMounts:
+            - { name: config, mountPath: /etc/web-config }
+        - name: toolbox
+          image: busybox:1.37
+          command: ["sleep", "infinity"]
           volumeMounts:
             - { name: config, mountPath: /etc/web-config }
       volumes:
@@ -194,12 +204,15 @@ spec:
 
 <!--
 Speaker: FOUR frames, all the SAME Deployment growing. (1) the app from Day 1, no config.
-(2) envFrom pulls every ConfigMap key in as an env var — one line. (3) the same ConfigMap
-ALSO mounted as a directory of files — call out mountPath with NO subPath, that's the
-updatable form (matters two slides on). (4) a Secret's key injected as one env var via
-secretKeyRef — sensitive value lives in its own object, consumed the same way. The lab
-applies these same pieces and execs in to prove each one. Note replicas:1 is deliberate:
-one Pod makes `kubectl exec deploy/web -- env` unambiguous.
+(2) envFrom pulls every ConfigMap key in as an env var — one line; the ConfigMap's VERSION
+key overrides the app's baked version, so the response body itself proves the injection.
+(3) the same ConfigMap ALSO mounted as a directory of files — call out mountPath with NO
+subPath, that's the updatable form (matters two slides on); the toolbox sidecar exists
+because the app image is distroless (no shell) — a second container is the honest way to
+look at mounted files. (4) a Secret's key injected as one env var via secretKeyRef —
+sensitive value lives in its own object, consumed the same way. The lab applies these same
+pieces and proves each one in the response body or via the toolbox. Note replicas:1 is
+deliberate: one Pod means the body's `pod:` line never surprises.
 -->
 
 ---
@@ -288,13 +301,13 @@ lab: labs/day-2/10-config.md
 
 ```console {none|1-3|5-6|8-10}
 # 1) edit the ConfigMap
-$ kubectl edit configmap web-config    # GREETING: hi → hello
-$ kubectl exec deploy/web -- printenv GREETING
-hi                                      # frozen at Pod start
+$ kubectl edit configmap web-config    # VERSION: config-v1 → config-v2
+$ wget -qO- http://$POD_IP:8080 | head -1
+workshop-web config-v1                  # env frozen at Pod start
 
 # 2) mounted file updates (~60–90s)
-$ kubectl exec deploy/web -- cat /etc/web-config/GREETING
-hello
+$ kubectl exec deploy/web -c toolbox -- cat /etc/web-config/VERSION
+config-v2
 
 # 3) force rollout — checksum annotation
 $ kubectl patch deploy web -p '{"spec":{"template":{"metadata":{"annotations":{"checksum/config":"<sha>"}}}}}'
@@ -321,12 +334,14 @@ template changes → a normal rolling update ships the new value.
 
 <!--
 Speaker: this is the beat people get burned by in production. Three outcomes from ONE
-edit: (1) env var unchanged — frozen at start; (2) directory-mounted file updates after
-~60–90s — reassure them the delay is normal, it's not broken; (3) if you need env to
-change now, you must roll the Pods, and the idiom is a checksum/config annotation on the
-pod template (Helm/Kustomize automate this). Tie back: immutable objects push you to
-name-per-version anyway. The lab walks all three outcomes and asks the learner to explain
-why env didn't change but the file did.
+edit: (1) env var unchanged — frozen at start; the app's response body still says the OLD
+version, which makes "frozen" visible without a shell; (2) directory-mounted file updates
+after ~60–90s — read via the toolbox sidecar; reassure them the delay is normal, it's not
+broken; (3) if you need env to change now, you must roll the Pods, and the idiom is a
+checksum/config annotation on the pod template (Helm/Kustomize automate this) — after the
+rollout the body says config-v2. Tie back: immutable objects push you to name-per-version
+anyway. The lab walks all three outcomes and asks the learner to explain why env didn't
+change but the file did.
 -->
 
 ---
@@ -365,8 +380,9 @@ env: namespace ✓ / kind ✓
 
 ## Lab 10 — Config in, secrets rotated
 
-- Create a **ConfigMap**; consume it as **env** (`envFrom`) and prove it with `exec … printenv`
-- Mount the **same** ConfigMap as **files**; `cat` a mounted key
+- Create a **ConfigMap**; consume it as **env** (`envFrom`) — the injected `VERSION`
+  shows up in the app's own response body
+- Mount the **same** ConfigMap as **files**; `cat` a mounted key from the toolbox sidecar
 - Create a **Secret**, consume it as env, and decode it — see the base64, feel "not encrypted"
 - **Rotate:** edit the ConfigMap → env is **unchanged**, the mounted file updates, then a
   **checksum annotation** forces a rollout

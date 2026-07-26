@@ -56,7 +56,7 @@ metadata:
   labels:
     app: s10
 data:
-  GREETING: "hi"
+  VERSION: "config-v1"    # the demo app prints $VERSION in its response body
   LOG_LEVEL: "info"
 EOF
 
@@ -68,7 +68,7 @@ metadata:
   labels:
     app: s10
 spec:
-  replicas: 1                      # one replica → `exec` is unambiguous
+  replicas: 1                      # one replica → one Pod answers every request
   selector:
     matchLabels:
       app: s10
@@ -79,9 +79,9 @@ spec:
     spec:
       containers:
         - name: web
-          image: nginx:1.27
+          image: ghcr.io/platformrelay/workshop-web:v1
           ports:
-            - containerPort: 80
+            - containerPort: 8080
           envFrom:
             - configMapRef:
                 name: web-config   # every key becomes an env var
@@ -92,23 +92,32 @@ kubectl apply -f deployment-env.yaml
 kubectl rollout status deploy/web
 ```
 
-**Task:** confirm the container actually has `GREETING` and `LOG_LEVEL` in its environment.
+**Task:** confirm the env vars actually reached the container. The demo app prints its
+`VERSION` env var in its own response body, so fetch it (you will reuse these two lines
+all lab — Pod IPs change on every rollout, so always re-read `POD_IP` first):
 
 ```bash
-kubectl exec deploy/web -- printenv GREETING LOG_LEVEL
+POD_IP=$(kubectl get pod -l app=s10 -o jsonpath='{.items[0].status.podIP}')
+kubectl run tmp -i --rm --restart=Never --image=busybox:1.37 -- wget -qO- "http://$POD_IP:8080"
 ```
 
 <details><summary>Solution / expected output</summary>
 
 ```console
-$ kubectl exec deploy/web -- printenv GREETING LOG_LEVEL
-hi
-info
+$ kubectl run tmp -i --rm --restart=Never --image=busybox:1.37 -- wget -qO- "http://$POD_IP:8080"
+workshop-web config-v1
+pod: web-5f6c8b9d4-abcde
+requests served: 1
+ready: true
 ```
 
+The first line says **`config-v1`** — the image was built as `v1`, but the ConfigMap's
+`VERSION` key overrode it via the environment. That one line is proof the injection worked.
 `envFrom` + `configMapRef` maps **each key** of the ConfigMap to an env var of the same
-name. (Use `valueFrom` + `configMapKeyRef` instead when you want just one key, possibly
-under a different variable name.)
+name (so `LOG_LEVEL` is set too — `kubectl describe pod -l app=s10` shows the
+`Environment Variables from: web-config ConfigMap` wiring). Use `valueFrom` +
+`configMapKeyRef` instead when you want just one key, possibly under a different variable
+name.
 </details>
 
 **Question:** where do the env var **names** come from — the ConfigMap keys, or something
@@ -116,7 +125,7 @@ you set on the container?
 
 <details><summary>Answer</summary>
 
-With `envFrom`, the variable names **are** the ConfigMap keys verbatim (`GREETING`,
+With `envFrom`, the variable names **are** the ConfigMap keys verbatim (`VERSION`,
 `LOG_LEVEL`). That's why keys meant for `envFrom` must be valid env var names. With
 `valueFrom.configMapKeyRef` you pick both the source key **and** the target variable name,
 so you can rename or expose only one key.
@@ -127,7 +136,9 @@ so you can rename or expose only one key.
 ## Step 2 — mount the SAME ConfigMap as files
 
 The same object, a second way in. Mount it as a **whole directory** (no `subPath`) so each
-key becomes a file — and so it stays **updatable** later.
+key becomes a file — and so it stays **updatable** later. The demo app's image is
+**distroless** (no shell, no `ls`/`cat`), so the manifest also adds a tiny **toolbox**
+sidecar that mounts the same volume — that is the honest way to look at mounted files.
 
 ```bash
 cat > deployment-mounted.yaml <<'EOF'
@@ -149,15 +160,21 @@ spec:
     spec:
       containers:
         - name: web
-          image: nginx:1.27
+          image: ghcr.io/platformrelay/workshop-web:v1
           ports:
-            - containerPort: 80
+            - containerPort: 8080
           envFrom:
             - configMapRef:
                 name: web-config
           volumeMounts:
             - name: config
               mountPath: /etc/web-config     # whole directory — NOT subPath
+        - name: toolbox                      # the app image has no shell —
+          image: busybox:1.37                # this sidecar is our window in
+          command: ["sleep", "infinity"]
+          volumeMounts:
+            - name: config
+              mountPath: /etc/web-config
       volumes:
         - name: config
           configMap:
@@ -168,26 +185,28 @@ kubectl apply -f deployment-mounted.yaml
 kubectl rollout status deploy/web
 ```
 
-**Task:** list the mounted files and read one.
+**Task:** list the mounted files and read one — from the **toolbox** container
+(`-c toolbox`).
 
 ```bash
-kubectl exec deploy/web -- ls /etc/web-config
-kubectl exec deploy/web -- cat /etc/web-config/GREETING
+kubectl exec deploy/web -c toolbox -- ls /etc/web-config
+kubectl exec deploy/web -c toolbox -- cat /etc/web-config/VERSION
 ```
 
 <details><summary>Solution / expected output</summary>
 
 ```console
-$ kubectl exec deploy/web -- ls /etc/web-config
-GREETING
+$ kubectl exec deploy/web -c toolbox -- ls /etc/web-config
 LOG_LEVEL
-$ kubectl exec deploy/web -- cat /etc/web-config/GREETING
-hi
+VERSION
+$ kubectl exec deploy/web -c toolbox -- cat /etc/web-config/VERSION
+config-v1
 ```
 
-Each ConfigMap **key** is projected as a **file** whose contents are the value. Because we
-mounted the whole directory (no `subPath`), Kubernetes keeps this directory in sync with
-the object — you'll use that in Step 4.
+Each ConfigMap **key** is projected as a **file** whose contents are the value. Both
+containers mount the same volume, so what the toolbox sees is exactly what the app sees.
+Because we mounted the whole directory (no `subPath`), Kubernetes keeps this directory in
+sync with the object — you'll use that in Step 4.
 </details>
 
 **Question:** we mounted at `/etc/web-config` without `subPath`. Why does that matter for
@@ -240,9 +259,9 @@ spec:
     spec:
       containers:
         - name: web
-          image: nginx:1.27
+          image: ghcr.io/platformrelay/workshop-web:v1
           ports:
-            - containerPort: 80
+            - containerPort: 8080
           envFrom:
             - configMapRef:
                 name: web-config
@@ -252,6 +271,12 @@ spec:
                 secretKeyRef:
                   name: web-secret
                   key: API_TOKEN
+          volumeMounts:
+            - name: config
+              mountPath: /etc/web-config
+        - name: toolbox
+          image: busybox:1.37
+          command: ["sleep", "infinity"]
           volumeMounts:
             - name: config
               mountPath: /etc/web-config
@@ -265,7 +290,8 @@ kubectl apply -f secret.yaml
 kubectl apply -f deployment-secret.yaml
 kubectl rollout status deploy/web
 
-kubectl exec deploy/web -- printenv API_TOKEN
+# the wiring, as the kubelet sees it:
+kubectl describe pod -l app=s10 | grep -A2 'API_TOKEN'
 ```
 
 **Task:** read the Secret straight from the API and recover the plaintext.
@@ -278,15 +304,17 @@ kubectl get secret web-secret -o jsonpath='{.data.API_TOKEN}' | base64 -d; echo
 <details><summary>Solution / expected output</summary>
 
 ```console
-$ kubectl exec deploy/web -- printenv API_TOKEN
-s3cr3t
+$ kubectl describe pod -l app=s10 | grep -A2 'API_TOKEN'
+      API_TOKEN:  <set to the key 'API_TOKEN' in secret 'web-secret'>  Optional: false
 $ kubectl get secret web-secret -o jsonpath='{.data.API_TOKEN}'; echo
 czNjcjN0
 $ kubectl get secret web-secret -o jsonpath='{.data.API_TOKEN}' | base64 -d; echo
 s3cr3t
 ```
 
-The stored value is `czNjcjN0` — plain **base64**, reversible by anyone with `get` on the
+Note what `describe` shows: the **reference** (`<set to the key … in secret …>`), never
+the value — one of the Secret's handling guarantees. But the value itself is hardly
+guarded: the stored value is `czNjcjN0` — plain **base64**, reversible by anyone with `get` on the
 Secret. A Secret is **not** encrypted at the API. Its real protections are **RBAC** (who
 may read it) and **etcd encryption-at-rest** (who may read the disk). `stringData` is a
 write-time convenience — you write plaintext, the API stores base64 under `data`.
@@ -311,11 +339,12 @@ Change the ConfigMap and watch three different outcomes from one edit. This is t
 point of the section.
 
 ```bash
-# change GREETING from "hi" to "hello"
-kubectl patch configmap web-config --type merge -p '{"data":{"GREETING":"hello"}}'
+# change VERSION from "config-v1" to "config-v2"
+kubectl patch configmap web-config --type merge -p '{"data":{"VERSION":"config-v2"}}'
 
-# (a) the env var — read it immediately
-kubectl exec deploy/web -- printenv GREETING
+# (a) the env var — the app prints $VERSION in its response body; read it immediately
+POD_IP=$(kubectl get pod -l app=s10 -o jsonpath='{.items[0].status.podIP}')
+kubectl run tmp -i --rm --restart=Never --image=busybox:1.37 -- wget -qO- "http://$POD_IP:8080" | head -1
 ```
 
 **Task:** did the env var change?
@@ -323,19 +352,19 @@ kubectl exec deploy/web -- printenv GREETING
 <details><summary>Solution / expected output</summary>
 
 ```console
-$ kubectl exec deploy/web -- printenv GREETING
-hi
+$ kubectl run tmp -i --rm --restart=Never --image=busybox:1.37 -- wget -qO- "http://$POD_IP:8080" | head -1
+workshop-web config-v1
 ```
 
 **No.** Environment variables are read **once**, when the container starts. Editing the
-ConfigMap changed the object, not the running process. The old value persists until the
-Pod is recreated.
+ConfigMap changed the object, not the running process — the response body still says
+`config-v1`. The old value persists until the Pod is recreated.
 </details>
 
 ```bash
 # (b) the directory-mounted file — give the kubelet up to ~90s, then read it
 sleep 90
-kubectl exec deploy/web -- cat /etc/web-config/GREETING
+kubectl exec deploy/web -c toolbox -- cat /etc/web-config/VERSION
 ```
 
 **Task:** did the mounted file change?
@@ -343,13 +372,15 @@ kubectl exec deploy/web -- cat /etc/web-config/GREETING
 <details><summary>Solution / expected output</summary>
 
 ```console
-$ kubectl exec deploy/web -- cat /etc/web-config/GREETING
-hello
+$ kubectl exec deploy/web -c toolbox -- cat /etc/web-config/VERSION
+config-v2
 ```
 
 **Yes** — but not instantly. The kubelet resyncs whole-directory ConfigMap mounts on its
-own cycle (typically under ~90s). If it still shows `hi`, wait a little longer and re-run;
-it is **not** broken. (A `subPath` mount would have stayed `hi` forever.)
+own cycle (typically under ~90s). If it still shows `config-v1`, wait a little longer and
+re-run; it is **not** broken. (A `subPath` mount would have stayed `config-v1` forever.)
+So the same Pod now holds **both** truths at once: env says `config-v1`, file says
+`config-v2`.
 </details>
 
 ```bash
@@ -357,7 +388,10 @@ it is **not** broken. (A `subPath` mount would have stayed `hi` forever.)
 kubectl patch deploy web -p \
   '{"spec":{"template":{"metadata":{"annotations":{"checksum/config":"v2"}}}}}'
 kubectl rollout status deploy/web
-kubectl exec deploy/web -- printenv GREETING
+
+# new Pod → new IP → re-read it, then fetch again
+POD_IP=$(kubectl get pod -l app=s10 -o jsonpath='{.items[0].status.podIP}')
+kubectl run tmp -i --rm --restart=Never --image=busybox:1.37 -- wget -qO- "http://$POD_IP:8080" | head -1
 ```
 
 **Task:** after the rollout, what does the env var read?
@@ -369,14 +403,14 @@ $ kubectl patch deploy web -p '{"spec":{"template":{"metadata":{"annotations":{"
 deployment.apps/web patched
 $ kubectl rollout status deploy/web
 deployment "web" successfully rolled out
-$ kubectl exec deploy/web -- printenv GREETING
-hello
+$ kubectl run tmp -i --rm --restart=Never --image=busybox:1.37 -- wget -qO- "http://$POD_IP:8080" | head -1
+workshop-web config-v2
 ```
 
 Changing the **pod template** (here, a `checksum/config` annotation) makes the Deployment
-roll out new Pods, and new Pods read the current ConfigMap — so the env var is now `hello`.
-`kubectl rollout restart deploy/web` does the same thing manually; the annotation is the
-version you can automate.
+roll out new Pods, and new Pods read the current ConfigMap — so the response body now says
+`config-v2`. `kubectl rollout restart deploy/web` does the same thing manually; the
+annotation is the version you can automate.
 </details>
 
 **Question (headline):** why did the env var not change but the mounted file did?
@@ -404,13 +438,15 @@ normal rolling update ships the new value — no manual step. Helm (`checksum/co
 
 ## Expected observations
 
-- `envFrom` maps every ConfigMap key to an env var; `valueFrom` maps one key.
-- The same ConfigMap mounted as a **directory** projects one file per key.
+- `envFrom` maps every ConfigMap key to an env var; `valueFrom` maps one key. The injected
+  `VERSION` is visible in the app's own response body (`workshop-web config-v1`).
+- The same ConfigMap mounted as a **directory** projects one file per key — read through
+  the `toolbox` sidecar, because the distroless app image has no shell.
 - A Secret value read from the API is **base64** (`czNjcjN0` → `s3cr3t`) — encoding, not
-  encryption.
-- Editing a ConfigMap: **env var unchanged**, **directory-mounted file updates** in
-  ~60–90s, and a **pod-template change** (checksum annotation / `rollout restart`) is what
-  refreshes the env.
+  encryption; `describe` shows only the reference, never the value.
+- Editing a ConfigMap: **env var unchanged** (body still `config-v1`), **directory-mounted
+  file updates** in ~60–90s, and a **pod-template change** (checksum annotation /
+  `rollout restart`) is what refreshes the env (body becomes `config-v2`).
 
 ## Cleanup / panic reset
 

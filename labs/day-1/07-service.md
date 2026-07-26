@@ -43,8 +43,8 @@ spec:
     app: web            # picks every Pod carrying this label
   ports:
     - name: http
-      port: 80          # the Service port
-      targetPort: 80    # the container port (containerPort in the Pod)
+      port: 80          # the Service port — what clients hit
+      targetPort: 8080  # the container port (containerPort in the Pod)
 EOF
 
 kubectl apply -f service.yaml
@@ -80,10 +80,12 @@ kubectl get pods -l app=web -o wide
 ```console
 $ kubectl get endpointslices -l kubernetes.io/service-name=web
 NAME        ADDRESSTYPE   PORTS   ENDPOINTS                            AGE
-web-abcde   IPv4          80      10.244.0.7,10.244.0.8,10.244.0.9     30s
+web-abcde   IPv4          8080    10.244.0.7,10.244.0.8,10.244.0.9     30s
 ```
 
-**Three** addresses — one per Pod. The endpoint controller watched the Service's selector,
+**Three** addresses — one per Pod. (Note the `PORTS` column says **8080**: the slice lists
+*container* ports — the Service's own `port: 80` exists only on the Service side.) The
+endpoint controller watched the Service's selector,
 found the three `app: web` Pods, and wrote their IPs into an **EndpointSlice**. Compare the
 IPs to `kubectl get pods -o wide` — they are the Pod IPs. The Service is just a stable front
 door; EndpointSlices are the live list of who is behind it.
@@ -93,28 +95,32 @@ door; EndpointSlices are the live list of who is behind it.
 
 ## Step 3 — reach it by DNS from a throwaway Pod
 
-Cluster DNS gives every Service a name. From a temporary Pod, fetch the nginx page by the
-Service name `web`:
+Cluster DNS gives every Service a name. From a temporary Pod, fetch the demo app's status
+page by the Service name `web`:
 
 ```bash
 kubectl run tmp -i --rm --restart=Never --image=busybox:1.36 -- \
-  wget -qO- http://web | head -4
+  wget -qO- http://web
 ```
 
-**Task:** what did you get back, and what name resolved?
+**Task:** what did you get back, and what name resolved? Run it a few times — watch the
+`pod:` line.
 
 <details><summary>Solution / expected output</summary>
 
 ```console
-$ kubectl run tmp -i --rm --restart=Never --image=busybox:1.36 -- wget -qO- http://web | head -4
-<!DOCTYPE html>
-<html>
-<head>
-<title>Welcome to nginx!</title>
+$ kubectl run tmp -i --rm --restart=Never --image=busybox:1.36 -- wget -qO- http://web
+workshop-web v1
+pod: web-6f8c9d5b7c-7nqld
+requests served: 1
+ready: true
 ```
 
 `http://web` resolved via cluster DNS to the Service's ClusterIP, which load-balanced to one
-of the three Pods. The fully-qualified name is `web.<your-namespace>.svc.cluster.local`;
+of the three Pods — the `pod:` line names which one answered, so repeated runs show
+different Pods taking turns. (Note you fetched port **80**, the Service port; the Service
+forwarded to the container's **8080**.) The fully-qualified name is
+`web.<your-namespace>.svc.cluster.local`;
 inside the same namespace the short name `web` is enough. The `tmp` Pod is deleted on exit
 (`--rm`).
 </details>
@@ -145,7 +151,7 @@ web    ClusterIP   10.96.142.51    <none>        80/TCP    6m      # looks total
 
 $ kubectl get endpointslices -l kubernetes.io/service-name=web
 NAME        ADDRESSTYPE   PORTS   ENDPOINTS   AGE
-web-abcde   IPv4          80      <unset>     6m                   # <-- ZERO endpoints
+web-abcde   IPv4          8080    <unset>     6m                   # <-- ZERO endpoints
 
 $ kubectl run tmp ... wget -qO- --timeout=5 http://web ; echo "exit=$?"
 wget: download timed out
@@ -172,10 +178,10 @@ kubectl run tmp -i --rm --restart=Never --image=busybox:1.36 -- \
 ```console
 $ kubectl get endpointslices -l kubernetes.io/service-name=web
 NAME        ADDRESSTYPE   PORTS   ENDPOINTS                          AGE
-web-abcde   IPv4          80      10.244.0.7,10.244.0.8,10.244.0.9   8m
+web-abcde   IPv4          8080    10.244.0.7,10.244.0.8,10.244.0.9   8m
 
 $ kubectl run tmp ... wget -qO- http://web | head -1
-<!DOCTYPE html>
+workshop-web v1
 ```
 
 Restoring `app: web` repopulates the EndpointSlice within a second and traffic flows again.
@@ -185,7 +191,8 @@ Same manifest, one label — that is the whole difference between working and si
 ## Expected observations
 
 - The Service gets a stable `ClusterIP`; its EndpointSlice lists **one address per Pod**.
-- `http://web` resolves via cluster DNS and returns the nginx welcome page.
+- `http://web` resolves via cluster DNS and returns the demo app's status body — the
+  `pod:` line rotates across the three Pods.
 - A wrong selector leaves the Service **healthy-looking but with zero endpoints**, and
   requests time out — identically in both environments.
 - Fixing the selector repopulates endpoints and restores traffic immediately.

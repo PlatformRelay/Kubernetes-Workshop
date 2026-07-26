@@ -184,7 +184,7 @@ metadata: { name: web, labels: { app: s12 } }
 spec:
   clusterIP: None                    # <-- headless: DNS returns each Pod, no load-balancing
   selector: { app: s12 }
-  ports: [{ port: 80, name: http }]
+  ports: [{ port: 80, targetPort: 8080, name: http }]
 ```
 
 ```yaml
@@ -201,8 +201,12 @@ spec:
     spec:
       containers:
         - name: web
-          image: nginx:1.27
-          volumeMounts: [{ name: data, mountPath: /usr/share/nginx/html }]
+          image: ghcr.io/platformrelay/workshop-web:v1
+          volumeMounts: [{ name: data, mountPath: /data }]
+        - name: toolbox   # shell-less app image → the sidecar writes the sentinel
+          image: busybox:1.37
+          command: ["sleep", "infinity"]
+          volumeMounts: [{ name: data, mountPath: /data }]
 ```
 
 ```yaml
@@ -219,8 +223,12 @@ spec:
     spec:
       containers:
         - name: web
-          image: nginx:1.27
-          volumeMounts: [{ name: data, mountPath: /usr/share/nginx/html }]   # the templated claim
+          image: ghcr.io/platformrelay/workshop-web:v1
+          volumeMounts: [{ name: data, mountPath: /data }]   # the templated claim
+        - name: toolbox
+          image: busybox:1.37
+          command: ["sleep", "infinity"]
+          volumeMounts: [{ name: data, mountPath: /data }]
   volumeClaimTemplates:
     - metadata: { name: data }        # → data-web-0, data-web-1, data-web-2
       spec:

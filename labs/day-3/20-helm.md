@@ -25,7 +25,7 @@ and every install/upgrade/rollback is a numbered, reversible revision.**
   - **namespace path:** your assigned namespace on the shared cluster (Helm needs no
     cluster-admin — it applies as *you*, with your RBAC).
   - **kind path:** a local cluster (`kind create cluster`).
-- Internet pull access for `nginxinc/nginx-unprivileged:1.27` / `:1.29`.
+- Internet pull access for `ghcr.io/platformrelay/workshop-web:v1` / `:v2`.
 
 > **Helm is a client.** There is no server component (no "Tiller" since Helm 3). `helm install`
 > renders the chart on your machine and applies the result with your kubeconfig — if you can't
@@ -90,14 +90,14 @@ name: demo-app
 description: A minimal web app packaged as a Helm chart
 type: application
 version: 0.1.0
-appVersion: "1.27"
+appVersion: "v1"
 EOF
 
 cat > demo-app/values.yaml <<'EOF'
 replicaCount: 1
 image:
-  repository: nginxinc/nginx-unprivileged
-  tag: "1.27"
+  repository: ghcr.io/platformrelay/workshop-web
+  tag: "v1"
 service:
   port: 80
 EOF
@@ -171,7 +171,7 @@ cluster. This is how you *see what Helm would apply* before applying it.
 helm template web demo-app
 ```
 
-**Task:** confirm the rendered Deployment has `name: web`, `replicas: 1`, and the `:1.27`
+**Task:** confirm the rendered Deployment has `name: web`, `replicas: 1`, and the `:v1`
 image — i.e. the values flowed in.
 
 <details><summary>Solution / expected output</summary>
@@ -209,7 +209,7 @@ spec:
     spec:
       containers:
         - name: web
-          image: "nginxinc/nginx-unprivileged:1.27"
+          image: "ghcr.io/platformrelay/workshop-web:v1"
           ports:
             - containerPort: 8080
 ```
@@ -256,7 +256,7 @@ TEST SUITE: None
 
 $ helm list
 NAME  NAMESPACE  REVISION  UPDATED  STATUS    CHART           APP VERSION
-web   <your-ns>  1         ...      deployed  demo-app-0.1.0  1.27
+web   <your-ns>  1         ...      deployed  demo-app-0.1.0  v1
 
 $ kubectl get deploy,svc,pods -l app=web
 NAME                  READY   UP-TO-DATE   AVAILABLE   AGE
@@ -289,14 +289,14 @@ helm upgrade web demo-app --set replicaCount=3
 cat > values-prod.yaml <<'EOF'
 replicaCount: 3
 image:
-  tag: "1.29"
+  tag: "v2"
 EOF
 helm upgrade web demo-app -f values-prod.yaml
 
 helm history web
 ```
 
-**Task:** confirm three revisions, and that the live Deployment now runs 3 replicas on `:1.29`.
+**Task:** confirm three revisions, and that the live Deployment now runs 3 replicas on `:v2`.
 
 ```bash
 kubectl get deploy web -o jsonpath='{.spec.replicas} {.spec.template.spec.containers[0].image}{"\n"}'
@@ -307,17 +307,17 @@ kubectl get deploy web -o jsonpath='{.spec.replicas} {.spec.template.spec.contai
 ```console
 $ helm history web
 REVISION  UPDATED  STATUS      CHART           APP VERSION  DESCRIPTION
-1         ...      superseded  demo-app-0.1.0  1.27         Install complete
-2         ...      superseded  demo-app-0.1.0  1.27         Upgrade complete
-3         ...      deployed    demo-app-0.1.0  1.27         Upgrade complete
+1         ...      superseded  demo-app-0.1.0  v1         Install complete
+2         ...      superseded  demo-app-0.1.0  v1         Upgrade complete
+3         ...      deployed    demo-app-0.1.0  v1         Upgrade complete
 
 $ kubectl get deploy web -o jsonpath='{.spec.replicas} {.spec.template.spec.containers[0].image}{"\n"}'
-3 nginxinc/nginx-unprivileged:1.29
+3 ghcr.io/platformrelay/workshop-web:v2
 ```
 
 Each `helm upgrade` re-rendered the **same** template with new values and stored a **new
 revision**; earlier revisions become `superseded` but are **kept**. Note `APP VERSION` stays
-`1.27` — that's `appVersion` from `Chart.yaml` (the app the chart *describes*), independent of
+`v1` — that's `appVersion` from `Chart.yaml` (the app the chart *describes*), independent of
 the running image `tag` we overrode. `--set` and `-f` do the same job; `-f` is how you keep a
 per-environment values file in Git.
 </details>
@@ -385,11 +385,11 @@ Rollback was a success! Happy Helming!
 
 $ helm history web
 REVISION  UPDATED  STATUS      CHART           APP VERSION  DESCRIPTION
-1         ...      superseded  demo-app-0.1.0  1.27         Install complete
-2         ...      superseded  demo-app-0.1.0  1.27         Upgrade complete
-3         ...      superseded  demo-app-0.1.0  1.27         Upgrade complete
-4         ...      superseded  demo-app-0.1.0  1.27         Upgrade complete
-5         ...      deployed    demo-app-0.1.0  1.27         Rollback to 3
+1         ...      superseded  demo-app-0.1.0  v1         Install complete
+2         ...      superseded  demo-app-0.1.0  v1         Upgrade complete
+3         ...      superseded  demo-app-0.1.0  v1         Upgrade complete
+4         ...      superseded  demo-app-0.1.0  v1         Upgrade complete
+5         ...      deployed    demo-app-0.1.0  v1         Rollback to 3
 
 $ kubectl get pods -l app=web
 NAME                   READY   STATUS    RESTARTS   AGE
@@ -398,7 +398,7 @@ web-xxxxxxxxx-xxxxx    1/1     Running   0          6m
 
 Look closely at the history: rollback created a **new revision 5** (`Rollback to 3`) — it did
 **not** delete revision 4 or "move back" to 3. It re-applied revision 3's stored manifests
-(`:1.29`, 3 replicas), the bad Pod is gone, and the app is healthy again. Everything is still in
+(`:v2`, 3 replicas), the bad Pod is gone, and the app is healthy again. Everything is still in
 the history, so you can roll forward again.
 </details>
 
@@ -524,7 +524,7 @@ auth story for both images and charts. Clean up: `helm uninstall web2`, then
 `docker rm -f registry`.
 
 > **Restricted namespace:** if a namespace enforces PSA `restricted` (from S17), the plain
-> chart is **rejected** — even though `nginx-unprivileged` runs as non-root UID 101, the
+> chart is **rejected** — even though `workshop-web` runs as non-root (UID 65532), the
 > template sets **no `securityContext`**, and a non-root image is necessary but not sufficient.
 > `restricted` also gates `runAsNonRoot: true`, `allowPrivilegeEscalation: false`,
 > `capabilities.drop: ["ALL"]`, and `seccompProfile.type: RuntimeDefault`. To make it admit,

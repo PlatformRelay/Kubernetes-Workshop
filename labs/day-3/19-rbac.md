@@ -31,7 +31,7 @@ something only because a Role lists the verb *and* a binding ties that Role to t
   throwaway cluster named `rbac`.
 - **Shared-cluster path:** your assigned namespace. Creating the SA/Role/RoleBinding works
   as-is; `--as` checks need impersonation rights (see the note above).
-- Internet pull access for `nginxinc/nginx-unprivileged:1.27` (a Pod to read).
+- Internet pull access for `ghcr.io/platformrelay/workshop-web:v1` (a Pod to read).
 
 ## Files used
 
@@ -107,7 +107,7 @@ spec:
     spec:
       containers:
         - name: web
-          image: nginxinc/nginx-unprivileged:1.27
+          image: ghcr.io/platformrelay/workshop-web:v1
           ports: [{ containerPort: 8080 }]
 EOF
 

@@ -49,7 +49,7 @@ kicker: The problem
 
 You have **one** app and **three** environments — and **three** copies of the same YAML that have already drifted apart.
 
-Dev runs 1 replica on `:1.27`, staging 2 replicas on `:1.28`, prod 4 replicas on `:1.27` with a different resource limit. Same Deployment, hand-edited per environment, kept in sync by **remembering** to edit all three. Miss one and the environments diverge silently. You don't want three files — you want **one template** and **three sets of values**.
+Dev runs 1 replica on `:v1`, staging 2 replicas on `:v2`, prod 4 replicas on `:v1` with a different resource limit. Same Deployment, hand-edited per environment, kept in sync by **remembering** to edit all three. Miss one and the environments diverge silently. You don't want three files — you want **one template** and **three sets of values**.
 
 <!--
 Speaker: the templating motivation, and it's a pain every learner has felt. The `web`
@@ -191,7 +191,7 @@ lab: labs/day-3/20-helm.md
 ````md magic-move
 ```yaml
 # helm install web ./demo-app        → revision 1  (values.yaml defaults)
-# replicaCount: 1  ·  image.tag: "1.27"
+# replicaCount: 1  ·  image.tag: "v1"
 kind: Deployment
 metadata:
   name: web
@@ -201,7 +201,7 @@ spec:
     spec:
       containers:
         - name: web
-          image: "nginxinc/nginx-unprivileged:1.27"
+          image: "ghcr.io/platformrelay/workshop-web:v1"
 ```
 
 ```yaml
@@ -215,11 +215,11 @@ spec:
     spec:
       containers:
         - name: web
-          image: "nginxinc/nginx-unprivileged:1.27"
+          image: "ghcr.io/platformrelay/workshop-web:v1"
 ```
 
 ```yaml
-# helm upgrade web ./demo-app --set image.tag=1.29     → revision 3
+# helm upgrade web ./demo-app --set image.tag=v2     → revision 3
 kind: Deployment
 metadata:
   name: web
@@ -229,15 +229,15 @@ spec:
     spec:
       containers:
         - name: web
-          image: "nginxinc/nginx-unprivileged:1.29"    # bumped, replicas kept
+          image: "ghcr.io/platformrelay/workshop-web:v2"    # bumped, replicas kept
 ```
 ````
 
 <!--
 Speaker: three frames = three revisions, and the diff is the story. Frame 1: install with the
-defaults from values.yaml → replicas 1, tag 1.27 — that's revision 1. Frame 2: `helm upgrade
+defaults from values.yaml → replicas 1, tag v1 — that's revision 1. Frame 2: `helm upgrade
 --set replicaCount=3` re-renders the SAME template with one changed value → replicas 3,
-everything else identical — revision 2. Frame 3: `--set image.tag=1.29` → the image bumps,
+everything else identical — revision 2. Frame 3: `--set image.tag=v2` → the image bumps,
 replicas STAY 3 because upgrade carries prior values forward unless you override them (that's
 the reuse-prior-values behaviour worth naming). Every install/upgrade renders fresh manifests
 and stores them as a numbered revision. These are the exact bytes `helm template` prints — the
@@ -311,8 +311,8 @@ lab breaks an upgrade and rolls back to feel this.
     <KwCard heading="Chart repository (index.yaml)" icon="🗂️" variant="ok">
       An HTTP server hosting packaged charts + an <code>index.yaml</code>.
       <div class="kw-muted mt-1">
-        <code>helm repo add bitnami https://…</code><br>
-        <code>helm install web bitnami/nginx</code>
+        <code>helm repo add prometheus-community https://…</code><br>
+        <code>helm install mon prometheus-community/kube-prometheus-stack</code>
       </div>
       The classic model — you <em>add a repo</em>, then reference <code>repo/chart</code>.
     </KwCard>
@@ -343,7 +343,7 @@ installing it.
 <!--
 Speaker: two distribution models, and the industry has shifted. (1) The classic chart REPO: an
 HTTP server with an index.yaml catalogue; you `helm repo add name url` then install
-`name/chart`. Still everywhere (Bitnami, ingress-nginx, etc.). (2) OCI registries: a chart is
+`name/chart`. Still everywhere (prometheus-community, grafana, etc.). (2) OCI registries: a chart is
 just an OCI artifact, so it lives in the SAME registry as your container images — push with
 `helm push chart.tgz oci://…`, install straight from the `oci://` URL with `--version`, no
 `repo add` step. Keep these mentally distinct: repo = index.yaml + `repo add`; OCI = URL by

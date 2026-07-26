@@ -179,7 +179,12 @@ spec:
     spec:
       containers:
         - name: web
-          image: nginx:1.27
+          image: ghcr.io/platformrelay/workshop-web:v1
+          volumeMounts:
+            - { name: data, mountPath: /data }
+        - name: toolbox   # shell-less app image → our pen for /data (as in Lab 10)
+          image: busybox:1.37
+          command: ["sleep", "infinity"]
           volumeMounts:
             - { name: data, mountPath: /data }
       volumes:
@@ -210,9 +215,14 @@ spec:
     spec:
       containers:
         - name: web
-          image: nginx:1.27
+          image: ghcr.io/platformrelay/workshop-web:v1
           volumeMounts:
             - { name: data, mountPath: /data }    # container is none the wiser
+        - name: toolbox
+          image: busybox:1.37
+          command: ["sleep", "infinity"]
+          volumeMounts:
+            - { name: data, mountPath: /data }
       volumes:
         - name: data
           persistentVolumeClaim: { claimName: web-data }   # durable, survives the Pod
@@ -226,9 +236,11 @@ Speaker: THREE frames, the same app growing durable storage. (1) emptyDir mounte
 its OWN object — the request; note it's namespaced and labelled app: s11 like everything
 else. (3) the Deployment's volume flips from emptyDir to persistentVolumeClaim.claimName —
 the container spec and mountPath are IDENTICAL, only the volume source changed. That's the
-whole trick: storage is pluggable behind the mount. Compact teaching view (inlined
-metadata) — the lab's manifests carry the block-style, applyable originals. The lab
-applies exactly these pieces, writes a sentinel to /data, and deletes the Pod.
+whole trick: storage is pluggable behind the mount. The toolbox sidecar carries over from
+Lab 10: the app image is distroless, so busybox is the pen that writes the sentinel.
+Compact teaching view (inlined metadata) — the lab's manifests carry the block-style,
+applyable originals. The lab applies exactly these pieces, writes a sentinel to /data
+(via the toolbox), and deletes the Pod.
 -->
 
 ---

@@ -161,9 +161,9 @@ metadata:
 spec:
   containers:
     - name: web
-      image: nginx:1.27
+      image: ghcr.io/platformrelay/workshop-web:v1
       ports:
-        - containerPort: 80
+        - containerPort: 8080
 ```
 ````
 

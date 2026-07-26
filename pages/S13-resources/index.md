@@ -124,7 +124,7 @@ spec:
     spec:
       containers:
         - name: web
-          image: nginx:1.27
+          image: ghcr.io/platformrelay/workshop-web:v1
           resources:
             requests: { cpu: 100m, memory: 128Mi }   # reserve
             limits:   { cpu: 500m, memory: 256Mi }    # cap
@@ -175,7 +175,7 @@ lab: labs/day-2/13-resources.md
 # 1: no resources at all — the web container as it started the day
 containers:
   - name: web
-    image: nginx:1.27
+    image: ghcr.io/platformrelay/workshop-web:v1
     # (no resources block)
     # scheduler assumes ~0 → overcommit risk; QoS class: BestEffort
 ```
@@ -184,7 +184,7 @@ containers:
 # 2: +requests — now the scheduler RESERVES capacity (QoS → Burstable)
 containers:
   - name: web
-    image: nginx:1.27
+    image: ghcr.io/platformrelay/workshop-web:v1
     resources:
       requests:                     # what the scheduler holds for this Pod
         cpu: 100m
@@ -195,7 +195,7 @@ containers:
 # 3: +limits — add the runtime ceiling the kubelet enforces
 containers:
   - name: web
-    image: nginx:1.27
+    image: ghcr.io/platformrelay/workshop-web:v1
     resources:
       requests:
         cpu: 100m

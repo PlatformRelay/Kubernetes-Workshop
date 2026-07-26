@@ -31,8 +31,10 @@ ACCURACY LOCKS (verified against the current Pod Security Standards doc):
 - readOnlyRootFilesystem is NOT a restricted requirement — it's beyond-restricted hardening,
   authored as the FINAL magic-move step and the lab's post-admission break→fix.
 - runAsNonRoot passes PSA admission when the field is set, but the KUBELET enforces at runtime:
-  a stock root image admits then CrashLoops ("container has runAsNonRoot and image will run as
-  root"). We use nginxinc/nginx-unprivileged so the harden lab actually runs.
+  a root image admits then CrashLoops ("container has runAsNonRoot and image will run as
+  root"). We use ghcr.io/platformrelay/workshop-web (distroless nonroot, UID 65532, :8080) so
+  the harden lab actually runs — and since it never writes to disk, readOnlyRootFilesystem
+  costs it nothing; the lab's runtime break→fix uses a busybox writer Pod instead.
 CKx tie-in: CKAD securityContext + CKA admission/security hardening.
 -->
 
@@ -189,7 +191,7 @@ metadata: { name: web, labels: { app: s17 } }
 spec:
   containers:
     - name: web
-      image: nginxinc/nginx-unprivileged:1.27
+      image: ghcr.io/platformrelay/workshop-web:v1
       # (no securityContext at all)
 ```
 
@@ -198,17 +200,17 @@ spec:
 spec:
   containers:
     - name: web
-      image: nginxinc/nginx-unprivileged:1.27
+      image: ghcr.io/platformrelay/workshop-web:v1
       securityContext:
         runAsNonRoot: true
-        runAsUser: 101                     # the image's built-in non-root user
+        runAsUser: 65532                   # the image's built-in non-root user (distroless "nonroot")
 ```
 
 ```yaml
 # 2: +allowPrivilegeEscalation:false — clears "allowPrivilegeEscalation != false"
       securityContext:
         runAsNonRoot: true
-        runAsUser: 101
+        runAsUser: 65532
         allowPrivilegeEscalation: false
 ```
 
@@ -216,7 +218,7 @@ spec:
 # 3: +drop ALL capabilities — clears "unrestricted capabilities"
       securityContext:
         runAsNonRoot: true
-        runAsUser: 101
+        runAsUser: 65532
         allowPrivilegeEscalation: false
         capabilities:
           drop: ["ALL"]
@@ -226,7 +228,7 @@ spec:
 # 4: +seccompProfile — clears the last gate. NOW IT PASSES `restricted`.
       securityContext:
         runAsNonRoot: true
-        runAsUser: 101
+        runAsUser: 65532
         allowPrivilegeEscalation: false
         capabilities:
           drop: ["ALL"]
@@ -238,11 +240,11 @@ spec:
 # 5: +readOnlyRootFilesystem — BEYOND restricted (not required), defence-in-depth.
       securityContext:
         runAsNonRoot: true
-        runAsUser: 101
+        runAsUser: 65532
         allowPrivilegeEscalation: false
         capabilities: { drop: ["ALL"] }
         seccompProfile: { type: RuntimeDefault }
-        readOnlyRootFilesystem: true       # now the app can't write to / — needs emptyDir
+        readOnlyRootFilesystem: true       # free for THIS app — it never writes to /
 ```
 ````
 
@@ -251,11 +253,14 @@ Speaker: SIX frames, and the caption boundary matters. Frames 0→4 each clear O
 violation, in the same order the admission controller lists them; by frame 4 all four gates
 pass and the Pod is admitted. STOP and say it: frame 4 is `restricted`-compliant. Frame 5 adds
 readOnlyRootFilesystem — call out explicitly that this is NOT part of restricted, it's extra
-hardening (and it's what the lab breaks: a read-only root filesystem stops nginx writing its
-cache/pid, so you add emptyDir mounts for those paths). Image note: nginxinc/nginx-unprivileged
-already runs as UID 101 and listens on 8080, so runAsNonRoot is a promise it keeps — which is
-exactly the runtime point on the next slide. The lab applies these frames as real files and
-watches the gate flip from Forbidden to created.
+hardening. Call out honestly: the demo app sails through frame 5 — it's distroless, logs to
+stdout, keeps state in memory, and never writes to its root filesystem, which is what a
+well-built image buys you. The lab then shows the OTHER case: a busybox Pod that writes a PID
+file crashes under readOnlyRootFilesystem, and you fix it with an emptyDir over just that path.
+Image note: workshop-web already runs as the distroless nonroot user (UID 65532) and listens on
+8080, so runAsNonRoot is a promise it keeps — which is exactly the runtime point on the next
+slide. The lab applies these frames as real files and watches the gate flip from Forbidden to
+created.
 -->
 
 ---
@@ -289,8 +294,8 @@ watches the gate flip from Forbidden to created.
 
 Either the image sets a non-root `USER` (this is exactly the **non-root image you built in
 container security**), or you pin `runAsUser` to a real non-root UID the image can run as. We use
-`nginxinc/nginx-unprivileged` — it ships as UID **101** and listens on **8080**, so the promise
-holds and the Pod runs.
+`workshop-web` — its distroless base ships as UID **65532** (`nonroot`) and it listens on
+**8080**, so the promise holds and the Pod runs.
 
 </div>
 
@@ -304,9 +309,10 @@ create, resolves the image's effective UID; if that's 0 and runAsNonRoot is true
 "container has runAsNonRoot and image will run as root" — the Pod exists but never starts
 (CreateContainerError → CrashLoopBackOff). The fix is not a securityContext field — it's the
 IMAGE: build it non-root (S02's multi-stage, non-root USER) or set runAsUser to a UID the image
-actually supports. Standard nginx runs as root and would hit this; nginx-unprivileged runs as
-101, so our hardened Pod actually serves traffic. Point back to S02: the reason we did all that
-image hygiene is so runtime hardening like this is even possible.
+actually supports. Most base images (busybox, debian, …) run as root and would hit this — the
+lab's callout names it; workshop-web ships as the distroless nonroot user 65532, so our hardened
+Pod actually serves traffic. Point back to S02: the reason we did all that image hygiene is so
+runtime hardening like this is even possible.
 -->
 
 ---
@@ -394,7 +400,7 @@ the whole loop the learner runs in Lab 17.
 ---
 layout: recap
 heading: 'Recap — least privilege, and who enforces it when'
-story: 'The insecure Pod was refused before it existed (admission); the same Pod, hardened, walked straight in. readOnlyRootFilesystem then broke the app at runtime — a different layer, a different fix.'
+story: 'The insecure Pod was refused before it existed (admission); the same Pod, hardened, walked straight in. readOnlyRootFilesystem then broke a Pod that writes to disk at runtime — a different layer, a different fix.'
 next: 'NetworkPolicy — the network complement: default-deny pod-to-pod traffic and explicit allows'
 ---
 
@@ -418,7 +424,8 @@ emptyDir when the app writes to disk. Migrate namespaces with warn→enforce so 
 a team. All of this is the toolkit S25 uses against a real pod escape, and it pairs with S18
 (NetworkPolicy) for the network side. Hand to Lab 17: label a namespace restricted, get your
 insecure Pod refused, harden it field by field until the gate admits it, then meet
-readOnlyRootFilesystem and give it a writable path.
+readOnlyRootFilesystem — free for the demo app, fatal for a Pod that writes a PID file until
+you give it a writable emptyDir path.
 -->
 
 ---
@@ -433,5 +440,6 @@ env: namespace ✓ / kind ✓
 - Label a namespace `enforce=restricted` (kind) or use your pre-labelled shared namespace
 - **Break:** apply a bare, root, no-context Pod → **Forbidden**; read the four-violation list
 - **Fix:** add the four fields one at a time, re-applying until the gate **admits** it
-- Turn on `readOnlyRootFilesystem`, watch the app fail to write, and give it an `emptyDir`
-- Confirm with `kubectl exec … id` (non-root UID) and that writes to `/` are refused
+- Turn on `readOnlyRootFilesystem` — free for the demo app; then watch a *writing* Pod crash
+  and give it an `emptyDir`
+- Confirm the app runs as UID 65532 (via `kubectl debug`) and that writes to `/` are refused

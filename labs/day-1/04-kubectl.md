@@ -105,8 +105,8 @@ The fastest way to a correct manifest is to have `kubectl` write it for you, the
 `--dry-run=client` builds the object **locally** and prints it — nothing is created.
 
 ```bash
-kubectl run web --image=nginx:1.29 --dry-run=client -o yaml
-kubectl create deployment web --image=nginx:1.29 --dry-run=client -o yaml
+kubectl run web --image=ghcr.io/platformrelay/workshop-web:v1 --dry-run=client -o yaml
+kubectl create deployment web --image=ghcr.io/platformrelay/workshop-web:v1 --dry-run=client -o yaml
 ```
 
 **Task:** run both. Confirm you get a full manifest on stdout and that
@@ -115,7 +115,7 @@ kubectl create deployment web --image=nginx:1.29 --dry-run=client -o yaml
 <details><summary>Solution / expected output</summary>
 
 ```console
-$ kubectl run web --image=nginx:1.29 --dry-run=client -o yaml
+$ kubectl run web --image=ghcr.io/platformrelay/workshop-web:v1 --dry-run=client -o yaml
 apiVersion: v1
 kind: Pod
 metadata:
@@ -125,7 +125,7 @@ metadata:
   name: web
 spec:
   containers:
-    - image: nginx:1.29
+    - image: ghcr.io/platformrelay/workshop-web:v1
       name: web
       resources: {}
   ...
@@ -137,7 +137,7 @@ No resources found in student-07 namespace.
 
 `run` scaffolds a **Pod**; `create deployment` scaffolds a **Deployment** (note the
 `apps/v1`, `replicas`, `selector`, and `template` wrapper — the S06 shape). Redirect to
-a file to keep it: `kubectl create deployment web --image=nginx:1.29 --dry-run=client -o yaml > web.yaml`.
+a file to keep it: `kubectl create deployment web --image=ghcr.io/platformrelay/workshop-web:v1 --dry-run=client -o yaml > web.yaml`.
 </details>
 
 **Question:** why do the printed manifests include empty `resources: {}` and
@@ -213,8 +213,8 @@ path (validation + admission) and can reject things the client can't see. Prove 
 the cleanest example: a namespace that doesn't exist.
 
 ```bash
-kubectl run probe --image=nginx:1.29 --namespace=no-such-namespace --dry-run=client -o yaml >/dev/null; echo "client exit: $?"
-kubectl run probe --image=nginx:1.29 --namespace=no-such-namespace --dry-run=server -o yaml >/dev/null; echo "server exit: $?"
+kubectl run probe --image=ghcr.io/platformrelay/workshop-web:v1 --namespace=no-such-namespace --dry-run=client -o yaml >/dev/null; echo "client exit: $?"
+kubectl run probe --image=ghcr.io/platformrelay/workshop-web:v1 --namespace=no-such-namespace --dry-run=server -o yaml >/dev/null; echo "server exit: $?"
 ```
 
 **Task:** run both. The **client** line must succeed; the **server** line must fail.
@@ -223,10 +223,10 @@ Read the server error — its exact text depends on your environment.
 <details><summary>Solution / expected output</summary>
 
 ```console
-$ kubectl run probe --image=nginx:1.29 --namespace=no-such-namespace --dry-run=client -o yaml >/dev/null; echo "client exit: $?"
+$ kubectl run probe --image=ghcr.io/platformrelay/workshop-web:v1 --namespace=no-such-namespace --dry-run=client -o yaml >/dev/null; echo "client exit: $?"
 client exit: 0
 
-$ kubectl run probe --image=nginx:1.29 --namespace=no-such-namespace --dry-run=server -o yaml >/dev/null; echo "server exit: $?"
+$ kubectl run probe --image=ghcr.io/platformrelay/workshop-web:v1 --namespace=no-such-namespace --dry-run=server -o yaml >/dev/null; echo "server exit: $?"
 # kind (you own the cluster):
 Error from server (NotFound): namespaces "no-such-namespace" not found
 # shared cluster (namespace-scoped role):
@@ -253,7 +253,7 @@ very different questions:
 **Fix:** target your real namespace — now both pass:
 
 ```console
-$ kubectl run probe --image=nginx:1.29 -n "$NS" --dry-run=server -o yaml >/dev/null; echo "exit: $?"
+$ kubectl run probe --image=ghcr.io/platformrelay/workshop-web:v1 -n "$NS" --dry-run=server -o yaml >/dev/null; echo "exit: $?"
 exit: 0
 ```
 
@@ -315,7 +315,7 @@ kubectl config view --minify | grep namespace:
 manifest, tweak it, and diff — all without creating anything permanent.
 
 ```bash
-kubectl create deployment web --image=nginx:1.29 --dry-run=client -o yaml > web.yaml
+kubectl create deployment web --image=ghcr.io/platformrelay/workshop-web:v1 --dry-run=client -o yaml > web.yaml
 kubectl diff -f web.yaml            # shows it would be CREATED (all new lines)
 ```
 

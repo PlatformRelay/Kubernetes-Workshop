@@ -21,7 +21,9 @@ lifecycle, and diagnose ImagePullBackOff.
 Beats: problem (K8s runs Pods, not containers) · mental model (shared context) ·
 lifecycle (phases + restartPolicy) · magic-move canonical pod.yaml ·
 run + observe · init/sidecar/imagePullSecrets · break (ImagePullBackOff) ·
-recap punchline to Deployment. No shared animation.
+recap punchline to Deployment. No shared animation. Demo image:
+ghcr.io/platformrelay/workshop-web (distroless, :8080) — exec has no shell,
+so the inspect beat teaches kubectl debug.
 Red-line seed: the pod.yaml built here IS labs/day-1/05-pod's manifest —
 S06/S07/S08 all extend it. CKx: CKAD Pod design & lifecycle.
 -->
@@ -123,7 +125,8 @@ in the image.
 Speaker: draw the line hard between "container restarted" (RESTARTS counter goes
 up, same Pod) and "Pod recreated" (a controller's job — not a Pod's). That
 distinction is the whole punchline of this section and the reason Deployment
-exists. Lab 05's stretch has them kill PID 1 and watch RESTARTS climb.
+exists. Lab 05's stretch runs a deliberately-crashing container and watches
+RESTARTS climb while the Pod object stays.
 -->
 
 ---
@@ -159,7 +162,7 @@ metadata:
 spec:
   containers:
     - name: web
-      image: nginx:1.27   # a real, pinned tag — never :latest
+      image: ghcr.io/platformrelay/workshop-web:v1   # a real, pinned tag — never :latest
 ```
 
 ```yaml
@@ -172,9 +175,9 @@ metadata:
 spec:
   containers:
     - name: web
-      image: nginx:1.27
+      image: ghcr.io/platformrelay/workshop-web:v1
       ports:
-        - containerPort: 80   # documents the port; the app must listen on it
+        - containerPort: 8080   # documents the port; the app must listen on it
 ```
 
 ```yaml
@@ -183,14 +186,14 @@ kind: Pod
 metadata:
   name: web
   labels:
-    app: web
+    app: web            # this label is how Lab 07's Service will find the Pod
 spec:
   containers:
     - name: web
-      image: nginx:1.27
+      image: ghcr.io/platformrelay/workshop-web:v1
       ports:
-        - containerPort: 80
-      resources:              # scheduler hint now; Lab 13 grows this into QoS
+        - containerPort: 8080
+      resources:        # a small "resources stub" — Lab 13 grows this into QoS
         requests:
           cpu: 50m
           memory: 64Mi
@@ -219,7 +222,7 @@ lab: labs/day-1/05-pod.md
 kubectl apply -f pod.yaml
 kubectl get pod web -w
 kubectl describe pod web
-kubectl exec -it web -- sh
+kubectl debug -it web --image=busybox:1.37 --target=web
 ```
 
 ::notes::
@@ -239,15 +242,19 @@ The debugging workhorse — its <code>Events</code> section holds the truth. Pai
 it with <code>kubectl logs web</code> for the app's own output.
 </CodeNote>
 
-<CodeNote at="4" label="exec">
-The kubelet runs <code>sh</code> <em>inside</em> the container's namespaces — not
-SSH, no extra port. In Lab 05 you confirm nginx is PID 1.
+<CodeNote at="4" label="debug">
+The demo image is <strong>distroless</strong> — no shell, so <code>kubectl exec … sh</code>
+fails. <code>debug</code> attaches an <strong>ephemeral container</strong> with a toolbox
+image; <code>--target</code> shares the app's PID namespace. In Lab 05 you confirm the
+server is PID 1.
 </CodeNote>
 
 <!--
 Speaker: these five commands are the entire debugging toolkit for the rest of
-the workshop — get/describe/logs/exec recur in every section. Emphasise
-describe → Events as the reflex. Everything here is exactly Lab 05, step by step.
+the workshop — get/describe/logs/exec/debug recur in every section. Emphasise
+describe → Events as the reflex, and that exec failing on a distroless image is
+a feature (smaller attack surface), not a bug — debug is the modern answer.
+Everything here is exactly Lab 05, step by step.
 -->
 
 ---
@@ -273,7 +280,8 @@ describe → Events as the reflex. Everything here is exactly Lab 05, step by st
   <v-click at="3">
     <KwCard heading="imagePullSecrets" kind="secret" variant="plain">
       Names a Secret holding registry credentials so the kubelet can pull from a
-      <strong>private</strong> registry. Public images (like nginx) need none.
+      <strong>private</strong> registry. Public images (like the workshop's demo
+      image) need none.
     </KwCard>
   </v-click>
 </div>
@@ -301,15 +309,15 @@ lab: labs/day-1/05-pod.md
 ---
 
 ```bash {none|1|2|3}
-kubectl run web-typo --image=nginx:1.27-typo --restart=Never
+kubectl run web-typo --image=ghcr.io/platformrelay/workshop-web:v9.99-nope --restart=Never
 kubectl get pod web-typo
 kubectl describe pod web-typo | sed -n '/Events:/,$p'
 ```
 
 ::notes::
 
-<CodeNote at="1" label="a typo'd tag">
-<code>1.27-typo</code> doesn't exist in the registry. The Pod is accepted and
+<CodeNote at="1" label="a tag that doesn't exist">
+<code>v9.99-nope</code> was never published to the registry. The Pod is accepted and
 <em>scheduled</em> — the failure comes later, at pull time.
 </CodeNote>
 
@@ -360,6 +368,6 @@ env: namespace ✓ / kind ✓
 ## Lab 05 — Your first Pod
 
 - Apply `pod.yaml`, watch `Pending → Running`, confirm `READY 1/1`
-- Inspect it three ways: `describe` (Events), `logs`, `exec` (nginx is PID 1)
-- **Break it:** a typo'd image tag → `ImagePullBackOff`; diagnose from Events
+- Inspect it three ways: `describe` (Events), `logs`, `debug` (the server is PID 1)
+- **Break it:** an image tag that doesn't exist → `ImagePullBackOff`; diagnose from Events
 - **The punchline:** delete the Pod — nothing recreates it. Keep `pod.yaml` for Lab 06.

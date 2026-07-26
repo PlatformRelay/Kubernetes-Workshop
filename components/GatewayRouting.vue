@@ -63,7 +63,7 @@ const live = computed(() => props.step >= 1)
         <div class="kw-gw-listener">
           listener <code>http</code> · <code>:80</code> · <code>HTTP</code>
         </div>
-        <div class="kw-gw-class">gatewayClassName <code>nginx</code></div>
+        <div class="kw-gw-class">gatewayClassName <code>eg</code></div>
       </div>
 
       <div class="kw-gw-arrow kw-gw-parentref">

@@ -30,7 +30,7 @@ when a policy *selects* it and no allow rule matches.
   You'll make a throwaway cluster named `netpol`.
 - **Shared-cluster path:** your assigned namespace — **read-only** here (you can inspect a
   pre-applied policy but not stand up an enforcing CNI). Prefer kind if you can.
-- Internet pull access for `curlimages/curl` and `nginxinc/nginx-unprivileged:1.27`.
+- Internet pull access for `curlimages/curl` and `ghcr.io/platformrelay/workshop-web:v1`.
 
 ## Files used
 
@@ -104,7 +104,7 @@ spec:
     spec:
       containers:
         - name: web
-          image: nginxinc/nginx-unprivileged:1.27
+          image: ghcr.io/platformrelay/workshop-web:v1
           ports: [{ containerPort: 8080 }]
 ---
 apiVersion: v1

@@ -8,14 +8,14 @@ export interface PodState {
   phase: PodPhase
 }
 
-export const OLD_TAG = 'nginx:1.27'
-export const NEW_TAG = 'nginx:1.28'
+export const OLD_TAG = 'ghcr.io/platformrelay/workshop-web:v1'
+export const NEW_TAG = 'ghcr.io/platformrelay/workshop-web:v2'
 
 /**
  * Shared timeline for the pod-replacement spike so every technology variant
  * animates the exact same sequence:
- * 0 spec at 1.27, old pod Running
- * 1 spec updated to 1.28
+ * 0 spec at v1, old pod Running
+ * 1 spec updated to v2
  * 2 new pod ContainerCreating alongside the old one
  * 3 new pod Running, old pod Terminating
  * 4 old pod gone

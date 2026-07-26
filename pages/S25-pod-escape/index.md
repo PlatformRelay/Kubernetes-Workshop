@@ -282,8 +282,8 @@ permissive namespace it runs; in a `restricted` namespace it is REJECTED at admi
 exists. Frame 1 removes exactly the two escape levers (privileged, the hostPath volume) — necessary
 but not yet sufficient: a bare Pod still fails `restricted` on the four fields from S17. Frame 2
 adds those four gates (runAsNonRoot, allowPrivilegeEscalation:false, drop ALL, seccompProfile) and
-pins runAsUser:1000 — alpine happily runs as any UID, so unlike S17's nginx-101 there's no image
-landmine. Frame 3 is the final hardened manifest the restricted gate admits — note runAsNonRoot /
+pins runAsUser:1000 — alpine happily runs as any UID, so unlike S17's root-image landmine
+(runAsNonRoot on an image that ships as root) there's nothing for the kubelet to refuse. Frame 3 is the final hardened manifest the restricted gate admits — note runAsNonRoot /
 runAsUser / seccomp lifted to Pod level to cover the whole Pod. Same namespace, same policy; the
 manifest is what changed. This magic-move IS the lab's escape → block → harden arc.
 -->

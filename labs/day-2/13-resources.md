@@ -28,7 +28,7 @@ that misbehaves) vs **admission** enforcement (the API server refuses to create 
 - Labs 05–06 concepts (Pod, Deployment). This lab **creates its own** objects and doesn't
   depend on leftovers from earlier labs.
 - `kubectl` against your assigned namespace **or** a local kind cluster. No admin rights.
-- Internet pull access for `nginx:1.27` and `polinux/stress` (the classic memory-hog image).
+- Internet pull access for `ghcr.io/platformrelay/workshop-web:v1` and `polinux/stress` (the classic memory-hog image).
 - Optional: a metrics pipeline (`kubectl top pods` returns data) for the CPU-throttle stretch.
   Not required for the core lab.
 
@@ -62,7 +62,7 @@ metadata:
 spec:
   containers:
     - name: web
-      image: nginx:1.27
+      image: ghcr.io/platformrelay/workshop-web:v1
       resources:
         requests: { cpu: 100m, memory: 128Mi }
         limits:   { cpu: 500m, memory: 256Mi }   # limit != request → Burstable
@@ -77,7 +77,7 @@ metadata:
 spec:
   containers:
     - name: web
-      image: nginx:1.27
+      image: ghcr.io/platformrelay/workshop-web:v1
       resources:
         requests: { cpu: 200m, memory: 128Mi }
         limits:   { cpu: 200m, memory: 128Mi }   # request == limit, both set → Guaranteed
@@ -92,7 +92,7 @@ metadata:
 spec:
   containers:
     - name: web
-      image: nginx:1.27
+      image: ghcr.io/platformrelay/workshop-web:v1
       # no resources block at all → BestEffort
 EOF
 
@@ -318,7 +318,7 @@ metadata:
 spec:
   containers:
     - name: web
-      image: nginx:1.27
+      image: ghcr.io/platformrelay/workshop-web:v1
       resources:
         requests: { memory: 512Mi }    # 512Mi > the 256Mi requests.memory cap
         limits:   { memory: 512Mi }

@@ -148,16 +148,17 @@ spec:
     app: web            # picks every Pod carrying this label
   ports:
     - name: http
-      port: 80          # the Service port
-      targetPort: 80    # the container port (containerPort in the Pod)
+      port: 80          # the Service port — what clients hit
+      targetPort: 8080  # the container port (containerPort in the Pod)
 ```
 ````
 
 <!--
 Speaker: build it up: identity (name) → the wiring (selector = the Deployment's
 app: web label) → the ports. Stress port vs targetPort: port is what clients hit
-on the Service; targetPort is the containerPort on the Pod. They're both 80 here,
-which is exactly why people conflate them — call it out. This final frame IS
+on the Service; targetPort is the containerPort on the Pod. Here they DIFFER —
+clients use plain :80 while the app listens unprivileged on :8080 — which is
+exactly the point people miss when both happen to be equal. This final frame IS
 labs/day-1/07-service's service.yaml, byte-for-byte; it sits BESIDE
 deployment.yaml, it doesn't edit it.
 -->

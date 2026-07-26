@@ -129,6 +129,9 @@ you'll instead see `STATUS: Bound` right away. Either is correct.) Remember the 
 ## Step 2 — mount the PVC and write a sentinel
 
 Now give the claim a consumer. First show the ephemeral baseline, then the durable version.
+As in Lab 10, the demo app's image is distroless (no shell), so each Deployment carries a
+tiny **toolbox** sidecar mounting the same volume — that's the pen you write the sentinel
+with.
 
 ```bash
 cat > deployment-emptydir.yaml <<'EOF'
@@ -150,7 +153,13 @@ spec:
     spec:
       containers:
         - name: web
-          image: nginx:1.27
+          image: ghcr.io/platformrelay/workshop-web:v1
+          volumeMounts:
+            - name: data
+              mountPath: /data
+        - name: toolbox              # the app image has no shell — the sidecar is our pen
+          image: busybox:1.37
+          command: ["sleep", "infinity"]
           volumeMounts:
             - name: data
               mountPath: /data
@@ -178,10 +187,16 @@ spec:
     spec:
       containers:
         - name: web
-          image: nginx:1.27
+          image: ghcr.io/platformrelay/workshop-web:v1
           volumeMounts:
             - name: data
               mountPath: /data        # identical mount — only the volume source changes
+        - name: toolbox
+          image: busybox:1.37
+          command: ["sleep", "infinity"]
+          volumeMounts:
+            - name: data
+              mountPath: /data
       volumes:
         - name: data
           persistentVolumeClaim:
@@ -199,8 +214,8 @@ kubectl get pvc web-data
 **Task:** confirm the claim is now `Bound`, then write a sentinel file into the volume.
 
 ```bash
-kubectl exec deploy/web -- sh -c 'echo "written by $(hostname) at boot" > /data/data.txt'
-kubectl exec deploy/web -- cat /data/data.txt
+kubectl exec deploy/web -c toolbox -- sh -c 'echo "written by $(hostname) at boot" > /data/data.txt'
+kubectl exec deploy/web -c toolbox -- cat /data/data.txt
 ```
 
 <details><summary>Solution / expected output</summary>
@@ -210,7 +225,7 @@ $ kubectl get pvc web-data
 NAME       STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   AGE
 web-data   Bound    pvc-3d1f...-9a2b                           1Gi        RWO            standard       40s
 
-$ kubectl exec deploy/web -- cat /data/data.txt
+$ kubectl exec deploy/web -c toolbox -- cat /data/data.txt
 written by web-6f8c9b7d5-abcde at boot
 ```
 
@@ -242,7 +257,7 @@ kubectl delete pod -l app=s11
 kubectl rollout status deploy/web
 
 # read the sentinel from the BRAND-NEW Pod
-kubectl exec deploy/web -- cat /data/data.txt
+kubectl exec deploy/web -c toolbox -- cat /data/data.txt
 ```
 
 **Task:** did the file survive into the replacement Pod?
@@ -254,7 +269,7 @@ $ kubectl delete pod -l app=s11
 pod "web-6f8c9b7d5-abcde" deleted
 $ kubectl rollout status deploy/web
 deployment "web" successfully rolled out
-$ kubectl exec deploy/web -- cat /data/data.txt
+$ kubectl exec deploy/web -c toolbox -- cat /data/data.txt
 written by web-6f8c9b7d5-abcde at boot
 ```
 
@@ -306,7 +321,7 @@ metadata:
 spec:
   containers:
     - name: c
-      image: nginx:1.27
+      image: ghcr.io/platformrelay/workshop-web:v1
       volumeMounts:
         - name: data
           mountPath: /data
@@ -386,7 +401,7 @@ metadata:
 spec:
   containers:
     - name: c
-      image: nginx:1.27
+      image: ghcr.io/platformrelay/workshop-web:v1
       volumeMounts:
         - name: data
           mountPath: /data
@@ -497,16 +512,16 @@ Prove the contrast: with `emptyDir`, the *same* delete loses the data.
 ```bash
 kubectl apply -f deployment-emptydir.yaml         # swap the PVC volume for emptyDir
 kubectl rollout status deploy/web
-kubectl exec deploy/web -- sh -c 'echo ephemeral > /data/data.txt'
+kubectl exec deploy/web -c toolbox -- sh -c 'echo ephemeral > /data/data.txt'
 kubectl delete pod -l app=s11                     # recreate the Pod
 kubectl rollout status deploy/web
-kubectl exec deploy/web -- cat /data/data.txt || echo "FILE GONE"
+kubectl exec deploy/web -c toolbox -- cat /data/data.txt || echo "FILE GONE"
 ```
 
 <details><summary>Solution / what you're looking at</summary>
 
 ```console
-$ kubectl exec deploy/web -- cat /data/data.txt || echo "FILE GONE"
+$ kubectl exec deploy/web -c toolbox -- cat /data/data.txt || echo "FILE GONE"
 cat: /data/data.txt: No such file or directory
 FILE GONE
 ```

@@ -30,8 +30,11 @@ digest, restricted securityContext) · (8) magic-move C: AVAILABILITY + the two 
 restricted gate admits the fixed Deployment · (10) the checklist as a repo artifact · (11) recap → lab.
 Each magic-move step is annotated with the SECTION it traces to. Reuse AdmissionGate.vue (do NOT
 author a new component). CKx tie-in: CKAD/CKA synthesis (probes, resources, PDBs, rollouts, security).
-ACCURACY LOCKS: image nginxinc/nginx-unprivileged:1.27 runs as UID 101 on port 8080 → ALL ports are
-8080; restricted gates FOUR fields (runAsNonRoot/allowPrivilegeEscalation:false/drop ALL/seccomp),
+ACCURACY LOCKS: image ghcr.io/platformrelay/workshop-web:v1 runs as UID 65532 (distroless
+nonroot) on port 8080 → ALL ports are 8080; probes use the app's real endpoints (/ready,
+/healthz); the image has NO shell → graceful shutdown uses the native preStop sleep action
+(lifecycle.preStop.sleep, stable), NOT an exec sh sleep; restricted gates FOUR fields
+(runAsNonRoot/allowPrivilegeEscalation:false/drop ALL/seccomp),
 split pod-level (runAsNonRoot,runAsUser,seccomp) vs container-level (allowPrivilegeEscalation,drop).
 The digest placeholder satisfies restricted admission (dry-run) but is ImagePullBackOff at runtime —
 resolve at rehearsal. PDB/topologySpread/NetworkPolicy selectors all match app.kubernetes.io/name: web.
@@ -254,7 +257,7 @@ spec:
     spec:
       containers:
         - name: web
-          image: nginxinc/nginx-unprivileged:latest   # ④ mutable tag
+          image: ghcr.io/platformrelay/workshop-web:v1   # ④ mutable tag — no digest
           ports: [{ containerPort: 8080 }]
           # ⑤ no resources  ⑥ no probes  ⑦ no securityContext
       # ⑧ no graceful shutdown  ⑨ no anti-affinity/spread
@@ -264,8 +267,9 @@ spec:
 ::notes::
 
 <CodeNote at="1" label="④ mutable image tag" variant="danger">
-<code>:latest</code> can change under you — the bytes you scanned aren't the bytes that run.
-<strong>Image hygiene</strong> says pin by <code>@sha256:…</code>.
+A tag is a <em>movable pointer</em> — <code>:v1</code> can be repointed and the bytes you
+scanned aren't the bytes that run. <strong>Image hygiene</strong> says pin by
+<code>@sha256:…</code>.
 </CodeNote>
 
 <CodeNote at="2" label="⑤ no resources · ⑥ no probes" variant="danger">
@@ -291,13 +295,14 @@ revealing the list — try it first.
 Speaker: this is the "spot the bug" slide — and it's the lab's opening self-audit, so pause and let
 people actually find problems before you narrate. The manifest is deliberately minimal and every
 omission is a checklist violation: (①) only an ad-hoc `app: web` label, none of the recommended
-app.kubernetes.io/* set; (②) replicas:1; (③) no strategy or revisionHistoryLimit; (④) image on
-:latest — a mutable tag; (⑤) no resources; (⑥) no probes; (⑦) no securityContext; (⑧) no graceful
+app.kubernetes.io/* set; (②) replicas:1; (③) no strategy or revisionHistoryLimit; (④) image pinned
+only by a mutable tag, no digest; (⑤) no resources; (⑥) no probes; (⑦) no securityContext; (⑧) no graceful
 shutdown; (⑨) no anti-affinity/topologySpread; and the two SEPARATE objects that should exist
 alongside it — (⑩) a PodDisruptionBudget and (⑪) a NetworkPolicy. That's why the count is "ten-plus":
 eight are wrong INSIDE the Deployment, two are missing sibling objects. Port is 8080 because
-nginx-unprivileged listens there — hold that, it threads through every fix. Next three slides fix
-these one at a time, grouped by checklist: health, then security, then availability.
+workshop-web listens there — hold that, it threads through every fix. On ④, be precise: the tag
+isn't ":latest" but ANY tag is mutable — the fix is a digest pin, not a "better" tag. Next three
+slides fix these one at a time, grouped by checklist: health, then security, then availability.
 -->
 
 ---
@@ -311,7 +316,7 @@ lab: labs/day-3/26-capstone.md
 # 0: the flawed container — no probes, no resources, no graceful shutdown
 containers:
   - name: web
-    image: nginxinc/nginx-unprivileged:latest
+    image: ghcr.io/platformrelay/workshop-web:v1
     ports: [{ containerPort: 8080 }]
 ```
 
@@ -319,7 +324,7 @@ containers:
 # 1: +resources — reserve + cap. No longer BestEffort.
 containers:
   - name: web
-    image: nginxinc/nginx-unprivileged:latest
+    image: ghcr.io/platformrelay/workshop-web:v1
     ports: [{ containerPort: 8080 }]
     resources:
       requests: { cpu: 50m, memory: 64Mi }    # right-sized, not padded (cost)
@@ -332,13 +337,13 @@ containers:
       requests: { cpu: 50m, memory: 64Mi }
       limits:   { cpu: 200m, memory: 128Mi }
     readinessProbe:
-      httpGet: { path: /, port: 8080 }
+      httpGet: { path: /ready, port: 8080 }
       periodSeconds: 5
     livenessProbe:
-      httpGet: { path: /, port: 8080 }
+      httpGet: { path: /healthz, port: 8080 }
       periodSeconds: 10
     startupProbe:
-      httpGet: { path: /, port: 8080 }
+      httpGet: { path: /healthz, port: 8080 }
       periodSeconds: 3
       failureThreshold: 30
 ```
@@ -346,12 +351,12 @@ containers:
 ```yaml
 # 3: +graceful shutdown — drain in-flight requests before SIGTERM (graceful shutdown)
     startupProbe:
-      httpGet: { path: /, port: 8080 }
+      httpGet: { path: /healthz, port: 8080 }
       periodSeconds: 3
       failureThreshold: 30
     lifecycle:
       preStop:
-        exec: { command: ["sh", "-c", "sleep 5"] }   # let endpoints drain first
+        sleep: { seconds: 5 }        # let endpoints drain first — no shell needed
 # at pod level:
 # spec.template.spec.terminationGracePeriodSeconds: 30
 ```
@@ -361,12 +366,14 @@ containers:
 Speaker: FOUR frames, the HEALTH group — resources, probes, graceful shutdown. Each fixes exactly one
 checklist line. Frame 1: resources (S13) — deliberately modest (50m/64Mi request) and the cost point:
 don't pad "just in case," right-size to real usage. Frame 2: all three probes (S14) on port 8080 (the
-port nginx-unprivileged serves) — readiness/liveness on / plus a generous startup budget. In the real
-manifest probe the app's own health path; / is fine for this teaching image. Frame 3: the graceful
-shutdown pair — a preStop hook that sleeps a few seconds so the Pod leaves the Service endpoints and
-finishes in-flight requests before SIGTERM, and terminationGracePeriodSeconds at pod level (shown as a
-comment; it's set in the full file). preStop needs a shell — nginx-unprivileged has one, and it runs
-before caps are dropped matters not, sleep needs nothing. Next group: security.
+port workshop-web serves), on the app's OWN health endpoints — readiness on /ready, liveness and
+startup on /healthz — exactly what "probe the app's own health path" means in practice. Frame 3: the
+graceful shutdown pair — a preStop hook that sleeps a few seconds so the Pod leaves the Service
+endpoints and finishes in-flight requests before SIGTERM, and terminationGracePeriodSeconds at pod
+level (shown as a comment; it's set in the full file). Note the NATIVE sleep action
+(preStop.sleep, stable API): the classic `exec sh -c sleep` would fail here — the image is
+distroless, there is no shell — and the native action is the current best practice anyway.
+Next group: security.
 -->
 
 ---
@@ -385,7 +392,7 @@ spec:
     spec:
       containers:
         - name: web
-          image: nginxinc/nginx-unprivileged:latest
+          image: ghcr.io/platformrelay/workshop-web:v1
 ```
 
 ```yaml
@@ -394,7 +401,7 @@ metadata:
   labels:
     app.kubernetes.io/name: web
     app.kubernetes.io/instance: web
-    app.kubernetes.io/version: "1.27"
+    app.kubernetes.io/version: "v1"
     app.kubernetes.io/part-of: workshop
     app.kubernetes.io/managed-by: argocd
 ```
@@ -403,7 +410,7 @@ metadata:
 # 2: +digest pin — immutable bytes, not a movable tag
         - name: web
           # RESOLVE at rehearsal: docker buildx imagetools inspect … / crane digest
-          image: nginxinc/nginx-unprivileged:1.27@sha256:0000000000000000000000000000000000000000000000000000000000000000
+          image: ghcr.io/platformrelay/workshop-web:v1@sha256:0000000000000000000000000000000000000000000000000000000000000000
 ```
 
 ```yaml
@@ -411,17 +418,17 @@ metadata:
     spec:
       securityContext:
         runAsNonRoot: true
-        runAsUser: 101                         # the image's built-in non-root UID
+        runAsUser: 65532                       # the image's built-in non-root UID (distroless nonroot)
         seccompProfile: { type: RuntimeDefault }
       containers:
         - name: web
-          image: nginxinc/nginx-unprivileged:1.27@sha256:0000000000000000000000000000000000000000000000000000000000000000
+          image: ghcr.io/platformrelay/workshop-web:v1@sha256:0000000000000000000000000000000000000000000000000000000000000000
 ```
 
 ```yaml
 # 4: +restricted securityContext — container-level: no priv-esc, drop ALL caps
         - name: web
-          image: nginxinc/nginx-unprivileged:1.27@sha256:0000000000000000000000000000000000000000000000000000000000000000
+          image: ghcr.io/platformrelay/workshop-web:v1@sha256:0000000000000000000000000000000000000000000000000000000000000000
           securityContext:
             allowPrivilegeEscalation: false
             capabilities: { drop: ["ALL"] }
@@ -435,7 +442,7 @@ topologySpread selectors, the ServiceMonitor, and Argo all key off these, so get
 prerequisite for the other fixes to actually bind. Frame 2: pin by digest (S02) — @sha256:… so the
 running bytes are the scanned bytes; the digest here is a PLACEHOLDER, resolved at rehearsal with
 crane/buildx (say this out loud — it's ImagePullBackOff until resolved). Frames 3+4 are the restricted
-securityContext, deliberately SPLIT: pod-level takes runAsNonRoot / runAsUser:101 / seccompProfile
+securityContext, deliberately SPLIT: pod-level takes runAsNonRoot / runAsUser:65532 / seccompProfile
 (these are valid at pod scope and cover every container); container-level takes
 allowPrivilegeEscalation:false and capabilities.drop:["ALL"] (these are container-only fields). All
 four together are exactly what `restricted` gates. Next: availability plus the two sibling objects.

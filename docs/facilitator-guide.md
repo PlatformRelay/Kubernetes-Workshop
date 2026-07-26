@@ -147,8 +147,8 @@ it once, in advance**, and learners observe.
 
 | Section / lab | Add-on to pre-install | What it is / why | Install (as shipped) |
 | --- | --- | --- | --- |
-| **S08** Ingress ([lab](../labs/day-1/08-ingress.md)) | **Ingress controller** (ingress-nginx) | Nothing serves an Ingress until a controller exists; the lab exposes the red-line app north-south. | `kubectl apply -f` the ingress-nginx `deploy/static/provider/kind` manifest (v1.11.2 as shipped). kind needs the `ingress-ready` node label — the lab's `kind-cluster.yaml` sets it. |
-| **S09** Gateway API ([lab](../labs/day-2/09-gateway-api.md)) | **Gateway API standard CRDs + a conformant controller** (NGINX Gateway Fabric) | The Gateway API is CRD-based; you need the standard-channel CRDs **and** a controller that owns a `GatewayClass`. | `kubectl apply -f` the Gateway API `standard-install.yaml` (v1.2.1) then the NGINX Gateway Fabric deploy manifest (v1.6.1). Provides the `nginx` GatewayClass. |
+| **S08** Ingress ([lab](../labs/day-1/08-ingress.md)) | **Ingress controller** (Contour) | Nothing serves an Ingress until a controller exists; the lab exposes the red-line app north-south. | `kubectl apply -f https://raw.githubusercontent.com/projectcontour/contour/v1.33.5/examples/render/contour.yaml` (pinned quickstart). kind needs the ingress-ready 80/443 port mappings — the repo's kind cluster config already has them. |
+| **S09** Gateway API ([lab](../labs/day-2/09-gateway-api.md)) | **Gateway API standard CRDs + a conformant controller** (Envoy Gateway) | The Gateway API is CRD-based; you need the standard-channel CRDs **and** a controller that owns a `GatewayClass`. | `kubectl apply -f` the Gateway API `standard-install.yaml` (v1.5.1) then the Envoy Gateway `install.yaml` (v1.8.2). Provides the `eg` GatewayClass. |
 | **S16** Autoscaling / HPA ([lab](../labs/day-2/16-hpa.md)) | **metrics-server** | The HPA reads CPU from the `metrics.k8s.io` API, which metrics-server serves. No metrics-server → `TARGETS <unknown>`. | `kubectl apply -f` the metrics-server `components.yaml`. **kind needs the `--kubelet-insecure-tls` patch** (kind's kubelet serves a self-signed cert). |
 | **S18** NetworkPolicy ([lab](../labs/day-3/18-networkpolicy.md)) | **A policy-capable CNI** (Calico, Cilium, Antrea, or modern kindnet) | A NetworkPolicy is inert unless the CNI enforces it. `kubectl apply` succeeds on any cluster but the packet is only dropped if the CNI enforces. | On kind, current **kindnet** enforces (via kube-network-policies); the lab's Step 2 is an **enforcement self-test** with a **Calico fallback** if your CNI doesn't enforce. On a shared cluster, confirm your CNI enforces before the room. |
 | **S21** GitOps / Argo CD ([lab](../labs/day-3/21-gitops.md)) | **Argo CD** | The in-cluster GitOps agent that reconciles the cluster toward Git; the lab hands it a public `guestbook` `Application`. | `kubectl create namespace argocd` then `kubectl apply -n argocd --server-side` the Argo CD `stable/manifests/install.yaml`. |
@@ -238,10 +238,12 @@ pass**. Be aware of the following, consistent with the honesty callouts already 
   delivery so you know the real install times for your network.
 - **The environment automation (`infra/`, `make kind-up` / `make ns-provision`) is
   planned, not built** (roadmap M8 / US-ENV-1). Provision manually as above.
-- **The controllers may change.** A planned de-nginx effort (roadmap M8 / US-NGX) intends to
-  swap the ingress and Gateway controllers and the demo web image. Until that lands, the
-  add-on table above reflects what the labs install **today**; re-check it against the labs
-  at delivery time.
+- **The de-nginx effort (roadmap M8 / US-NGX) has landed.** The retired ingress-nginx
+  controller was replaced by **Contour** (S08), NGINX Gateway Fabric by **Envoy Gateway**
+  (S09), and every demo web image by the purpose-built
+  `ghcr.io/platformrelay/workshop-web` (`:v1`/`:v2`/`:v3` — listens on **8080**, non-root,
+  distroless, PSA `restricted`-clean). The add-on table above reflects the new stack;
+  re-check the pinned versions against the labs at delivery time.
 - **S24 (kubebuilder) is a stub** and **S25 (pod escape) is strictly kind-only** — plan
   those two accordingly.
 

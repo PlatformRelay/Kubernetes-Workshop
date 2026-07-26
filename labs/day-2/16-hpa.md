@@ -102,7 +102,7 @@ makes an HPA read `<unknown>` — that's a *different* cause from the missing-re
 
 ## Step 1 — a CPU-bound app with a request, and an HPA over it
 
-`hpa-example` is a tiny PHP app that burns CPU on every request — unlike a static nginx, which
+`hpa-example` is a tiny PHP app that burns CPU on every request — unlike the workshop-web demo app, which
 answers instantly and would never move the needle. The `requests.cpu: 200m` is the **denominator**
 the HPA scales against.
 

@@ -31,8 +31,9 @@ every manifest** — and one un-hardened Deployment fails a dozen lines of it at
 - A cluster where you can create a namespace and (for the restricted check) label it — a **kind**
   cluster or an assigned namespace on a shared cluster both work.
 - `kubectl` configured. Pod Security Admission is **built into the API server** (stable since v1.25).
-- Internet pull access for `nginxinc/nginx-unprivileged:1.27` — a non-root nginx that runs as UID
-  **101** and listens on **8080** (so it actually runs under `restricted`, unlike stock nginx).
+- Internet pull access for `ghcr.io/platformrelay/workshop-web:v1` — the workshop's demo image,
+  distroless and non-root (UID **65532**), listening on **8080** (so it actually runs under
+  `restricted`, unlike an image that ships as root).
 - **No cluster-admin needed.** Everything is namespace-scoped.
 
 ## Files used
@@ -129,7 +130,7 @@ spec:
     spec:
       containers:
         - name: web
-          image: nginxinc/nginx-unprivileged:latest
+          image: ghcr.io/platformrelay/workshop-web:v1
           ports:
             - containerPort: 8080
 EOF
@@ -147,11 +148,11 @@ Deployment; two are **missing sibling objects**.
 
 | # | Problem | Fix | Traces to |
 | --- | --- | --- | --- |
-| 1 | **No liveness/readiness/startup probes** | add all three (`httpGet` on `/`, port 8080) | S14 |
+| 1 | **No liveness/readiness/startup probes** | add all three (`httpGet` on the app's `/ready` + `/healthz`, port 8080) | S14 |
 | 2 | **No resource requests/limits** (BestEffort — first evicted) | add `requests` + `limits` | S13 |
-| 3 | **No `securityContext`** (runs default user, full caps, no seccomp) | `runAsNonRoot` + `runAsUser: 101` + `seccompProfile` + `allowPrivilegeEscalation: false` + `drop: [ALL]` | S17 |
+| 3 | **No `securityContext`** (runs default user, full caps, no seccomp) | `runAsNonRoot` + `runAsUser: 65532` + `seccompProfile` + `allowPrivilegeEscalation: false` + `drop: [ALL]` | S17 |
 | 4 | **No PodDisruptionBudget** — a drain can take it to zero | add a PDB, `minAvailable: 2` | availability |
-| 5 | **Mutable image tag** (`:latest`) — running bytes can drift | pin by digest `@sha256:…` | S02 |
+| 5 | **Mutable image tag** (`:v1`, no digest) — running bytes can drift | pin by digest `@sha256:…` | S02 |
 | 6 | **No NetworkPolicy** — flat network, a foothold roams | default-deny + one allow | S18 |
 | 7 | **No graceful shutdown** — dropped connections on rollout | `terminationGracePeriodSeconds` + `preStop` | graceful shutdown |
 | 8 | **Missing recommended labels** (only ad-hoc `app: web`) | add `app.kubernetes.io/*` | hygiene |
@@ -177,7 +178,8 @@ so why is it "wrong"?
 Because **valid YAML and a running Pod are not the same as production-ready.** `kubectl apply`
 accepts it and a Pod comes up `Running` — but `Running` only means the process started (S14), the Pod
 is BestEffort and first-evicted (S13), it runs with default privileges (S17), a single node failure
-is a full outage (one replica, no spread, no PDB), the image can change under you (`:latest`), and
+is a full outage (one replica, no spread, no PDB), the image can change under you (a bare tag,
+no digest), and
 nothing isolates it on the network (S18). The checklist exists precisely because the API server's bar
 ("is this valid?") is far below the production bar ("will this stay up, resist compromise, and be
 operable?"). The next steps close that gap.
@@ -199,7 +201,7 @@ metadata:
   labels:
     app.kubernetes.io/name: web            # ⑧ recommended labels (hygiene)
     app.kubernetes.io/instance: web
-    app.kubernetes.io/version: "1.27"
+    app.kubernetes.io/version: "v1"
     app.kubernetes.io/part-of: workshop
     app.kubernetes.io/managed-by: argocd
 spec:
@@ -218,14 +220,14 @@ spec:
       labels:
         app.kubernetes.io/name: web        # matches PDB / topologySpread / NetworkPolicy selectors
         app.kubernetes.io/instance: web
-        app.kubernetes.io/version: "1.27"
+        app.kubernetes.io/version: "v1"
         app.kubernetes.io/part-of: workshop
         app.kubernetes.io/managed-by: argocd
     spec:
       terminationGracePeriodSeconds: 30    # ⑦ graceful shutdown (grace window)
       securityContext:                     # ③ restricted — pod-level fields
         runAsNonRoot: true
-        runAsUser: 101                     # the image's built-in non-root UID
+        runAsUser: 65532                   # the image's built-in non-root UID (distroless nonroot)
         seccompProfile:
           type: RuntimeDefault
       topologySpreadConstraints:           # ⑨ spread replicas across nodes
@@ -240,20 +242,20 @@ spec:
       containers:
         - name: web
           # ⑤ pin by digest — dummy value; RESOLVE at rehearsal (see the note below this block)
-          image: nginxinc/nginx-unprivileged:1.27@sha256:0000000000000000000000000000000000000000000000000000000000000000
+          image: ghcr.io/platformrelay/workshop-web:v1@sha256:0000000000000000000000000000000000000000000000000000000000000000
           ports:
             - containerPort: 8080
           resources:                       # ② requests + limits (right-sized, S13/cost)
             requests: { cpu: 50m, memory: 64Mi }
             limits:   { cpu: 200m, memory: 128Mi }
-          readinessProbe:                  # ① probes (S14)
-            httpGet: { path: /, port: 8080 }
+          readinessProbe:                  # ① probes (S14) — the app's own endpoints
+            httpGet: { path: /ready, port: 8080 }
             periodSeconds: 5
           livenessProbe:
-            httpGet: { path: /, port: 8080 }
+            httpGet: { path: /healthz, port: 8080 }
             periodSeconds: 10
           startupProbe:
-            httpGet: { path: /, port: 8080 }
+            httpGet: { path: /healthz, port: 8080 }
             periodSeconds: 3
             failureThreshold: 30
           securityContext:                 # ③ restricted — container-level fields
@@ -262,7 +264,7 @@ spec:
               drop: ["ALL"]
           lifecycle:                        # ⑦ graceful shutdown — drain before SIGTERM
             preStop:
-              exec: { command: ["sh", "-c", "sleep 5"] }
+              sleep: { seconds: 5 }        # native sleep action — no shell in the image (distroless)
 EOF
 
 cat fixed-deployment.yaml
@@ -329,9 +331,9 @@ EOF
 <details><summary>Solution — problem → fix map</summary>
 
 ```text
-① probes .............. readinessProbe + livenessProbe + startupProbe (port 8080)   [fixed-deployment.yaml]
+① probes .............. readiness /ready + liveness/startup /healthz (port 8080)    [fixed-deployment.yaml]
 ② resources ........... resources.requests + resources.limits                       [fixed-deployment.yaml]
-③ securityContext ..... pod: runAsNonRoot/runAsUser:101/seccomp ·
+③ securityContext ..... pod: runAsNonRoot/runAsUser:65532/seccomp ·
                         container: allowPrivilegeEscalation:false/drop ALL           [fixed-deployment.yaml]
 ④ PDB ................. minAvailable: 2                                              [fixed-pdb.yaml]
 ⑤ digest .............. image ...@sha256:0000…0000 (dummy → resolve at rehearsal)   [fixed-deployment.yaml]
@@ -358,9 +360,9 @@ it, which is why the labels fix (⑧) is a prerequisite for the others to bind.
 >
 > ```bash
 > # resolve the real digest for the tag, then edit the image line:
-> crane digest nginxinc/nginx-unprivileged:1.27
-> # or: docker buildx imagetools inspect nginxinc/nginx-unprivileged:1.27
-> # → image: nginxinc/nginx-unprivileged:1.27@sha256:<the real digest>
+> crane digest ghcr.io/platformrelay/workshop-web:v1
+> # or: docker buildx imagetools inspect ghcr.io/platformrelay/workshop-web:v1
+> # → image: ghcr.io/platformrelay/workshop-web:v1@sha256:<the real digest>
 > ```
 
 > **⚠️ `topologySpreadConstraints` on a single-node cluster.** With `whenUnsatisfiable:
@@ -404,7 +406,7 @@ metadata:
 spec:
   containers:
     - name: web
-      image: nginxinc/nginx-unprivileged:latest
+      image: ghcr.io/platformrelay/workshop-web:v1
       ports:
         - containerPort: 8080
 EOF
@@ -418,11 +420,11 @@ metadata:
 spec:
   securityContext:
     runAsNonRoot: true
-    runAsUser: 101
+    runAsUser: 65532
     seccompProfile: { type: RuntimeDefault }
   containers:
     - name: web
-      image: nginxinc/nginx-unprivileged:1.27@sha256:0000000000000000000000000000000000000000000000000000000000000000
+      image: ghcr.io/platformrelay/workshop-web:v1@sha256:0000000000000000000000000000000000000000000000000000000000000000
       ports:
         - containerPort: 8080
       securityContext:
@@ -493,7 +495,7 @@ the Deployment exists, its Pods don't.)
 <details><summary>Answer</summary>
 
 **No — on two counts.** First, `enforce` only gates **Pods**, and it only checks the **four**
-`securityContext` fields; a Deployment with `replicas: 1`, no probes, `:latest`, and no NetworkPolicy
+`securityContext` fields; a Deployment with `replicas: 1`, no probes, an unpinned tag, and no NetworkPolicy
 sails through as long as its Pod template's `securityContext` is correct. Second, admission is a
 *single line* of the checklist — the security floor — enforced **for** you. It does not know or care
 whether you pinned a digest, added the recommended labels, wrote a PodDisruptionBudget, set
@@ -578,7 +580,7 @@ production-ready for its scope, and the checklist names exactly what's left for 
 ## Expected observations
 
 - **Valid ≠ ready.** The flawed Deployment applies cleanly and runs — yet fails a dozen checklist
-  lines: BestEffort, no probes, default privileges, one replica, `:latest`, no isolation.
+  lines: BestEffort, no probes, default privileges, one replica, an unpinned tag, no isolation.
 - **One fix per line.** Each of the ten problems maps to exactly one field or object; nothing bundled.
 - **Selectors converge on one label.** The PDB, topology spread, and NetworkPolicy all select
   `app.kubernetes.io/name: web` — fixing labels first is what lets the rest bind.
@@ -632,7 +634,7 @@ web    1/1     1            1           5s
 
 Under **`warn`**, the API server returns the violation list as a **`Warning:`** but **creates** the
 Deployment — and note it inspects the embedded Pod **template** here (unlike `enforce`, which only
-gates the Pods themselves). It runs to `1/1`: the flawed Deployment uses `:latest` (which pulls) and
+gates the Pods themselves). It runs to `1/1`: the flawed Deployment's `:v1` tag pulls fine and it
 has no probes, so the Pod is Ready the moment it starts — a security-flagged workload happily serving
 traffic is exactly the situation `warn` is meant to surface without breaking anyone. That's discovery,
 not a block — like a non-blocking CI check that annotates a PR. The real migration play is

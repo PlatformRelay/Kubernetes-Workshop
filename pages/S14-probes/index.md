@@ -41,9 +41,10 @@ kicker: The problem
 `Running` is a lie you tell your users.
 
 The `web` Deployment reports `3/3` and every Pod says `Running` — so the Service sends
-traffic. But `Running` only means *the process started*: nginx may still be warming its cache,
-or wedged on a deadlocked worker, serving nothing but errors. Kubernetes can't tell a busy Pod
-from a broken one **unless you teach it how to ask**. That's what a **probe** is.
+traffic. But `Running` only means *the process started*: the app may still be warming up,
+waiting on a dependency, or wedged on a deadlock, serving nothing but errors. Kubernetes
+can't tell a busy Pod from a broken one **unless you teach it how to ask**. That's what a
+**probe** is.
 
 <!--
 Speaker: the "why should I care" beat. Phase == Running is a low bar — it means PID 1 is up,
@@ -123,8 +124,8 @@ lab: labs/day-2/14-probes.md
 ```yaml {none|2|3|5|6-7}
 readinessProbe:
   httpGet:                    # mechanism: HTTP GET
-    path: /ready.html
-    port: 80
+    path: /ready
+    port: 8080
   initialDelaySeconds: 0      # wait this long before the FIRST probe
   periodSeconds: 5            # then probe every 5s
   failureThreshold: 3         # this many misses in a row = failed
@@ -139,8 +140,8 @@ gRPC health). Pick the one that reflects <em>real</em> health, not just "port op
 </CodeNote>
 
 <CodeNote at="2" label="path — probe a dedicated endpoint">
-<code>/ready.html</code> here, not <code>/</code>. Real apps expose a <code>/healthz</code>
-that checks their own dependencies — so readiness reflects "can I actually serve," not "is the
+<code>/ready</code> here, not <code>/</code>. The demo app owns this endpoint and answers
+200 or 503 from its own logic — so readiness reflects "can I actually serve," not "is the
 web server process listening."
 </CodeNote>
 
@@ -157,8 +158,8 @@ here.
 
 <!--
 Speaker: the field-level slide — these knobs cause most probe bugs. MECHANISMS: httpGet is the
-common one and note the success rule (any 2xx or 3xx passes; 400+ fails — that's how deleting
-the file breaks readiness in the lab, nginx 404s the missing path). tcpSocket for non-HTTP
+common one and note the success rule (any 2xx or 3xx passes; 400+ fails — that's how the lab
+breaks readiness: POST /fail flips the app's /ready to 503). tcpSocket for non-HTTP
 (databases, brokers). exec for "run a script" (most flexible, most expensive — forks a process
 each period). grpc for services that speak the standard gRPC health protocol. TIMING: the
 reaction window is periodSeconds × failureThreshold — memorise that, it's what you tune. A
@@ -176,84 +177,77 @@ lab: labs/day-2/14-probes.md
 
 ````md magic-move
 ```yaml
-# 1: the web container as the Service section left it — "Running" the instant nginx's process starts
+# 1: the web container as the Service section left it — "Running" the instant the process starts
 containers:
   - name: web
-    image: nginx:1.27
-    ports: [{ containerPort: 80 }]
+    image: ghcr.io/platformrelay/workshop-web:v1
+    ports: [{ containerPort: 8080 }]
     # no probes → Kubernetes assumes process-up = ready AND healthy
 ```
 
 ```yaml
-# 2: +readiness — gate traffic on a dedicated endpoint (postStart seeds the file)
+# 2: +readiness — gate traffic on a dedicated endpoint the app itself owns
 containers:
   - name: web
-    image: nginx:1.27
-    ports: [{ containerPort: 80 }]
+    image: ghcr.io/platformrelay/workshop-web:v1
+    ports: [{ containerPort: 8080 }]
     readinessProbe:
-      httpGet: { path: /ready.html, port: 80 }
+      httpGet: { path: /ready, port: 8080 }   # 200 = send traffic, 503 = drain me
       periodSeconds: 5
       failureThreshold: 3
-    lifecycle:
-      postStart:
-        exec: { command: ["sh", "-c", "echo ok > /usr/share/nginx/html/ready.html"] }
 ```
 
 ```yaml
-# 3: +liveness — restart the container if it wedges (probe the app itself, not the readiness file)
+# 3: +liveness — restart the container if it wedges (a DIFFERENT question than readiness)
 containers:
   - name: web
-    image: nginx:1.27
-    ports: [{ containerPort: 80 }]
+    image: ghcr.io/platformrelay/workshop-web:v1
+    ports: [{ containerPort: 8080 }]
     readinessProbe:
-      httpGet: { path: /ready.html, port: 80 }
+      httpGet: { path: /ready, port: 8080 }
       periodSeconds: 5
       failureThreshold: 3
     livenessProbe:
-      httpGet: { path: /, port: 80 }
+      httpGet: { path: /healthz, port: 8080 }  # 200 while the process serves
       periodSeconds: 10
       failureThreshold: 3
-    lifecycle:
-      postStart:
-        exec: { command: ["sh", "-c", "echo ok > /usr/share/nginx/html/ready.html"] }
 ```
 
 ```yaml
 # 4: +startup — give a slow boot room; readiness & liveness are suspended until it passes
 containers:
   - name: web
-    image: nginx:1.27
-    ports: [{ containerPort: 80 }]
+    image: ghcr.io/platformrelay/workshop-web:v1
+    ports: [{ containerPort: 8080 }]
     readinessProbe:
-      httpGet: { path: /ready.html, port: 80 }
+      httpGet: { path: /ready, port: 8080 }
       periodSeconds: 5
       failureThreshold: 3
     livenessProbe:
-      httpGet: { path: /, port: 80 }
+      httpGet: { path: /healthz, port: 8080 }
       periodSeconds: 10
       failureThreshold: 3
     startupProbe:
-      httpGet: { path: /, port: 80 }
+      httpGet: { path: /healthz, port: 8080 }
       periodSeconds: 3
       failureThreshold: 30          # up to 90s to boot before liveness takes over
-    lifecycle:
-      postStart:
-        exec: { command: ["sh", "-c", "echo ok > /usr/share/nginx/html/ready.html"] }
 ```
 ````
 
 <!--
 Speaker: FOUR frames, each a real state of the same web container the deck has carried since
 S06. (1) No probes: "Running" is the only signal, and it's a lie the moment the app needs warm-
-up. (2) +readiness on /ready.html — note the postStart hook that writes that file once nginx is
-up; that's a teaching device so we can break readiness independently in the lab by deleting the
-file (nginx then 404s → readiness fails → Pod drains, but liveness on / is still 200 so it is
-NOT restarted). Real apps skip the hook and expose a /healthz their code owns. (3) +liveness on
-/ (the app itself) — deliberately a DIFFERENT target from readiness, so the two can't be
-conflated. (4) +startup on / with a generous 30×3s = 90s budget; while it runs, readiness and
-liveness are held, so a slow boot can't be mistaken for a crash loop. Frame 4's container spec
-is byte-for-byte the lab's deployment-probes.yaml — same through-line manifest. To reach the
-lab, apply this and watch all three Pods reach READY 1/1.
+up. (2) +readiness on /ready — the demo app owns this endpoint in its own code (exactly what
+you want real apps to do), and it can be flipped at runtime: POST /fail makes /ready answer
+503, POST /recover flips it back. That's how the lab breaks readiness on ONE Pod without
+touching the process (readiness fails → Pod drains, but liveness on /healthz is still 200 so
+it is NOT restarted). (3) +liveness on /healthz — deliberately a DIFFERENT target from
+readiness, so the two can't be conflated: /healthz answers 200 for as long as the process
+serves, /ready answers "should I get traffic right now." (4) +startup on /healthz with a
+generous 30×3s = 90s budget; while it runs, readiness and liveness are held, so a slow boot
+can't be mistaken for a crash loop. Frame 4's container spec is byte-for-byte the lab's
+deployment-probes.yaml — same through-line manifest. To reach the lab, apply this and watch
+all three Pods reach READY 1/1.
 -->
 
 ---
@@ -285,9 +279,9 @@ red; it stays Running (this is the crucial part — it is NOT restarted, NOT del
 leaves the slice, so kube-proxy stops routing to it. The other two absorb the traffic; the user
 sees nothing. This is exactly what a rolling update leans on: a new Pod is kept out of the slice
 until readiness passes, so users never touch a half-warmed replica. In the lab you'll cause
-this by deleting /ready.html on ONE Pod and watch its IP vanish from `get endpointslices` while
-curl keeps returning 200 from the others. Contrast with liveness on the next slide — same-
-looking failure, completely different outcome.
+this by POSTing /fail to ONE Pod (its /ready flips to 503) and watch its IP vanish from
+`get endpointslices` while curl keeps returning 200 from the others. Contrast with liveness on
+the next slide — same-looking failure, completely different outcome.
 -->
 
 ---
@@ -336,8 +330,7 @@ restart fails again and you get CrashLoopBackOff with an exponential backoff tim
 learners must avoid: putting a dependency check (DB reachable?) on LIVENESS — now a DB outage
 restarts every Pod, turning a brown-out into an outage; the same check on READINESS just drains
 them until the DB is back. Click 1: startup is the referee — it holds the other two off during
-boot, so you stop abusing initialDelaySeconds on liveness. The lab makes both arrows physical:
-delete a file → left arrow; point liveness at a dead port → right arrow.
+boot, so you stop abusing initialDelaySeconds on liveness.
 -->
 
 ---
@@ -391,13 +384,14 @@ sit 0/1 forever, Deployment shows unavailable replicas, and because readiness ga
 rollout, it never completes (old Pods keep serving, which is the safety feature, but your
 deploy is stuck). Cause is almost always a typo'd path/port or a readiness gate on something
 that isn't up in this environment. Both are diagnosable in one command: describe the Pod, read
-the Events. That's the muscle memory the lab builds.
+the Events. That's the muscle memory the lab builds. The lab makes both arrows physical:
+POST /fail → left arrow (drain); point liveness at a dead port → right arrow (restart).
 -->
 
 ---
 layout: recap
 heading: 'Recap — Running is a floor, not a promise'
-story: 'Deleting one Pod''s readiness file drained it with zero downtime; pointing liveness at a dead port bounced the container until we fixed it — same symptom, opposite cure.'
+story: 'Flipping one Pod''s `/ready` to failing drained it with zero downtime; pointing liveness at a dead port bounced the container until we fixed it — same symptom, opposite cure.'
 next: 'Jobs & CronJobs — workloads that run to completion, not forever'
 ---
 
@@ -419,8 +413,8 @@ startup are how you attach real meaning to it. The two-arrow fork is the keeper:
 reversible and traffic-only (drain/rejoin), liveness is a hammer (restart/CrashLoop) — so map
 each check to the response you actually want. Probe your own health, keep liveness cheap and
 forgiving, and reach for startup instead of piling initialDelaySeconds onto liveness. CKAD
-Observability domain lives right here. Hand to Lab 14: add all three probes, delete a readiness
-file to drain one Pod with zero downtime, break liveness to force restarts, and watch a startup
+Observability domain lives right here. Hand to Lab 14: add all three probes, POST /fail to
+drain one Pod with zero downtime, break liveness to force restarts, and watch a startup
 probe shepherd a slow starter. Next section: Jobs & CronJobs — the first workloads that are
 SUPPOSED to stop.
 -->
@@ -436,7 +430,7 @@ env: namespace ✓ / kind ✓
 
 - Add readiness, liveness, and startup probes to the `web` Deployment; confirm `READY 1/1` and
   three IPs in the EndpointSlice
-- **Break readiness** on one Pod (delete its `/ready.html`) → it leaves the slice, `curl` keeps
+- **Break readiness** on one Pod (`POST /fail` — its `/ready` flips to 503) → it leaves the slice, `curl` keeps
   returning 200 from the others — **zero downtime** — then fix and watch it rejoin
 - **Break liveness** (point it at a dead port) → `RESTARTS` climbs into `CrashLoopBackOff` →
   fix and watch restarts stop

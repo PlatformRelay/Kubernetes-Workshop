@@ -66,18 +66,18 @@ Two more things to keep straight before you start:
 | [ ] | S05 | core | [05-pod](../labs/day-1/05-pod.md) | none | a bad image (ImagePullBackOff) | [ ] |
 | [ ] | S06 | core | [06-deployment](../labs/day-1/06-deployment.md) | none | a rollout that stalls | [ ] |
 | [ ] | S07 | core | [07-service](../labs/day-1/07-service.md) | none | break the selector (silent failure) | [ ] |
-| [ ] | S08 | core | [08-ingress](../labs/day-1/08-ingress.md) | **ingress-nginx** (`kind` provider manifest) | forget `pathType` | [ ] |
+| [ ] | S08 | core | [08-ingress](../labs/day-1/08-ingress.md) | **Contour** (pinned quickstart manifest) | forget `pathType` | [ ] |
 
 **Day 1 add-on install to verify:** for **S08**, the `kind` cluster must carry the
-`ingress-ready` node label (from the lab's `kind-cluster.yaml`), then
-`kubectl apply -f` the ingress-nginx `kind` provider manifest and wait for the
+ingress-ready 80/443 port mappings (the repo's kind cluster config sets them), then
+`kubectl apply -f` the Contour v1.33.5 pinned quickstart and wait for the
 controller to be ready **before** the Ingress step.
 
 ## Day 2 — Modern routing and running workloads well
 
 | ✓ | ID | Tier | Lab | Add-on to install first | break→fix present | Cleanup runs |
 | --- | --- | --- | --- | --- | --- | --- |
-| [ ] | S09 | recommended | [09-gateway-api](../labs/day-2/09-gateway-api.md) | **Gateway API CRDs + NGINX Gateway Fabric** | a `gatewayClassName` nobody owns | [ ] |
+| [ ] | S09 | recommended | [09-gateway-api](../labs/day-2/09-gateway-api.md) | **Gateway API CRDs + Envoy Gateway** | a `gatewayClassName` nobody owns | [ ] |
 | [ ] | S10 | core | [10-config](../labs/day-2/10-config.md) | none | rotate a value — env vars don't update live | [ ] |
 | [ ] | S11 | core | [11-storage](../labs/day-2/11-storage.md) | none (default StorageClass on kind) | a StorageClass that doesn't exist | [ ] |
 | [ ] | S12 | recommended | [12-statefulset](../labs/day-2/12-statefulset.md) | none (default StorageClass on kind) | a `serviceName` pointing at nothing | [ ] |
@@ -87,8 +87,8 @@ controller to be ready **before** the Ingress step.
 | [ ] | S16 | optional | [16-hpa](../labs/day-2/16-hpa.md) | **metrics-server** (kind: `--kubelet-insecure-tls`) | an HPA with nothing to divide by | [ ] |
 
 **Day 2 add-on installs to verify:** for **S09**, `kubectl apply -f` the Gateway API
-standard-channel CRDs, then the NGINX Gateway Fabric deploy manifest (provides the
-`nginx` GatewayClass), **before** the route step. For **S16**, `kubectl apply -f`
+standard-channel CRDs (v1.5.1), then the Envoy Gateway `install.yaml` (provides the
+`eg` GatewayClass), **before** the route step. For **S16**, `kubectl apply -f`
 metrics-server `components.yaml` **with the kind `--kubelet-insecure-tls` patch**, then
 confirm `kubectl top` reports before the HPA step (otherwise `TARGETS <unknown>`).
 

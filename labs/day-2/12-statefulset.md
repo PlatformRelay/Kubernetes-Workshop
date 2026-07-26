@@ -66,6 +66,7 @@ spec:
     app: s12
   ports:
     - port: 80
+      targetPort: 8080
       name: http
 EOF
 
@@ -113,12 +114,18 @@ spec:
     spec:
       containers:
         - name: web
-          image: nginx:1.27
+          image: ghcr.io/platformrelay/workshop-web:v1
           ports:
-            - containerPort: 80
+            - containerPort: 8080
           volumeMounts:
             - name: data
-              mountPath: /usr/share/nginx/html
+              mountPath: /data
+        - name: toolbox           # the app image has no shell — the sidecar is our pen
+          image: busybox:1.37
+          command: ["sleep", "infinity"]
+          volumeMounts:
+            - name: data
+              mountPath: /data
   volumeClaimTemplates:           # a PVC STENCIL — one minted per ordinal
     - metadata:
         name: data
@@ -142,12 +149,12 @@ kubectl get pods -l app=s12 -w
 ```console
 $ kubectl get pods -l app=s12 -w
 NAME    READY   STATUS              RESTARTS   AGE
-web-0   0/1     ContainerCreating   0          1s
-web-0   1/1     Running             0          6s
-web-1   0/1     Pending             0          0s
-web-1   1/1     Running             0          8s
-web-2   0/1     Pending             0          0s
-web-2   1/1     Running             0          7s
+web-0   0/2     ContainerCreating   0          1s
+web-0   2/2     Running             0          6s
+web-1   0/2     Pending             0          0s
+web-1   2/2     Running             0          8s
+web-2   0/2     Pending             0          0s
+web-2   2/2     Running             0          7s
 ```
 
 Names are **stable ordinals** — `web-0`, `web-1`, `web-2` — not the random
@@ -207,14 +214,14 @@ here, every Pod owns its own.
 Give one specific ordinal some data we can recognise later.
 
 ```bash
-kubectl exec web-1 -- sh -c 'echo "written by $(hostname)" > /usr/share/nginx/html/data.txt'
-kubectl exec web-1 -- cat /usr/share/nginx/html/data.txt
+kubectl exec web-1 -c toolbox -- sh -c 'echo "written by $(hostname)" > /data/data.txt'
+kubectl exec web-1 -c toolbox -- cat /data/data.txt
 ```
 
 <details><summary>Solution / expected output</summary>
 
 ```console
-$ kubectl exec web-1 -- cat /usr/share/nginx/html/data.txt
+$ kubectl exec web-1 -c toolbox -- cat /data/data.txt
 written by web-1
 ```
 
@@ -235,7 +242,7 @@ kubectl delete pod web-1
 kubectl get pods -l app=s12 -w        # Ctrl-C once web-1 is Running again
 
 # read the sentinel from the REPLACEMENT web-1
-kubectl exec web-1 -- cat /usr/share/nginx/html/data.txt
+kubectl exec web-1 -c toolbox -- cat /data/data.txt
 ```
 
 **Task:** what name does the replacement Pod get, and is the sentinel still there?
@@ -247,10 +254,10 @@ $ kubectl delete pod web-1
 pod "web-1" deleted
 $ kubectl get pods -l app=s12
 NAME    READY   STATUS    RESTARTS   AGE
-web-0   1/1     Running   0          5m
-web-1   1/1     Running   0          12s     # <-- same NAME, a fresh Pod underneath
-web-2   1/1     Running   0          5m
-$ kubectl exec web-1 -- cat /usr/share/nginx/html/data.txt
+web-0   2/2     Running   0          5m
+web-1   2/2     Running   0          12s     # <-- same NAME, a fresh Pod underneath
+web-2   2/2     Running   0          5m
+$ kubectl exec web-1 -c toolbox -- cat /data/data.txt
 written by web-1
 ```
 
@@ -335,12 +342,18 @@ spec:
     spec:
       containers:
         - name: web
-          image: nginx:1.27
+          image: ghcr.io/platformrelay/workshop-web:v1
           ports:
-            - containerPort: 80
+            - containerPort: 8080
           volumeMounts:
             - name: data
-              mountPath: /usr/share/nginx/html
+              mountPath: /data
+        - name: toolbox
+          image: busybox:1.37
+          command: ["sleep", "infinity"]
+          volumeMounts:
+            - name: data
+              mountPath: /data
   volumeClaimTemplates:
     - metadata:
         name: data
@@ -394,9 +407,9 @@ statefulset rolling update complete 3 pods at revision ...
 
 $ kubectl get pods -l app=s12
 NAME    READY   STATUS    RESTARTS   AGE
-web-0   1/1     Running   0          20s
-web-1   1/1     Running   0          14s
-web-2   1/1     Running   0          8s
+web-0   2/2     Running   0          20s
+web-1   2/2     Running   0          14s
+web-2   2/2     Running   0          8s
 
 $ kubectl run dnstest --rm -it --restart=Never --image=busybox:1.36 -- \
     nslookup "web-1.web.$NS.svc.cluster.local"
@@ -423,7 +436,7 @@ kubectl run dnstest --rm -it --restart=Never --image=busybox:1.36 -- \
   nslookup "web-1.web.$NS.svc.cluster.local"
 
 # ...and the sentinel from Step 3 survived TWO delete/recreate cycles
-kubectl exec web-1 -- cat /usr/share/nginx/html/data.txt
+kubectl exec web-1 -c toolbox -- cat /data/data.txt
 ```
 
 <details><summary>Solution / expected output</summary>
@@ -434,7 +447,7 @@ $ kubectl run dnstest --rm -it --restart=Never --image=busybox:1.36 -- \
 Name:      web-1.web.<ns>.svc.cluster.local
 Address:   10.244.1.9
 
-$ kubectl exec web-1 -- cat /usr/share/nginx/html/data.txt
+$ kubectl exec web-1 -c toolbox -- cat /data/data.txt
 written by web-1
 ```
 
@@ -494,7 +507,7 @@ kubectl scale statefulset web --replicas=1        # removes web-2 then web-1 (re
 kubectl get pods -l app=s12                        # only web-0 remains
 kubectl get pvc -l app=s12 || kubectl get pvc      # ...but data-web-1 and data-web-2 REMAIN
 kubectl scale statefulset web --replicas=3        # web-1, web-2 recreated in order
-kubectl exec web-1 -- cat /usr/share/nginx/html/data.txt   # sentinel still there
+kubectl exec web-1 -c toolbox -- cat /data/data.txt   # sentinel still there
 ```
 
 <details><summary>Solution / what you're looking at</summary>
@@ -502,7 +515,7 @@ kubectl exec web-1 -- cat /usr/share/nginx/html/data.txt   # sentinel still ther
 ```console
 $ kubectl get pods -l app=s12       # after scaling to 1
 NAME    READY   STATUS    RESTARTS   AGE
-web-0   1/1     Running   0          10m
+web-0   2/2     Running   0          10m
 
 $ kubectl get pvc -l app=s12        # PVCs for the removed ordinals are kept
 NAME         STATUS   VOLUME             CAPACITY   ACCESS MODES   STORAGECLASS   AGE
@@ -510,7 +523,7 @@ data-web-0   Bound    pvc-a1b2...        1Gi        RWO            standard     
 data-web-1   Bound    pvc-c3d4...        1Gi        RWO            standard       10m
 data-web-2   Bound    pvc-e5f6...        1Gi        RWO            standard       10m
 
-$ kubectl exec web-1 -- cat /usr/share/nginx/html/data.txt   # after scaling back to 3
+$ kubectl exec web-1 -c toolbox -- cat /data/data.txt   # after scaling back to 3
 written by web-1
 ```
 

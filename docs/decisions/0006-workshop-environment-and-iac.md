@@ -38,7 +38,7 @@ infra/
 │   ├── cluster.yaml         # kind cluster config (ingress-ready ports, extra mounts)
 │   └── up.sh / down.sh      # create/tear down a local cluster
 ├── addons/                  # one installer per shared prerequisite, each idempotent
-│   ├── ingress-nginx/
+│   ├── contour/             # ingress controller (US-NGX: replaced the retired ingress-nginx)
 │   ├── gateway-api/         # standard-channel CRDs + a conformant controller
 │   ├── metrics-server/
 │   ├── network-policy-cni/  # policy-capable CNI for the NetworkPolicy lab

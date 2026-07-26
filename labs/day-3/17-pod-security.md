@@ -12,8 +12,9 @@ Meet the `restricted` **Pod Security Standard** from the wrong side. You will dr
 root, no-`securityContext` Pod into a namespace that **enforces** `restricted`, watch **Pod
 Security Admission** refuse it *before it is ever created*, then add the **four** fields
 `restricted` gates — one at a time — until the same gate **admits** it. Finally you'll turn on
-`readOnlyRootFilesystem` (which is **not** part of `restricted`), watch it break the app at
-**runtime**, and give the app a writable path with an `emptyDir`.
+`readOnlyRootFilesystem` (which is **not** part of `restricted`) — see it cost the demo app
+*nothing* (it never writes to disk), then watch it break a Pod that **does** write at
+**runtime**, and give that app a writable path with an `emptyDir`.
 
 The whole lab turns on one contrast: **admission** enforcement (PSA refuses the Pod up front —
 nothing is created) vs **runtime** enforcement (the Pod exists and then misbehaves).
@@ -29,10 +30,10 @@ nothing is created) vs **runtime** enforcement (the Pod exists and then misbehav
 
 - `kubectl` against your assigned namespace **or** a local kind cluster. No admin rights needed
   for the harden loop itself.
-- Internet pull access for `nginxinc/nginx-unprivileged:1.27` — an nginx image that **already
-  runs as a non-root user (UID 101) and listens on 8080**. We use it deliberately: see the
-  callout in Step 2 about why a *stock* `nginx` image would fail even after you set
-  `runAsNonRoot: true`.
+- Internet pull access for `ghcr.io/platformrelay/workshop-web:v1` — the workshop's demo image,
+  which **already runs as a non-root user (UID 65532, the distroless `nonroot` user) and listens
+  on 8080**, plus `busybox:1.37` for the runtime break. See the callout in Step 2 about why an
+  image that ships running as *root* would fail even after you set `runAsNonRoot: true`.
 - Pod Security Admission is **built into the API server** (stable since v1.25) — there is no
   controller to install.
 
@@ -40,8 +41,10 @@ nothing is created) vs **runtime** enforcement (the Pod exists and then misbehav
 
 - `pod-insecure.yaml` — a bare Pod, no `securityContext` → violates `restricted`.
 - `pod-hardened.yaml` — the same Pod with the four `restricted` fields set → admitted.
-- `pod-readonly.yaml` — hardened **plus** `readOnlyRootFilesystem: true` → breaks at runtime.
-- `pod-readonly-fixed.yaml` — adds `emptyDir` mounts for nginx's writable paths → runs again.
+- `pod-readonly.yaml` — hardened **plus** `readOnlyRootFilesystem: true` → still runs (the demo
+  app never writes to its root filesystem).
+- `pod-writer-ro.yaml` — a Pod that writes a PID file, same hardening → **breaks at runtime**.
+- `pod-writer-fixed.yaml` — adds an `emptyDir` mount over the writable path → runs again.
 
 Everything is labelled `app: s17` so cleanup is a single label selector.
 
@@ -107,7 +110,7 @@ metadata:
 spec:
   containers:
     - name: web
-      image: nginxinc/nginx-unprivileged:1.27
+      image: ghcr.io/platformrelay/workshop-web:v1
       ports:
         - containerPort: 8080
       # no securityContext at all
@@ -177,12 +180,12 @@ metadata:
 spec:
   containers:
     - name: web
-      image: nginxinc/nginx-unprivileged:1.27
+      image: ghcr.io/platformrelay/workshop-web:v1
       ports:
         - containerPort: 8080
       securityContext:
         runAsNonRoot: true
-        runAsUser: 101            # nginx-unprivileged's built-in non-root user
+        runAsUser: 65532          # the image's built-in non-root user (distroless "nonroot")
 EOF
 kubectl apply -f pod-step.yaml
 ```
@@ -195,17 +198,18 @@ violates PodSecurity "restricted:latest": allowPrivilegeEscalation != false (...
 capabilities (...), seccompProfile (...)
 ```
 
-`runAsNonRoot != true` is gone; three violations remain. (Setting `runAsUser: 101` isn't required
-by `restricted` — `runAsNonRoot: true` alone satisfies it — but it makes the non-root user
-explicit and guarantees a UID this image can actually run as.)
+`runAsNonRoot != true` is gone; three violations remain. (Setting `runAsUser: 65532` isn't
+required by `restricted` — `runAsNonRoot: true` alone satisfies it — but it makes the non-root
+user explicit and guarantees a UID this image can actually run as.)
 </details>
 
 > **⚠️ Why this image?** `runAsNonRoot: true` is a *promise the image must keep*. Admission only
 > checks that the **field is set**, so it passes — but the **kubelet** checks the image's real
-> user at start. Point this Pod at a **stock `nginx:1.27`** (which runs as root) and it would be
-> **admitted** and then **CrashLoop** with `container has runAsNonRoot and image will run as
-> root`. `nginxinc/nginx-unprivileged` runs as UID 101, so the promise holds. This is the
-> **non-root image discipline from S02** paying off.
+> user at start. Point this Pod at an image whose effective user is **root** — most base images,
+> e.g. a stock `busybox` or `debian` — and it would be **admitted** and then fail at start with
+> `container has runAsNonRoot and image will run as root` (CreateContainerError →
+> CrashLoopBackOff). `workshop-web` ships as the distroless `nonroot` user (UID 65532), so the
+> promise holds. This is the **non-root image discipline from S02** paying off.
 
 **2b — add `allowPrivilegeEscalation: false`** (re-apply the whole file with one more field):
 
@@ -219,12 +223,12 @@ metadata:
 spec:
   containers:
     - name: web
-      image: nginxinc/nginx-unprivileged:1.27
+      image: ghcr.io/platformrelay/workshop-web:v1
       ports:
         - containerPort: 8080
       securityContext:
         runAsNonRoot: true
-        runAsUser: 101
+        runAsUser: 65532
         allowPrivilegeEscalation: false
 EOF
 kubectl apply -f pod-step.yaml
@@ -252,12 +256,12 @@ metadata:
 spec:
   containers:
     - name: web
-      image: nginxinc/nginx-unprivileged:1.27
+      image: ghcr.io/platformrelay/workshop-web:v1
       ports:
         - containerPort: 8080
       securityContext:
         runAsNonRoot: true
-        runAsUser: 101
+        runAsUser: 65532
         allowPrivilegeEscalation: false
         capabilities:
           drop: ["ALL"]
@@ -288,12 +292,12 @@ metadata:
 spec:
   containers:
     - name: web
-      image: nginxinc/nginx-unprivileged:1.27
+      image: ghcr.io/platformrelay/workshop-web:v1
       ports:
         - containerPort: 8080
       securityContext:
         runAsNonRoot: true
-        runAsUser: 101
+        runAsUser: 65532
         allowPrivilegeEscalation: false
         capabilities:
           drop: ["ALL"]
@@ -327,7 +331,7 @@ kubelet is happy too — `1/1 Running`. **The policy never changed; your manifes
 `readOnlyRootFilesystem: true` is **not** one of the four `restricted` gates — it's extra
 defence-in-depth (a foothold can't drop tools or rewrite binaries). But it changes runtime
 behaviour: the container can no longer write to its own filesystem, and many apps *need* a few
-writable paths.
+writable paths. First, see what it costs a **well-built** app — nothing:
 
 ```bash
 cat > pod-readonly.yaml <<'EOF'
@@ -339,12 +343,12 @@ metadata:
 spec:
   containers:
     - name: web
-      image: nginxinc/nginx-unprivileged:1.27
+      image: ghcr.io/platformrelay/workshop-web:v1
       ports:
         - containerPort: 8080
       securityContext:
         runAsNonRoot: true
-        runAsUser: 101
+        runAsUser: 65532
         allowPrivilegeEscalation: false
         capabilities: { drop: ["ALL"] }
         seccompProfile: { type: RuntimeDefault }
@@ -352,83 +356,125 @@ spec:
 EOF
 
 kubectl apply -f pod-readonly.yaml
-kubectl get pod web-ro -w        # Ctrl-C after you see it fail
-```
-
-**Task:** this Pod is **admitted** (it still satisfies `restricted`) but doesn't stay up. What
-does `kubectl logs` say?
-
-```bash
-kubectl get pod web-ro
-kubectl logs web-ro --previous 2>/dev/null || kubectl logs web-ro
-```
-
-<details><summary>Solution / expected output</summary>
-
-```console
-$ kubectl get pod web-ro
-NAME     READY   STATUS             RESTARTS      AGE
-web-ro   0/1     CrashLoopBackOff   3 (20s ago)   90s
-
-$ kubectl logs web-ro
-... nginx: ... open() "/tmp/nginx.pid" failed (30: Read-only file system)
-... [emerg] mkdir() "/var/cache/nginx/client_temp" failed (30: Read-only file system)
-```
-
-The Pod **passed admission** — this is a **runtime** failure. nginx needs to write its PID file
-and temp/cache directories, but with `readOnlyRootFilesystem: true` the whole root filesystem
-(including `/tmp` and `/var/cache/nginx`) is read-only, so it can't start → `CrashLoopBackOff`.
-The error **names the paths** it couldn't write — that's your list of what to make writable.
-</details>
-
-**Task:** fix it by mounting a **writable `emptyDir`** over each path the app needs, keeping the
-root filesystem read-only everywhere else.
-
-```bash
-cat > pod-readonly-fixed.yaml <<'EOF'
-apiVersion: v1
-kind: Pod
-metadata:
-  name: web-ro
-  labels: { app: s17 }
-spec:
-  containers:
-    - name: web
-      image: nginxinc/nginx-unprivileged:1.27
-      ports:
-        - containerPort: 8080
-      securityContext:
-        runAsNonRoot: true
-        runAsUser: 101
-        allowPrivilegeEscalation: false
-        capabilities: { drop: ["ALL"] }
-        seccompProfile: { type: RuntimeDefault }
-        readOnlyRootFilesystem: true
-      volumeMounts:
-        - { name: tmp,   mountPath: /tmp }
-        - { name: cache, mountPath: /var/cache/nginx }
-  volumes:
-    - { name: tmp,   emptyDir: {} }
-    - { name: cache, emptyDir: {} }
-EOF
-
-kubectl delete pod web-ro --ignore-not-found     # securityContext/volumes are immutable — recreate
-kubectl apply -f pod-readonly-fixed.yaml
 kubectl get pod web-ro -w        # Ctrl-C once Running
 ```
+
+**Task:** the Pod runs — why didn't `readOnlyRootFilesystem` hurt it?
 
 <details><summary>Solution / expected output</summary>
 
 ```console
 $ kubectl get pod web-ro
 NAME     READY   STATUS    RESTARTS   AGE
-web-ro   1/1     Running   0          15s
+web-ro   1/1     Running   0          10s
 ```
 
-Each `emptyDir` gives the container a small **writable** scratch volume at exactly the path it
-needs, while `/` and everything else stays read-only. If your build of nginx complains about a
-*different* path, read the log line, add one more `emptyDir` mount for it, and re-apply — the
-method is always "the error names the path; mount a writable volume there." This is the answer to
+The demo image was **built for this**: it's distroless, logs to stdout, and keeps its state in
+memory — it never writes to its own filesystem, so mounting `/` read-only costs it nothing.
+That's the goal state for your own images. Most real-world apps aren't there yet, which is the
+next beat.
+</details>
+
+Now the **break**: a container that writes a PID file at startup — the classic pattern that
+`readOnlyRootFilesystem` trips over.
+
+```bash
+cat > pod-writer-ro.yaml <<'EOF'
+apiVersion: v1
+kind: Pod
+metadata:
+  name: writer-ro
+  labels: { app: s17 }
+spec:
+  containers:
+    - name: app
+      image: busybox:1.37
+      command: ["sh", "-c", "echo $$ > /var/run/app.pid && sleep infinity"]
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532          # busybox ships as root — pin a non-root UID to pass the gate
+        runAsGroup: 65532
+        allowPrivilegeEscalation: false
+        capabilities: { drop: ["ALL"] }
+        seccompProfile: { type: RuntimeDefault }
+        readOnlyRootFilesystem: true
+EOF
+
+kubectl apply -f pod-writer-ro.yaml
+kubectl get pod writer-ro -w        # Ctrl-C after you see it fail
+```
+
+**Task:** this Pod is **admitted** (it satisfies `restricted`) but doesn't stay up. What does
+`kubectl logs` say?
+
+```bash
+kubectl get pod writer-ro
+kubectl logs writer-ro --previous 2>/dev/null || kubectl logs writer-ro
+```
+
+<details><summary>Solution / expected output</summary>
+
+```console
+$ kubectl get pod writer-ro
+NAME        READY   STATUS             RESTARTS      AGE
+writer-ro   0/1     CrashLoopBackOff   3 (20s ago)   90s
+
+$ kubectl logs writer-ro
+sh: can't create /var/run/app.pid: Read-only file system
+```
+
+The Pod **passed admission** — this is a **runtime** failure. The app needs to write its PID
+file, but with `readOnlyRootFilesystem: true` the whole root filesystem (including `/var/run`)
+is read-only, so the startup command fails → the container exits → `CrashLoopBackOff`.
+The error **names the path** it couldn't write — that's your list of what to make writable.
+</details>
+
+**Task:** fix it by mounting a **writable `emptyDir`** over the one path the app needs, keeping
+the root filesystem read-only everywhere else.
+
+```bash
+cat > pod-writer-fixed.yaml <<'EOF'
+apiVersion: v1
+kind: Pod
+metadata:
+  name: writer-ro
+  labels: { app: s17 }
+spec:
+  containers:
+    - name: app
+      image: busybox:1.37
+      command: ["sh", "-c", "echo $$ > /var/run/app.pid && sleep infinity"]
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        allowPrivilegeEscalation: false
+        capabilities: { drop: ["ALL"] }
+        seccompProfile: { type: RuntimeDefault }
+        readOnlyRootFilesystem: true
+      volumeMounts:
+        - { name: run, mountPath: /var/run }
+  volumes:
+    - { name: run, emptyDir: {} }
+EOF
+
+kubectl delete pod writer-ro --ignore-not-found  # securityContext/volumes are immutable — recreate
+kubectl apply -f pod-writer-fixed.yaml
+kubectl get pod writer-ro -w        # Ctrl-C once Running
+```
+
+<details><summary>Solution / expected output</summary>
+
+```console
+$ kubectl get pod writer-ro
+NAME        READY   STATUS    RESTARTS   AGE
+writer-ro   1/1     Running   0          15s
+```
+
+The `emptyDir` gives the container a small **writable** scratch volume at exactly the path it
+needs, while `/` and everything else stays read-only. If an app complains about a *different*
+path, read the log line, add one more `emptyDir` mount for it, and re-apply — the method is
+always "the error names the path; mount a writable volume there." This is the answer to
 "how do I give a read-only-rootfs container a writable spot": **not** by dropping
 `readOnlyRootFilesystem`, but by carving out just the paths that must be writable.
 </details>
@@ -437,29 +483,46 @@ method is always "the error names the path; mount a writable volume there." This
 
 ## Step 4 — observe: prove it's actually locked down
 
+Two proofs. First, the demo app really is non-root — its image has no shell, so attach a debug
+container that shares its PID namespace and read the process list:
+
 ```bash
-kubectl exec web-ro -- id
-kubectl exec web-ro -- touch /nope
+kubectl debug -it web-ro --image=busybox:1.37 --target=web -- ps
 ```
 
-**Question:** what UID is the process, and why does the write to `/` fail?
+Second, the writer Pod (busybox — it *has* a shell) shows the read-only root and the carve-out:
+
+```bash
+kubectl exec writer-ro -- id
+kubectl exec writer-ro -- touch /nope
+kubectl exec writer-ro -- touch /var/run/ok
+```
+
+**Question:** what UID are the processes, and why does the write to `/` fail while
+`/var/run` works?
 
 <details><summary>Answer / expected output</summary>
 
 ```console
-$ kubectl exec web-ro -- id
-uid=101(nginx) gid=101(nginx) groups=101(nginx)
+$ kubectl debug -it web-ro --image=busybox:1.37 --target=web -- ps
+PID   USER     TIME  COMMAND
+    1 65532     0:00 /workshop-web
+...
 
-$ kubectl exec web-ro -- touch /nope
-touch: cannot touch '/nope': Read-only file system
+$ kubectl exec writer-ro -- id
+uid=65532 gid=65532 groups=65532
+
+$ kubectl exec writer-ro -- touch /nope
+touch: /nope: Read-only file system
 command terminated with exit code 1
+
+$ kubectl exec writer-ro -- touch /var/run/ok      # succeeds — the emptyDir carve-out
 ```
 
-`uid=101`, not `0` — the container is **non-root** (the `runAsNonRoot`/`runAsUser` promise, kept
-by the image). The write to `/` fails with **`Read-only file system`** because
-`readOnlyRootFilesystem: true` mounts the root read-only. Only the two `emptyDir` paths
-(`/tmp`, `/var/cache/nginx`) are writable — try `kubectl exec web-ro -- touch /tmp/ok` and it
-succeeds.
+`uid=65532`, not `0` — both containers are **non-root** (the `runAsNonRoot`/`runAsUser`
+promise, kept by the image in one case and by `runAsUser` in the other). The write to `/`
+fails with **`Read-only file system`** because `readOnlyRootFilesystem: true` mounts the root
+read-only; only the `emptyDir` path (`/var/run`) is writable.
 </details>
 
 ## Expected observations
@@ -480,7 +543,7 @@ succeeds.
 # scoped cleanup — everything this lab made is labelled app=s17
 kubectl delete pod -l app=s17 -n "$NS" --ignore-not-found
 rm -f pod-insecure.yaml pod-step.yaml pod-hardened.yaml \
-      pod-readonly.yaml pod-readonly-fixed.yaml
+      pod-readonly.yaml pod-writer-ro.yaml pod-writer-fixed.yaml
 
 # kind users: remove the enforce label so later labs' plain Pods aren't rejected
 # (leave warn/audit if you like — they never block)
@@ -506,14 +569,14 @@ namespace (kind, or anywhere you can create namespaces).
 kubectl create namespace psa-demo
 kubectl label namespace psa-demo pod-security.kubernetes.io/warn=restricted
 # insecure Pod is CREATED, but kubectl prints a warning for each violation:
-kubectl run canary --image=nginxinc/nginx-unprivileged:1.27 -n psa-demo
+kubectl run canary --image=ghcr.io/platformrelay/workshop-web:v1 -n psa-demo
 kubectl get pod canary -n psa-demo
 ```
 
 <details><summary>What you're looking at</summary>
 
 ```console
-$ kubectl run canary --image=nginxinc/nginx-unprivileged:1.27 -n psa-demo
+$ kubectl run canary --image=ghcr.io/platformrelay/workshop-web:v1 -n psa-demo
 Warning: would violate PodSecurity "restricted:latest": allowPrivilegeEscalation != false (...),
 unrestricted capabilities (...), runAsNonRoot != true (...), seccompProfile (...)
 pod/canary created
