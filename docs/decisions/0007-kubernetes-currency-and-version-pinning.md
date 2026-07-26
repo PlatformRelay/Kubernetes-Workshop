@@ -47,6 +47,10 @@ environment deterministic.
   validation + lab smoke pass, and scans slides/labs for any behaviour that changed
   (deprecations, defaults, graduations). The review is a checklist item in the rehearsal
   milestone, not an ad-hoc fix.
+- **Automated pin proposals.** Root [`renovate.json`](../../renovate.json) runs weekly and opens
+  PRs that bump `infra/versions.env` / `mise.toml` pins (including digest-pinned images) via
+  regex managers. Those PRs must pass CI; they never automerge to `main`. Human review still
+  owns major bumps and rehearsal sign-off.
 
 ## Consequences
 
@@ -56,3 +60,5 @@ environment deterministic.
   run, keeping "stay current" cheap enough to actually do every cycle.
 - `--dry-run=server` against the pinned cluster is the early-warning system for API deprecations,
   so drift is caught by tooling rather than in the room.
+- Renovate turns the scheduled review into a bot-opened, CI-gated PR; maintainers still decide
+  when a bump is safe to merge.

@@ -1,0 +1,199 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":disableDependencyDashboard"
+  ],
+  "labels": ["dependencies"],
+  "timezone": "Europe/Berlin",
+  "schedule": ["before 6am on Monday"],
+  "automerge": false,
+  "semanticCommits": "enabled",
+  "commitMessagePrefix": ":arrow_up:",
+  "commitMessageAction": "chore(deps): update",
+  "prConcurrentLimit": 5,
+  "prHourlyLimit": 2,
+  "ignorePaths": [
+    "references/**",
+    "bin/**"
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "infra/versions.env — kind CLI release",
+      "fileMatch": ["/^(?:infra/)?versions\\.env$/"],
+      "matchStrings": [
+        "KIND_VERSION=(?<currentValue>v?[0-9]+\\.[0-9]+\\.[0-9]+)"
+      ],
+      "datasourceTemplate": "github-releases",
+      "depNameTemplate": "kubernetes-sigs/kind"
+    },
+    {
+      "customType": "regex",
+      "description": "infra/versions.env — kubectl client release",
+      "fileMatch": ["/^(?:infra/)?versions\\.env$/"],
+      "matchStrings": [
+        "KUBECTL_VERSION=(?<currentValue>v?[0-9]+\\.[0-9]+\\.[0-9]+)"
+      ],
+      "datasourceTemplate": "github-releases",
+      "depNameTemplate": "kubernetes/kubernetes"
+    },
+    {
+      "customType": "regex",
+      "description": "infra/versions.env — Contour Ingress controller",
+      "fileMatch": ["/^(?:infra/)?versions\\.env$/"],
+      "matchStrings": [
+        "CONTOUR_VERSION=(?<currentValue>v?[0-9]+\\.[0-9]+\\.[0-9]+)"
+      ],
+      "datasourceTemplate": "github-releases",
+      "depNameTemplate": "projectcontour/contour"
+    },
+    {
+      "customType": "regex",
+      "description": "infra/versions.env — Gateway API CRDs",
+      "fileMatch": ["/^(?:infra/)?versions\\.env$/"],
+      "matchStrings": [
+        "GATEWAY_API_VERSION=(?<currentValue>v?[0-9]+\\.[0-9]+\\.[0-9]+)"
+      ],
+      "datasourceTemplate": "github-releases",
+      "depNameTemplate": "kubernetes-sigs/gateway-api"
+    },
+    {
+      "customType": "regex",
+      "description": "infra/versions.env — Envoy Gateway controller",
+      "fileMatch": ["/^(?:infra/)?versions\\.env$/"],
+      "matchStrings": [
+        "ENVOY_GATEWAY_VERSION=(?<currentValue>v?[0-9]+\\.[0-9]+\\.[0-9]+)"
+      ],
+      "datasourceTemplate": "github-releases",
+      "depNameTemplate": "envoyproxy/gateway"
+    },
+    {
+      "customType": "regex",
+      "description": "infra/versions.env — digest-pinned container images",
+      "fileMatch": ["/^(?:infra/)?versions\\.env$/"],
+      "matchStrings": [
+        "(?<depName>kindest/node):(?<currentValue>[^@\\s]+)@(?<currentDigest>sha256:[a-f0-9]+)",
+        "(?<depName>registry\\.k8s\\.io/e2e-test-images/agnhost):(?<currentValue>[^@\\s]+)@(?<currentDigest>sha256:[a-f0-9]+)",
+        "(?<depName>ghcr\\.io/platformrelay/workshop-web):(?<currentValue>[^@\\s]+)@(?<currentDigest>sha256:[a-f0-9]+)"
+      ],
+      "datasourceTemplate": "docker",
+      "versioningTemplate": "docker",
+      "autoReplaceStringTemplate": "{{{depName}}}:{{{newValue}}}@{{{newDigest}}}"
+    },
+    {
+      "customType": "regex",
+      "description": "mise.toml — kubectl (mirrors versions.env KUBECTL_VERSION)",
+      "fileMatch": ["/^(?:.*/)?mise\\.toml$/"],
+      "matchStrings": [
+        "kubectl = \"(?<currentValue>[0-9]+\\.[0-9]+\\.[0-9]+)\""
+      ],
+      "datasourceTemplate": "github-releases",
+      "depNameTemplate": "kubernetes/kubernetes",
+      "extractVersionTemplate": "^v(?<version>.*)$"
+    },
+    {
+      "customType": "regex",
+      "description": "mise.toml — kind (mirrors versions.env KIND_VERSION)",
+      "fileMatch": ["/^(?:.*/)?mise\\.toml$/"],
+      "matchStrings": [
+        "kind = \"(?<currentValue>[0-9]+\\.[0-9]+\\.[0-9]+)\""
+      ],
+      "datasourceTemplate": "github-releases",
+      "depNameTemplate": "kubernetes-sigs/kind",
+      "extractVersionTemplate": "^v(?<version>.*)$"
+    },
+    {
+      "customType": "regex",
+      "description": "mise.toml — helm (stay on 3.x; majors gated below)",
+      "fileMatch": ["/^(?:.*/)?mise\\.toml$/"],
+      "matchStrings": [
+        "helm = \"(?<currentValue>[0-9]+\\.[0-9]+\\.[0-9]+)\""
+      ],
+      "datasourceTemplate": "github-releases",
+      "depNameTemplate": "helm/helm",
+      "extractVersionTemplate": "^v(?<version>.*)$"
+    },
+    {
+      "customType": "regex",
+      "description": "mise.toml — k9s",
+      "fileMatch": ["/^(?:.*/)?mise\\.toml$/"],
+      "matchStrings": [
+        "k9s = \"(?<currentValue>[0-9]+\\.[0-9]+\\.[0-9]+)\""
+      ],
+      "datasourceTemplate": "github-releases",
+      "depNameTemplate": "derailed/k9s",
+      "extractVersionTemplate": "^v(?<version>.*)$"
+    },
+    {
+      "customType": "regex",
+      "description": "mise.toml — jq",
+      "fileMatch": ["/^(?:.*/)?mise\\.toml$/"],
+      "matchStrings": [
+        "jq = \"(?<currentValue>[0-9]+\\.[0-9]+\\.[0-9]+)\""
+      ],
+      "datasourceTemplate": "github-releases",
+      "depNameTemplate": "jqlang/jq",
+      "extractVersionTemplate": "^jq-(?<version>.*)$"
+    },
+    {
+      "customType": "regex",
+      "description": "mise.toml — yq",
+      "fileMatch": ["/^(?:.*/)?mise\\.toml$/"],
+      "matchStrings": [
+        "yq = \"(?<currentValue>[0-9]+\\.[0-9]+\\.[0-9]+)\""
+      ],
+      "datasourceTemplate": "github-releases",
+      "depNameTemplate": "mikefarah/yq",
+      "extractVersionTemplate": "^v(?<version>.*)$"
+    },
+    {
+      "customType": "regex",
+      "description": "mise.toml — gum",
+      "fileMatch": ["/^(?:.*/)?mise\\.toml$/"],
+      "matchStrings": [
+        "gum = \"(?<currentValue>[0-9]+\\.[0-9]+\\.[0-9]+)\""
+      ],
+      "datasourceTemplate": "github-releases",
+      "depNameTemplate": "charmbracelet/gum",
+      "extractVersionTemplate": "^v(?<version>.*)$"
+    }
+  ],
+  "packageRules": [
+    {
+      "description": "Helm 4.x is a deliberate adoption decision — do not propose majors",
+      "matchPackageNames": ["helm/helm"],
+      "matchUpdateTypes": ["major"],
+      "enabled": false
+    },
+    {
+      "description": "Weekly batch of non-major pin / digest bumps (versions.env + mise)",
+      "matchManagers": ["custom.regex"],
+      "matchUpdateTypes": ["minor", "patch", "digest"],
+      "groupName": "workshop environment pins"
+    },
+    {
+      "description": "Major pin bumps stay ungrouped — one PR per package for review",
+      "matchManagers": ["custom.regex"],
+      "matchUpdateTypes": ["major"],
+      "automerge": false
+    },
+    {
+      "matchManagers": ["github-actions"],
+      "matchUpdateTypes": ["minor", "patch", "digest"],
+      "groupName": "github actions",
+      "pinDigests": true
+    },
+    {
+      "matchManagers": ["npm"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "npm dependencies"
+    },
+    {
+      "description": "npm majors stay separate; never automerge",
+      "matchManagers": ["npm"],
+      "matchUpdateTypes": ["major"],
+      "automerge": false
+    }
+  ]
+}
