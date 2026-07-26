@@ -45,6 +45,11 @@ jobs:
 
       - name: Export decks to PDF
         # slidev appends `.pdf`; GITHUB_REF_NAME is the tag (e.g. v1.2.0).
+        # VITE_WORKSHOP_* stamp tag + short SHA into global-bottom chrome
+        # (US-BETA-8); vite.config.mjs also falls back to GITHUB_* / git.
+        env:
+          VITE_WORKSHOP_VERSION: ${{ github.ref_name }}
+          VITE_WORKSHOP_SHA: ${{ github.sha }}
         run: |
           pnpm exec slidev export slides.md \
             --output "kubernetes-workshop-full-${GITHUB_REF_NAME}"
@@ -56,6 +61,9 @@ jobs:
         # open straight from the filesystem after unzip — no web server, no
         # base-path guesswork. Full deck at the bundle root; the 3-day cut and
         # templates gallery nest under it, mirroring the Pages layout.
+        env:
+          VITE_WORKSHOP_VERSION: ${{ github.ref_name }}
+          VITE_WORKSHOP_SHA: ${{ github.sha }}
         run: |
           pnpm exec slidev build slides.md \
             --base ./ --out site

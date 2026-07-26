@@ -424,6 +424,7 @@
 /* -------------------------------------------------------- global chrome --- */
 
 .kw-global-footer,
+.kw-global-provenance,
 .kw-global-page {
   position: fixed;
   bottom: 0.7rem;
@@ -437,6 +438,11 @@
 
 .kw-global-footer {
   left: 1.5rem;
+}
+
+/* Version · short-SHA — left of the page counter; low density, export-visible. */
+.kw-global-provenance {
+  right: 5.25rem;
 }
 
 .kw-global-page {

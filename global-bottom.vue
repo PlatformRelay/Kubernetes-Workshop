@@ -14,7 +14,9 @@ const frontmatter = computed(
     ($slidev.nav.currentSlideRoute?.meta?.slide?.frontmatter ?? {}) as Record<string, unknown>,
 )
 
-/* Full-bleed layouts carry no footer; any slide can opt out via hideFooter. */
+/* Full-bleed layouts carry no footer; any slide can opt out via hideFooter.
+ * cover / section-cover stay clear so the mandatory "AI generated" label is
+ * undisturbed (AGENT.md). Provenance chrome lives here, not on covers. */
 const hideFooter = computed(() => {
   if (frontmatter.value.hideFooter === true)
     return true
@@ -26,11 +28,19 @@ const deckTitle = computed(() => $slidev.configs.title ?? '')
 const page = computed(() => $slidev.nav.currentPage)
 const total = computed(() => $slidev.nav.total)
 const progress = computed(() => (total.value ? (page.value / total.value) * 100 : 0))
+
+/* Build-time stamp from vite.config.mjs / release.yml (US-BETA-8). */
+const provenance = computed(() => {
+  const version = String(import.meta.env.VITE_WORKSHOP_VERSION || 'dev')
+  const sha = String(import.meta.env.VITE_WORKSHOP_SHA || 'unversioned')
+  return `${version} · ${sha}`
+})
 </script>
 
 <template>
   <template v-if="!hideFooter">
     <div class="kw-global-footer" aria-hidden="true">{{ deckTitle }}</div>
+    <div class="kw-global-provenance" aria-hidden="true">{{ provenance }}</div>
     <div class="kw-global-page" aria-hidden="true">{{ page }} / {{ total }}</div>
   </template>
   <div class="kw-global-progress" :style="{ width: `${progress}%` }" aria-hidden="true" />
