@@ -17,6 +17,19 @@ export const DAY_1_LABS = [
   'labs/day-1/08-ingress.md',
 ];
 
+export const DAY_2_LABS = [
+  'labs/day-2/09-gateway-api.md',
+  'labs/day-2/10-config.md',
+  'labs/day-2/11-storage.md',
+  'labs/day-2/12-statefulset.md',
+  'labs/day-2/13-resources.md',
+  'labs/day-2/14-probes.md',
+  'labs/day-2/15-jobs.md',
+  'labs/day-2/16-hpa.md',
+];
+
+export const CONTRACTED_LABS = [...DAY_1_LABS, ...DAY_2_LABS];
+
 const REQUIRED_LAB_HEADINGS = [
   'Objective',
   'Prerequisites',
@@ -362,7 +375,7 @@ export function auditLab(labPath) {
   return errors;
 }
 
-export function auditLabs(paths = DAY_1_LABS.map((path) => resolve(REPO_ROOT, path))) {
+export function auditLabs(paths = CONTRACTED_LABS.map((path) => resolve(REPO_ROOT, path))) {
   return paths.flatMap(auditLab);
 }
 
@@ -385,8 +398,14 @@ export function auditContractDocumentation(repoRoot = REPO_ROOT) {
       errors.push(`labs/README.md: participant guidance must name ${token}`);
     }
   }
-  if (!/Day 1 Labs 01[–-]08/.test(labsReadme)) {
-    errors.push('labs/README.md: must scope the enforced contract to Day 1 Labs 01–08');
+  if (!/Day 1 Labs 01[–-]08/.test(labsReadme) || !/Day 2 Labs 09[–-]16/.test(labsReadme)) {
+    errors.push('labs/README.md: must scope the enforced contract to Day 1 Labs 01–08 and Day 2 Labs 09–16');
+  }
+  if (!/## Completion matrix/i.test(labsReadme)) {
+    errors.push('labs/README.md: must track contracted labs in a completion matrix');
+  }
+  if (!/Day 2 Labs 09[–-]16/.test(agent) && !/Labs 01[–-]16/.test(agent)) {
+    errors.push('AGENT.md: must name Day 2 Labs 09–16 in the enforced contract slice');
   }
   if (/Every task and every question[\s\S]{0,100}collapsible spoiler/i.test(labsReadme)) {
     errors.push('labs/README.md: still promises inline spoilers for every task');
@@ -394,6 +413,9 @@ export function auditContractDocumentation(repoRoot = REPO_ROOT) {
 
   if (!facilitator.includes('NN-topic.solution.md')) {
     errors.push('docs/facilitator-guide.md: must direct facilitators to sibling solutions');
+  }
+  if (!/Day 2 Labs 09[–-]16/.test(facilitator) && !/Labs 01[–-]16/.test(facilitator)) {
+    errors.push('docs/facilitator-guide.md: must mention Day 2 Labs 09–16 sibling companions');
   }
   if (/with a spoiler for\s+every task/i.test(facilitator)) {
     errors.push('docs/facilitator-guide.md: still promises an inline spoiler for every task');
@@ -513,7 +535,7 @@ const invokedAsScript = process.argv[1] &&
 if (invokedAsScript) {
   const paths = process.argv.length > 2
     ? process.argv.slice(2).map((path) => resolve(path))
-    : DAY_1_LABS.map((path) => resolve(REPO_ROOT, path));
+    : CONTRACTED_LABS.map((path) => resolve(REPO_ROOT, path));
   const errors = auditLabs(paths);
   if (errors.length > 0) {
     console.error(`lab-contract: FAILED with ${errors.length} problem(s):`);

@@ -6,9 +6,13 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import {
+  CONTRACTED_LABS,
+  DAY_1_LABS,
+  DAY_2_LABS,
   auditContractDocumentation,
   auditDayOneCommandTruth,
   auditLab,
+  auditLabs,
 } from './lab-contract.mjs';
 
 function fixture({ lab = '', solution = '', name = '01-example' } = {}) {
@@ -357,4 +361,35 @@ test('rejects a colliding Lab 08 class and mandatory unpinned translation', () =
 
 test('keeps contributor and facilitator guidance aligned with the enforced slice', () => {
   assert.deepEqual(auditContractDocumentation(), []);
+});
+
+test('inventories Day 1 and Day 2 participant labs in the enforced contract', () => {
+  assert.deepEqual(DAY_1_LABS, [
+    'labs/day-1/01-containers.md',
+    'labs/day-1/02-container-security.md',
+    'labs/day-1/03-cluster-tour.md',
+    'labs/day-1/04-kubectl.md',
+    'labs/day-1/05-pod.md',
+    'labs/day-1/06-deployment.md',
+    'labs/day-1/07-service.md',
+    'labs/day-1/08-ingress.md',
+  ]);
+  assert.deepEqual(DAY_2_LABS, [
+    'labs/day-2/09-gateway-api.md',
+    'labs/day-2/10-config.md',
+    'labs/day-2/11-storage.md',
+    'labs/day-2/12-statefulset.md',
+    'labs/day-2/13-resources.md',
+    'labs/day-2/14-probes.md',
+    'labs/day-2/15-jobs.md',
+    'labs/day-2/16-hpa.md',
+  ]);
+  assert.deepEqual(CONTRACTED_LABS, [...DAY_1_LABS, ...DAY_2_LABS]);
+  assert.equal(CONTRACTED_LABS.length, 16);
+});
+
+test('audits every Day 2 participant lab against the sibling-solution contract', () => {
+  const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+  const errors = auditLabs(DAY_2_LABS.map((path) => resolve(repo, path)));
+  assert.deepEqual(errors, [], errors.join('\n'));
 });

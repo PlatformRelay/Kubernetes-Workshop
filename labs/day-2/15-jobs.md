@@ -1,5 +1,7 @@
 # Lab 15 — Jobs & CronJobs (S15)
 
+<!-- lab-contract:v1 -->
+
 | | |
 | --- | --- |
 | **Section** | S15 — Jobs & CronJobs |
@@ -42,7 +44,14 @@ Everything is labelled `app: s15` so cleanup is a single label selector.
 
 ---
 
-## Step 0 — a Job that runs to completion
+## Guided task
+
+Work through the steps without opening the companion unless you are blocked. The spoiler
+contains exact commands, expected state, explanations, and recovery guidance.
+
+[Spoiler: guided solutions and expected output](./15-jobs.solution.md#guided-solutions)
+
+### Step 0 — a Job that runs to completion
 
 A **Job** wraps a Pod spec and adds a completion contract: it runs the Pod until it **succeeds**
 (exit `0`), then stops. Note the Pod's `restartPolicy: Never` — a Job may only use `Never` or
@@ -79,39 +88,12 @@ kubectl get job report
 kubectl logs job/report          # logs of the Job's Pod, by Job name
 ```
 
-<details><summary>Solution / expected output</summary>
-
-```console
-$ kubectl get job report
-NAME     STATUS     COMPLETIONS   DURATION   AGE
-report   Complete   1/1           4s         30s
-
-$ kubectl logs job/report
-nightly report generated
-```
-
-`COMPLETIONS 1/1` means one successful Pod satisfied `completions: 1` (the default), so the Job
-is `Complete` and **nothing restarts** — the container exited `0` and Kubernetes treats that as
-the goal, not a fault. `kubectl logs job/report` resolves the Job to its Pod for you. Contrast
-this with a Deployment: exit `0` there would be a "crash" and the Pod would be recreated.
-</details>
-
 **Question:** the Job is `Complete`, but `kubectl get pods -l app=s15` still shows the Pod as
 `Completed`. Why does the finished Pod stick around instead of being deleted?
 
-<details><summary>Answer</summary>
-
-A Job **keeps its finished Pods on purpose** so you can still read their logs and inspect
-`describe` output after the fact — the Pod's `STATUS` is `Completed` (phase `Succeeded`), not
-running. They're cleaned up when you delete the Job, when a CronJob's history limit trims them
-(Step 1), or automatically if you set **`ttlSecondsAfterFinished`** on the Job (e.g. `100` →
-the Job and its Pods self-delete 100s after finishing). Without one of those, completed Jobs
-accumulate — which is exactly why CronJobs have history limits.
-</details>
-
 ---
 
-## Step 1 — put the same work on a schedule (CronJob)
+### Step 1 — put the same work on a schedule (CronJob)
 
 A **CronJob** is a Job factory: on each cron tick it stamps out a new Job from its
 `jobTemplate`. Use a **per-minute** schedule so you don't wait long. (One minute is the finest
@@ -156,26 +138,6 @@ kubectl get cronjob report                       # watch LAST SCHEDULE go from <
 kubectl get jobs -l app=s15 --sort-by=.metadata.creationTimestamp
 ```
 
-<details><summary>Solution / expected output</summary>
-
-```console
-$ kubectl get cronjob report
-NAME     SCHEDULE      TIMEZONE   SUSPEND   ACTIVE   LAST SCHEDULE   AGE
-report   */1 * * * *   <none>     False     0        30s             2m
-
-$ kubectl get jobs -l app=s15 --sort-by=.metadata.creationTimestamp
-NAME              STATUS     COMPLETIONS   DURATION   AGE
-report-29...01    Complete   1/1           5s         2m
-report-29...02    Complete   1/1           4s         62s
-report-29...03    Complete   1/1           5s         2s
-```
-
-Each minute the CronJob creates a new Job named `report-<timestamp>`. `LAST SCHEDULE` shows how
-long ago the most recent tick fired; `ACTIVE 0` means nothing is running right now (each Job
-finishes in seconds). `TIMEZONE <none>` means the schedule is evaluated in the controller's
-default zone (UTC) — set `spec.timeZone: "Europe/Berlin"` to pin it.
-</details>
-
 **Task:** let it run a few minutes, then confirm the **history limit** is trimming old Jobs —
 you should never see more than `successfulJobsHistoryLimit` (3) successful Jobs kept.
 
@@ -184,31 +146,9 @@ you should never see more than `successfulJobsHistoryLimit` (3) successful Jobs 
 kubectl get jobs -l app=s15
 ```
 
-<details><summary>Solution / expected output</summary>
-
-```console
-$ kubectl get jobs -l app=s15
-NAME              STATUS     COMPLETIONS   DURATION   AGE
-report-29...05    Complete   1/1           4s         2m
-report-29...06    Complete   1/1           5s         62s
-report-29...07    Complete   1/1           4s         3s
-```
-
-Even after five or six ticks, only **3** successful Jobs remain — the CronJob controller
-garbage-collects older finished Jobs (and their Pods) past `successfulJobsHistoryLimit`. Bump
-the limit to keep more history for debugging; keep it low so a per-minute CronJob doesn't bury
-your namespace in `Completed` Pods. **Suspend it now so it stops firing while you do Step 2:**
-
-```console
-$ kubectl patch cronjob report -p '{"spec":{"suspend":true}}'
-cronjob.batch/report patched
-```
-
-</details>
-
 ---
 
-## Step 2 — break→fix: a Job that fails until it hits `backoffLimit`
+### Step 2 — break→fix: a Job that fails until it hits `backoffLimit`
 
 A Job doesn't retry forever. On failure it makes a new attempt, up to `backoffLimit` times;
 then it gives up and is marked **Failed** with reason **`BackoffLimitExceeded`**. Reproduce it
@@ -247,40 +187,6 @@ kubectl get pods -l app=s15 --field-selector=status.phase=Failed
 kubectl describe job flaky | sed -n '/Events/,$p'
 ```
 
-<details><summary>Solution / expected output</summary>
-
-```console
-$ kubectl get pods -l app=s15 --field-selector=status.phase=Failed
-NAME          READY   STATUS   RESTARTS   AGE
-flaky-abc12   0/1     Error    0          70s
-flaky-def34   0/1     Error    0          55s
-flaky-ghi56   0/1     Error    0          35s
-flaky-jkl78   0/1     Error    0          10s
-
-$ kubectl describe job flaky
-...
-Events:
-  Type     Reason                Age   From            Message
-  ----     ------                ----  ----            -------
-  Normal   SuccessfulCreate      70s   job-controller  Created pod: flaky-abc12
-  Normal   SuccessfulCreate      55s   job-controller  Created pod: flaky-def34
-  Normal   SuccessfulCreate      35s   job-controller  Created pod: flaky-ghi56
-  Normal   SuccessfulCreate      10s   job-controller  Created pod: flaky-jkl78
-  Warning  BackoffLimitExceeded  2s    job-controller  Job has reached the specified backoff limit
-```
-
-The Job stops after a **bounded, small** number of failed Pods (governed by `backoffLimit: 3`)
-and reports **`BackoffLimitExceeded`** — the AC-named signal. Because `restartPolicy: Never`,
-each failed attempt is a **separate Pod** (all in `Error`), so you can count them. `kubectl get
-job flaky` now shows `STATUS Failed`. Retries are also **rate-limited** with an exponential
-backoff (10s, 20s, 40s…), which is why the attempts are spaced out rather than instant.
-
-> The exact number of Pods is a small, bounded count tied to `backoffLimit` — anchor on the
-> **`BackoffLimitExceeded`** reason, not a memorised number. (This lab was authored against
-> `batch/v1` on a live server but the failing-Job run was not executed end-to-end here — see
-> the note at the bottom; confirm the precise count on your cluster.)
-</details>
-
 **Task:** fix the command so the container exits `0`, and confirm the Job completes. (A Job's
 Pod template is immutable, so delete and recreate.)
 
@@ -309,50 +215,14 @@ kubectl apply -f job-fixed.yaml
 kubectl get job flaky            # COMPLETIONS 1/1, STATUS Complete
 ```
 
-<details><summary>Solution / expected output</summary>
-
-```console
-$ kubectl get job flaky
-NAME    STATUS     COMPLETIONS   DURATION   AGE
-flaky   Complete   1/1           3s         8s
-```
-
-One successful Pod, `COMPLETIONS 1/1`, `Complete`, no `BackoffLimitExceeded`. In the real world
-the "fix" is usually the container command / image / config that was wrong — `backoffLimit` just
-stops a doomed Job from retrying into eternity while you find it.
-</details>
-
 **Question:** why did the failing Job stop after only a handful of Pods, and what would have
 been different with `restartPolicy: OnFailure`?
-
-<details><summary>Answer</summary>
-
-`backoffLimit` (here `3`) caps the number of retries; once exhausted the Job is marked **Failed**
-(`BackoffLimitExceeded`) and stops creating Pods — that's the guardrail that keeps a broken batch
-job from looping forever the way a Deployment would. With **`restartPolicy: Never`** each retry
-is a **new Pod**, so you saw several `Error` Pods pile up. With **`restartPolicy: OnFailure`**
-the Job restarts the container **in place** in the **same** Pod, so you'd instead see one Pod
-with a climbing `RESTARTS` count and no pile of Pods — same `backoffLimit` ceiling, different
-shape. That's why this lab uses `Never`: it makes the retry count visible as distinct Pods.
-</details>
 
 **Question:** your nightly CronJob sometimes takes longer than a minute. With
 `concurrencyPolicy: Forbid`, what happens at the next tick — and how would `Allow` or `Replace`
 differ?
 
-<details><summary>Answer</summary>
-
-- **`Forbid`** (what we set): if the previous run is still active when the next tick arrives,
-  the CronJob **skips** that tick entirely — no second run starts. Safe for a job that must not
-  overlap itself (a backup writing to one destination, a migration).
-- **`Allow`** (the default): the next run starts **anyway**, so two (or more) runs execute
-  concurrently — fine for a fast, idempotent job, dangerous for a slow stateful one.
-- **`Replace`**: the CronJob **kills the still-running** Job and starts a fresh one, so only the
-  newest run survives — useful when only the latest result matters.
-
-</details>
-
-## Expected observations
+## Observe
 
 - A **Job** runs to completion: exit `0` → `COMPLETIONS 1/1`, `Complete`, nothing restarts.
   Finished Pods linger (as `Completed`) for their logs until GC'd or `ttlSecondsAfterFinished`.
@@ -364,7 +234,36 @@ differ?
 - The core contrast with S06: a **Deployment** treats exit `0` as a fault and restarts forever;
   a **Job** treats it as success and stops.
 
-## Cleanup / panic reset
+## Challenge
+
+Predict and then prove how concurrencyPolicy Forbid behaves when a CronJob tick
+arrives while the previous Job is still Running — then contrast Allow and Replace
+without retyping the whole guided history demo.
+
+**Difficulty:** Intermediate
+
+**Success criteria:** Identify from CronJob Events or Job timestamps that Forbid skips an overlapping tick,
+compare one observable signal each for Allow (concurrent Jobs present) versus Replace,
+and leave the CronJob suspended or deleted.
+
+**Hints:** Suspend the CronJob when finished; inspect LAST SCHEDULE versus active Jobs; read
+concurrencyPolicy on the CronJob spec.
+
+[Spoiler: challenge solution](./15-jobs.solution.md#challenge-solution)
+
+## Verify
+
+Confirm Job/CronJob evidence before cleanup.
+
+```bash
+kubectl get cronjob,job,pods -n "$NS" -l app=s15
+kubectl get job -n "$NS" -l app=s15 -o custom-columns=NAME:.metadata.name,STATUS:.status.conditions[*].type
+```
+
+Expected: labelled Jobs/CronJobs still show Complete or Failed status from the guided
+steps (suspend the CronJob if it is still firing).
+
+## Cleanup / reset
 
 ```bash
 # scoped cleanup — everything this lab made is labelled app=s15
@@ -411,21 +310,6 @@ EOF
 kubectl apply -f job-queue.yaml
 kubectl get job batch -w           # COMPLETIONS climbs 0/6 → 2/6 → 4/6 → 6/6, then Ctrl-C
 ```
-
-<details><summary>Solution / what you're looking at</summary>
-
-```console
-$ kubectl get job batch
-NAME    STATUS     COMPLETIONS   DURATION   AGE
-batch   Complete   6/6           14s        20s
-```
-
-The Job schedules Pods in waves of `parallelism` (2 at a time) until it reaches `completions`
-(6 successes), then stops. `kubectl get pods -l app=s15` shows six `Completed` worker Pods. This
-is the built-in fan-out for embarrassingly-parallel batch work — no external queue needed for
-the simple fixed-count case. (For a dynamic work queue, drop `completions` and have workers pull
-until the queue is empty.) Clean up: `kubectl delete job batch`.
-</details>
 
 ---
 
