@@ -92,9 +92,9 @@ planning target.
 **Pacing tactics that hold the 50/50 balance:**
 
 - **Timebox the labs, not the discussion.** Announce the lab's estimated time up front and
-  keep a visible timer. Day 1 Labs 01–08 are fully copy-pasteable and link to their
-  `NN-topic.solution.md` companion, so a stuck learner is one click from exact commands,
-  expected state, and recovery guidance — you rarely need to stop the room.
+  keep a visible timer. Day 1 Labs 01–08 and Day 2 Labs 09–16 are fully copy-pasteable
+  and link to their `NN-topic.solution.md` companion, so a stuck learner is one click from
+  exact commands, expected state, and recovery guidance — you rarely need to stop the room.
 - **Use the break→fix step as the natural catch-up point.** Fast finishers dig into the
   stretch goal; you circulate while slower learners reach the deliberate break.
 - **Protect the red line.** Sections S05–S09 (`Pod → Deployment → Service → Ingress →

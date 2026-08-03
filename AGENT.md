@@ -244,9 +244,9 @@ manifests, expected state/output, explanations, likely-failure recovery, and the
 answer. Cleanup is scoped to named/labelled resources or the assigned namespace and comes
 after verification and the challenge.
 
-Run `pnpm test:labs` to enforce the contract. Day 1 Labs 01–08 are the first enforced
-slice; expand the checker inventory as later days migrate. Full curriculum intent remains
-in `agent-context/presentation-outline.md#lab-authoring-contract`.
+Run `pnpm test:labs` to enforce the contract. Day 1 Labs 01–08 and Day 2 Labs 09–16 are
+the enforced slices; expand the checker inventory when Day 3 migrates. Full curriculum
+intent remains in `agent-context/presentation-outline.md#lab-authoring-contract`.
 
 ## Commit conventions
 
