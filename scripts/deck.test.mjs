@@ -181,6 +181,8 @@ describe('deck manifest validation', () => {
       'S24 can after installing Go be scheduled as a hands-on lab.',
       'S24 may be scheduled as a hands-on lab.',
       'S24 can eventually be scheduled as a hands-on lab.',
+      'S24 cannot be scheduled today, but may be scheduled as a hands-on lab.',
+      'S24 may not be scheduled now, but will be scheduled as a hands-on lab.',
       'S24 is, after the toolchain is installed, runnable.',
     ]) {
       const mutated = new Map(base)
