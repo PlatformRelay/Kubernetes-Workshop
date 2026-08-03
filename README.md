@@ -177,13 +177,15 @@ Three GitHub Actions workflows (`.github/workflows/`):
 | --- | --- | --- |
 | `ci.yml` | PR + push to `main` | Lint the labs, build the four live entries plus compatibility/gallery entries, and link-check the front-door docs — a broken deck, malformed lab, or dead internal link fails the check. A separate job re-renders the README showcase GIF from the deck sources (`pnpm showcase:gif`) and uploads it as an artifact, keeping the animated preview reproducible. |
 | `pages.yml` | push to `main` (+ manual) | Build the decks as a static site and deploy to GitHub Pages under the `/Kubernetes-Workshop/` base path. |
-| `release.yml` | tag `v*` | Export the superset and 3-day decks to PDF and attach them (plus the built site) to a GitHub Release. |
+| `release.yml` | tag `v*` | Export Day 1/2/3 + compatibility full/3-day PDFs and the offline site zip to an immutable GitHub Release (build-then-publish). |
 
-**Cut a release** (PDFs only ever come from a version tag):
+**Cut a release** (PDFs only ever come from a version tag). Tags are **immutable** —
+never move a published `v*` tag; same-commit retries are idempotent, a different
+commit is refused. Full maintainer policy: [`docs/release.md`](./docs/release.md).
 
 ```bash
 git tag v1.0.0
-git push origin v1.0.0   # → Release "v1.0.0" with both PDFs attached
+git push origin v1.0.0   # → build validates artifacts, then publish creates the Release
 ```
 
 **Live site** — every push to `main` publishes:

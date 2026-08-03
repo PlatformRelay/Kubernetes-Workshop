@@ -273,6 +273,13 @@ Examples:
 One logical change per commit. Stage explicit paths (`git add <paths>`); never blanket
 `git add -A` when working material is present.
 
+## Releases
+
+Version tags (`v*`) trigger immutable GitHub Release publication: build validates
+Day 1/2/3 + compatibility artifacts, then publish uploads them. Tags are never
+moved; see [`docs/release.md`](./docs/release.md) for the cut procedure and
+`scripts/release-tag-guard.sh` for the local/CI guard.
+
 ## Validation
 
 - Run `slidev` dev/build/export once the deck exists; confirm exports (PDF/static)
