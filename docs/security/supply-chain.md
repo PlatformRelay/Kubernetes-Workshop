@@ -20,6 +20,13 @@ node scripts/dependency-audit.mjs
 `pnpm-lock.yaml`. High and critical advisories fail. Lower severities remain
 visible in the count and are reviewed during routine dependency updates.
 
+Before the live registry scan, the same command checks every locked version
+against the GitHub advisory ranges captured in
+`supply-chain/dependency-advisories.json`. This checked-in evidence keeps known
+patched floors enforceable without network access; updating it requires a
+reviewed refresh from the GitHub Global Security Advisory API. Malformed or
+empty evidence fails closed.
+
 An accepted risk must be added to `supply-chain/dependency-audit.json` with all
 of these fields:
 

@@ -5,6 +5,7 @@ import { spawnSync } from 'node:child_process'
 import path from 'node:path'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
+import { parse as parseYaml } from 'yaml'
 
 const BLOCKED_SEVERITIES = new Set(['high', 'critical'])
 
@@ -79,17 +80,129 @@ export function evaluateAudit(report, policy, today = new Date().toISOString().s
   }
 }
 
+function compareVersions(left, right) {
+  const parse = (value) => {
+    const match = String(value).match(/^(\d+)\.(\d+)\.(\d+)$/)
+    return match ? match.slice(1).map(Number) : null
+  }
+  const leftParts = parse(left)
+  const rightParts = parse(right)
+  if (!leftParts || !rightParts) return null
+  for (let index = 0; index < leftParts.length; index += 1) {
+    if (leftParts[index] !== rightParts[index]) return Math.sign(leftParts[index] - rightParts[index])
+  }
+  return 0
+}
+
+function isVersionInRange(version, range) {
+  const comparators = String(range).split(',').map((part) => part.trim()).filter(Boolean)
+  if (comparators.length === 0) return null
+  for (const comparator of comparators) {
+    const match = comparator.match(/^(<=|>=|<|>|=)\s*(\d+\.\d+\.\d+)$/)
+    if (!match) return null
+    const comparison = compareVersions(version, match[2])
+    if (comparison === null) return null
+    const matches = {
+      '<': comparison < 0,
+      '<=': comparison <= 0,
+      '=': comparison === 0,
+      '>=': comparison >= 0,
+      '>': comparison > 0,
+    }[match[1]]
+    if (!matches) return false
+  }
+  return true
+}
+
+function escapeRegex(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+export function evaluateLockedAdvisories(lockfileContents, evidence) {
+  let lockfile
+  try {
+    lockfile = parseYaml(lockfileContents)
+  } catch (error) {
+    return { ok: false, message: `Cannot parse pnpm-lock.yaml: ${error.message}` }
+  }
+  if (!lockfile?.packages || typeof lockfile.packages !== 'object') {
+    return { ok: false, message: 'pnpm-lock.yaml does not contain a packages map.' }
+  }
+  if (
+    !isIsoDate(evidence?.captured)
+    || evidence?.source !== 'GitHub Global Security Advisory API'
+    || !Array.isArray(evidence?.advisories)
+    || evidence.advisories.length === 0
+  ) {
+    return { ok: false, message: 'Checked-in advisory evidence requires a capture date, GitHub API source, and at least one advisory.' }
+  }
+
+  const errors = []
+  for (const advisory of evidence?.advisories ?? []) {
+    if (
+      !/^GHSA-[0-9a-z-]+$/.test(advisory.id ?? '')
+      || !advisory.package
+      || advisory.ecosystem !== 'npm'
+      || !BLOCKED_SEVERITIES.has(advisory.severity)
+      || !advisory.vulnerableVersionRange
+      || !advisory.firstPatchedVersion
+      || advisory.source !== `https://github.com/advisories/${advisory.id}`
+    ) {
+      errors.push(`${advisory.id ?? '<missing id>'}: malformed checked-in advisory evidence`)
+      continue
+    }
+    if (isVersionInRange(advisory.firstPatchedVersion, advisory.vulnerableVersionRange) !== false) {
+      errors.push(`${advisory.id}: first patched version ${advisory.firstPatchedVersion} contradicts its vulnerable range`)
+      continue
+    }
+    const packageKey = new RegExp(`^${escapeRegex(advisory.package)}@([^()]+)`)
+    for (const key of Object.keys(lockfile.packages)) {
+      const version = key.match(packageKey)?.[1]
+      if (!version) continue
+      const vulnerable = isVersionInRange(version, advisory.vulnerableVersionRange)
+      if (vulnerable === null) {
+        errors.push(`${advisory.id}: cannot compare ${advisory.package}@${version} with ${advisory.vulnerableVersionRange}`)
+      } else if (vulnerable) {
+        errors.push(`${advisory.id}: ${advisory.package}@${version} is inside vulnerable range ${advisory.vulnerableVersionRange}; first patched version is ${advisory.firstPatchedVersion}`)
+      }
+    }
+  }
+
+  return {
+    ok: errors.length === 0,
+    message: errors.length === 0
+      ? 'Locked advisory evidence passed: no package version is inside a recorded vulnerable range.'
+      : errors.join('\n'),
+  }
+}
+
 async function main() {
   const root = process.cwd()
   const policyFile = path.join(root, 'supply-chain', 'dependency-audit.json')
+  const evidenceFile = path.join(root, 'supply-chain', 'dependency-advisories.json')
+  const lockfilePath = path.join(root, 'pnpm-lock.yaml')
   let policy
+  let evidence
+  let lockfile
   try {
-    policy = JSON.parse(await readFile(policyFile, 'utf8'))
+    [policy, evidence, lockfile] = await Promise.all([
+      readFile(policyFile, 'utf8').then(JSON.parse),
+      readFile(evidenceFile, 'utf8').then(JSON.parse),
+      readFile(lockfilePath, 'utf8'),
+    ])
   } catch (error) {
-    console.error(`Cannot read dependency audit policy: ${error.message}`)
+    console.error(`Cannot read dependency audit policy inputs: ${error.message}`)
     process.exitCode = 2
     return
   }
+
+  const lockedResult = evaluateLockedAdvisories(lockfile, evidence)
+  if (!lockedResult.ok) {
+    console.error(lockedResult.message)
+    process.exitCode = 1
+    return
+  }
+  console.log(lockedResult.message)
 
   const audit = spawnSync('pnpm', ['audit', '--audit-level', 'high', '--json'], {
     cwd: root,
