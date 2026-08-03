@@ -34,6 +34,8 @@ March 2026, so the controller behind the API is now a choice you make — here, 
 
 - Labs 05–07 concepts (Deployment + Service). This lab **recreates its own backends**, so it
   does not depend on leftovers from Lab 07.
+- Lab 00 complete: `$NS` is set and is your default namespace
+  (`kubectl config view --minify | grep namespace:` shows it).
 - kind path: the Lab 00 `workshop` cluster (created from `infra/kind/cluster.yaml`, which
   maps container ports 80/443 to `127.0.0.1:80/443`) and admin over it.
 - Shared-cluster path: your assigned namespace `$NS`, the ingress controller's
@@ -353,8 +355,8 @@ clusters use the facilitator-provided DNS host directly.
 openssl req -x509 -newkey rsa:2048 -nodes -days 1 \
   -keyout tls.key -out tls.crt -subj "/CN=$WEB_HOST" \
   -addext "subjectAltName=DNS:$WEB_HOST"
-kubectl create secret tls web-tls --cert=tls.crt --key=tls.key
-kubectl patch ingress web --type=merge \
+kubectl create secret tls web-tls -n "$NS" --cert=tls.crt --key=tls.key
+kubectl patch ingress web -n "$NS" --type=merge \
   -p "{\"spec\":{\"tls\":[{\"hosts\":[\"$WEB_HOST\"],\"secretName\":\"web-tls\"}]}}"
 if [ "$LAB_ENV" = kind ]; then
   curl --noproxy '*' -sk --resolve "$WEB_HOST:443:127.0.0.1" \
@@ -411,8 +413,8 @@ Expected: the Ingress exists; the two requests print `workshop-web v1` and
 ```bash
 kubectl delete -f ingress.yaml -f backends.yaml -n "$NS" --ignore-not-found
 rm -f ingress-no-pathtype.yaml   # the broken copy never applied; just a local file
-kubectl delete secret web-tls -n "$NS" --ignore-not-found   # TLS Secret from the stretch (if you did it)
-rm -f tls.key tls.crt                              # self-signed cert files from the stretch
+kubectl delete secret web-tls -n "$NS" --ignore-not-found   # TLS Secret from the Challenge (Verify needs HTTPS)
+rm -f tls.key tls.crt                              # self-signed cert files from the Challenge
 # full namespace reset:
 kubectl delete ingress,svc,deploy,rs,pod --all -n "$NS" --ignore-not-found
 

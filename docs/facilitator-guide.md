@@ -259,8 +259,9 @@ pass**. Be aware of the following, consistent with the honesty callouts already 
 - **S08 has fresh live evidence.** On 2026-08-03, its complete kind path passed on an
   Ubuntu 26.04 x86_64 laptop with Docker 29.6.2, kind v0.32.0 / Kubernetes v1.36.1,
   and Contour v1.33.5: controller and Envoy readiness, both host routes,
-  required-`pathType` rejection, wrong-class routing loss, TLS/SNI, the ingress2gateway
-  challenge, and cleanup. This validates behaviour, not the 25-minute classroom estimate.
+  required-`pathType` rejection, wrong-class routing loss, TLS/SNI, optional Extension 2
+  (`ingress2gateway` preview), and cleanup. This validates behaviour, not the 25-minute
+  classroom estimate.
   The created cluster and validation namespace were removed.
 - **The remaining `kind`-only add-on installs have not all been run end-to-end** in a
   clean environment. Exact controller/CRD timings and representative solution output may

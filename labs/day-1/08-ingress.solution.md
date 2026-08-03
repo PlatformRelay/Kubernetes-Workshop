@@ -515,8 +515,8 @@ assigned class and hostnames.
 openssl req -x509 -newkey rsa:2048 -nodes -days 1 \
   -keyout tls.key -out tls.crt -subj "/CN=$WEB_HOST" \
   -addext "subjectAltName=DNS:$WEB_HOST"
-kubectl create secret tls web-tls --cert=tls.crt --key=tls.key
-kubectl patch ingress web --type=merge \
+kubectl create secret tls web-tls -n "$NS" --cert=tls.crt --key=tls.key
+kubectl patch ingress web -n "$NS" --type=merge \
   -p "{\"spec\":{\"tls\":[{\"hosts\":[\"$WEB_HOST\"],\"secretName\":\"web-tls\"}]}}"
 case "$LAB_ENV" in
   kind) curl --noproxy '*' -sk --resolve "$WEB_HOST:443:127.0.0.1" "https://$WEB_HOST/" ;;
