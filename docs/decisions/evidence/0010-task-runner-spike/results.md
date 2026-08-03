@@ -20,12 +20,17 @@ There are no skipped candidates. It asserts exact output for:
 - discovery of `help`, `up`, `down`, `doctor`, `profile-observability`, `args`, and `tool-version`;
 - ordered `up` → Gateway API add-on → metrics-server add-on → `doctor` composition;
 - `WORKSHOP_NONINTERACTIVE=1` on every composed operation;
-- three argument boundaries: `alpha`, `beta gamma`, and the unexpanded `*.md` glob; and
+- argument boundaries and literal metacharacters: `alpha`, `beta gamma`, the unexpanded `*.md`
+  glob, `$HOME`, `$(printf injected)`, `semi;colon`, and backtick command text; and
 - kind 0.32.0 resolved from mise while `kind` is absent from the restricted host PATH.
 
 It also requires all candidates to reject a missing `.ready` precondition and checks all fixture
 shell with ShellCheck. `mise.lock` contains platform URLs and SHA-256 checksums for Task, kind, and
 ShellCheck.
+
+The Make adapter uses a temporary NUL-delimited argument file. Passing arguments in a Make
+command-line variable is intentionally not used: Make expands dollar syntax before the recipe
+shell sees it. Task and mise receive the same argument vector directly after `--`.
 
 Observed on macOS 26.5.2 arm64:
 

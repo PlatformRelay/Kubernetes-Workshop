@@ -24,8 +24,11 @@ cd "$fixture_dir"
 case "$runner" in
   make)
     if [ "$command_name" = "args" ]; then
-      printf -v escaped_args ' %q' "$@"
-      "$mise_path" exec -- make --no-print-directory args "ARGS=$escaped_args"
+      args_file="$(mktemp "${TMPDIR:-/tmp}/workshop-runner-args.XXXXXX")"
+      trap 'rm -f -- "$args_file"' EXIT
+      printf '%s\0' "$@" >"$args_file"
+      WORKSHOP_ARGS_FILE="$args_file" \
+        "$mise_path" exec -- make --no-print-directory args
     else
       "$mise_path" exec -- make --no-print-directory "$command_name"
     fi

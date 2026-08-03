@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Literal dollar and backtick strings below are security regression payloads.
+# shellcheck disable=SC2016
 set -euo pipefail
 
 if [ "${1:-}" != "--strict" ] || [ "$#" -ne 1 ]; then
@@ -25,9 +27,11 @@ cp "$evidence_dir/Taskfile.yml" "$scratch/Taskfile.yml"
 cp "$evidence_dir/mise.toml" "$scratch/mise.toml"
 cp "$evidence_dir/mise.lock" "$scratch/mise.lock"
 cp "$evidence_dir/runner.sh" "$scratch/runner.sh"
+cp "$evidence_dir/args-from-file.sh" "$scratch/args-from-file.sh"
 cp "$evidence_dir/tool-version.sh" "$scratch/tool-version.sh"
 cp "$evidence_dir/workshop" "$scratch/workshop"
-chmod +x "$scratch/runner.sh" "$scratch/tool-version.sh" "$scratch/workshop"
+chmod +x "$scratch/args-from-file.sh" "$scratch/runner.sh" \
+  "$scratch/tool-version.sh" "$scratch/workshop"
 touch "$scratch/.ready"
 
 (cd "$scratch" && "$mise_path" install --locked)
@@ -57,7 +61,7 @@ fi
 expected_help='commands: help up down doctor profile-observability args tool-version'
 expected_profile=$'action=up noninteractive=1 args=\naction=addon-gateway-api noninteractive=1 args=\naction=addon-metrics-server noninteractive=1 args=\naction=doctor noninteractive=1 args='
 expected_down='action=down noninteractive=1 args='
-expected_args='action=args noninteractive=1 args=<alpha><beta gamma><*.md>'
+expected_args='action=args noninteractive=1 args=<alpha><beta gamma><*.md><$HOME><$(printf injected)><semi;colon><`printf injected`>'
 expected_tool='tool=kind version=0.32.0 source=mise'
 
 assert_exact() {
@@ -81,7 +85,8 @@ for runner in make task mise; do
   assert_exact "$runner down" "$expected_down" \
     "$("${runner_command[@]}" down)"
   assert_exact "$runner argument boundaries" "$expected_args" \
-    "$("${runner_command[@]}" args alpha 'beta gamma' '*.md')"
+    "$("${runner_command[@]}" args alpha 'beta gamma' '*.md' '$HOME' \
+      '$(printf injected)' 'semi;colon' '`printf injected`')"
   assert_exact "$runner mise-managed tool" "$expected_tool" \
     "$("${runner_command[@]}" tool-version)"
 done
@@ -102,8 +107,9 @@ for runner in make task mise; do
 done
 
 (cd "$scratch" && "$mise_path" exec -- shellcheck \
-  "$evidence_dir/runner.sh" "$evidence_dir/tool-version.sh" \
-  "$evidence_dir/workshop" "$evidence_dir/verify.sh")
+  "$evidence_dir/args-from-file.sh" "$evidence_dir/runner.sh" \
+  "$evidence_dir/tool-version.sh" "$evidence_dir/workshop" \
+  "$evidence_dir/verify.sh")
 
 printf 'versions: %s | Task %s | mise %s\n' \
   "$make_version" "$task_version" "$mise_version"

@@ -30,7 +30,7 @@ profile-observability: preflight
 	@$(MAKE) --no-print-directory doctor
 
 args:
-	@./runner.sh args $(ARGS)
+	@./args-from-file.sh "$${WORKSHOP_ARGS_FILE:?WORKSHOP_ARGS_FILE is required}"
 
 tool-version:
 	@./tool-version.sh
