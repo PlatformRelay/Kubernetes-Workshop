@@ -13,7 +13,15 @@ pushes never release — only an annotated or lightweight `v*` tag does.
    Do not `git tag -f` / force-push a published `v*` tag. The publish job runs
    `scripts/release-tag-guard.sh`, which allows same-commit retries (idempotent)
    and **refuses** when the remote tag or GitHub Release already points at a
-   different commit.
+   different commit. API lookup failures (rate-limit, 5xx, auth) fail closed as
+   `unknown` — they never green-light publish. Annotated tags are peeled to the
+   commit SHA; a peel failure is also `unknown` (never compared against the
+   tag-object SHA).
+   **Limit:** the CI guard cannot stop a force-pushed tag whose tip already
+   equals `github.sha` — after a force-move to the commit being published, the
+   check looks idempotent. Enforce tag immutability with GitHub branch/tag
+   protection or a ruleset that blocks force-pushes to `v*`; do not treat the
+   workflow alone as a hard immutability boundary.
 3. **Provenance.** Every exported deck stamps `VITE_WORKSHOP_VERSION` (the tag)
    and `VITE_WORKSHOP_SHA` (the tagged commit) into the slide chrome.
 4. **Permissions.** Workflow default + `build` use `contents: read`. Only

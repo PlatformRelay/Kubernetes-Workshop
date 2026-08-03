@@ -11,7 +11,9 @@ name: Release
 #     artifacts that already validated (fail_on_unmatched_files: true).
 #   - tags are immutable: scripts/release-tag-guard.sh refuses republishing
 #     when a tag/release already points at a different commit; same-commit
-#     retries are idempotent.
+#     retries are idempotent. API/peel failures fail closed (unknown).
+#     Force-push of a tag onto github.sha still looks idempotent — protect
+#     v* tags with a GitHub ruleset; the workflow is not a hard boundary.
 #   - provenance: VITE_WORKSHOP_VERSION / VITE_WORKSHOP_SHA stamp every export.
 #   - write scope: contents: write only on the publish job.
 #

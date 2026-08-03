@@ -181,7 +181,8 @@ Three GitHub Actions workflows (`.github/workflows/`):
 
 **Cut a release** (PDFs only ever come from a version tag). Tags are **immutable** —
 never move a published `v*` tag; same-commit retries are idempotent, a different
-commit is refused. Full maintainer policy: [`docs/release.md`](./docs/release.md).
+commit is refused. CI cannot stop a force-pushed tag already at `github.sha` —
+protect `v*` with a ruleset. Full policy: [`docs/release.md`](./docs/release.md).
 
 ```bash
 git tag v1.0.0

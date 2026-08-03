@@ -277,8 +277,8 @@ One logical change per commit. Stage explicit paths (`git add <paths>`); never b
 
 Version tags (`v*`) trigger immutable GitHub Release publication: build validates
 Day 1/2/3 + compatibility artifacts, then publish uploads them. Tags are never
-moved; see [`docs/release.md`](./docs/release.md) for the cut procedure and
-`scripts/release-tag-guard.sh` for the local/CI guard.
+moved (CI guard + recommended `v*` ruleset — see [`docs/release.md`](./docs/release.md)
+and `scripts/release-tag-guard.sh`).
 
 ## Validation
 
