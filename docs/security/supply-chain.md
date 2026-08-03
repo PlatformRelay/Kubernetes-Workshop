@@ -65,19 +65,30 @@ The policy currently covers two executable trust boundaries:
 
 - every artifact URL generated in `mise.lock` must have a `sha256` checksum in
   the same platform entry;
-- maintained shell/Python setup and automation under `infra/`, `setup/`,
+- maintained shell, Python, and Node setup/automation under `infra/`, `setup/`,
   `scripts/`, `.github/`, plus the root launch/task surfaces may not download a
   remote input—or pipe one into a shell—without a named, documented, unexpired
   entry in `supply-chain/exceptions.json`;
-- variable-indirected `curl`/`wget` and Python `urllib` sources fail because the
-  gate cannot audit their origin statically.
+- direct, aliased, and simply token-assembled `curl`/`wget`, Python HTTP clients
+  and subprocess calls, and Node `fetch` are treated as network-capable
+  callsites. A new callsite fails until its exact command is reviewed.
 
 Each exception binds an exact HTTPS `source` to one of two auditable kinds:
 
-- `sha256` requires the declared 64-character checksum and a matching
-  `sha256sum -c` in the same command chain before use;
-- `accepted-risk` states plainly that the bytes are not checksum-pinned and
-  gives the reason and expiry for that temporary risk acceptance.
+- `accepted-risk` requires an exact, whitespace-normalized literal `command`
+  with no dynamic source. It states plainly that the bytes are not
+  checksum-pinned and gives the reason and expiry for that temporary risk
+  acceptance;
+- `sha256` permits only one deliberately narrow flow: `curl -fsSL <source> -o
+  <output>`, then `printf ... | sha256sum -c -`, then `bash <output>`. The source,
+  simple output filename, exact digest, verified file, and executed file must
+  all match the inventory. Comments do not satisfy a verification step.
+
+This is a fail-closed drift inventory for ordinary maintained code. It catches
+accidental mutable inputs and the common indirection forms covered by its
+mutation tests. It is **not** a proof against intentionally obfuscated malicious
+code; review, branch protection, and the immutable workflow/action policy remain
+the controls for hostile changes.
 
 The interactive mise convenience installer is the only current exception. It
 is isolated from non-interactive/CI setup, but the installer bytes themselves

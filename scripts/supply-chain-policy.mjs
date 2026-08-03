@@ -8,10 +8,15 @@ import { fileURLToPath } from 'node:url'
 const ACTION_SHA = /^[0-9a-f]{40}$/i
 const VERSION_COMMENT = /^v?\d+(?:\.\d+){0,2}(?:[-+][0-9A-Za-z.-]+)?$/
 const DOWNLOAD_COMMAND = /\b(?:curl|wget)\b/
-const PYTHON_REMOTE_INPUT = /\b(?:urllib\.request\.)?(?:urlopen|urlretrieve)\s*\(|\brequests\.(?:get|post|put|patch|delete)\s*\(/
+const DYNAMIC_NETWORK_CALL = /\b(?:fetch|urlopen|urlretrieve)\s*\(|\brequests\.(?:request|get|post|put|patch|delete)\s*\(/
 const URL_PATTERN = /https?:\/\/[^\s'"|)]+/g
 const SHELL_PIPE = /\|\s*(?:ba)?sh\b/
 const EXCEPTION_MARKER = /supply-chain-exception:\s*([a-z0-9][a-z0-9-]*)/i
+const ALLOWED_JOB_WRITES = new Map([
+  ['pages.yml:deploy', new Set(['pages', 'id-token'])],
+  ['release.yml:publish', new Set(['contents'])],
+  ['workshop-web.yml:build', new Set(['packages', 'id-token'])],
+])
 
 function isIsoDate(value) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value ?? '')) return false
@@ -65,9 +70,15 @@ function validateExceptions(exceptions, today, errors) {
       errors.push(`supply-chain/exceptions.json: ${exception.id} kind must be accepted-risk or sha256`)
       continue
     }
-    if (exception.kind === 'sha256' && !/^[0-9a-f]{64}$/i.test(exception.sha256 ?? '')) {
-      errors.push(`supply-chain/exceptions.json: ${exception.id} requires a 64-character sha256`)
+    if (exception.kind === 'accepted-risk' && !exception.command) {
+      errors.push(`supply-chain/exceptions.json: ${exception.id} accepted-risk requires an exact command`)
       continue
+    }
+    if (exception.kind === 'sha256') {
+      if (!/^[0-9a-f]{64}$/i.test(exception.sha256 ?? '') || !/^[A-Za-z0-9._-]+$/.test(exception.output ?? '')) {
+        errors.push(`supply-chain/exceptions.json: ${exception.id} requires a 64-character sha256 and simple output filename`)
+        continue
+      }
     }
     if (exception.expires < today) {
       errors.push(`supply-chain/exceptions.json: ${exception.id} expired on ${exception.expires}`)
@@ -123,12 +134,29 @@ function checkWorkflowPermissions(root, file, contents, errors) {
   if (/\bwrite(?:-all)?\b/.test(permissionLines.join('\n'))) {
     errors.push(`${location}:${start + 1}: workflow-wide write permission is forbidden; grant write only on the publishing job`)
   }
-}
 
-function exceptionAllows(exception, urls, verificationWindow) {
-  if (!exception || urls.length !== 1 || urls[0] !== exception.source) return false
-  if (exception.kind === 'accepted-risk') return true
-  return verificationWindow.includes(exception.sha256) && /sha256sum\s+-c/.test(verificationWindow)
+  let currentJob = ''
+  let inJobPermissions = false
+  lines.forEach((line, index) => {
+    const job = line.match(/^  ([A-Za-z0-9_-]+):\s*$/)
+    if (job) {
+      currentJob = job[1]
+      inJobPermissions = false
+      return
+    }
+    if (/^    permissions:\s*$/.test(line)) {
+      inJobPermissions = true
+      return
+    }
+    if (inJobPermissions && /^    \S/.test(line)) inJobPermissions = false
+    if (!inJobPermissions) return
+    const permission = line.match(/^      ([A-Za-z0-9_-]+):\s*write\s*(?:#.*)?$/)
+    if (!permission) return
+    const allowed = ALLOWED_JOB_WRITES.get(`${path.basename(file)}:${currentJob}`) ?? new Set()
+    if (!allowed.has(permission[1])) {
+      errors.push(`${location}:${index + 1}: job-level write permission ${permission[1]}:write is not allowed for ${currentJob}`)
+    }
+  })
 }
 
 function isLoopback(url) {
@@ -149,7 +177,12 @@ async function checkRemoteInputs(root, exceptionById, errors) {
     path.join(root, 'Makefile'),
     path.join(root, 'package.json'),
     path.join(root, 'mise.toml'),
-  ].filter((file) => /(?:\.sh|\.bash|\.ya?ml|\.json|\.toml)$/.test(file) || ['workshop', 'Makefile'].includes(path.basename(file)))
+  ].filter((file) => {
+    if (/\.test\.(?:mjs|js|ts|py)$/.test(file)) return false
+    if (path.basename(file) === 'supply-chain-policy.mjs') return false
+    return /(?:\.sh|\.bash|\.py|\.mjs|\.js|\.cjs|\.ts|\.ya?ml|\.json|\.toml)$/.test(file)
+      || ['workshop', 'Makefile'].includes(path.basename(file))
+  })
 
   for (const file of candidates) {
     let contents
@@ -167,63 +200,89 @@ async function checkRemoteInputs(root, exceptionById, errors) {
       if (current === '') startLine = index + 1
       current += `${current ? ' ' : ''}${line.replace(/\\\s*$/, '')}`
       if (/\\\s*$/.test(line)) return
-      lines.push({ text: current, startLine })
+      lines.push({ text: current, startLine, isComment: current.trim().startsWith('#') })
       current = ''
     })
-    if (current) lines.push({ text: current, startLine })
+    if (current) lines.push({ text: current, startLine, isComment: current.trim().startsWith('#') })
 
-    lines.forEach(({ text: line, startLine: lineNumber }, index) => {
-      if (/^(?:#|say\s)/.test(line.trim())) return
-      if (!DOWNLOAD_COMMAND.test(line)) return
-      const command = line.slice(line.search(DOWNLOAD_COMMAND))
-      if (/\$(?:\{|[A-Za-z_])/.test(command)) {
-        errors.push(`${relative(root, file)}:${lineNumber}: dynamic curl/wget source is not auditable; use an exact HTTPS source`)
+    const variables = new Map()
+    const expandVariables = (value) => {
+      let expanded = value
+      for (let pass = 0; pass < 4; pass += 1) {
+        const next = expanded.replace(/\$\{?([A-Za-z_][A-Za-z0-9_]*)\}?/g, (match, name) => variables.get(name) ?? match)
+        if (next === expanded) break
+        expanded = next
+      }
+      return expanded
+    }
+    const executable = lines.filter((entry) => !entry.isComment && entry.text.trim() !== '')
+
+    lines.forEach((entry, index) => {
+      const trimmed = entry.text.trim()
+      if (entry.isComment || /^(?:say|warn|err|ok)\s/.test(trimmed)) return
+      const assignment = trimmed.match(/^(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)=(.+)$/)
+      if (assignment && !/[;&|]/.test(assignment[2])) {
+        variables.set(assignment[1], expandVariables(assignment[2]).replace(/^['"]|['"]$/g, ''))
         return
       }
-      const urls = [...line.matchAll(URL_PATTERN)].map((match) => match[0])
+      const expanded = expandVariables(trimmed)
+      const urls = [...expanded.matchAll(URL_PATTERN)].map((match) => match[0]).filter((url) => !isLoopback(url))
+      const hasShellClient = DOWNLOAD_COMMAND.test(expanded)
+      const hasDynamicClient = DYNAMIC_NETWORK_CALL.test(expanded)
+      const hasLanguageCall = /\.py$/.test(file) && /\b[A-Za-z_][A-Za-z0-9_.]*\s*\(/.test(expanded)
+      if (urls.length === 0 && [...expanded.matchAll(URL_PATTERN)].some((match) => isLoopback(match[0]))) return
+      const directShellCommand = trimmed.slice(Math.max(0, trimmed.search(DOWNLOAD_COMMAND)))
+      if (DOWNLOAD_COMMAND.test(trimmed) && /\$(?:\{|[A-Za-z_])/.test(directShellCommand)) {
+        errors.push(`${relative(root, file)}:${entry.startLine}: dynamic curl/wget source: dynamic source cannot match an exception`)
+        return
+      }
+      if (urls.length === 0 && !hasShellClient && !hasDynamicClient) return
+      if (urls.length > 0 && !hasShellClient && !hasDynamicClient && !hasLanguageCall) return
       if (urls.length === 0) {
-        errors.push(`${relative(root, file)}:${lineNumber}: dynamic curl/wget source is not auditable; use an exact HTTPS source`)
+        const kind = hasShellClient ? 'curl/wget' : 'remote'
+        errors.push(`${relative(root, file)}:${entry.startLine}: dynamic ${kind} source: dynamic source is not an exact reviewed callsite`)
         return
       }
-      const remoteUrls = urls.filter((url) => !isLoopback(url))
-      if (remoteUrls.length === 0) return
-      const marker = `${lines[index - 1]?.text ?? ''} ${line}`.match(EXCEPTION_MARKER)?.[1]
+
+      const previous = lines[index - 1]?.text ?? ''
+      const marker = `${previous} ${trimmed}`.match(EXCEPTION_MARKER)?.[1]
       const exception = marker ? exceptionById.get(marker) : undefined
-      const verificationWindow = line
-      if (!exceptionAllows(exception, remoteUrls, verificationWindow)) {
-        if (exception && !remoteUrls.includes(exception.source)) {
-          errors.push(`${relative(root, file)}:${lineNumber}: exception ${exception.id} source does not match the command`)
-          return
+      const location = `${relative(root, file)}:${entry.startLine}`
+      if (!exception) {
+        const legacy = hasShellClient
+          ? (SHELL_PIPE.test(expanded) ? 'unverified remote execution' : 'unverified remote download')
+          : (/\.py$/.test(file) ? 'unverified Python remote input' : 'unverified remote input')
+        errors.push(`${location}: unreviewed remote-input callsite (${legacy})`)
+        return
+      }
+      if (/\$(?:\{|[A-Za-z_])|`|\$\(/.test(trimmed)) {
+        errors.push(`${location}: dynamic source cannot match exception ${exception.id}`)
+        return
+      }
+      if (urls.length !== 1 || urls[0] !== exception.source) {
+        errors.push(`${location}: exception ${exception.id} source does not match the command`)
+        return
+      }
+      const normalize = (value) => value.trim().replace(/\s+/g, ' ')
+      if (exception.kind === 'accepted-risk') {
+        if (normalize(trimmed) !== normalize(exception.command)) {
+          errors.push(`${location}: unreviewed remote-input callsite does not match exception ${exception.id}`)
         }
-        const operation = SHELL_PIPE.test(line) ? 'execution' : 'download'
-        errors.push(`${relative(root, file)}:${lineNumber}: unverified remote ${operation} requires a documented, unexpired exception`)
-      }
-    })
-  }
-}
-
-async function checkPythonRemoteInputs(root, exceptionById, errors) {
-  const candidates = [
-    ...(await filesUnder(path.join(root, 'infra'))),
-    ...(await filesUnder(path.join(root, 'setup'))),
-    ...(await filesUnder(path.join(root, 'scripts'))),
-    ...(await filesUnder(path.join(root, '.github'))),
-  ].filter((file) => /(?:\.py|\.ya?ml)$/.test(file))
-
-  for (const file of candidates) {
-    const lines = (await readFile(file, 'utf8')).split(/\r?\n/)
-    lines.forEach((line, index) => {
-      if (line.trim().startsWith('#') || !PYTHON_REMOTE_INPUT.test(line)) return
-      const urls = [...line.matchAll(URL_PATTERN)].map((match) => match[0]).filter((url) => !isLoopback(url))
-      if (urls.length === 0) {
-        errors.push(`${relative(root, file)}:${index + 1}: dynamic Python remote input is not auditable; use an exact HTTPS source`)
         return
       }
-      const marker = `${lines[index - 1] ?? ''} ${line}`.match(EXCEPTION_MARKER)?.[1]
-      const exception = marker ? exceptionById.get(marker) : undefined
-      const verificationWindow = line
-      if (!exceptionAllows(exception, urls, verificationWindow)) {
-        errors.push(`${relative(root, file)}:${index + 1}: unverified Python remote input requires a documented, unexpired exception`)
+
+      const executableIndex = executable.indexOf(entry)
+      const verify = executable[executableIndex + 1]?.text.trim() ?? ''
+      const execute = executable[executableIndex + 2]?.text.trim() ?? ''
+      const expectedDownload = `curl -fsSL ${exception.source} -o ${exception.output}`
+      const expectedVerify = `printf '%s  %s\\n' '${exception.sha256}' '${exception.output}' | sha256sum -c -`
+      const expectedExecute = `bash ${exception.output}`
+      if (
+        normalize(trimmed) !== normalize(expectedDownload)
+        || normalize(verify) !== normalize(expectedVerify)
+        || normalize(execute) !== normalize(expectedExecute)
+      ) {
+        errors.push(`${location}: canonical checksum flow must bind source, output, exact digest, and executed file (download=${JSON.stringify(normalize(trimmed))}, verify=${JSON.stringify(normalize(verify))}, execute=${JSON.stringify(normalize(execute))})`)
       }
     })
   }
@@ -261,7 +320,6 @@ export async function checkSupplyChainPolicy(root = process.cwd(), options = {})
     checkWorkflowPermissions(root, workflow, contents, errors)
   }
   await checkRemoteInputs(root, exceptionById, errors)
-  await checkPythonRemoteInputs(root, exceptionById, errors)
   await checkMiseLock(root, errors)
   return { errors }
 }

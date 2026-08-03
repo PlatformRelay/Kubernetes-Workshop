@@ -4,6 +4,7 @@
       "id": "mise-bootstrap",
       "source": "https://mise.run",
       "kind": "accepted-risk",
+      "command": "curl -fsSL https://mise.run | sh",
       "reason": "The interactive convenience path executes installer bytes that are not checksum-pinned. Non-interactive and CI paths fail closed when mise is absent; this accepted risk expires for mandatory review.",
       "expires": "2026-11-03"
     }
