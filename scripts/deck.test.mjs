@@ -178,6 +178,9 @@ describe('deck manifest validation', () => {
       'Fully authored and runnable today: S24.',
       'S24 can be scheduled as a hands-on lab.',
       'S24 can, after installing Go, be scheduled as a hands-on lab.',
+      'S24 can after installing Go be scheduled as a hands-on lab.',
+      'S24 may be scheduled as a hands-on lab.',
+      'S24 can eventually be scheduled as a hands-on lab.',
       'S24 is, after the toolchain is installed, runnable.',
     ]) {
       const mutated = new Map(base)
@@ -191,6 +194,10 @@ describe('deck manifest validation', () => {
     for (const validNegation of [
       "S24 isn't runnable.",
       'S24 is neither authored nor runnable.',
+      'S24 cannot be scheduled as a hands-on lab.',
+      "S24 can't be scheduled as a hands-on lab.",
+      'S24 may not be scheduled as a hands-on lab.',
+      'S24 is not schedulable.',
     ]) {
       const mutated = new Map(base)
       mutated.set('docs/facilitator-guide.md', `S24 is deferred. ${validNegation}`)

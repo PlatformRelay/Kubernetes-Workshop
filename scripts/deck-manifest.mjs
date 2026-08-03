@@ -412,10 +412,11 @@ export function validateStatusClaims(manifest, documents) {
           .replace(/\b(?:is\s+)?neither\s+(?:fully\s+)?(?:authored|runnable|schedulable)(?:\s+nor\s+(?:fully\s+)?(?:authored|runnable|schedulable))+\b/gi, '')
           .replace(/\bisn['’]t(?:\s+\w+){0,3}\s+(?:fully\s+)?(?:authored|runnable|schedulable)\b/gi, '')
           .replace(/\bnot(?:\s+\w+){0,3}\s+(?:fully\s+)?(?:authored|runnable|schedulable)\b/gi, '')
-          .replace(/\b(?:cannot|can't|must not|should not)\b[^.;]{0,60}\b(?:schedule|scheduled)\b/gi, '')
+          .replace(/\b(?:cannot|can['’]t|may not|could not|must not|should not|will not|won['’]t|never)\b[^.!?;]{0,100}\b(?:be\s+)?scheduled\b/gi, '')
           .replace(/\bunauthored\b/gi, '')
-        const positiveClaim = /\bfully authored\b|\brunnable\b|\bschedulable\b|\bcan(?:\s*,[^,]{1,80},)?\s+be\s+scheduled\b|\bis(?:\s*,[^,]+,)?\s+authored\b/i
-        if (positiveClaim.test(withoutNegations)) {
+        const positiveClaim = /\bfully authored\b|\brunnable\b|\bschedulable\b|\bis(?:\s*,[^,]+,)?\s+authored\b/i
+        const positiveScheduling = /\b(?:can|may|could|will|should)\b[^.!?;]{0,100}\bbe\s+scheduled\b|\bis(?:\s*,[^,]{1,80},)?\s+scheduled\b[^.!?;]{0,80}\bas\s+(?:an?\s+)?(?:hands-on\s+)?lab\b/i
+        if (positiveClaim.test(withoutNegations) || positiveScheduling.test(withoutNegations)) {
           throw new Error(
             `${section.id} status contradiction in ${path}: deferred but claimed authored/runnable/schedulable`,
           )
