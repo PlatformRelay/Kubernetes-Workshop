@@ -13,6 +13,7 @@ import {
   DEFERRED_LAB_EXCEPTIONS,
   auditContractDocumentation,
   auditDayOneCommandTruth,
+  auditDayThreeCleanupTruth,
   auditLab,
   auditLabs,
 } from './lab-contract.mjs';
@@ -419,4 +420,39 @@ test('audits every Day 3 contracted lab against the sibling-solution contract', 
   const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
   const errors = auditLabs(DAY_3_LABS.map((path) => resolve(repo, path)));
   assert.deepEqual(errors, [], errors.join('\n'));
+});
+
+test('rejects Day 3 cleanup prose that fakes namespace deletes or splits them', () => {
+  const root = mkdtempSync(join(tmpdir(), 'lab-day3-cleanup-'));
+  const day = join(root, 'labs', 'day-3');
+  mkdirSync(day, { recursive: true });
+  for (const name of DAY_3_LABS.map((path) => path.split('/').at(-1))) {
+    writeFileSync(join(day, name), '# ok\n');
+    writeFileSync(join(day, name.replace(/\.md$/, '.solution.md')), '# ok\n');
+  }
+  writeFileSync(join(day, '24-kubebuilder.md'), '# deferred stub\n');
+  writeFileSync(
+    join(day, '26-capstone.md'),
+    '> `remove the lab Namespace object (kind: burn the cluster)` removes everything\n',
+  );
+  writeFileSync(
+    join(day, '25-pod-escape.solution.md'),
+    'tear it down:\n`./context-check.sh && remove the lab Namespace out-of-band / burn kind\n',
+  );
+  writeFileSync(
+    join(day, '26-capstone.solution.md'),
+    'Clean up: `kubectl delete\nnamespace s26-warn`.\n',
+  );
+  writeFileSync(join(day, '99-orphan.md'), '# not contracted\n');
+
+  const errors = auditDayThreeCleanupTruth(root);
+  assert.ok(errors.some((error) => error.includes('nonsensical Namespace-object')));
+  assert.ok(errors.some((error) => error.includes('unclosed code span')));
+  assert.ok(errors.some((error) => error.includes('line-split to bypass unsafeCommands')));
+  assert.ok(errors.some((error) => error.includes('99-orphan.md') && error.includes('DEFERRED_LAB_EXCEPTIONS')));
+});
+
+test('guards Day 3 cleanup / panic-reset wording on contracted labs', () => {
+  const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+  assert.deepEqual(auditDayThreeCleanupTruth(repo), []);
 });

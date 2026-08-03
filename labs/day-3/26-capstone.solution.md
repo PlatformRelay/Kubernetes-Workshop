@@ -567,8 +567,8 @@ gates the Pods themselves). It runs to `1/1`: the flawed Deployment's `:v1` tag 
 has no probes, so the Pod is Ready the moment it starts — a security-flagged workload happily serving
 traffic is exactly the situation `warn` is meant to surface without breaking anyone. That's discovery,
 not a block — like a non-blocking CI check that annotates a PR. The real migration play is
-`warn`/`audit` first (find offenders), fix them, **then** `enforce`. Clean up: `kubectl delete
-namespace s26-warn`.
+`warn`/`audit` first (find offenders), fix them, **then** `enforce`. Clean up:
+`kind delete cluster` (disposable) or remove the Namespace out-of-band.
 
 </details>
 

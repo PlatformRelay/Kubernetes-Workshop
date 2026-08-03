@@ -498,6 +498,46 @@ export function auditContractDocumentation(repoRoot = REPO_ROOT) {
   return errors;
 }
 
+/**
+ * Day 3 cleanup / panic-reset truth: no fake runnable prose, no unclosed backticks,
+ * and no line-split `kubectl delete` + `namespace` that bypasses single-line unsafeCommands.
+ */
+export function auditDayThreeCleanupTruth(repoRoot = REPO_ROOT) {
+  const errors = [];
+  const day3Dir = resolve(repoRoot, 'labs/day-3');
+  const contracted = new Set(DAY_3_LABS);
+  const deferred = new Set(DEFERRED_LAB_EXCEPTIONS.map((entry) => entry.path));
+
+  if (existsSync(day3Dir)) {
+    for (const name of readdirSync(day3Dir).filter((file) => file.endsWith('.md') && !file.endsWith('.solution.md'))) {
+      const path = `labs/day-3/${name}`;
+      if (!contracted.has(path) && !deferred.has(path)) {
+        errors.push(`${path}: day-3 participant lab must be contracted or listed in DEFERRED_LAB_EXCEPTIONS`);
+      }
+    }
+  }
+
+  const paths = [
+    ...DAY_3_LABS,
+    ...DAY_3_LABS.map((path) => path.replace(/\.md$/, '.solution.md')),
+  ];
+  for (const path of paths) {
+    const absolute = resolve(repoRoot, path);
+    if (!existsSync(absolute)) continue;
+    const text = readFileSync(absolute, 'utf8');
+    if (/remove the lab Namespace object\s*\(kind:\s*burn the cluster\)/i.test(text)) {
+      errors.push(`${path}: cleanup must not use nonsensical Namespace-object / burn-the-cluster prose`);
+    }
+    if (/`[^`\n]*remove the lab Namespace[^`\n]*$/m.test(text)) {
+      errors.push(`${path}: cleanup must not leave an unclosed code span around Namespace tear-down prose`);
+    }
+    if (/kubectl\s+delete\s*\n\s*namespace\b/i.test(text)) {
+      errors.push(`${path}: namespace deletion must not be line-split to bypass unsafeCommands`);
+    }
+  }
+  return errors;
+}
+
 export function auditDayOneCommandTruth(repoRoot = REPO_ROOT) {
   const errors = [];
   const read = (path) => readFileSync(resolve(repoRoot, path), 'utf8');

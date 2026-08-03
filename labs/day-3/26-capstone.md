@@ -453,14 +453,16 @@ Expected: fixed objects (or dry-run success) remain so checklist coverage can be
 # scoped cleanup — the fixed objects share app.kubernetes.io/name: web; the flawed one is app: s26
 kubectl delete -f fixed-netpol.yaml -f fixed-pdb.yaml -f fixed-deployment.yaml --ignore-not-found
 kubectl delete deployment -l app=s26 -n "$NS" --ignore-not-found
-# panic reset: remove the lab Namespace via your cluster UI / burn kind — do not use an unqualified ns delete here
+# panic reset (namespace): Namespace delete is forbidden in this workshop — remove it
+# out-of-band via your cluster UI if you must; do not paste an unqualified ns delete here
+# panic reset (kind): make kind-down && make kind-up   # or: kind delete cluster
 rm -f flawed-deployment.yaml fixed-deployment.yaml fixed-pdb.yaml fixed-netpol.yaml \
   flawed-pod.yaml fixed-pod.yaml PRODUCTION-CHECKLIST.md
 ```
 
-> **Panic reset.** Everything lived in the `s26` namespace — `remove the lab Namespace object (kind: burn the cluster)` removes
-> the Deployment, PDB, NetworkPolicies, and any Pods in one shot. On kind you can also
-> `kind delete cluster` to burn it all down.
+> **Panic reset.** Everything lived in the `s26` namespace. Namespace deletes are forbidden here —
+> tear the disposable environment down with `kind delete cluster` (or your cluster UI). That
+> removes the Deployment, PDB, NetworkPolicies, and any Pods in one shot.
 
 ## Stretch (optional) — make the checklist un-skippable
 

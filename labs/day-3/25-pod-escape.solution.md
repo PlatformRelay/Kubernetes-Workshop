@@ -515,8 +515,8 @@ Under **`warn`**, the API server returns the *same* six-violation list as a **`W
 **creates the Pod anyway** (there's the escape running again). `warn` is discovery, not a block;
 only **`enforce`** rejects. That's the real-world migration play: `warn` (and `audit`) to find
 offenders across a namespace, fix them, **then** `enforce`. Because this namespace only `warn`s, the
-escape Pod runs — so tear it down with a fresh guard check:
-`./context-check.sh && remove the lab Namespace out-of-band / burn kind
+escape Pod runs — so tear it down: Namespace delete is forbidden here; use
+`kind delete cluster` (disposable) or remove the Namespace out-of-band.
 </details>
 
 > **⚠️ Why the stretch stays kind-only too.** `warn` **creates** the Pod — so this scratch namespace
