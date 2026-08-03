@@ -27,6 +27,8 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 # shellcheck source=versions.env disable=SC1091
 . "$SCRIPT_DIR/versions.env"
+# shellcheck source=platform-checks.sh disable=SC1091
+. "$SCRIPT_DIR/platform-checks.sh"
 
 # --- Non-interactive detection ----------------------------------------------
 # Interactive UX (gum) is used ONLY when all of these hold:
@@ -101,20 +103,36 @@ confirm() {
 # --- Preflight ---------------------------------------------------------------
 # OS / arch detect — informational; used to tailor hints (WSL2, licensing).
 detect_os() {
-  local uname_s
-  uname_s="$(uname -s 2>/dev/null || echo unknown)"
-  case "$uname_s" in
-    Darwin) echo "macos" ;;
-    Linux)
-      if grep -qiE '(microsoft|wsl)' /proc/version 2>/dev/null; then
-        echo "wsl2"
-      else
-        echo "linux"
-      fi
-      ;;
-    MINGW* | MSYS* | CYGWIN*) echo "windows" ;;
-    *) echo "unknown" ;;
-  esac
+  workshop_detect_os
+}
+
+# Diagnose checkout properties that commonly break shell-based workshop setup.
+# The optional root makes the checks independently testable without mutating the
+# real checkout. A Windows-drive location is advisory; damaged script files are
+# fatal because their shebangs and commands cannot be trusted to execute.
+check_checkout() {
+  local os="$1" repo_root="${2:-$REPO_ROOT}" crlf_files nonexec_files
+
+  if workshop_repo_is_windows_mount "$os" "$repo_root"; then
+    warn "repository is on a mounted Windows drive (${repo_root})."
+    say "For faster file I/O and reliable Linux permissions, clone inside the WSL2 filesystem:"
+    say "  mkdir -p ~/src && cd ~/src && git clone <this-repo-url> kubernetes-workshop"
+  fi
+
+  crlf_files="$(workshop_crlf_files "$repo_root")"
+  nonexec_files="$(workshop_nonexecutable_files "$repo_root")"
+  if [ -n "$crlf_files" ]; then
+    err "workshop scripts have CRLF line endings: $(printf '%s' "$crlf_files" | tr '\n' ' ')"
+    say "Use Linux line endings, then re-clone or repair the checkout:"
+    say "  git config core.autocrlf input"
+    say "  sed -i 's/\\r$//' workshop infra/bootstrap.sh infra/doctor.sh"
+  fi
+  if [ -n "$nonexec_files" ]; then
+    err "workshop scripts are not executable: $(printf '%s' "$nonexec_files" | tr '\n' ' ')"
+    say "Restore the executable bits:"
+    say "  chmod +x workshop infra/bootstrap.sh infra/doctor.sh"
+  fi
+  [ -z "$crlf_files" ] && [ -z "$nonexec_files" ]
 }
 
 # Container engine probe in preference order Docker → Podman (proposal §3.2).
@@ -201,12 +219,22 @@ preflight() {
     return 1
   fi
 
+  check_checkout "$os" || return 1
+
   check_resources "$os"
 
   WORKSHOP_ENGINE="$(detect_engine || true)"
   if [ -z "$WORKSHOP_ENGINE" ]; then
-    err "no reachable container engine (tried docker, then podman)."
-    say "Start Docker Desktop or 'podman machine start' (rootful for kind), then retry."
+    if [ "$os" = "wsl2" ]; then
+      err "no reachable container engine; Docker Desktop WSL integration may be disabled."
+      say "In Docker Desktop, enable Settings > Resources > WSL integration for this distro."
+      say "Then restart Docker Desktop, run 'wsl --shutdown' in PowerShell, reopen WSL2,"
+      say "and verify 'docker info' before retrying. Podman is also supported."
+      say "On a managed device, ask the facilitator for an assigned cloud namespace instead."
+    else
+      err "no reachable container engine (tried docker, then podman)."
+      say "Start Docker Desktop or 'podman machine start' (rootful for kind), then retry."
+    fi
     licensing_note "$os"
     return 1
   fi
@@ -457,4 +485,6 @@ main() {
   esac
 }
 
-main "$@"
+if [ "${BASH_SOURCE[0]}" = "$0" ]; then
+  main "$@"
+fi

@@ -229,6 +229,91 @@ run_workshop_in_pty() {
   ! grep -q "kind create cluster" "$MOCK_LOG"
 }
 
+# --- Windows / WSL2 diagnostics ---------------------------------------------
+
+@test "native Windows shells are rejected with the supported WSL2 route" {
+  local os_bin="$BATS_TEST_TMPDIR/windows-bin"
+  mkdir -p "$os_bin"
+  cat > "$os_bin/uname" <<'EOF'
+#!/usr/bin/env sh
+echo MINGW64_NT-10.0
+EOF
+  chmod +x "$os_bin/uname"
+  export PATH="$os_bin:$PATH"
+
+  run "$ROOT/workshop" up
+
+  [ "$status" -ne 0 ]
+  echo "$output" | grep -q "native Windows"
+  echo "$output" | grep -q "wsl --install"
+  ! grep -q "docker info" "$MOCK_LOG"
+}
+
+@test "WSL2 reports an actionable Docker Desktop integration failure" {
+  export WSL_DISTRO_NAME=Ubuntu
+  export MOCK_ENGINE_UP=0
+
+  run "$ROOT/workshop" up
+
+  [ "$status" -ne 0 ]
+  echo "$output" | grep -q "Docker Desktop WSL integration"
+  echo "$output" | grep -q "Settings.*Resources.*WSL integration"
+  echo "$output" | grep -q "assigned cloud namespace"
+}
+
+@test "WSL2 warns when the repository is on a mounted Windows drive" {
+  export WSL_DISTRO_NAME=Ubuntu
+
+  run bash -c 'source "$1"; check_checkout wsl2 /mnt/c/Users/learner/kubernetes-workshop' _ \
+    "$ROOT/infra/bootstrap.sh"
+
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q "mounted Windows drive"
+  echo "$output" | grep -q 'mkdir -p .*/src'
+}
+
+@test "checkout diagnostics reject CRLF in executable scripts" {
+  local checkout="$BATS_TEST_TMPDIR/crlf-checkout"
+  mkdir -p "$checkout/infra"
+  printf '#!/usr/bin/env bash\r\necho workshop\r\n' > "$checkout/workshop"
+  printf '#!/usr/bin/env bash\necho bootstrap\n' > "$checkout/infra/bootstrap.sh"
+  printf '#!/usr/bin/env bash\necho doctor\n' > "$checkout/infra/doctor.sh"
+  chmod +x "$checkout/workshop" "$checkout/infra/bootstrap.sh" "$checkout/infra/doctor.sh"
+
+  run bash -c 'source "$1"; check_checkout linux "$2"' _ \
+    "$ROOT/infra/bootstrap.sh" "$checkout"
+
+  [ "$status" -ne 0 ]
+  echo "$output" | grep -q "CRLF line endings"
+  echo "$output" | grep -q "git config core.autocrlf input"
+}
+
+@test "checkout diagnostics reject missing executable bits" {
+  local checkout="$BATS_TEST_TMPDIR/mode-checkout"
+  mkdir -p "$checkout/infra"
+  printf '#!/usr/bin/env bash\necho workshop\n' > "$checkout/workshop"
+  printf '#!/usr/bin/env bash\necho bootstrap\n' > "$checkout/infra/bootstrap.sh"
+  printf '#!/usr/bin/env bash\necho doctor\n' > "$checkout/infra/doctor.sh"
+  chmod +x "$checkout/infra/bootstrap.sh" "$checkout/infra/doctor.sh"
+  chmod -x "$checkout/workshop"
+
+  run bash -c 'source "$1"; check_checkout linux "$2"' _ \
+    "$ROOT/infra/bootstrap.sh" "$checkout"
+
+  [ "$status" -ne 0 ]
+  echo "$output" | grep -q "not executable"
+  echo "$output" | grep -q "chmod +x workshop infra/bootstrap.sh infra/doctor.sh"
+}
+
+@test "normal Linux checkout has no WSL2 warnings" {
+  run bash -c 'source "$1"; check_checkout linux "$2"' _ \
+    "$ROOT/infra/bootstrap.sh" "$ROOT"
+
+  [ "$status" -eq 0 ]
+  ! echo "$output" | grep -q "mounted Windows drive"
+  ! echo "$output" | grep -q "WSL integration"
+}
+
 # --- non-interactive contract: no prompts, no gum ----------------------------
 
 @test "non-interactive up never invokes gum" {

@@ -35,6 +35,28 @@ setup() {
   echo "$output" | grep -q "FAIL"
 }
 
+@test "doctor gives the Docker Desktop integration route when WSL2 has no engine" {
+  export MOCK_CLUSTER_EXISTS=1
+  export MOCK_ENGINE_UP=0
+  export WSL_DISTRO_NAME=Ubuntu
+
+  run "$ROOT/infra/doctor.sh"
+
+  [ "$status" -ne 0 ]
+  echo "$output" | grep -q "Docker Desktop WSL integration"
+  echo "$output" | grep -q "assigned cloud namespace"
+}
+
+@test "doctor does not print WSL2 guidance on normal Linux" {
+  export MOCK_CLUSTER_EXISTS=1
+
+  run "$ROOT/infra/doctor.sh"
+
+  [ "$status" -eq 0 ]
+  ! echo "$output" | grep -q "WSL integration"
+  ! echo "$output" | grep -q "mounted Windows drive"
+}
+
 @test "doctor warns but does not fail on a kind version mismatch" {
   export MOCK_CLUSTER_EXISTS=1
   export MOCK_KIND_VERSION=v0.20.0

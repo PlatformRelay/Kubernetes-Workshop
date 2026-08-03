@@ -50,6 +50,21 @@ named source: `server-dry-run` rows trace to the roadmap M4/M5 per-section progr
 (which record the exact cluster version each manifest was dry-run against) plus AR-05;
 `unrun` and `kind-smoke` rows trace to the honesty rule above.
 
+## Participant host validation
+
+Host support is a separate claim from manifest or lab validation. The scripted
+checks use stubs and cannot prove container-engine integration on a real Windows
+host.
+
+| Host path | Automated coverage | Live validation procedure | State |
+| --- | --- | --- | --- |
+| macOS / Linux + supported engine | Bootstrap and doctor Bats suites | Fresh-host `./workshop up` and `./workshop doctor` | `unrun` |
+| Windows + WSL2 + integrated engine | Native-shell rejection, missing-engine guidance, `/mnt/c`, CRLF, executable-bit, and normal-Linux non-regression tests | [WSL2 reproducible validation checklist](./windows-wsl2.md#reproducible-validation-checklist) | `unrun` — no live WSL2 host was available for this change |
+| Managed device + assigned cloud namespace | Documentation contract only | Facilitator-issued kubeconfig, namespace-path rehearsal without Docker/kind | `unrun` |
+
+Native PowerShell is explicitly unsupported. Browser-only participation remains
+future work (US-ENV-6), not a validated environment.
+
 ## Canonical version pins (`infra/versions.env`)
 
 These are the only versions the repo pins centrally (ADR 0007). Every cluster lab runs

@@ -22,6 +22,8 @@ export WORKSHOP_NONINTERACTIVE
 script_dir="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=versions.env disable=SC1091
 . "$script_dir/versions.env"
+# shellcheck source=platform-checks.sh disable=SC1091
+. "$script_dir/platform-checks.sh"
 
 pass_count=0
 warn_count=0
@@ -41,6 +43,27 @@ summary_and_exit() {
 }
 
 kube_ctx="kind-${WORKSHOP_CLUSTER_NAME}"
+repo_root="$(cd "$script_dir/.." && pwd)"
+host_os="$(workshop_detect_os)"
+
+# Checkout diagnostics --------------------------------------------------------
+if workshop_repo_is_windows_mount "$host_os" "$repo_root"; then
+  warn "repository is on a mounted Windows drive — clone under ~/src in WSL2 for reliable performance and permissions"
+fi
+crlf_files="$(workshop_crlf_files "$repo_root")"
+nonexec_files="$(workshop_nonexecutable_files "$repo_root")"
+if [ -n "$crlf_files" ]; then
+  fail "CRLF line endings in workshop scripts — run: git config core.autocrlf input; then re-clone or convert the files"
+fi
+if [ -n "$nonexec_files" ]; then
+  fail "workshop scripts are not executable — run: chmod +x workshop infra/bootstrap.sh infra/doctor.sh"
+fi
+if [ "$host_os" = "windows" ]; then
+  fail "native Windows shells are unsupported — open WSL2 and run ./workshop doctor there"
+fi
+if [ "$fail_count" -gt 0 ]; then
+  summary_and_exit
+fi
 
 # 1. container engine ---------------------------------------------------------
 engine=""
@@ -52,7 +75,12 @@ fi
 if [ -n "$engine" ]; then
   pass "container engine reachable ($engine)"
 else
-  fail "no container engine reachable — start Docker Desktop / Podman machine"
+  if [ "$host_os" = "wsl2" ]; then
+    fail "no container engine reachable — enable Docker Desktop WSL integration for this distro and verify: docker info"
+    echo "       If local installs are restricted, request an assigned cloud namespace from the facilitator."
+  else
+    fail "no container engine reachable — start Docker Desktop / Podman machine"
+  fi
   summary_and_exit
 fi
 

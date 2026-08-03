@@ -84,8 +84,8 @@ these work and are picked up automatically:
 brew install mise            # Homebrew
 curl https://mise.run | sh   # official installer (checksummed by upstream)
 
-# Windows (inside WSL2 — see Step 3)
-winget install jdx.mise      # or: scoop install mise
+# Windows participants run Linux tools inside WSL2 — see Step 3
+curl https://mise.run | sh
 ```
 
 The pinned versions live in `mise.toml` (human-readable) and `mise.lock`
@@ -114,6 +114,21 @@ Engine choice under WSL2:
 - **Podman** inside WSL2 — remember the machine must be **rootful** for kind
   (`podman machine set --rootful`).
 
+Clone the repository inside the WSL2 Linux filesystem (for example `~/src`),
+not under `/mnt/c`: Windows-mounted files are slower and may not preserve the
+executable-bit behaviour the scripts expect. The bootstrap diagnoses that
+layout, CRLF line endings, missing executable bits, and an unavailable Docker
+Desktop integration socket with targeted recovery steps.
+
+For virtualization and resource requirements, proxy/VPN guidance, managed
+devices, and the live validation checklist, see the dedicated
+[`windows-wsl2.md`](./windows-wsl2.md) guide.
+
+> **Managed device?** Participants who cannot install or run local containers
+> can use a facilitator-provided kubeconfig and assigned cloud namespace. This
+> avoids kind and local administrator access, but currently still needs a
+> terminal with `kubectl`. A browser-only shell is future work (US-ENV-6).
+
 ## Step 4 — daily use
 
 ```bash
@@ -136,9 +151,11 @@ path CI runs, so the script you run locally is the script that is tested. Use
 
 | Symptom | Fix |
 | --- | --- |
-| `no reachable container engine` | Start Docker Desktop / `colima start` / `podman machine start`. On Podman for Windows, make the machine rootful. |
+| `no reachable container engine` | Start Docker Desktop / `colima start` / `podman machine start`. In WSL2, enable Docker Desktop integration for the distribution and verify `docker info`. On Podman for Windows, make the machine rootful. |
 | `native Windows (PowerShell) is not supported` | You're not in WSL2. Open your WSL2 distro and re-run there (Step 3). |
-| `mise is required but not installed` (non-interactive) | Install mise first (`brew install mise` / `winget install jdx.mise` / `curl https://mise.run \| sh`), then re-run. |
+| `repository is on a mounted Windows drive` | Re-clone under `~/src` in the WSL2 Linux filesystem. |
+| `CRLF line endings` / `not executable` | Follow the repair command printed by `./workshop`; see the [WSL2 troubleshooting table](./windows-wsl2.md#troubleshooting). |
+| `mise is required but not installed` (non-interactive) | Install mise in the current Linux/macOS environment (`brew install mise` or `curl https://mise.run \| sh`), then re-run. Windows participants must do this inside WSL2. |
 | `kubectl: command not found` after a green bootstrap | Run the `mise activate` command printed by `./workshop up` in the current shell. You do not need to recreate the cluster. |
 | kind cluster won't create / is unreachable | Panic reset: `./workshop down` then `./workshop up` (equivalently `make kind-down && make kind-up`). |
 | Slow / stalls on downloads | Conference Wi-Fi. The tool cache and node image are only fetched once; retry — mise resumes. |
