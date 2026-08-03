@@ -1,7 +1,10 @@
 # Windows participant setup with WSL2
 
-The workshop supports Windows through **WSL2**, using a Linux distribution and a
-container engine that is reachable from that distribution. Native PowerShell,
+The workshop's Windows route is **WSL2**, using a Linux distribution and a
+container engine that is reachable from that distribution. This route is
+currently **partial: contract-tested, live-smoke pending**. It must not be
+advertised as officially supported until the live acceptance gate below passes.
+Native PowerShell,
 Command Prompt, Git Bash, MSYS2, and WSL1 are not supported execution
 environments for `./workshop` or the labs.
 
@@ -21,9 +24,34 @@ Windows host
     └── WSL integration socket ◀─┘
 ```
 
-Podman is also supported by the bootstrap. Docker Desktop is used in the
-examples because its WSL integration is the most common Windows route; check
-its licence terms before using it for work.
+The bootstrap can select Podman, but the first Windows acceptance target is
+Docker Desktop with WSL integration. Treat Podman on Windows as experimental
+until it has its own live-smoke row. Check Docker Desktop's licence terms before
+using it for work.
+
+## Version support policy
+
+The provisional minimum tuple for the first live acceptance is:
+
+| Component | Provisional minimum |
+| --- | --- |
+| Windows | Windows 11 23H2, build 22631 |
+| WSL package | 2.1.5, with the distribution running as generation 2 |
+| Linux distribution | Ubuntu 24.04 LTS |
+| Docker Desktop | 4.44.0 with the WSL2 backend and per-distribution integration enabled |
+| Workshop resources | 4 CPUs and 8 GiB RAM available to WSL2/containers |
+
+These are workshop policy floors, not a claim that every newer combination has
+already been exercised. The Windows and WSL floors align with Docker's current
+[Windows installation requirements](https://docs.docker.com/desktop/setup/install/windows-install/).
+Use `wsl --version`, `wsl --status`, and `wsl --list --verbose` as documented by
+[Microsoft's WSL command reference](https://learn.microsoft.com/en-us/windows/wsl/basic-commands).
+
+No live tuple has passed yet. The first successful acceptance record must state
+the exact Windows build, WSL/kernel, distribution, architecture, engine, and
+workshop commit. That tuple becomes the tested baseline; raising a minimum later
+requires another recorded smoke. Stubbed tests establish only the diagnostic
+contract.
 
 ## One-time host setup
 
@@ -31,7 +59,9 @@ its licence terms before using it for work.
 
    ```powershell
    wsl --install
+   wsl --update
    wsl --set-default-version 2
+   wsl --version
    wsl --list --verbose
    ```
 
@@ -112,6 +142,7 @@ cluster-scoped permissions.
 | Symptom | Action |
 | --- | --- |
 | `native Windows ... is not supported` | Open the WSL2 distribution and run the command from its Linux shell. |
+| `WSL1 is not supported` | Back up the distribution, run `wsl --set-version <DistributionName> 2` in PowerShell, and confirm `VERSION 2` with `wsl --list --verbose`. |
 | `Docker Desktop WSL integration may be disabled` | Enable integration for this distribution, restart Docker Desktop, run `wsl --shutdown`, reopen WSL2, and verify `docker info`. |
 | Repository path starts with `/mnt/c/` | Re-clone under `~/src`; do not move `node_modules` or a kind data directory across filesystems. |
 | `bad interpreter` or `$'\r': command not found` | Set `git config --global core.autocrlf input`, re-clone inside WSL2, and verify the scripts use LF endings. |
@@ -120,14 +151,15 @@ cluster-scoped permissions.
 
 ## Reproducible validation checklist
 
-Run this checklist on a real Windows host before claiming the WSL2 row as
-validated:
+Run this checklist on a host meeting the provisional tuple. Every item is a
+release gate: do not call the Windows route officially supported until all
+items pass and the exact tuple is recorded.
 
 1. Record Windows version, `wsl --version`, `wsl --list --verbose`, Linux
    distribution/version, architecture, engine version, and available CPU/RAM.
 2. In a clean WSL2 distribution with Docker integration enabled, clone under
-   `~/src`, run `./workshop up`, then run `./workshop doctor`; expect zero
-   failures.
+   `~/src`, complete Lab 00, run `./workshop up`, then run `./workshop doctor`;
+   expect zero failures.
 3. Disable WSL integration for the distribution and run `./workshop up`; expect
    a non-zero exit and the integration recovery instructions.
 4. Re-enable integration. Clone a disposable copy under `/mnt/c` and run
@@ -135,11 +167,17 @@ validated:
 5. In disposable copies, introduce CRLF into `workshop` and remove its
    executable bit. Run `bash infra/doctor.sh`; expect specific repair commands
    and a non-zero result.
-6. Run the namespace path using a facilitator-provided kubeconfig without
+6. Exercise representative cluster behaviour: Service/DNS networking, dynamic
+   PVC provisioning and persistence, and one canonical cluster add-on lab.
+   Record commands, timings, failures, and cleanup; a green bootstrap alone is
+   insufficient.
+7. Run the namespace path using a facilitator-provided kubeconfig without
    Docker or kind. Confirm that namespace-scoped labs work and cluster-wide
    steps direct the participant to the read-only alternative.
-7. Run `./workshop down --yes` for the local path and confirm the workshop kind
+8. Run `./workshop down --yes` for the local path and confirm the workshop kind
    cluster is removed.
 
-The automated tests reproduce the detection and messages with stubs, but they
-do not replace this live WSL2 validation.
+Until this checklist is recorded as passing, the state is `contract-tested` /
+`live-smoke pending`, the story remains partial, and release notes must not
+claim official Windows support. Automated tests reproduce detection and
+messages with stubs, but do not replace live WSL2 validation.

@@ -92,20 +92,26 @@ The pinned versions live in `mise.toml` (human-readable) and `mise.lock`
 (checksummed). Participants who prefer to install tools by hand can read the
 exact versions out of those files — the lockfile *is* the documentation.
 
-## Step 3 — Windows: use WSL2
+## Step 3 — Windows: use WSL2 (partial support)
 
 Native Windows PowerShell is **not supported** (kind + the bootstrap expect a
-Linux userland). The supported path is **WSL2**. In an elevated PowerShell,
+Linux userland). The intended Windows path is **WSL2**. In an elevated PowerShell,
 once:
 
 ```powershell
 wsl --install
+wsl --update
 wsl --set-default-version 2
+wsl --list --verbose
 ```
 
 Reboot if prompted, open your WSL2 distro (e.g. Ubuntu), then run `./workshop
 up` **from inside WSL2**. If you run it from PowerShell by mistake, the
 bootstrap detects it and prints these same commands.
+
+This route is contract-tested but has not completed its live WSL2 acceptance
+run. Do not present it as officially supported yet. The provisional minimum
+tuple and release gate are in [`windows-wsl2.md`](./windows-wsl2.md).
 
 Engine choice under WSL2:
 

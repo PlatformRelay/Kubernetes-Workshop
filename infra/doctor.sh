@@ -20,6 +20,22 @@ WORKSHOP_NONINTERACTIVE="${WORKSHOP_NONINTERACTIVE:-1}"
 export WORKSHOP_NONINTERACTIVE
 
 script_dir="$(cd "$(dirname "$0")" && pwd)"
+repo_root="$(cd "$script_dir/.." && pwd)"
+
+require_lf_sources() {
+  local source_file relative_path
+  for source_file in "$@"; do
+    if LC_ALL=C grep -q "$(printf '\r')" "$source_file" 2>/dev/null; then
+      relative_path="${source_file#"$repo_root"/}"
+      printf '[FAIL] CRLF line endings in required source file: %s\n' "$relative_path" >&2
+      printf "Repair from WSL2/Linux: sed -i 's/\\\\r$//' %s\n" "$relative_path" >&2
+      return 1
+    fi
+  done
+}
+
+require_lf_sources "$script_dir/versions.env" "$script_dir/platform-checks.sh" || exit 1
+
 # shellcheck source=versions.env disable=SC1091
 . "$script_dir/versions.env"
 # shellcheck source=platform-checks.sh disable=SC1091
@@ -43,7 +59,6 @@ summary_and_exit() {
 }
 
 kube_ctx="kind-${WORKSHOP_CLUSTER_NAME}"
-repo_root="$(cd "$script_dir/.." && pwd)"
 host_os="$(workshop_detect_os)"
 
 # Checkout diagnostics --------------------------------------------------------
@@ -60,6 +75,10 @@ if [ -n "$nonexec_files" ]; then
 fi
 if [ "$host_os" = "windows" ]; then
   fail "native Windows shells are unsupported — open WSL2 and run ./workshop doctor there"
+fi
+if [ "$host_os" = "wsl1" ]; then
+  fail "WSL1 is unsupported — in PowerShell run: wsl --set-version ${WSL_DISTRO_NAME:-<DistributionName>} 2"
+  echo "       Verify the distribution shows VERSION 2: wsl --list --verbose"
 fi
 if [ "$fail_count" -gt 0 ]; then
   summary_and_exit

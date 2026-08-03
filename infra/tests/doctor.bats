@@ -10,6 +10,23 @@ setup() {
   export WORKSHOP_NONINTERACTIVE=1
 }
 
+use_wsl2_kernel() {
+  local os_bin="$BATS_TEST_TMPDIR/wsl2-bin"
+  mkdir -p "$os_bin"
+  cat > "$os_bin/uname" <<'EOF'
+#!/usr/bin/env sh
+case "${1:-}" in
+  -s) echo Linux ;;
+  -r) echo 5.15.167.4-microsoft-standard-WSL2 ;;
+  -m) echo x86_64 ;;
+  *) echo Linux ;;
+esac
+EOF
+  chmod +x "$os_bin/uname"
+  export PATH="$os_bin:$PATH"
+  export WSL_DISTRO_NAME=Ubuntu
+}
+
 @test "doctor passes when engine, cluster, nodes, and smoke Pod are green" {
   export MOCK_CLUSTER_EXISTS=1
   run "$ROOT/infra/doctor.sh"
@@ -38,7 +55,7 @@ setup() {
 @test "doctor gives the Docker Desktop integration route when WSL2 has no engine" {
   export MOCK_CLUSTER_EXISTS=1
   export MOCK_ENGINE_UP=0
-  export WSL_DISTRO_NAME=Ubuntu
+  use_wsl2_kernel
 
   run "$ROOT/infra/doctor.sh"
 

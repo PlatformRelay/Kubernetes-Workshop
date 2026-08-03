@@ -25,6 +25,23 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
+# These files are sourced below, so validate their line endings using only
+# built-in/bootstrap-safe commands first. Otherwise a CRLF-corrupted helper can
+# fail with opaque `$'\r'`/command-not-found errors before diagnostics exist.
+require_lf_sources() {
+  local source_file relative_path
+  for source_file in "$@"; do
+    if LC_ALL=C grep -q "$(printf '\r')" "$source_file" 2>/dev/null; then
+      relative_path="${source_file#"$REPO_ROOT"/}"
+      printf '[FAIL] CRLF line endings in required source file: %s\n' "$relative_path" >&2
+      printf "Repair from WSL2/Linux: sed -i 's/\\\\r$//' %s\n" "$relative_path" >&2
+      return 1
+    fi
+  done
+}
+
+require_lf_sources "$SCRIPT_DIR/versions.env" "$SCRIPT_DIR/platform-checks.sh" || exit 1
+
 # shellcheck source=versions.env disable=SC1091
 . "$SCRIPT_DIR/versions.env"
 # shellcheck source=platform-checks.sh disable=SC1091
@@ -101,7 +118,7 @@ confirm() {
 }
 
 # --- Preflight ---------------------------------------------------------------
-# OS / arch detect — informational; used to tailor hints (WSL2, licensing).
+# OS / arch detect — gates unsupported Windows shells/WSL1 and tailors hints.
 detect_os() {
   workshop_detect_os
 }
@@ -216,6 +233,16 @@ preflight() {
     say "  wsl --install"
     say "  wsl --set-default-version 2"
     say "then re-run ./workshop up from inside your WSL2 distro. See docs/setup.md."
+    return 1
+  fi
+
+  if [ "$os" = "wsl1" ]; then
+    local distro_name="${WSL_DISTRO_NAME:-<DistributionName>}"
+    err "WSL1 is not supported — this workshop requires WSL2 kernel isolation."
+    say "In PowerShell, convert this distribution and verify VERSION 2:"
+    say "  wsl --set-version ${distro_name} 2"
+    say "  wsl --list --verbose"
+    say "Back up large distributions first; conversion can take time."
     return 1
   fi
 

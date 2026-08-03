@@ -30,6 +30,30 @@ run_workshop_in_pty() {
   fi
 }
 
+use_wsl_kernel() {
+  local generation="$1" os_bin="$BATS_TEST_TMPDIR/wsl-${1}-bin"
+  mkdir -p "$os_bin"
+  if [ "$generation" = "2" ]; then
+    export MOCK_WSL_KERNEL_RELEASE=5.15.167.4-microsoft-standard-WSL2
+  elif [ "$generation" = "1" ]; then
+    export MOCK_WSL_KERNEL_RELEASE=4.4.0-19041-Microsoft
+  else
+    export MOCK_WSL_KERNEL_RELEASE=6.8.0-generic
+  fi
+  cat > "$os_bin/uname" <<'EOF'
+#!/usr/bin/env sh
+case "${1:-}" in
+  -s) echo Linux ;;
+  -r) echo "${MOCK_WSL_KERNEL_RELEASE:?}" ;;
+  -m) echo x86_64 ;;
+  *) echo Linux ;;
+esac
+EOF
+  chmod +x "$os_bin/uname"
+  export PATH="$os_bin:$PATH"
+  export WSL_DISTRO_NAME=Ubuntu
+}
+
 # --- usage / dispatch --------------------------------------------------------
 
 @test "no subcommand prints usage" {
@@ -250,7 +274,7 @@ EOF
 }
 
 @test "WSL2 reports an actionable Docker Desktop integration failure" {
-  export WSL_DISTRO_NAME=Ubuntu
+  use_wsl_kernel 2
   export MOCK_ENGINE_UP=0
 
   run "$ROOT/workshop" up
@@ -262,7 +286,7 @@ EOF
 }
 
 @test "WSL2 warns when the repository is on a mounted Windows drive" {
-  export WSL_DISTRO_NAME=Ubuntu
+  use_wsl_kernel 2
 
   run bash -c 'source "$1"; check_checkout wsl2 /mnt/c/Users/learner/kubernetes-workshop' _ \
     "$ROOT/infra/bootstrap.sh"
@@ -270,6 +294,44 @@ EOF
   [ "$status" -eq 0 ]
   echo "$output" | grep -q "mounted Windows drive"
   echo "$output" | grep -q 'mkdir -p .*/src'
+}
+
+@test "WSL1 is rejected instead of being treated as WSL2" {
+  use_wsl_kernel 1
+
+  run "$ROOT/workshop" up
+
+  [ "$status" -ne 0 ]
+  echo "$output" | grep -q "WSL1 is not supported"
+  echo "$output" | grep -q "wsl --set-version Ubuntu 2"
+  echo "$output" | grep -q "wsl --list --verbose"
+  ! grep -q "docker info" "$MOCK_LOG"
+}
+
+@test "WSL2 requires kernel evidence and does not trust environment variables alone" {
+  use_wsl_kernel ambiguous
+
+  run bash -c 'source "$1"; workshop_detect_os' _ "$ROOT/infra/platform-checks.sh"
+
+  [ "$status" -eq 0 ]
+  [ "$output" = "wsl1" ]
+}
+
+@test "bootstrap rejects CRLF in the sourced platform helper before sourcing it" {
+  local checkout="$BATS_TEST_TMPDIR/helper-crlf-checkout"
+  mkdir -p "$checkout/infra"
+  cp "$ROOT/infra/bootstrap.sh" "$checkout/infra/bootstrap.sh"
+  cp "$ROOT/infra/versions.env" "$checkout/infra/versions.env"
+  awk '{ printf "%s\r\n", $0 }' "$ROOT/infra/platform-checks.sh" > \
+    "$checkout/infra/platform-checks.sh"
+  chmod +x "$checkout/infra/bootstrap.sh"
+
+  run bash "$checkout/infra/bootstrap.sh" --help
+
+  [ "$status" -ne 0 ]
+  echo "$output" | grep -q "CRLF line endings in required source file"
+  echo "$output" | grep -q "infra/platform-checks.sh"
+  ! echo "$output" | grep -q "command not found"
 }
 
 @test "checkout diagnostics reject CRLF in executable scripts" {

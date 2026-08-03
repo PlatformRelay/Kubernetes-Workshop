@@ -52,18 +52,19 @@ named source: `server-dry-run` rows trace to the roadmap M4/M5 per-section progr
 
 ## Participant host validation
 
-Host support is a separate claim from manifest or lab validation. The scripted
-checks use stubs and cannot prove container-engine integration on a real Windows
-host.
+Host support is a separate claim from manifest or lab validation.
+`contract-tested` means scripted detection/message tests passed with stubs;
+`live-smoke` means the recorded real-host checklist passed. Only `live-smoke`
+permits an official support claim.
 
 | Host path | Automated coverage | Live validation procedure | State |
 | --- | --- | --- | --- |
 | macOS / Linux + supported engine | Bootstrap and doctor Bats suites | Fresh-host `./workshop up` and `./workshop doctor` | `unrun` |
-| Windows + WSL2 + integrated engine | Native-shell rejection, missing-engine guidance, `/mnt/c`, CRLF, executable-bit, and normal-Linux non-regression tests | [WSL2 reproducible validation checklist](./windows-wsl2.md#reproducible-validation-checklist) | `unrun` — no live WSL2 host was available for this change |
+| Windows 11 23H2+ + WSL 2.1.5+ + Ubuntu 24.04 + Docker Desktop 4.44+ | WSL1/WSL2 kernel distinction, native-shell rejection, missing-engine guidance, `/mnt/c`, sourced-helper CRLF, executable-bit, and normal-Linux non-regression tests | [WSL2 acceptance checklist](./windows-wsl2.md#reproducible-validation-checklist): Lab 00, networking, storage, one add-on, cleanup | `contract-tested` / `live-smoke pending` — **PARTIAL**, no official support claim |
 | Managed device + assigned cloud namespace | Documentation contract only | Facilitator-issued kubeconfig, namespace-path rehearsal without Docker/kind | `unrun` |
 
-Native PowerShell is explicitly unsupported. Browser-only participation remains
-future work (US-ENV-6), not a validated environment.
+Native PowerShell and WSL1 are explicitly unsupported. Browser-only
+participation remains future work (US-ENV-6), not a validated environment.
 
 ## Canonical version pins (`infra/versions.env`)
 
