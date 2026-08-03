@@ -127,11 +127,13 @@ Four ways in, depending on why you are here:
 
 ```bash
 pnpm install
-pnpm dev                # superset deck (slides.md) at http://localhost:3030
-pnpm dev:3day           # canonical 3-day cut (slides-3day.md)
+pnpm dev                # choose a day, section, or range (Gum menu when available)
+pnpm deck -- --list     # deterministic choices for any shell or CI
+pnpm deck -- --day 1    # full day; also supports --section S05 / --range S05-S09
+pnpm dev:superset       # compatibility-only full content superset
 pnpm dev:templates      # template gallery & animation spike
-pnpm build              # static build (build:3day / build:templates likewise)
-pnpm export             # PDF export (needs playwright-chromium)
+pnpm build              # build four live entries to dist-day-{1,2,3}/ + dist-optional/
+pnpm export             # export four live-entry PDFs (needs playwright-chromium)
 pnpm render             # export per-slide PNGs to dist-render/ (needs playwright-chromium)
 pnpm showcase:gif       # re-render the README's animated deck tour (docs/images/deck-showcase.gif)
 pnpm lint               # markdownlint the labs (lint:fix to auto-correct)
@@ -142,8 +144,11 @@ pnpm link-check         # verify internal doc links & anchors (no <pages-url> pl
 
 | Path | Purpose |
 | --- | --- |
-| `slides.md` | **Superset root deck** — imports every section `S00`–`S27` |
-| `slides-3day.md` | **Canonical 3-day cut** — same sections, some `hide: true` |
+| `scripts/deck-manifest.mjs` | Source of truth for section metadata and generated deck membership |
+| `slides-day-{1,2,3}.md` | Generated live-delivery entries for the three canonical days |
+| `slides-optional.md` | Generated Optional / Appendix entry for on-ramp, add-back, and advanced sections |
+| `slides.md` | Generated compatibility superset — imports every section `S00`–`S27` |
+| `slides-3day.md` | Generated compatibility entry containing all three canonical days |
 | `slides-templates.md` | Template gallery & animation-technology spike |
 | `pages/SNN-topic/` | One self-contained, toggleable section per folder (`index.md`) |
 | `labs/day-*/` | Standalone Markdown labs, one per authored section |
@@ -153,9 +158,11 @@ pnpm link-check         # verify internal doc links & anchors (no <pages-url> pl
 | `public/icons/` | Curated official Kubernetes/CNCF artwork (see its README) |
 | `docs/decisions/` | Decision records |
 
-Toggling: every section is imported by the root decks with a single `src:` block —
-set `hide: true` on that block to drop the whole section from that cut. New cut =
-one new `slides-<variant>.md`, never copied sections.
+Do not hand-edit generated root decks or toggle their `hide:` fields. Change section
+membership once in `scripts/deck-manifest.mjs`, run `pnpm decks:generate`, and commit the
+result. `pnpm decks:check` rejects missing or duplicate sections and generated drift.
+For a one-off delivery, use `pnpm deck` to compose a complete day, one section, or a
+contiguous range into the ignored `.deck-selection.md`; no section content is copied.
 
 ## Continuous integration & publishing
 
@@ -163,7 +170,7 @@ Three GitHub Actions workflows (`.github/workflows/`):
 
 | Workflow | Trigger | What it does |
 | --- | --- | --- |
-| `ci.yml` | PR + push to `main` | Lint the labs, build all three root decks, and link-check the front-door docs — a broken deck, malformed lab, or dead internal link fails the check. A separate job re-renders the README showcase GIF from the deck sources (`pnpm showcase:gif`) and uploads it as an artifact, keeping the animated preview reproducible. |
+| `ci.yml` | PR + push to `main` | Lint the labs, build the four live entries plus compatibility/gallery entries, and link-check the front-door docs — a broken deck, malformed lab, or dead internal link fails the check. A separate job re-renders the README showcase GIF from the deck sources (`pnpm showcase:gif`) and uploads it as an artifact, keeping the animated preview reproducible. |
 | `pages.yml` | push to `main` (+ manual) | Build the decks as a static site and deploy to GitHub Pages under the `/Kubernetes-Workshop/` base path. |
 | `release.yml` | tag `v*` | Export the superset and 3-day decks to PDF and attach them (plus the built site) to a GitHub Release. |
 

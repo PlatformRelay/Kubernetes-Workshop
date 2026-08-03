@@ -44,6 +44,17 @@ describe('deck manifest validation', () => {
     )
   })
 
+  it('rejects section IDs with extra prefix or suffix characters', () => {
+    const root = mkdtempSync(join(tmpdir(), 'workshop-deck-'))
+    mkdirSync(join(root, 'pages', 'XS00-topic-xs00'), { recursive: true })
+    writeFileSync(join(root, 'pages', 'XS00-topic-xs00', 'index.md'), '# XS00\n')
+
+    assert.throws(
+      () => validateManifest([section('XS00')], { repoRoot: root }),
+      /invalid manifest metadata.*XS00/i,
+    )
+  })
+
   it('rejects an authored section omitted from the manifest', () => {
     const root = mkdtempSync(join(tmpdir(), 'workshop-deck-'))
     mkdirSync(join(root, 'pages', 'S00-topic-s00'), { recursive: true })

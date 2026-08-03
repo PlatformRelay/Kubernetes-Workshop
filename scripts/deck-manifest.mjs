@@ -58,7 +58,7 @@ export function validateManifest(manifest = sections, { repoRoot = resolve(impor
       throw new Error(`Duplicate section source ${source}`)
     seenPaths.add(source)
 
-    if (!/S\d{2}/.test(section.id) || ![1, 2, 3].includes(section.day)
+    if (!/^S\d{2}$/.test(section.id) || ![1, 2, 3].includes(section.day)
       || !['core', 'recommended', 'optional'].includes(section.tier)) {
       throw new Error(`Invalid manifest metadata for ${section.id}`)
     }
