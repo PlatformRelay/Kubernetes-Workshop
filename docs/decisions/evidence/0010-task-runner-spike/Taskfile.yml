@@ -1,0 +1,41 @@
+version: '3.52.0'
+
+tasks:
+  default:
+    cmds:
+      - task: help
+    silent: true
+
+  help:
+    desc: List the fixture tasks
+    cmd: task --list
+    silent: true
+
+  preflight:
+    internal: true
+    preconditions:
+      - sh: test -f .ready
+        msg: missing .ready
+
+  up:
+    desc: Simulate workshop up
+    deps: [preflight]
+    cmd: ./runner.sh up
+
+  down:
+    desc: Simulate workshop down
+    cmd: ./runner.sh down
+
+  doctor:
+    desc: Simulate workshop doctor
+    cmd: ./runner.sh doctor
+
+  profile:
+    desc: Compose up and doctor sequentially
+    cmds:
+      - task: up
+      - task: doctor
+
+  args:
+    desc: Preserve arguments after --
+    cmd: ./runner.sh args {{.CLI_ARGS}}

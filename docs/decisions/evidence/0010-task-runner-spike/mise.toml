@@ -1,0 +1,29 @@
+[tasks.help]
+description = "List the fixture tasks"
+run = "mise tasks"
+
+[tasks.preflight]
+hide = true
+run = "test -f .ready || { echo 'missing .ready' >&2; exit 1; }"
+
+[tasks.up]
+description = "Simulate workshop up"
+depends = ["preflight"]
+run = "./runner.sh up"
+
+[tasks.down]
+description = "Simulate workshop down"
+run = "./runner.sh down"
+
+[tasks.doctor]
+description = "Simulate workshop doctor"
+run = "./runner.sh doctor"
+
+[tasks.profile]
+description = "Compose up and doctor sequentially"
+run = [{ task = "up" }, { task = "doctor" }]
+
+[tasks.args]
+description = "Preserve arguments"
+run = "./runner.sh args"
+raw = true
