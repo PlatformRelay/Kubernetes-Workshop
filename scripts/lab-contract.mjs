@@ -160,6 +160,53 @@ export function auditLabs(paths = DAY_1_LABS.map((path) => resolve(REPO_ROOT, pa
   return paths.flatMap(auditLab);
 }
 
+export function auditContractDocumentation(repoRoot = REPO_ROOT) {
+  const errors = [];
+  const read = (path) => readFileSync(resolve(repoRoot, path), 'utf8');
+  const agent = read('AGENT.md');
+  const labsReadme = read('labs/README.md');
+  const facilitator = read('docs/facilitator-guide.md');
+
+  for (const token of ['<!-- lab-contract:v1 -->', 'NN-topic.solution.md', 'pnpm test:labs']) {
+    if (!agent.includes(token)) errors.push(`AGENT.md: lab contract guidance must name ${token}`);
+  }
+  if (/collapsible\s+\*\*spoiler\*\*/i.test(agent)) {
+    errors.push('AGENT.md: still requires inline collapsible spoilers');
+  }
+
+  for (const token of ['NN-topic.solution.md', '#guided-solutions', '#challenge-solution']) {
+    if (!labsReadme.includes(token)) {
+      errors.push(`labs/README.md: participant guidance must name ${token}`);
+    }
+  }
+  if (!/Day 1 Labs 01[–-]08/.test(labsReadme)) {
+    errors.push('labs/README.md: must scope the enforced contract to Day 1 Labs 01–08');
+  }
+  if (/Every task and every question[\s\S]{0,100}collapsible spoiler/i.test(labsReadme)) {
+    errors.push('labs/README.md: still promises inline spoilers for every task');
+  }
+
+  if (!facilitator.includes('NN-topic.solution.md')) {
+    errors.push('docs/facilitator-guide.md: must direct facilitators to sibling solutions');
+  }
+  if (/with a spoiler for\s+every task/i.test(facilitator)) {
+    errors.push('docs/facilitator-guide.md: still promises an inline spoiler for every task');
+  }
+  for (const evidence of ['S08', 'Ubuntu', '2026-08-03', 'Contour v1.33.5']) {
+    if (!facilitator.includes(evidence)) {
+      errors.push(`docs/facilitator-guide.md: missing S08 rehearsal evidence: ${evidence}`);
+    }
+  }
+  const pendingAddons = facilitator
+    .split('\n')
+    .find((line) => line.includes('add-on-heavy labs'));
+  if (pendingAddons?.includes('S08')) {
+    errors.push('docs/facilitator-guide.md: S08 is still listed as pending live rehearsal');
+  }
+
+  return errors;
+}
+
 const invokedAsScript = process.argv[1] &&
   pathToFileURL(resolve(process.argv[1])).href === import.meta.url;
 

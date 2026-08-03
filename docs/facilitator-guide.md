@@ -92,9 +92,9 @@ planning target.
 **Pacing tactics that hold the 50/50 balance:**
 
 - **Timebox the labs, not the discussion.** Announce the lab's estimated time up front and
-  keep a visible timer. Every lab is idiot-proof (fully copy-pasteable, with a spoiler for
-  every task), so a stuck learner is one click from the answer — you rarely need to stop
-  the room.
+  keep a visible timer. Day 1 Labs 01–08 are fully copy-pasteable and link to their
+  `NN-topic.solution.md` companion, so a stuck learner is one click from exact commands,
+  expected state, and recovery guidance — you rarely need to stop the room.
 - **Use the break→fix step as the natural catch-up point.** Fast finishers dig into the
   stretch goal; you circulate while slower learners reach the deliberate break.
 - **Protect the red line.** Sections S05–S09 (`Pod → Deployment → Service → Ingress →
@@ -256,11 +256,17 @@ pass**. Be aware of the following, consistent with the honesty callouts already 
 
 - **Timings are unrehearsed planning estimates.** Confirming the 3-day cut lands near ~390
   min/day at ~50/50 is an open pre-delivery task — keep your own clock the first time.
-- **The `kind`-only add-on installs have not all been run end-to-end** in a clean
-  environment. Exact controller/CRD timings and the verbatim `describe`/error strings in a
-  few spoilers may differ slightly; the commands are correct. Do a **dry run of the
-  add-on-heavy labs** (S08, S09, S16, S18, S21, S22, S23) on a clean kind cluster before
-  delivery so you know the real install times for your network.
+- **S08 has fresh live evidence.** On 2026-08-03, its complete kind path passed on an
+  Ubuntu 26.04 x86_64 laptop with Docker 29.6.2, kind v0.32.0 / Kubernetes v1.36.1,
+  and Contour v1.33.5: controller and Envoy readiness, both host routes,
+  required-`pathType` rejection, wrong-class routing loss, TLS/SNI, the ingress2gateway
+  challenge, and cleanup. This validates behaviour, not the 25-minute classroom estimate.
+  The created cluster and validation namespace were removed.
+- **The remaining `kind`-only add-on installs have not all been run end-to-end** in a
+  clean environment. Exact controller/CRD timings and representative solution output may
+  differ slightly. Dry-run the remaining **add-on-heavy labs** (S09, S16, S18, S21, S22,
+  S23) on a clean kind cluster before delivery so you know the real install times for your
+  network.
 - **The environment automation (`infra/`, `make kind-up` / `make ns-provision`) is
   planned, not built** (roadmap M8 / US-ENV-1). Provision manually as above.
 - **The de-nginx effort (roadmap M8 / US-NGX) has landed.** The retired ingress-nginx

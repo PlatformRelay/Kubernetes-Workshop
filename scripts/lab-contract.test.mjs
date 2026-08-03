@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 
-import { auditLab } from './lab-contract.mjs';
+import { auditContractDocumentation, auditLab } from './lab-contract.mjs';
 
 function fixture({ lab = '', solution = '' } = {}) {
   const root = mkdtempSync(join(tmpdir(), 'lab-contract-'));
@@ -118,4 +118,8 @@ test('rejects a dangling challenge-solution anchor', () => {
   }));
 
   assert.ok(errors.some((error) => error.includes('dangling challenge solution link')));
+});
+
+test('keeps contributor and facilitator guidance aligned with the enforced slice', () => {
+  assert.deepEqual(auditContractDocumentation(), []);
 });

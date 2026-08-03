@@ -81,34 +81,34 @@ the setup lab (`export NS=<your-namespace>`; kind users use `export NS=workshop`
 ## How the labs work
 
 The workshop teaches a repeatable rhythm: **explain → run → observe → break → fix →
-recap**. The labs are the "run / observe / break / fix" part. Every lab follows the
-same shape:
+recap**. The labs are the "run / observe / break / fix" part. Day 1 Labs 01–08 are the
+first slice enforced by `pnpm test:labs`; they follow this shape:
 
 1. **Title & metadata** — the matching section ID, an estimated time, and the
    Environment badge.
 2. **Objective** — one or two sentences on what you'll prove.
 3. **Prerequisites** — prior labs, any add-ons/tools needed.
-4. **Files used** — manifests are created inline (via `cat > file.yaml`), so a lab is
-   fully self-contained; nothing to clone separately.
-5. **Steps** — explicit, ordered, copy-pasteable commands. No "figure it out."
-6. **Cleanup / panic reset** — return to a known-good state.
+4. **Guided task** — explicit, ordered, copy-pasteable commands. No "figure it out."
+5. **Observe** — read and explain the resulting state.
+6. **Challenge** — transfer the skill to a diagnostic or changed scenario.
+7. **Verify** — prove the expected state before deleting evidence.
+8. **Cleanup / reset** — remove named/labelled lab resources or reset only the assigned
+   namespace.
 
-### Spoilers & hints
+### Solutions & hints
 
-Every task and every question is immediately followed by a **collapsible spoiler** with
-the solution or the expected output:
+Contracted participant labs stay readable by keeping answers in a sibling
+`NN-topic.solution.md`. Each lab links to both required anchors:
 
 ```md
-<details><summary>Solution / expected output</summary>
-
-...the answer, the exact command output, and why it's correct...
-</details>
+[Spoiler: guided solutions](./NN-topic.solution.md#guided-solutions)
+[Spoiler: challenge solution](./NN-topic.solution.md#challenge-solution)
 ```
 
-Try each step **before** you open the spoiler — but if you get stuck, the answer is
-always one click away. The labs are **idiot-proof by design**: a learner who copies every
-command in order will succeed, and any question you could get wrong has its answer in a
-spoiler.
+Try each step **before** opening the companion. It contains the exact commands/manifests,
+representative expected state, why the result is correct, likely-failure recovery, and the
+challenge answer. Day 1 Labs 01–08 use this sibling convention; later labs retain their
+legacy inline answers until they are migrated into the enforced inventory.
 
 ### Break → fix
 
@@ -179,5 +179,6 @@ it needs a Go toolchain and is planned for a later milestone; see the
 > **Kind rehearsal note.** The labs' manifests are validated, but not every lab has yet
 > been run end-to-end in a clean environment — a few kind-only add-on installs (timings,
 > exact controller/CRD behaviour) are pending a rehearsal pass. If a step's timing or
-> output differs slightly from a spoiler, that is the likely reason; the commands are
-> correct. Facilitators: see the [facilitator guide](../docs/facilitator-guide.md).
+> representative solution output differs, capture the real state instead of copying an
+> ephemeral value. Facilitators: see the
+> [facilitator guide](../docs/facilitator-guide.md).

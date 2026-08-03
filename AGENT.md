@@ -236,10 +236,17 @@ control-plane `api`/`c-m`/`sched`/`kubelet`/`k-proxy`, infra `node`/`etcd`, …)
 ## Lab authoring contract
 
 Labs are standalone Markdown under `labs/day-N/NN-topic.md`, **not** embedded in the
-deck. Every lab must be **idiot-proof**: explicit, copy-pasteable steps, and a
-collapsible **spoiler** (`<details>`) with the solution/expected output for every task
-and question. Full contract:
-`agent-context/presentation-outline.md#lab-authoring-contract`.
+deck. A contracted participant lab carries `<!-- lab-contract:v1 -->` and uses the ordered
+headings **Prerequisites → Guided task → Observe → Challenge → Verify → Cleanup / reset**.
+Answers belong in the sibling `NN-topic.solution.md`, linked from the participant lab at
+`#guided-solutions` and `#challenge-solution`. The companion includes exact commands and
+manifests, expected state/output, explanations, likely-failure recovery, and the challenge
+answer. Cleanup is scoped to named/labelled resources or the assigned namespace and comes
+after verification and the challenge.
+
+Run `pnpm test:labs` to enforce the contract. Day 1 Labs 01–08 are the first enforced
+slice; expand the checker inventory as later days migrate. Full curriculum intent remains
+in `agent-context/presentation-outline.md#lab-authoring-contract`.
 
 ## Commit conventions
 
