@@ -126,7 +126,10 @@ describe('deck CI contract', () => {
 
     for (const command of [
       'pnpm run test:deck',
-      'pnpm run build',
+      'pnpm run build:day1',
+      'pnpm run build:day2',
+      'pnpm run build:day3',
+      'pnpm run build:optional',
       'pnpm run build:superset',
       'pnpm run build:3day',
       'pnpm run build:templates',
