@@ -17,11 +17,13 @@ more readable than progressively extending Make. Any runner change must still wo
 on macOS, Linux, or WSL2, including a shell where mise-managed tools have not been activated.
 Native Windows is not a supported lab environment today.
 
-This timeboxed spike compared the current Make layer, Go Task 3.52.0, and mise tasks using mise
-2026.7.15. The fixture and recorded results are in
-[the ADR evidence directory](evidence/0010-task-runner-spike/results.md). The comparison used real
-help/list output, `up`, `down`, `doctor`, a composed profile, arguments containing whitespace,
-non-interactive environment propagation, dependencies, and preconditions.
+This timeboxed spike compared the current Make layer, Go Task 3.52.0, and mise tasks using an
+installed mise 2026.7.15 and a CI fixture pinned to mise 2026.8.1. The fixture and recorded results
+are in [the ADR evidence directory](evidence/0010-task-runner-spike/results.md). The comparison used
+real candidate configuration behind one `workshop` wrapper: command discovery, `up`, `down`,
+`doctor`, an observability profile that composes Gateway API and metrics-server add-ons, arguments
+containing whitespace and globs, non-interactive environment propagation, dependencies, and
+preconditions.
 
 ## Options considered
 
@@ -47,8 +49,9 @@ checksums, and the installer can request a specific release
 ([installation documentation](https://taskfile.dev/docs/installation)). It could also be pinned as
 `task = "3.52.0"` through mise's Aqua backend and covered by `mise.lock`.
 
-Those features do not currently justify another required executable. Task is absent on a fresh
-Ubuntu/WSL2 installation and on the tested Ubuntu laptop. Installing it through mise avoids an
+Those features do not currently justify another required executable. Task was absent from the
+tested pristine Ubuntu image and Ubuntu laptop. WSL2 was not available for this spike and no claim
+is made about a particular WSL2 installation. Installing Task through mise avoids an
 unverified curl bootstrap, but then Task is not available until the existing bootstrap has installed
 mise and the locked toolchain. Native Windows support is not a present advantage because the
 workshop intentionally directs Windows participants to WSL2.
@@ -60,8 +63,8 @@ arguments, dependencies, parallel graph execution, source/output tracking, and W
 commands ([task documentation](https://mise.jdx.dev/tasks/) and
 [task configuration](https://mise.jdx.dev/tasks/task-configuration.html)). A mise task runs in the
 configured tool environment, so it avoids the post-install PATH problem without requiring shell
-activation. The spike also confirmed that `mise exec` found the locked `kind` and `kubectl` while
-the process PATH contained only `/usr/bin:/bin`.
+activation. The strict fixture confirmed that every candidate, including Make and Task, resolved a
+fixture-managed `kind` 0.32.0 while the host PATH contained only `/usr/bin:/bin` and had no `kind`.
 
 Mise has the same bootstrap boundary as Task: it cannot run a task before `./workshop` finds or
 installs mise. Inline TOML commands are no more shellcheck-friendly than inline Make or YAML, so
@@ -114,3 +117,4 @@ logic or participant command changes because neither lives in the runner configu
   mise-task layer would reuse that trust boundary.
 - Removing Make from the bootstrap path is a separate reliability fix, not a task-runner migration.
 - A future native-Windows commitment may change the result, but WSL2 support alone does not.
+- WSL2 remains an explicit migration gate because it was not exercised in this spike.

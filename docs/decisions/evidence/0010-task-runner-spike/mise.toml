@@ -1,6 +1,14 @@
+[settings]
+lockfile = true
+
+[tools]
+kind = "0.32.0"
+shellcheck = "0.11.0"
+task = "3.52.0"
+
 [tasks.help]
 description = "List the fixture tasks"
-run = "mise tasks"
+run = "printf '%s\\n' 'commands: help up down doctor profile-observability args tool-version'"
 
 [tasks.preflight]
 hide = true
@@ -19,11 +27,28 @@ run = "./runner.sh down"
 description = "Simulate workshop doctor"
 run = "./runner.sh doctor"
 
-[tasks.profile]
-description = "Compose up and doctor sequentially"
-run = [{ task = "up" }, { task = "doctor" }]
+[tasks.addon-gateway-api]
+hide = true
+run = "./runner.sh addon-gateway-api"
+
+[tasks.addon-metrics-server]
+hide = true
+run = "./runner.sh addon-metrics-server"
+
+[tasks.profile-observability]
+description = "Compose a cluster and its observability prerequisites"
+run = [
+  { task = "up" },
+  { task = "addon-gateway-api" },
+  { task = "addon-metrics-server" },
+  { task = "doctor" },
+]
 
 [tasks.args]
 description = "Preserve arguments"
 run = "./runner.sh args"
 raw = true
+
+[tasks.tool-version]
+description = "Resolve a locked tool absent from the host PATH"
+run = "./tool-version.sh"

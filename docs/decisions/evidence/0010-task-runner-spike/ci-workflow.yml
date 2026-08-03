@@ -1,0 +1,19 @@
+name: Task-runner spike fixture
+
+on:
+  workflow_dispatch:
+
+jobs:
+  compare:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: jdx/mise-action@5228313ee0372e111a38da051671ca30fc5a96db
+        with:
+          version: 2026.8.1
+          install: false
+      - name: Install locked fixture tools
+        working-directory: docs/decisions/evidence/0010-task-runner-spike
+        run: mise install --locked
+      - name: Compare all runners strictly
+        run: docs/decisions/evidence/0010-task-runner-spike/verify.sh --strict

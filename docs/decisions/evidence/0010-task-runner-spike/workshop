@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+fixture_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+runner="${WORKSHOP_SPIKE_RUNNER:-make}"
+
+if [ "${1:-}" = "--runner" ]; then
+  runner="${2:-}"
+  shift 2
+fi
+
+command_name="${1:-help}"
+shift || true
+
+mise_path="${MISE_BIN:-$(command -v mise || true)}"
+if [ -z "$mise_path" ]; then
+  printf '%s\n' 'mise is required for the spike fixture' >&2
+  exit 1
+fi
+
+export MISE_TRUSTED_CONFIG_PATHS="$fixture_dir"
+cd "$fixture_dir"
+
+case "$runner" in
+  make)
+    if [ "$command_name" = "args" ]; then
+      printf -v escaped_args ' %q' "$@"
+      "$mise_path" exec -- make --no-print-directory args "ARGS=$escaped_args"
+    else
+      "$mise_path" exec -- make --no-print-directory "$command_name"
+    fi
+    ;;
+  task)
+    if [ "$command_name" = "args" ]; then
+      "$mise_path" exec -- task --silent args -- "$@"
+    else
+      "$mise_path" exec -- task --silent "$command_name"
+    fi
+    ;;
+  mise)
+    "$mise_path" run --quiet "$command_name" -- "$@"
+    ;;
+  *)
+    printf 'unknown spike runner: %s\n' "$runner" >&2
+    exit 2
+    ;;
+esac

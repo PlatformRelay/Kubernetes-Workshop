@@ -28,6 +28,7 @@ shaped the way it is — not just *what* it looks like.
 | [0007](0007-kubernetes-currency-and-version-pinning.md) | Kubernetes currency and version-pinning policy | accepted |
 | [0008](0008-validation-and-ci.md) | Validation and CI strategy | accepted |
 | [0009](0009-single-file-lab-convention.md) | Single-file labs with in-file manifest heredocs | accepted |
+| [0010](0010-task-runner-spike.md) | Keep the workshop entrypoint and defer a task-runner migration | accepted |
 
 ## Template
 

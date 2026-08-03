@@ -1,19 +1,31 @@
 # Task-runner spike evidence
 
-Captured on 2026-08-03. The fixture delegates every verb to `runner.sh`, matching the intended
-architecture in which the task runner contains composition rather than product logic.
+Captured on 2026-08-03. The fixture places Make, Go Task, and mise tasks behind the same
+`workshop --runner <candidate>` wrapper. Every verb delegates to standalone scripts, matching the
+intended architecture in which runner files contain discovery and composition rather than
+Kubernetes logic.
 
-## Reproduce the feature comparison
+## Strict feature comparison
 
 From the repository root:
 
 ```sh
-docs/decisions/evidence/0010-task-runner-spike/verify.sh
+docs/decisions/evidence/0010-task-runner-spike/verify.sh --strict
 ```
 
-The script tests task discovery, a sequential `up` plus `doctor` profile, non-interactive
-environment propagation, whitespace-preserving arguments, and a failing precondition. A missing
-optional runner is reported as skipped. The two shell files are checked with ShellCheck.
+Strict mode fails if Make or mise is missing, or if locked Task 3.52.0, kind 0.32.0, and ShellCheck
+0.11.0 cannot be installed.
+There are no skipped candidates. It asserts exact output for:
+
+- discovery of `help`, `up`, `down`, `doctor`, `profile-observability`, `args`, and `tool-version`;
+- ordered `up` → Gateway API add-on → metrics-server add-on → `doctor` composition;
+- `WORKSHOP_NONINTERACTIVE=1` on every composed operation;
+- three argument boundaries: `alpha`, `beta gamma`, and the unexpanded `*.md` glob; and
+- kind 0.32.0 resolved from mise while `kind` is absent from the restricted host PATH.
+
+It also requires all candidates to reject a missing `.ready` precondition and checks all fixture
+shell with ShellCheck. `mise.lock` contains platform URLs and SHA-256 checksums for Task, kind, and
+ShellCheck.
 
 Observed on macOS 26.5.2 arm64:
 
@@ -24,11 +36,7 @@ mise 2026.7.15 macos-arm64
 ShellCheck 0.11.0
 ```
 
-All three runners produced the same action order and preserved `alpha` plus `beta gamma` as two
-arguments. All three rejected the missing `.ready` precondition. Task and mise provided their task
-lists from descriptions; Make needed a custom help recipe.
-
-The official latest-release API reported Task v3.52.0 and mise v2026.8.1 at the time of the spike:
+The official latest-release API reported Task v3.52.0 and mise v2026.8.1 at capture time:
 
 ```sh
 gh api repos/go-task/task/releases/latest --jq '.tag_name + " " + .published_at'
@@ -37,7 +45,7 @@ gh api repos/jdx/mise/releases/latest --jq '.tag_name + " " + .published_at'
 
 ## Bootstrap evidence
 
-The Ubuntu workshop laptop was inspected without changing its tools:
+The Ubuntu workshop laptop was inspected without changing its installed tools:
 
 ```sh
 ssh a242168@192.168.178.74 \
@@ -54,32 +62,35 @@ ssh a242168@192.168.178.74 \
   'for tool in make task mise curl bash; do command -v \"\$tool\" || echo \"\$tool=missing\"; done'"
 ```
 
-The image contained Bash, but Make, Task, mise, and curl were all absent. This is not a complete
-Docker-enabled participant image, but it proves none of the candidate runners is an Ubuntu base
-guarantee. WSL2 with an Ubuntu distribution has the same package-level risk.
+The image contained Bash, but Make, Task, mise, and curl were absent. This does not model Docker
+installation or a complete participant machine; it only proves that none of the candidate runners
+is guaranteed by the Ubuntu base image.
 
-## PATH and pinning evidence
+No live WSL2 host was available. WSL2 bootstrap, filesystem, and Docker Desktop integration remain
+untested and are explicitly required before any runner migration.
 
-From the repository root, an intentionally restricted PATH still resolved the locked tools through
-mise:
+## CI ergonomics
+
+`ci-workflow.yml` is an inactive, reproducible GitHub Actions fixture, not a repository workflow.
+It pins checkout and mise actions by commit, pins mise 2026.8.1, installs the evidence lock, and runs
+the strict suite on Ubuntu 24.04. It can be copied to a temporary branch for an actual Actions run;
+that remote execution was not part of this spike.
+
+The fixture makes the CI trade-off concrete:
+
+| Candidate | CI preparation in the fixture | Tool PATH behavior |
+| --- | --- | --- |
+| Make | Relies on the runner image's Make; strict mode fails if absent | Wrapper uses `mise exec` |
+| Go Task | Downloads locked Task 3.52.0 through the existing mise install step | Wrapper uses `mise exec` |
+| mise tasks | Uses the already-required pinned mise action | Tasks activate locked tools directly |
+
+Task therefore needs no separate setup action if adopted, but it remains an additional downloaded
+binary. Mise tasks reuse the runner already needed for the workshop toolchain. Make has no download
+in this specific GitHub image, but that is image state rather than a repository pin.
+
+Validate the inactive workflow fixture locally with the repository-managed `yq`:
 
 ```sh
-env PATH=/usr/bin:/bin /opt/homebrew/bin/mise exec -- \
-  sh -c 'command -v kind; kind version'
-env PATH=/usr/bin:/bin /opt/homebrew/bin/mise exec -- \
-  sh -c 'command -v kubectl; kubectl version --client=true'
+mise exec -- yq '.' \
+  docs/decisions/evidence/0010-task-runner-spike/ci-workflow.yml >/dev/null
 ```
-
-The commands resolved `kind` 0.32.0 and `kubectl` 1.36.1 under the mise install directory. Their
-platform URLs and SHA-256 checksums are recorded in the repository's existing `mise.lock`.
-
-Go Task 3.52.0 is available through mise's Aqua registry:
-
-```sh
-mise registry task
-mise ls-remote task | tail
-```
-
-Therefore a future Task adoption could be pinned and checksummed without adding a separate install
-script. It would still be an additional managed executable, while mise tasks reuse the runner that
-already installs the Kubernetes tools.

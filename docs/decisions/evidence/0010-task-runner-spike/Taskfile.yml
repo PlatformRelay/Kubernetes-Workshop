@@ -8,7 +8,9 @@ tasks:
 
   help:
     desc: List the fixture tasks
-    cmd: task --list
+    cmd: >-
+      printf '%s\n'
+      'commands: help up down doctor profile-observability args tool-version'
     silent: true
 
   preflight:
@@ -30,12 +32,26 @@ tasks:
     desc: Simulate workshop doctor
     cmd: ./runner.sh doctor
 
-  profile:
-    desc: Compose up and doctor sequentially
+  addon-gateway-api:
+    internal: true
+    cmd: ./runner.sh addon-gateway-api
+
+  addon-metrics-server:
+    internal: true
+    cmd: ./runner.sh addon-metrics-server
+
+  profile-observability:
+    desc: Compose a cluster and its observability prerequisites
     cmds:
       - task: up
+      - task: addon-gateway-api
+      - task: addon-metrics-server
       - task: doctor
 
   args:
     desc: Preserve arguments after --
     cmd: ./runner.sh args {{.CLI_ARGS}}
+
+  tool-version:
+    desc: Resolve a locked tool absent from the host PATH
+    cmd: ./tool-version.sh

@@ -4,6 +4,9 @@
 - **Scope:** how the runnable environment for the labs is provisioned and where that
   infrastructure-as-code lives — both the local `kind` path and the shared-cluster/namespace
   path, plus the per-lab prerequisites (controllers, CRDs, operators).
+- **Amendment:** [ADR 0010](0010-task-runner-spike.md) governs the participant entrypoint and
+  task-runner choice. Its rules replace this ADR's runner-specific assumptions while preserving
+  the `infra/` layout and thin-entrypoint principle.
 
 ## Context
 
@@ -32,7 +35,7 @@ things a learner already has or can install in minutes (`kubectl`, a container e
 
 All environment code lives under `infra/`, referenced by labs — never vendored into them.
 
-```
+```text
 infra/
 ├── kind/
 │   ├── cluster.yaml         # kind cluster config (ingress-ready ports, extra mounts)
