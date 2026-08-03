@@ -305,25 +305,33 @@ export function validateFrontDoorFacts(manifest, documents) {
   validateSyllabusCatalog(manifest, syllabus)
 
   const readme = documents.get('README.md') ?? ''
-  const readmeAssignments = new Map()
+  const readmeByDay = new Map([1, 2, 3].map((day) => [day, []]))
   for (const line of readme.split('\n')) {
     const cells = line.split('|').slice(1, -1).map((cell) => cell.replaceAll('*', '').trim())
     const day = Number(cells[0]?.match(/^Day ([123])$/)?.[1])
     if (!day || cells.length < 3)
       continue
-    for (const id of sectionIds(cells[2])) {
-      const assignments = readmeAssignments.get(id) ?? new Set()
-      assignments.add(day)
-      readmeAssignments.set(id, assignments)
-    }
+    readmeByDay.get(day).push(...sectionIds(cells[2]))
   }
-  for (const section of manifest.filter((item) => item.canonical)) {
-    const assignments = readmeAssignments.get(section.id) ?? new Set()
-    const wrongDay = [...assignments].find((day) => day !== section.day)
-    if (!assignments.has(section.day) || wrongDay) {
-      const claim = wrongDay ? `assigns ${section.id} to Day ${wrongDay}` : `does not assign ${section.id}`
-      throw new Error(`README.md ${claim}; manifest requires Day ${section.day}`)
+  for (const day of [1, 2, 3]) {
+    const expected = new Set(manifest
+      .filter((section) => section.canonical && section.day === day)
+      .map((section) => section.id))
+    const claimed = readmeByDay.get(day)
+    const duplicate = claimed.find((id, index) => claimed.indexOf(id) !== index)
+    if (duplicate)
+      throw new Error(`README.md Day ${day} lists duplicate section ${duplicate}`)
+    const extra = claimed.find((id) => !expected.has(id))
+    if (extra) {
+      const section = byId.get(extra)
+      const requirement = section?.canonical
+        ? `manifest requires Day ${section.day}`
+        : `${extra} is not a canonical section for this delivery`
+      throw new Error(`README.md Day ${day} contains unexpected ${extra}; ${requirement}`)
     }
+    const missing = [...expected].find((id) => !claimed.includes(id))
+    if (missing)
+      throw new Error(`README.md Day ${day} is missing canonical section ${missing}`)
   }
 
   const labsReadme = documents.get('labs/README.md') ?? ''
@@ -336,12 +344,17 @@ export function validateFrontDoorFacts(manifest, documents) {
     if (heading)
       labsDay = Number(heading[1])
     if (labsDay) {
-      for (const match of line.matchAll(/\.\/day-[123]\/(\d{2})-[^)]+\.md/g))
-        labAssignments.set(`S${match[1]}`, labsDay)
+      for (const match of line.matchAll(/\.\/day-[123]\/(\d{2})-[^)]+\.md/g)) {
+        const id = `S${match[1]}`
+        labAssignments.set(id, [...(labAssignments.get(id) ?? []), labsDay])
+      }
     }
   }
   for (const section of manifest.filter((item) => item.environment)) {
-    const assigned = labAssignments.get(section.id)
+    const assignments = labAssignments.get(section.id) ?? []
+    if (assignments.length > 1)
+      throw new Error(`labs/README.md ${section.id} has duplicate day placement`)
+    const assigned = assignments[0]
     if (assigned !== section.day) {
       const claim = assigned ? `groups ${section.id} under Day ${assigned}` : `does not list ${section.id}`
       throw new Error(`labs/README.md ${claim}; manifest requires Day ${section.day}`)
@@ -406,16 +419,25 @@ export function validateStatusClaims(manifest, documents) {
         ? block.split('\n')
         : block.replaceAll('\n', ' ').split(/(?<=[.!?])\s+/))
       for (const statement of statements.filter((item) => item.includes(section.id))) {
-        const withoutNegations = statement
+        const explicitlyDeferred = /\bdeferred\b|\bnot\s+(?:taught|delivered|schedulable)\b/i.test(statement)
+        let withoutNegations = statement
           .replace(/[*_>`#]/g, ' ')
           .replace(/\b\d+\s+of\s+\d+\s+sections are fully authored\b/gi, '')
           .replace(/\b(?:is\s+)?neither\s+(?:fully\s+)?(?:authored|runnable|schedulable)(?:\s+nor\s+(?:fully\s+)?(?:authored|runnable|schedulable))+\b/gi, '')
           .replace(/\bisn['’]t(?:\s+\w+){0,3}\s+(?:fully\s+)?(?:authored|runnable|schedulable)\b/gi, '')
           .replace(/\bnot(?:\s+\w+){0,3}\s+(?:fully\s+)?(?:authored|runnable|schedulable)\b/gi, '')
-          .replace(/\b(?:cannot|can['’]t|may not|could not|must not|should not|will not|won['’]t|never)\b[^.!?;]{0,100}?\b(?:be\s+)?scheduled\b/gi, '')
+          .replace(/\b(?:cannot|can['’]t|may not|might not|could not|would not|must not|should not|shall not|will not|won['’]t|never)\b[^.!?;]{0,100}?\b(?:be\s+)?scheduled\b/gi, '')
+          .replace(/\b(?:is|are|was|were)\s+not\s+scheduled\b/gi, '')
+          .replace(/\b(?:isn['’]t|aren['’]t|wasn['’]t|weren['’]t)\s+scheduled\b/gi, '')
           .replace(/\bunauthored\b/gi, '')
+        if (explicitlyDeferred) {
+          withoutNegations = withoutNegations.replace(
+            /\bis(?:\s*,[^,]{1,80},)?\s+scheduled\s+for\s+(?:an?\s+)?later\s+milestone\b/gi,
+            '',
+          )
+        }
         const positiveClaim = /\bfully authored\b|\brunnable\b|\bschedulable\b|\bis(?:\s*,[^,]+,)?\s+authored\b/i
-        const positiveScheduling = /\b(?:can|may|could|will|should)\b[^.!?;]{0,100}\bbe\s+scheduled\b|\bis(?:\s*,[^,]{1,80},)?\s+scheduled\b[^.!?;]{0,80}\bas\s+(?:an?\s+)?(?:hands-on\s+)?lab\b/i
+        const positiveScheduling = /\b(?:can|may|might|could|would|will|should|shall|must)\b[^.!?;]{0,100}\bbe\s+scheduled\b|\b(?:is|are|was|were)(?:\s*,[^,]{1,80},)?\s+scheduled\b/i
         if (positiveClaim.test(withoutNegations) || positiveScheduling.test(withoutNegations)) {
           throw new Error(
             `${section.id} status contradiction in ${path}: deferred but claimed authored/runnable/schedulable`,

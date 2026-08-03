@@ -8,6 +8,7 @@ import {
   canonicalDayTotals,
   findGeneratedDrift,
   renderDeck,
+  sections as workshopSections,
   validateCanonicalScheduleTables,
   validateFrontDoorFacts,
   validatePlanningLanguage,
@@ -183,6 +184,12 @@ describe('deck manifest validation', () => {
       'S24 can eventually be scheduled as a hands-on lab.',
       'S24 cannot be scheduled today, but may be scheduled as a hands-on lab.',
       'S24 may not be scheduled now, but will be scheduled as a hands-on lab.',
+      'S24 must be scheduled as a hands-on lab.',
+      'S24 might be scheduled as a hands-on lab.',
+      'S24 would be scheduled as a hands-on lab.',
+      'S24 shall be scheduled as a hands-on lab.',
+      'S24 is scheduled tomorrow.',
+      'S24 is scheduled for Day 3.',
       'S24 is, after the toolchain is installed, runnable.',
     ]) {
       const mutated = new Map(base)
@@ -200,6 +207,7 @@ describe('deck manifest validation', () => {
       "S24 can't be scheduled as a hands-on lab.",
       'S24 may not be scheduled as a hands-on lab.',
       'S24 is not schedulable.',
+      'S24 is deferred and not taught; it is scheduled for a later milestone.',
     ]) {
       const mutated = new Map(base)
       mutated.set('docs/facilitator-guide.md', `S24 is deferred. ${validNegation}`)
@@ -338,10 +346,7 @@ describe('deck manifest validation', () => {
       'docs/validation-matrix.md',
     ]
     const base = new Map(paths.map((path) => [path, readFileSync(join(root, path), 'utf8')]))
-    const manifest = [
-      section('S09', { day: 2, tier: 'recommended', environment: 'kind ✓ (CRDs + controller install) · namespace ✓ (CRDs/controller pre-provided)' }),
-      section('S23', { day: 3, tier: 'recommended', environment: 'kind ✓ (self-install) / namespace: read-only' }),
-    ]
+    const manifest = workshopSections
 
     const readmeDay = new Map(base)
     readmeDay.set('README.md', base.get('README.md').replace(
@@ -353,6 +358,26 @@ describe('deck manifest validation', () => {
       /README.*S09.*Day 2/i,
     )
 
+    const readmeDay3 = new Map(base)
+    readmeDay3.set('README.md', base.get('README.md').replace(
+      '`S17`, `S20`–`S23`, `S25`–`S27`',
+      '`S17`, `S20`–`S27`',
+    ))
+    assert.throws(
+      () => validateFrontDoorFacts(manifest, readmeDay3),
+      /README.*Day 3.*S24/i,
+    )
+
+    const readmeOptional = new Map(base)
+    readmeOptional.set('README.md', base.get('README.md').replace(
+      '`S09`–`S14`',
+      '`S09`–`S15`',
+    ))
+    assert.throws(
+      () => validateFrontDoorFacts(manifest, readmeOptional),
+      /README.*Day 2.*S15/i,
+    )
+
     const labsDay = new Map(base)
     const s09Line = base.get('labs/README.md').match(/^- \[`09-gateway-api`\].*$/m)?.[0]
     labsDay.set('labs/README.md', base.get('labs/README.md')
@@ -361,6 +386,14 @@ describe('deck manifest validation', () => {
     assert.throws(
       () => validateFrontDoorFacts(manifest, labsDay),
       /labs\/README.*S09.*Day 2/i,
+    )
+
+    const labsDuplicate = new Map(base)
+    labsDuplicate.set('labs/README.md', base.get('labs/README.md')
+      .replace('### Day 2', `${s09Line}\n\n### Day 2`))
+    assert.throws(
+      () => validateFrontDoorFacts(manifest, labsDuplicate),
+      /labs\/README.*S09.*duplicate/i,
     )
 
     const matrixEnvironment = new Map(base)
