@@ -1,7 +1,7 @@
 name: CI
 
-# Fast gate on every PR and every push to main: lint the labs and build all
-# three root decks so a broken deck or malformed lab fails review. A separate
+# Fast gate on every PR and every push to main: lint the labs, verify the deck manifest,
+# and build the live + compatibility entries so broken content fails review. A separate
 # job re-renders the README's animated showcase GIF from the deck sources
 # (US-OSS-2: the committed GIF must stay reproducible from a clean checkout).
 # Full PDF export (slow) is intentionally left to the release job.
@@ -77,9 +77,11 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - name: Build superset, 3-day cut, and templates gallery
+      - name: Test manifest and build live, compatibility, and template decks
         run: |
+          pnpm run test:deck
           pnpm run build
+          pnpm run build:superset
           pnpm run build:3day
           pnpm run build:templates
 

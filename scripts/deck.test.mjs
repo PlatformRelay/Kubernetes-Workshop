@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, it } from 'node:test'
@@ -114,5 +114,24 @@ describe('deck selection', () => {
       () => resolveSelection([], { isTTY: false, hasGum: false }),
       /choose.*--day.*--section.*--range/i,
     )
+  })
+})
+
+describe('deck CI contract', () => {
+  it('tests the deck contract and builds every generated delivery class', () => {
+    const workflow = readFileSync(
+      join(import.meta.dirname, '..', '.github', 'workflows', 'ci.yml'),
+      'utf8',
+    )
+
+    for (const command of [
+      'pnpm run test:deck',
+      'pnpm run build',
+      'pnpm run build:superset',
+      'pnpm run build:3day',
+      'pnpm run build:templates',
+    ]) {
+      assert.match(workflow, new RegExp(`^\\s*${command}$`, 'm'))
+    }
   })
 })
