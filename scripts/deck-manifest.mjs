@@ -150,8 +150,11 @@ export function validateSyllabusCatalog(manifest, markdown) {
     const cells = line.split('|').slice(1, -1).map((cell) => cell.trim())
     if (/^S\d{2}$/.test(cells[0] ?? '')
       && ['core', 'recommended', 'optional'].includes(cells[2])
-      && /^[123]$/.test(cells[3] ?? ''))
+      && /^[123]$/.test(cells[3] ?? '')) {
+      if (rows.has(cells[0]))
+        throw new Error(`Duplicate ${cells[0]} syllabus catalog row`)
       rows.set(cells[0], cells)
+    }
   }
   for (const section of manifest) {
     const row = rows.get(section.id)
@@ -179,6 +182,8 @@ export function validateSyllabusTimings(manifest, markdown) {
     if (!id || cells.length !== 5 || !/^\d+$/.test(cells[3] ?? '')
       || !/^(?:\d+|—)$/.test(cells[4] ?? ''))
       continue
+    if (rows.has(id))
+      throw new Error(`Duplicate ${id} syllabus timing row`)
     rows.set(id, { slides: Number(cells[3]), lab: cells[4] === '—' ? 0 : Number(cells[4]) })
   }
   for (const section of manifest) {
@@ -383,8 +388,11 @@ export function validateFrontDoorFacts(manifest, documents) {
   for (const line of matrix.split('\n')) {
     const cells = line.split('|').slice(1, -1).map((cell) => cell.trim())
     const id = cells[1]?.match(/\bS\d{2}\b/)?.[0]
-    if (id && cells.length >= 6)
+    if (id && cells.length >= 6) {
+      if (matrixEnvironments.has(id))
+        throw new Error(`docs/validation-matrix.md duplicate ${id} environment row`)
       matrixEnvironments.set(id, cells[2])
+    }
   }
   for (const section of manifest.filter((item) => item.environment)) {
     const claimed = matrixEnvironments.get(section.id)
@@ -399,6 +407,35 @@ export function validateFrontDoorFacts(manifest, documents) {
     }
   }
   return true
+}
+
+function hasPositiveSchedulingClaim(sectionId, statement) {
+  const escapedId = sectionId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const explicitlyDeferred = /\bdeferred\b|\bnot\s+(?:taught|delivered|schedulable)\b/i.test(statement)
+  let claim = statement.replace(/[*_>`#]/g, ' ')
+  if (explicitlyDeferred) {
+    claim = claim.replace(
+      /\b(?:is|are|was|were|will\s+be|would\s+be|to\s+be)?\s*scheduled\s+(?:at|for)\s+(?:an?\s+)?later\s+milestone\b/gi,
+      '',
+    )
+  }
+  claim = claim
+    .replace(/\b(?:is\s+)?neither\s+(?:scheduled|schedulable)\b[^.!?;]{0,80}?\bnor\b[^.!?;]{0,80}/gi, '')
+    .replace(/\b(?:not|never|isn['’]t|aren['’]t|wasn['’]t|weren['’]t)\s+(?:currently\s+)?schedul(?:ed|able)\b/gi, '')
+    .replace(/\b(?:cannot|can['’]t|\w+\s+not|never)\b[^.!?;]{0,100}?\b(?:be|get|remain)?\s*scheduled\b/gi, '')
+    .replace(/\b(?:do|does|did)\s+not\s+schedul\w*\b[^.!?;,|]{0,100}/gi, '')
+    .replace(/\bnever\s+schedul\w*\b[^.!?;,|]{0,100}/gi, '')
+
+  const scheduleStem = /\bschedul(?:e|es|ed|ing|able)\b/i
+  if (!scheduleStem.test(claim))
+    return false
+  const active = new RegExp(`\\bschedul(?:e|es|ed)\\s+(?:the\\s+)?${escapedId}\\b`, 'i')
+  const construction = new RegExp(
+    `\\b${escapedId}\\b[^.!?;]{0,100}\\b(?:is|are|was|were|be|been|being|get|gets|got|remain|remains|remained|going\\s+to)\\b[^.!?;]{0,50}\\bscheduled\\b`,
+    'i',
+  )
+  const teachingImplication = /\b(?:teach|teaches|taught|day\s*[123]|hands-on|labs?|workshop|delivery|session|today|tomorrow)\b/i
+  return active.test(claim) || construction.test(claim) || teachingImplication.test(claim)
 }
 
 export function validateStatusClaims(manifest, documents) {
@@ -419,26 +456,15 @@ export function validateStatusClaims(manifest, documents) {
         ? block.split('\n')
         : block.replaceAll('\n', ' ').split(/(?<=[.!?])\s+/))
       for (const statement of statements.filter((item) => item.includes(section.id))) {
-        const explicitlyDeferred = /\bdeferred\b|\bnot\s+(?:taught|delivered|schedulable)\b/i.test(statement)
-        let withoutNegations = statement
+        const withoutNegations = statement
           .replace(/[*_>`#]/g, ' ')
           .replace(/\b\d+\s+of\s+\d+\s+sections are fully authored\b/gi, '')
           .replace(/\b(?:is\s+)?neither\s+(?:fully\s+)?(?:authored|runnable|schedulable)(?:\s+nor\s+(?:fully\s+)?(?:authored|runnable|schedulable))+\b/gi, '')
           .replace(/\bisn['’]t(?:\s+\w+){0,3}\s+(?:fully\s+)?(?:authored|runnable|schedulable)\b/gi, '')
           .replace(/\bnot(?:\s+\w+){0,3}\s+(?:fully\s+)?(?:authored|runnable|schedulable)\b/gi, '')
-          .replace(/\b(?:cannot|can['’]t|may not|might not|could not|would not|must not|should not|shall not|will not|won['’]t|never)\b[^.!?;]{0,100}?\b(?:be\s+)?scheduled\b/gi, '')
-          .replace(/\b(?:is|are|was|were)\s+not\s+scheduled\b/gi, '')
-          .replace(/\b(?:isn['’]t|aren['’]t|wasn['’]t|weren['’]t)\s+scheduled\b/gi, '')
           .replace(/\bunauthored\b/gi, '')
-        if (explicitlyDeferred) {
-          withoutNegations = withoutNegations.replace(
-            /\bis(?:\s*,[^,]{1,80},)?\s+scheduled\s+for\s+(?:an?\s+)?later\s+milestone\b/gi,
-            '',
-          )
-        }
         const positiveClaim = /\bfully authored\b|\brunnable\b|\bschedulable\b|\bis(?:\s*,[^,]+,)?\s+authored\b/i
-        const positiveScheduling = /\b(?:can|may|might|could|would|will|should|shall|must)\b[^.!?;]{0,100}\bbe\s+scheduled\b|\b(?:is|are|was|were)(?:\s*,[^,]{1,80},)?\s+scheduled\b/i
-        if (positiveClaim.test(withoutNegations) || positiveScheduling.test(withoutNegations)) {
+        if (positiveClaim.test(withoutNegations) || hasPositiveSchedulingClaim(section.id, statement)) {
           throw new Error(
             `${section.id} status contradiction in ${path}: deferred but claimed authored/runnable/schedulable`,
           )

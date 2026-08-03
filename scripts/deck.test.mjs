@@ -148,6 +148,37 @@ describe('deck manifest validation', () => {
     )
   })
 
+  it('rejects duplicate IDs in syllabus status and timing tables', () => {
+    const manifest = [section('S24', {
+      day: 3,
+      tier: 'optional',
+      status: 'deferred',
+      slidesMinutes: 40,
+      labMinutes: 40,
+    })]
+    const catalog = `
+| ID | Section | Tier | Day | Status | Track |
+| --- | --- | --- | --- | --- | --- |
+| S24 | Operator dev 101 | optional | 3 | authored | Operators |
+| S24 | Operator dev 101 | optional | 3 | deferred | Operators |
+`
+    assert.throws(
+      () => validateSyllabusCatalog(manifest, catalog),
+      /duplicate.*S24.*syllabus.*catalog/i,
+    )
+
+    const timings = `
+| ID | Outcome | Lab | Slides | Lab time |
+| --- | --- | --- | --- | --- |
+| S24 | Scaffold an operator. | lab.md | 41 | 40 |
+| S24 | Scaffold an operator. | lab.md | 40 | 40 |
+`
+    assert.throws(
+      () => validateSyllabusTimings(manifest, timings),
+      /duplicate.*S24.*syllabus.*timing/i,
+    )
+  })
+
   it('requires every front-door document to identify deferred sections', () => {
     const manifest = [section('S24', { status: 'deferred', environment: 'kind-only' })]
     const documents = new Map([
@@ -190,6 +221,11 @@ describe('deck manifest validation', () => {
       'S24 shall be scheduled as a hands-on lab.',
       'S24 is scheduled tomorrow.',
       'S24 is scheduled for Day 3.',
+      'We schedule S24 as a hands-on lab.',
+      'S24 gets scheduled.',
+      'S24 remains scheduled.',
+      'S24 will get scheduled.',
+      'S24 is going to be scheduled.',
       'S24 is, after the toolchain is installed, runnable.',
     ]) {
       const mutated = new Map(base)
@@ -208,6 +244,8 @@ describe('deck manifest validation', () => {
       'S24 may not be scheduled as a hands-on lab.',
       'S24 is not schedulable.',
       'S24 is deferred and not taught; it is scheduled for a later milestone.',
+      'S24 is deferred and is scheduled at a later milestone.',
+      'S24 is deferred; do not schedule it as a hands-on lab.',
     ]) {
       const mutated = new Map(base)
       mutated.set('docs/facilitator-guide.md', `S24 is deferred. ${validNegation}`)
@@ -404,6 +442,21 @@ describe('deck manifest validation', () => {
     assert.throws(
       () => validateFrontDoorFacts(manifest, matrixEnvironment),
       /validation-matrix.*S23.*environment/i,
+    )
+
+    const matrixDuplicate = new Map(base)
+    const s23MatrixRow = base.get('docs/validation-matrix.md')
+      .split('\n')
+      .find((line) => line.includes('| S23 Prometheus Operator |'))
+    const contradictoryS23 = s23MatrixRow.replace(
+      'kind ✓ (self-install stack) / namespace: read-only',
+      'namespace ✓ / kind ✓',
+    )
+    matrixDuplicate.set('docs/validation-matrix.md', base.get('docs/validation-matrix.md')
+      .replace(s23MatrixRow, `${contradictoryS23}\n${s23MatrixRow}`))
+    assert.throws(
+      () => validateFrontDoorFacts(manifest, matrixDuplicate),
+      /validation-matrix.*duplicate.*S23.*environment/i,
     )
 
     const facilitatorDay = new Map(base)
