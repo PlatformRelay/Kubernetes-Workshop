@@ -1,5 +1,7 @@
 # Lab 19 — RBAC (S19)
 
+<!-- lab-contract:v1 -->
+
 | | |
 | --- | --- |
 | **Section** | S19 — RBAC |
@@ -44,7 +46,14 @@ Everything carries the label `app: s19` so cleanup is a single scoped delete.
 
 ---
 
-## Step 0 — a namespace to work in
+## Guided task
+
+Work through the steps without opening the companion unless you are blocked. The spoiler
+contains exact commands, expected state, explanations, and recovery guidance.
+
+[Spoiler: guided solutions and expected output](./19-rbac.solution.md#guided-solutions)
+
+### Step 0 — a namespace to work in
 
 ### kind path
 
@@ -54,18 +63,6 @@ export NS=default
 kubectl get nodes
 ```
 
-<details><summary>Solution / expected output</summary>
-
-```console
-$ kubectl get nodes
-NAME                 STATUS   ROLES           AGE   VERSION
-rbac-control-plane   Ready    control-plane   40s   v1.3x.x
-```
-
-On kind you're **cluster-admin**, so the `--as` impersonation checks in Steps 2–4 work with no
-extra setup.
-</details>
-
 ### Shared-cluster path
 
 ```bash
@@ -74,20 +71,9 @@ kubectl config set-context --current --namespace="$NS"
 kubectl auth can-i create rolebindings          # should print: yes
 ```
 
-<details><summary>Solution / expected output</summary>
-
-```console
-yes
-```
-
-If that prints `yes`, you can create the SA/Role/RoleBinding in your namespace. The `--as` checks
-later may still be denied if you lack impersonation — that's expected; use the stretch goal's
-in-Pod path to verify if so.
-</details>
-
 ---
 
-## Step 1 — a Pod to read, and the identity + Role + binding
+### Step 1 — a Pod to read, and the identity + Role + binding
 
 First, something to read:
 
@@ -153,23 +139,9 @@ EOF
 kubectl apply -f rbac.yaml
 ```
 
-<details><summary>Solution / expected output</summary>
-
-```console
-role.rbac.authorization.k8s.io/pod-reader created
-serviceaccount/pod-reader-sa created
-rolebinding.rbac.authorization.k8s.io/pod-reader-binding created
-```
-
-Three objects, one file. The **Role** is a pure allow-list (`get`/`list`/`watch` on `pods`), the
-**ServiceAccount** is the identity, and the **RoleBinding** is the join — its `roleRef` names the
-Role and its `subjects` names the SA. Note `apiGroups: [""]` (the empty string) is the **core**
-API group where Pods live — not the literal text `"core"`.
-</details>
-
 ---
 
-## Step 2 — verify the grant with `can-i --list`
+### Step 2 — verify the grant with `can-i --list`
 
 ```bash
 kubectl auth can-i --list --as=system:serviceaccount:$NS:pod-reader-sa
@@ -177,29 +149,9 @@ kubectl auth can-i --list --as=system:serviceaccount:$NS:pod-reader-sa
 
 **Task:** confirm the SA may read Pods (`get`/`list`/`watch`) and cannot write them.
 
-<details><summary>Solution / expected output</summary>
-
-```console
-Resources          Non-Resource URLs   Resource Names   Verbs
-pods               []                  []               [get list watch]
-selfsubjectreviews.authorization.k8s.io   []   []   [create]
-selfsubjectaccessreviews.authorization.k8s.io   []   []   [create]
-...
-```
-
-The teaching row is **`pods … [get list watch]`** — exactly the Role you granted. The
-`selfsubject*` rows are **baseline** permissions every identity gets (they let a subject ask "what
-can I do?"); they don't grant access to your workloads. There is **no** `create`/`delete`/`update`
-on `pods`, so writes are denied — which the next step proves against a real Pod.
-
-> If `--as` returns `Error … cannot impersonate resource "serviceaccounts"`, your account lacks
-> the `impersonate` verb (common on a shared namespace). Skip to the stretch goal to verify from
-> inside a Pod, or ask your facilitator to grant impersonation.
-</details>
-
 ---
 
-## Step 3 — run real commands as the SA (and hit the break)
+### Step 3 — run real commands as the SA (and hit the break)
 
 Point `kubectl` at the SA with `--as` and act on the real Pod from Step 1.
 
@@ -216,39 +168,12 @@ kubectl delete pod "$POD" --as=system:serviceaccount:$NS:pod-reader-sa
 
 **Task:** `get pods` should list the `reader-target` Pod; `delete pod` should be **Forbidden**.
 
-<details><summary>Solution / expected output</summary>
-
-```console
-$ kubectl get pods --as=system:serviceaccount:$NS:pod-reader-sa
-NAME                             READY   STATUS    RESTARTS   AGE
-reader-target-6c9d8f7b5c-abcde   1/1     Running   0          40s
-
-$ kubectl delete pod "$POD" --as=system:serviceaccount:$NS:pod-reader-sa
-Error from server (Forbidden): pods "reader-target-6c9d8f7b5c-abcde" is forbidden: User "system:serviceaccount:default:pod-reader-sa" cannot delete resource "pods" in API group "" in the namespace "default"
-```
-
-`get` matched the Role's `list` verb → allowed. `delete` matched **no** rule → the API server
-returns **`Forbidden`**: *"cannot delete resource pods in API group … in the namespace …"*.
-(Authorization is checked **before** the object is even looked up, so the same error fires for any
-Pod name.) `In API group ""` is the core group again. This is RBAC's deny-by-default doing its
-job — the Role never granted a write verb.
-</details>
-
 **Question:** you asked to `delete` a Pod that **exists** and are cluster-admin yourself — why did
 the command fail?
 
-<details><summary>Answer</summary>
-
-Because `--as` made the request run **as the ServiceAccount**, not as you. The API server
-authorizes the **impersonated** subject, and `pod-reader-sa`'s Role allows only
-`get`/`list`/`watch`. Your own cluster-admin rights let you *impersonate*, but they don't leak
-into the impersonated identity's permissions — that's the entire point of `--as`: it lets you test
-**another** identity's effective access safely.
-</details>
-
 ---
 
-## Step 4 — fix: add the `delete` verb and re-check
+### Step 4 — fix: add the `delete` verb and re-check
 
 The break is a missing verb, so the fix is one line in the **Role**. Add `delete`, re-apply, and
 re-run `can-i`.
@@ -263,64 +188,19 @@ kubectl auth can-i delete pods --as=system:serviceaccount:$NS:pod-reader-sa
 
 **Task:** `can-i delete pods` should now print `yes`, and the real delete should succeed.
 
-<details><summary>Solution / expected output</summary>
-
-```console
-$ kubectl auth can-i delete pods --as=system:serviceaccount:$NS:pod-reader-sa
-yes
-
-$ POD=$(kubectl get pod -l app=reader-target -o jsonpath='{.items[0].metadata.name}')
-$ kubectl delete pod "$POD" --as=system:serviceaccount:$NS:pod-reader-sa
-pod "reader-target-6c9d8f7b5c-abcde" deleted
-```
-
-Adding `delete` to the Role's `verbs` immediately widens the SA's permissions — **no rebind, no
-Pod restart**. RBAC is evaluated live on every request, so the moment the Role changes, `can-i`
-flips and the action goes through. (The Deployment simply starts a replacement Pod, since its
-desired replica count is unchanged.) You could equally have used `kubectl edit role pod-reader` and
-added `delete` to the `verbs` list by hand.
-</details>
-
 **Question:** you changed only the **Role** — not the RoleBinding, not the ServiceAccount. Why was
 that enough?
 
-<details><summary>Answer</summary>
-
-The RoleBinding is a **reference**, not a copy — it ties the *subject* to the *Role by name*. The
-SA's effective permissions are always whatever the referenced Role currently lists, evaluated at
-request time. So editing the Role's `verbs` changes what every subject bound to it can do,
-instantly. The binding wires the two together; the Role holds the actual grant.
-</details>
-
 ---
 
-## Step 5 — question: when do you need a ClusterRole instead?
+### Step 5 — question: when do you need a ClusterRole instead?
 
 You built a **Role** + **RoleBinding**, entirely inside one namespace. That's the right default.
 
 **Question:** when would a `Role` be the wrong choice — forcing a `ClusterRole` (and possibly a
 `ClusterRoleBinding`) instead?
 
-<details><summary>Answer</summary>
-
-A `Role` can only grant access to **namespaced** resources, **within its own namespace**. Reach
-for a `ClusterRole` when:
-
-- **The resource is cluster-scoped.** `nodes`, `namespaces`, `persistentvolumes`,
-  `storageclasses`, and non-resource URLs like `/healthz` live **outside** any namespace, so a
-  namespaced Role literally cannot name them. Only a ClusterRole can — and to grant it you bind
-  with a **ClusterRoleBinding**.
-- **You want one definition reused across many namespaces.** Define the rules once as a
-  `ClusterRole`, then reference it from a `RoleBinding` **in each namespace** — the grant stays
-  namespaced (only that namespace's resources), but you maintain a single Role definition. This is
-  the common "read-only" pattern.
-
-Rule of thumb: **namespaced access to namespaced resources → Role + RoleBinding.** Anything
-cluster-scoped, or shared across namespaces → **ClusterRole** (bound namespaced *or* cluster-wide
-as needed). Least privilege still applies: prefer the narrowest scope that works.
-</details>
-
-## Expected observations
+## Observe
 
 - **Deny by default:** a fresh ServiceAccount can do nothing; a permission exists only because a
   **Role lists the verb** *and* a **RoleBinding** ties that Role to the subject.
@@ -333,7 +213,35 @@ as needed). Least privilege still applies: prefer the narrowest scope that works
 - **Scope:** `Role`/`RoleBinding` are namespaced; cluster-scoped resources or cross-namespace
   reuse need a `ClusterRole`.
 
-## Cleanup / panic reset
+## Challenge
+
+An app ServiceAccount can get Pods but still cannot delete them, and adding verbs to a
+Role that is not bound changes nothing. Diagnose Role versus RoleBinding, then grant delete
+least-privilege and prove Forbidden becomes allowed for that subject only.
+
+**Difficulty:** Intermediate
+
+**Success criteria:** Show kubectl auth can-i delete pods --as=system:serviceaccount:$NS:pod-reader-sa flips from
+no to yes after the Role lists delete and the RoleBinding still references that Role, and
+demonstrate a get still works while an unbound verb remains Forbidden.
+
+**Hints:** Inspect roleRef and subjects on the RoleBinding; edit the Role verbs and re-run
+can-i --list --as=... without recreating the ServiceAccount.
+
+[Spoiler: challenge solution](./19-rbac.solution.md#challenge-solution)
+
+## Verify
+
+Confirm RBAC evidence before cleanup.
+
+```bash
+kubectl get sa,role,rolebinding,deploy -n "$NS" -l app=s19
+kubectl auth can-i list pods -n "$NS" --as="system:serviceaccount:$NS:pod-reader-sa"
+```
+
+Expected: the Role/RoleBinding still grant the verbs you verified with can-i --as.
+
+## Cleanup / reset
 
 ```bash
 # scoped cleanup — everything is labelled app=s19
@@ -380,32 +288,3 @@ kubectl exec api-reader -- sh -c '
     https://kubernetes.default.svc/api/v1/namespaces/$NS/pods
 '
 ```
-
-<details><summary>What you should see, and why</summary>
-
-```console
-list pods → 200
-```
-
-The kubelet projected the SA's token at
-`/var/run/secrets/kubernetes.io/serviceaccount/` (plus its `namespace`). The Pod presents it as a
-Bearer token; the API server authenticates it as `system:serviceaccount:$NS:pod-reader-sa` and
-authorizes against the **same Role** — `list pods` is allowed, so **`200`**. Now probe a resource
-the Role **never** grants, to prove the boundary holds from inside too:
-
-```bash
-kubectl exec api-reader -- sh -c '
-  TOKEN=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
-  NS=$(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace)
-  curl -sk -o /dev/null -w "list secrets → %{http_code}\n" \
-    -H "Authorization: Bearer $TOKEN" \
-    https://kubernetes.default.svc/api/v1/namespaces/$NS/secrets
-'
-```
-
-This returns **`403`** (Forbidden) — the Role only ever covered `pods`, so **any** verb on
-`secrets` is denied, no matter what you did in Step 4. Same deny-by-default, now enforced against
-a real in-cluster client instead of `--as`. This is the identity every workload uses: no `--as`,
-no cluster-admin, just the projected token and its Role. Clean up with the **Cleanup** section
-below (the Pod is labelled `app: s19`), or `kubectl delete pod api-reader`.
-</details>

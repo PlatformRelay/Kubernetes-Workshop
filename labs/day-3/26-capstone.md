@@ -1,5 +1,7 @@
 # Lab 26 — Best practices capstone (S26)
 
+<!-- lab-contract:v1 -->
+
 > **This is the course capstone.** You are handed one deliberately **flawed** manifest set and a
 > **production-readiness checklist**. Audit the manifest against the checklist, fix every issue, and
 > prove the result would be admitted by a `restricted` namespace. No new concepts — this ties
@@ -49,7 +51,14 @@ single selector.
 
 ---
 
-## Step 0 — a namespace and the checklist you audit against
+## Guided task
+
+Work through the steps without opening the companion unless you are blocked. The spoiler
+contains exact commands, expected state, explanations, and recovery guidance.
+
+[Spoiler: guided solutions and expected output](./26-capstone.solution.md#guided-solutions)
+
+### Step 0 — a namespace and the checklist you audit against
 
 ```bash
 export NS=s26
@@ -90,23 +99,9 @@ cat PRODUCTION-CHECKLIST.md
 
 **Task:** confirm the checklist is written — you'll tick these off as you fix the manifest.
 
-<details><summary>Solution / expected output</summary>
-
-```console
-$ kubectl create namespace "$NS"
-namespace/s26 created
-```
-
-The checklist has three groups — **availability**, **security**, **operations** — and each line
-traces to the section that taught it. This is the deliverable from the section: a
-`PRODUCTION-CHECKLIST.md` you commit next to your manifests and review every change against. For the
-rest of the lab, each fix ticks one box.
-
-</details>
-
 ---
 
-## Step 1 — read the flawed manifest and audit it yourself
+### Step 1 — read the flawed manifest and audit it yourself
 
 Write the flawed Deployment. **Read it before you read the answer key.**
 
@@ -141,31 +136,6 @@ cat flawed-deployment.yaml
 **Task:** audit this manifest against `PRODUCTION-CHECKLIST.md`. **Write down every issue you find**
 before opening the spoiler. Aim for ten.
 
-<details><summary>Answer key — the planted problems (~10)</summary>
-
-Each problem maps to a checklist line and the section that taught it. Eight are **inside** the
-Deployment; two are **missing sibling objects**.
-
-| # | Problem | Fix | Traces to |
-| --- | --- | --- | --- |
-| 1 | **No liveness/readiness/startup probes** | add all three (`httpGet` on the app's `/ready` + `/healthz`, port 8080) | S14 |
-| 2 | **No resource requests/limits** (BestEffort — first evicted) | add `requests` + `limits` | S13 |
-| 3 | **No `securityContext`** (runs default user, full caps, no seccomp) | `runAsNonRoot` + `runAsUser: 65532` + `seccompProfile` + `allowPrivilegeEscalation: false` + `drop: [ALL]` | S17 |
-| 4 | **No PodDisruptionBudget** — a drain can take it to zero | add a PDB, `minAvailable: 2` | availability |
-| 5 | **Mutable image tag** (`:v1`, no digest) — running bytes can drift | pin by digest `@sha256:…` | S02 |
-| 6 | **No NetworkPolicy** — flat network, a foothold roams | default-deny + one allow | S18 |
-| 7 | **No graceful shutdown** — dropped connections on rollout | `terminationGracePeriodSeconds` + `preStop` | graceful shutdown |
-| 8 | **Missing recommended labels** (only ad-hoc `app: web`) | add `app.kubernetes.io/*` | hygiene |
-| 9 | **`replicas: 1`** — no HA, and unspread | `replicas: 3` + `topologySpreadConstraints` | availability |
-| 10 | **No rollout strategy / `revisionHistoryLimit`** — dead ReplicaSets pile up, uncontrolled surge | `RollingUpdate` (`maxUnavailable: 0`) + `revisionHistoryLimit` | S06 / cost |
-
-Bonus line you can't see in YAML but belongs on the checklist: **config/secret hygiene** (S11/S12) —
-this Pod has no config, but a real one keeps config in a `ConfigMap`/`Secret`, never baked in — and
-**observability** (S23): expose `/metrics` and a `ServiceMonitor`. We note them; the fix below covers
-the ten manifest-visible problems.
-
-</details>
-
 > **Why audit before revealing.** The professional skill this capstone builds is *reading a manifest
 > against a checklist* — spotting the omissions. On the job nobody hands you an answer key; the
 > checklist is the answer key. Do the audit cold, then compare.
@@ -173,22 +143,9 @@ the ten manifest-visible problems.
 **Question:** the flawed manifest **applies cleanly** with `kubectl apply` on a default namespace —
 so why is it "wrong"?
 
-<details><summary>Answer</summary>
-
-Because **valid YAML and a running Pod are not the same as production-ready.** `kubectl apply`
-accepts it and a Pod comes up `Running` — but `Running` only means the process started (S14), the Pod
-is BestEffort and first-evicted (S13), it runs with default privileges (S17), a single node failure
-is a full outage (one replica, no spread, no PDB), the image can change under you (a bare tag,
-no digest), and
-nothing isolates it on the network (S18). The checklist exists precisely because the API server's bar
-("is this valid?") is far below the production bar ("will this stay up, resist compromise, and be
-operable?"). The next steps close that gap.
-
-</details>
-
 ---
 
-## Step 2 — fix it: the hardened Deployment (one fix per issue)
+### Step 2 — fix it: the hardened Deployment (one fix per issue)
 
 Write the fixed Deployment. Every field below closes exactly one audit item.
 
@@ -328,31 +285,6 @@ EOF
 
 **Task:** confirm each of the ten problems now has exactly one fix in the files above.
 
-<details><summary>Solution — problem → fix map</summary>
-
-```text
-① probes .............. readiness /ready + liveness/startup /healthz (port 8080)    [fixed-deployment.yaml]
-② resources ........... resources.requests + resources.limits                       [fixed-deployment.yaml]
-③ securityContext ..... pod: runAsNonRoot/runAsUser:65532/seccomp ·
-                        container: allowPrivilegeEscalation:false/drop ALL           [fixed-deployment.yaml]
-④ PDB ................. minAvailable: 2                                              [fixed-pdb.yaml]
-⑤ digest .............. image ...@sha256:0000…0000 (dummy → resolve at rehearsal)   [fixed-deployment.yaml]
-⑥ NetworkPolicy ....... default-deny + allow (podSelector on our label)             [fixed-netpol.yaml]
-⑦ graceful shutdown ... terminationGracePeriodSeconds: 30 + preStop sleep 5         [fixed-deployment.yaml]
-⑧ labels .............. app.kubernetes.io/{name,instance,version,part-of,managed-by} [fixed-deployment.yaml]
-⑨ HA + spread ......... replicas: 3 + topologySpreadConstraints                     [fixed-deployment.yaml]
-⑩ rollout ............. strategy RollingUpdate(maxUnavailable:0) + revisionHistoryLimit [fixed-deployment.yaml]
-```
-
-**One fix per issue** — nothing bundled, nothing missed. Note the pod/container **split** on ③: the
-`restricted` fields that are valid at pod scope (`runAsNonRoot`, `runAsUser`, `seccompProfile`) sit on
-`spec.template.spec.securityContext`; the container-only fields (`allowPrivilegeEscalation`,
-`capabilities.drop`) sit on the container. And note every sibling selector keys off the **same**
-`app.kubernetes.io/name: web` label — the PDB, the topology spread, and the NetworkPolicy all target
-it, which is why the labels fix (⑧) is a prerequisite for the others to bind.
-
-</details>
-
 > **⚠️ Resolve the digest before you rely on it.** `@sha256:0000…0000` is a **dummy** digest —
 > valid *syntax* (64 hex chars) but not a real image. A server-side dry-run (Step 3) runs **admission
 > without pulling the image**, so the dummy still proves *restricted-compliance*. But a real
@@ -374,7 +306,7 @@ it, which is why the labels fix (⑧) is a prerequisite for the others to bind.
 
 ---
 
-## Step 3 — validate: dry-run the set, then prove `restricted` admits the fixed Pod
+### Step 3 — validate: dry-run the set, then prove `restricted` admits the fixed Pod
 
 First a **server-side dry-run** of the whole fixed set — this runs full admission (schema + policy)
 **without** creating anything or pulling the image. It confirms the objects are well-formed.
@@ -442,39 +374,6 @@ kubectl apply --dry-run=server -f fixed-pod.yaml
 **Task:** the flawed Pod is **rejected** for the four `restricted` violations; the fixed Pod is
 **admitted**. Read both outputs.
 
-<details><summary>Solution / expected output</summary>
-
-```console
-$ kubectl apply --dry-run=server -f fixed-deployment.yaml -f fixed-pdb.yaml -f fixed-netpol.yaml
-deployment.apps/web created (server dry run)
-poddisruptionbudget.policy/web created (server dry run)
-networkpolicy.networking.k8s.io/web-default-deny created (server dry run)
-networkpolicy.networking.k8s.io/web-allow-ingress created (server dry run)
-
-== flawed Pod (expect REJECTED) ==
-$ kubectl apply --dry-run=server -f flawed-pod.yaml
-Error from server (Forbidden): error when creating "flawed-pod.yaml": pods "web" is forbidden:
-violates PodSecurity "restricted:latest": allowPrivilegeEscalation != false (container "web" must set
-securityContext.allowPrivilegeEscalation=false), unrestricted capabilities (container "web" must set
-securityContext.capabilities.drop=["ALL"]), runAsNonRoot != true (pod or container "web" must set
-securityContext.runAsNonRoot=true), seccompProfile (pod or container "web" must set
-securityContext.seccompProfile.type to "RuntimeDefault" or "Localhost")
-
-== fixed Pod (expect ADMITTED) ==
-$ kubectl apply --dry-run=server -f fixed-pod.yaml
-pod/web created (server dry run)
-```
-
-The **flawed** Pod trips **all four** `restricted` fields — the exact same four gates from S17. The
-**fixed** Pod sets all four (split pod/container) and is **admitted**. `--dry-run=server` ran the real
-admission controllers, so `created (server dry run)` means *this would be accepted* — but nothing was
-actually created. Same namespace, same `enforce=restricted` label; only the manifest changed. (You
-can also confirm the **Deployment** path: apply the flawed Deployment for real under
-`enforce=restricted` and `kubectl describe rs` shows `FailedCreate … pods "web-…" is forbidden …` —
-the Deployment exists, its Pods don't.)
-
-</details>
-
 > **⚠️ Why the bare Pod, and why it matters.** `enforce` mode evaluates **Pods**, not Deployments,
 > ReplicaSets, or Jobs. Apply a violating *Deployment* under `enforce=restricted` and it's **created**
 > — the block only surfaces when the ReplicaSet controller tries to spawn Pods, as a
@@ -492,92 +391,20 @@ the Deployment exists, its Pods don't.)
 **Question:** you had to submit a bare **Pod** to see `enforce` reject the security fields. So does
 `enforce=restricted` on the namespace make the fixed manifest production-ready?
 
-<details><summary>Answer</summary>
-
-**No — on two counts.** First, `enforce` only gates **Pods**, and it only checks the **four**
-`securityContext` fields; a Deployment with `replicas: 1`, no probes, an unpinned tag, and no NetworkPolicy
-sails through as long as its Pod template's `securityContext` is correct. Second, admission is a
-*single line* of the checklist — the security floor — enforced **for** you. It does not know or care
-whether you pinned a digest, added the recommended labels, wrote a PodDisruptionBudget, set
-probes/resources, or applied a NetworkPolicy. Those are **review discipline** — which is exactly why
-you commit `PRODUCTION-CHECKLIST.md` and gate it in CI/GitOps (S21), rather than trusting the API
-server to catch everything.
-
-</details>
-
 ---
 
-## Step 4 — classify each fix: availability vs security vs cost
+### Step 4 — classify each fix: availability vs security vs cost
 
 **Task:** sort the ten fixes into **availability**, **security**, and **cost**, and decide which
 matter most for *this* workload (a stateless web front end).
 
-<details><summary>Answer</summary>
-
-| Fix | Category | Why |
-| --- | --- | --- |
-| Probes (①) | **Availability** | readiness keeps traffic off unready Pods; liveness self-heals |
-| Resources — requests (②) | **Availability** + **Cost** | requests schedule *and* reserve (cost); a limit prevents a noisy neighbour |
-| PDB (④) | **Availability** | keeps ≥2 up through drains/upgrades |
-| Rollout + `revisionHistoryLimit` (⑩) | **Availability** + **Cost** | `maxUnavailable:0` = no capacity dip; history limit trims dead RSs (cost) |
-| Replicas + spread (⑨) | **Availability** | survive a node failure |
-| Labels (⑧) | **Security**/hygiene | selectors, dashboards, GitOps rely on them |
-| Digest pin (⑤) | **Security** | provenance — the running bytes are the scanned bytes |
-| `securityContext` (③) | **Security** | least privilege; shrinks blast radius |
-| NetworkPolicy (⑥) | **Security** | contains a foothold on a flat network |
-| Graceful shutdown (⑦) | **Availability** | zero dropped connections on rollout/scale-down |
-
-**Most important for *this* workload** — a **stateless, replicated, internet-facing web front end**:
-the **availability** set carries the most weight day-to-day (probes, >1 replica + spread, PDB,
-graceful shutdown) because the failure you'll actually hit is a rollout or a node drain, not a
-targeted attacker. But the **security floor** (`securityContext` — ③) is non-negotiable and *free*:
-it's the one line `restricted` admission will reject you for, and it costs nothing to set. **Cost**
-matters least here only because the workload is tiny — right-sizing requests (②) is where it bites at
-scale. A different workload (a database, a batch job, a Pod handling secrets) would reweight this
-table — which is the point: the checklist is universal, the **priorities are per-workload**.
-
-</details>
-
 ---
 
-## Step 5 — confirm full checklist coverage
+### Step 5 — confirm full checklist coverage
 
 **Task:** walk `PRODUCTION-CHECKLIST.md` line by line against the fixed manifests and tick every box.
 
-<details><summary>Solution — coverage map</summary>
-
-```text
-AVAILABILITY
-[x] Probes ....................... readiness + liveness + startup on :8080     (①)
-[x] Resources .................... requests + limits                          (②)
-[x] PDB .......................... fixed-pdb.yaml, minAvailable: 2            (④)
-[x] Anti-affinity/spread ......... topologySpreadConstraints (hostname)      (⑨)
-[x] Rollout + revisionHistory .... RollingUpdate maxUnavailable:0 + limit:5  (⑩)
-[x] >1 replica ................... replicas: 3                               (⑨)
-
-SECURITY
-[x] Recommended labels ........... app.kubernetes.io/{name,…}                (⑧)
-[x] Image digest ................. @sha256:… (placeholder → resolve)         (⑤)
-[x] Restricted securityContext ... 4 fields, pod+container split            (③)
-[x] NetworkPolicy ................ default-deny + allow                      (⑥)
-[~] Config/secret hygiene ........ N/A here — no config; keep it externalized in real apps [S11/S12]
-
-OPERATIONS
-[~] GitOps ....................... managed-by: argocd label declares intent; wire the Application  [S21]
-[~] Observability ................ add /metrics + a ServiceMonitor selecting app.kubernetes.io/name: web [S23]
-[x] Graceful shutdown ............ terminationGracePeriodSeconds + preStop   (⑦)
-[x] Cost ......................... right-sized requests (50m/64Mi)           (②)
-```
-
-**All ten manifest-visible problems are fixed.** The `[~]` lines are checklist items this minimal
-workload doesn't exercise in-manifest but that a real service must address: config/secret hygiene
-(S11/S12), the GitOps `Application` that reconciles this repo (S21 — the `managed-by: argocd` label
-declares the intent), and a `ServiceMonitor` for observability (S23). The capstone manifest is
-production-ready for its scope, and the checklist names exactly what's left for a fuller service.
-
-</details>
-
-## Expected observations
+## Observe
 
 - **Valid ≠ ready.** The flawed Deployment applies cleanly and runs — yet fails a dozen checklist
   lines: BestEffort, no probes, default privileges, one replica, an unpinned tag, no isolation.
@@ -590,18 +417,48 @@ production-ready for its scope, and the checklist names exactly what's left for 
   NetworkPolicy, HA, and right-sizing are review discipline — so the checklist ships as a repo
   artifact and is gated in CI/GitOps.
 
-## Cleanup / panic reset
+## Challenge
+
+A reviewer claims the flawed Deployment is "fine" because kubectl apply succeeds and
+Pods become Ready. Prove valid≠ready: show restricted dry-run rejects the flawed Pod template
+(or lists PSA violations) while the fixed set is admitted, and map at least three checklist
+failures to availability versus security.
+
+**Difficulty:** Advanced
+
+**Success criteria:** Run server dry-run (or apply) of the flawed versus fixed manifests under
+enforce=restricted, record the admission/error contrast, and classify three concrete checklist
+gaps (for example probes, resources, securityContext) as availability or security with an
+observable field path.
+
+**Hints:** Use kubectl apply --dry-run=server -f flawed-deployment.yaml in a restricted
+namespace; compare fixed-deployment.yaml; keep PRODUCTION-CHECKLIST.md open while you classify.
+
+[Spoiler: challenge solution](./26-capstone.solution.md#challenge-solution)
+
+## Verify
+
+Confirm capstone evidence before cleanup.
+
+```bash
+kubectl get deploy,pdb,networkpolicy -n "$NS"
+kubectl apply -f fixed-deployment.yaml --dry-run=server
+```
+
+Expected: fixed objects (or dry-run success) remain so checklist coverage can be re-audited.
+
+## Cleanup / reset
 
 ```bash
 # scoped cleanup — the fixed objects share app.kubernetes.io/name: web; the flawed one is app: s26
 kubectl delete -f fixed-netpol.yaml -f fixed-pdb.yaml -f fixed-deployment.yaml --ignore-not-found
 kubectl delete deployment -l app=s26 -n "$NS" --ignore-not-found
-kubectl delete namespace "$NS" --ignore-not-found
+# panic reset: remove the lab Namespace via your cluster UI / burn kind — do not use an unqualified ns delete here
 rm -f flawed-deployment.yaml fixed-deployment.yaml fixed-pdb.yaml fixed-netpol.yaml \
   flawed-pod.yaml fixed-pod.yaml PRODUCTION-CHECKLIST.md
 ```
 
-> **Panic reset.** Everything lived in the `s26` namespace — `kubectl delete namespace s26` removes
+> **Panic reset.** Everything lived in the `s26` namespace — `remove the lab Namespace object (kind: burn the cluster)` removes
 > the Deployment, PDB, NetworkPolicies, and any Pods in one shot. On kind you can also
 > `kind delete cluster` to burn it all down.
 
@@ -618,30 +475,6 @@ kubectl label namespace s26-warn pod-security.kubernetes.io/warn=restricted
 kubectl apply -n s26-warn -f flawed-deployment.yaml
 kubectl get deploy web -n s26-warn
 ```
-
-<details><summary>What you're looking at</summary>
-
-```console
-$ kubectl apply -n s26-warn -f flawed-deployment.yaml
-Warning: would violate PodSecurity "restricted:latest": allowPrivilegeEscalation != false, ...
-runAsNonRoot != true, seccompProfile (...)
-deployment.apps/web created
-
-$ kubectl get deploy web -n s26-warn
-NAME   READY   UP-TO-DATE   AVAILABLE   AGE
-web    1/1     1            1           5s
-```
-
-Under **`warn`**, the API server returns the violation list as a **`Warning:`** but **creates** the
-Deployment — and note it inspects the embedded Pod **template** here (unlike `enforce`, which only
-gates the Pods themselves). It runs to `1/1`: the flawed Deployment's `:v1` tag pulls fine and it
-has no probes, so the Pod is Ready the moment it starts — a security-flagged workload happily serving
-traffic is exactly the situation `warn` is meant to surface without breaking anyone. That's discovery,
-not a block — like a non-blocking CI check that annotates a PR. The real migration play is
-`warn`/`audit` first (find offenders), fix them, **then** `enforce`. Clean up: `kubectl delete
-namespace s26-warn`.
-
-</details>
 
 > **⚠️ The deeper stretch is the artifact, not the command.** Beyond admission, real gates are: a
 > policy engine (require labels/resources/probes), a linter in CI, and a GitOps sync that only applies

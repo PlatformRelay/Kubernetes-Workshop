@@ -28,7 +28,31 @@ export const DAY_2_LABS = [
   'labs/day-2/16-hpa.md',
 ];
 
-export const CONTRACTED_LABS = [...DAY_1_LABS, ...DAY_2_LABS];
+/** Day 3 authored labs under the sibling-solution contract (S24 kubebuilder deferred). */
+export const DAY_3_LABS = [
+  'labs/day-3/17-pod-security.md',
+  'labs/day-3/18-networkpolicy.md',
+  'labs/day-3/19-rbac.md',
+  'labs/day-3/20-helm.md',
+  'labs/day-3/21-gitops.md',
+  'labs/day-3/22-operator-concept.md',
+  'labs/day-3/23-prometheus.md',
+  'labs/day-3/25-pod-escape.md',
+  'labs/day-3/26-capstone.md',
+];
+
+/**
+ * Reviewed exceptions: paths present under labs/ but excluded from CONTRACTED_LABS.
+ * S24 remains a deferred stub (Go/kubebuilder toolchain) — no invented sibling solution.
+ */
+export const DEFERRED_LAB_EXCEPTIONS = [
+  {
+    path: 'labs/day-3/24-kubebuilder.md',
+    reason: 'S24 kubebuilder is a deferred stub; sibling-solution contract waits on toolchain authoring',
+  },
+];
+
+export const CONTRACTED_LABS = [...DAY_1_LABS, ...DAY_2_LABS, ...DAY_3_LABS];
 
 const REQUIRED_LAB_HEADINGS = [
   'Objective',
@@ -398,14 +422,22 @@ export function auditContractDocumentation(repoRoot = REPO_ROOT) {
       errors.push(`labs/README.md: participant guidance must name ${token}`);
     }
   }
-  if (!/Day 1 Labs 01[–-]08/.test(labsReadme) || !/Day 2 Labs 09[–-]16/.test(labsReadme)) {
-    errors.push('labs/README.md: must scope the enforced contract to Day 1 Labs 01–08 and Day 2 Labs 09–16');
+  if (!/Day 1 Labs 01[–-]08/.test(labsReadme) ||
+      !/Day 2 Labs 09[–-]16/.test(labsReadme) ||
+      !/Day 3 Labs 17[–-]23,\s*25[–-]26/.test(labsReadme)) {
+    errors.push('labs/README.md: must scope the enforced contract to Day 1 Labs 01–08, Day 2 Labs 09–16, and Day 3 Labs 17–23, 25–26');
+  }
+  if (!/S24/.test(labsReadme) || !/deferred/i.test(labsReadme)) {
+    errors.push('labs/README.md: must call out S24 as the deferred sibling-solution exception');
   }
   if (!/## Completion matrix/i.test(labsReadme)) {
     errors.push('labs/README.md: must track contracted labs in a completion matrix');
   }
-  if (!/Day 2 Labs 09[–-]16/.test(agent) && !/Labs 01[–-]16/.test(agent)) {
-    errors.push('AGENT.md: must name Day 2 Labs 09–16 in the enforced contract slice');
+  if (!/Day 3 Labs 17[–-]23,\s*25[–-]26/.test(agent) && !/Labs 01[–-]23,\s*25[–-]26/.test(agent)) {
+    errors.push('AGENT.md: must name Day 3 Labs 17–23, 25–26 in the enforced contract slice');
+  }
+  if (!/S24/.test(agent) || !/deferred/i.test(agent)) {
+    errors.push('AGENT.md: must name S24 as deferred outside the sibling-solution inventory');
   }
   if (/Every task and every question[\s\S]{0,100}collapsible spoiler/i.test(labsReadme)) {
     errors.push('labs/README.md: still promises inline spoilers for every task');
@@ -414,8 +446,10 @@ export function auditContractDocumentation(repoRoot = REPO_ROOT) {
   if (!facilitator.includes('NN-topic.solution.md')) {
     errors.push('docs/facilitator-guide.md: must direct facilitators to sibling solutions');
   }
-  if (!/Day 2 Labs 09[–-]16/.test(facilitator) && !/Labs 01[–-]16/.test(facilitator)) {
-    errors.push('docs/facilitator-guide.md: must mention Day 2 Labs 09–16 sibling companions');
+  if (!/Day 3 Labs 17[–-]23,\s*25[–-]26/.test(facilitator) &&
+      !/Labs 01[–-]23,\s*25[–-]26/.test(facilitator) &&
+      !/Day 1 Labs 01[–-]08[\s\S]{0,120}Day 2 Labs 09[–-]16[\s\S]{0,120}Day 3/.test(facilitator)) {
+    errors.push('docs/facilitator-guide.md: must mention Day 3 Labs 17–23, 25–26 sibling companions');
   }
   if (/with a spoiler for\s+every task/i.test(facilitator)) {
     errors.push('docs/facilitator-guide.md: still promises an inline spoiler for every task');

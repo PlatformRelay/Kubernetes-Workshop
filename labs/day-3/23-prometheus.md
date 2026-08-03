@@ -1,5 +1,7 @@
 # Lab 23 — Prometheus Operator (S23)
 
+<!-- lab-contract:v1 -->
+
 | | |
 | --- | --- |
 | **Section** | S23 — Prometheus Operator |
@@ -59,7 +61,14 @@ selector plus one namespace delete.
 
 ---
 
-## Step 0 — a cluster with the stack
+## Guided task
+
+Work through the steps without opening the companion unless you are blocked. The spoiler
+contains exact commands, expected state, explanations, and recovery guidance.
+
+[Spoiler: guided solutions and expected output](./23-prometheus.solution.md#guided-solutions)
+
+### Step 0 — a cluster with the stack
 
 ### kind path (do this)
 
@@ -67,18 +76,6 @@ selector plus one namespace delete.
 kind create cluster --name monitoring
 kubectl get nodes
 ```
-
-<details><summary>Solution / expected output</summary>
-
-```console
-$ kubectl get nodes
-NAME                       STATUS   ROLES           AGE   VERSION
-monitoring-control-plane   Ready    control-plane   40s   v1.3x.x
-```
-
-A one-node kind cluster is plenty for this lab. The stack you install next runs the Prometheus
-Operator plus a small Prometheus, Grafana, kube-state-metrics, and node-exporter.
-</details>
 
 Add the Helm repo and install the stack into its own `monitoring` namespace. The release name
 `monitoring` is what makes the Prometheus adopt ServiceMonitors labelled `release: monitoring`.
@@ -98,29 +95,6 @@ helm install monitoring prometheus-community/kube-prometheus-stack \
 helm list -n monitoring
 kubectl get pods -n monitoring
 ```
-
-<details><summary>Solution / expected output</summary>
-
-```console
-$ helm list -n monitoring
-NAME        NAMESPACE   REVISION  STATUS    CHART                          APP VERSION
-monitoring  monitoring  1         deployed  kube-prometheus-stack-xx.x.x   v0.xx.x
-
-$ kubectl get pods -n monitoring
-NAME                                                     READY   STATUS    RESTARTS   AGE
-monitoring-kube-prometheus-operator-xxxxxxxxx-xxxxx      1/1     Running   0          2m
-prometheus-monitoring-kube-prometheus-prometheus-0       2/2     Running   0          2m
-alertmanager-monitoring-kube-prometheus-alertmanager-0   2/2     Running   0          2m
-monitoring-grafana-xxxxxxxxxxx-xxxxx                      3/3     Running   0          2m
-monitoring-kube-state-metrics-xxxxxxxxx-xxxxx            1/1     Running   0          2m
-monitoring-prometheus-node-exporter-xxxxx                1/1     Running   0          2m
-```
-
-The **operator** Pod is the controller; `prometheus-…-0` is the Prometheus **StatefulSet** the
-operator created from a `Prometheus` CR. `kube-state-metrics` and `node-exporter` are the two
-standard sources — each already has its own ServiceMonitor, so the stack is scraping cluster + node
-health before you add anything.
-</details>
 
 > **node-exporter may CrashLoop on some kind setups** (it mounts the host rootfs, which a container
 > runtime can restrict). It's harmless to this lab — your app's ServiceMonitor doesn't depend on it.
@@ -145,7 +119,7 @@ applied them differs.
 
 ---
 
-## Step 1 — confirm the operator installed its CRDs
+### Step 1 — confirm the operator installed its CRDs
 
 The operator is only useful because it registered new **kinds**. Check them.
 
@@ -153,26 +127,9 @@ The operator is only useful because it registered new **kinds**. Check them.
 kubectl get crd | grep monitoring.coreos.com
 ```
 
-<details><summary>Solution / expected output</summary>
-
-```console
-alertmanagers.monitoring.coreos.com              2026-...
-podmonitors.monitoring.coreos.com                2026-...
-probes.monitoring.coreos.com                     2026-...
-prometheuses.monitoring.coreos.com               2026-...
-prometheusrules.monitoring.coreos.com            2026-...
-servicemonitors.monitoring.coreos.com            2026-...
-thanosrulers.monitoring.coreos.com               2026-...
-```
-
-These are the CRDs from the slides (`servicemonitors`, `podmonitors`, `prometheuses`,
-`alertmanagers`, plus a few more). Every one is group `monitoring.coreos.com` — this is the API the
-operator added. `kubectl get servicemonitor -A` now works exactly like `kubectl get pod`.
-</details>
-
 ---
 
-## Step 2 — deploy an app that exposes `/metrics` on a NAMED port
+### Step 2 — deploy an app that exposes `/metrics` on a NAMED port
 
 The app is `prometheus-example-app`: it serves `/metrics` on port **8080** and exposes the counter
 **`http_requests_total`** (perfect for a `rate()` query). Note the Service gives its port a
@@ -231,22 +188,9 @@ curl -s http://localhost:8080/metrics | grep '^http_requests_total'
 kill "$APP_PF" 2>/dev/null
 ```
 
-<details><summary>Solution / expected output</summary>
-
-```console
-$ curl -s http://localhost:8080/metrics | grep '^http_requests_total'
-http_requests_total{code="200",method="get"} 1
-```
-
-The app exposes `http_requests_total` (a **counter**), labelled by HTTP `code` and `method`. Right
-now the count is tiny — that curl to `/metrics` doesn't hit the counted `/` handler. You'll generate
-real traffic in Step 6 before querying. The Service's port is **named** `web`, and `targetPort: web`
-points at the container's named port — the whole chain is by name.
-</details>
-
 ---
 
-## Step 3 — wire it in (the WRONG way, on purpose)
+### Step 3 — wire it in (the WRONG way, on purpose)
 
 Apply a ServiceMonitor whose **target selector is deliberately wrong** — it selects
 `app: sample-APP-typo`, which no Service has. Layer (1) is correct (it carries
@@ -275,23 +219,9 @@ kubectl apply -f servicemonitor.yaml
 kubectl -n demo get servicemonitor
 ```
 
-<details><summary>Solution / expected output</summary>
-
-```console
-$ kubectl -n demo get servicemonitor
-NAME         AGE
-sample-app   10s
-```
-
-The object applies cleanly — the API server never validates that the selector matches anything
-(just like a Service with a selector that matches no Pods applies fine). The operator adopts it
-(layer 1 is correct), but it resolves **zero** Services (layer 2 is wrong), so it generates a scrape
-job with **no targets**. Nothing tells you on the command line; you diagnose it in Prometheus.
-</details>
-
 ---
 
-## Step 4 — break: diagnose on the Prometheus `/targets` page
+### Step 4 — break: diagnose on the Prometheus `/targets` page
 
 Port-forward the Prometheus web UI and look at **`/targets`** — the page that lists every scrape
 target and its health. Because our selector matches no Service, our app is **not there** (or shows
@@ -311,53 +241,13 @@ echo "open http://localhost:9090/targets"
 ServiceMonitor (`serviceMonitor/demo/sample-app/0`). It shows **0 targets** — our app never appears
 as **UP**.
 
-<details><summary>Solution / expected output</summary>
-
-On `/targets`, the built-in pools (`node-exporter`, `kube-state-metrics`, `apiserver`, …) are
-**UP**, but **our app is nowhere to be seen as UP**. You should see the scrape pool for our monitor
-with **no active target**:
-
-```text
-serviceMonitor/demo/sample-app/0 (0 / 0 up)
-```
-
-The operator adopted the ServiceMonitor (layer 1 is correct) but found **no Service** matching
-`app: sample-APP-typo`, so it produced a scrape job with an **empty target list**.
-
-> The precise `/targets` rendering — whether the pool shows as "0 / 0 up" or isn't listed at all
-> until it has a live target — **varies by Prometheus build**. Don't anchor your diagnosis on that;
-> anchor it on the deterministic fact below. Confirm the exact wording on a rehearsal run.
-</details>
-
 **Question:** the ServiceMonitor applied with no error and the operator adopted it, yet the app
 never appears **UP**. Where is the fault — and how is this failure different from *forgetting* the
 `release: monitoring` label?
 
-<details><summary>Answer</summary>
-
-The fault is **layer (2): ServiceMonitor → Service selection.** The object applied cleanly
-(`kubectl -n demo get servicemonitor` lists it), so the problem isn't syntax or discovery — it's
-that `spec.selector.matchLabels` (`app: sample-APP-typo`) matches **no Service**, so the operator
-has no endpoints to scrape and the target never comes **UP**. That's a different layer from
-**discovery**: if you'd dropped `release: monitoring`, the stack's Prometheus would **never adopt
-the monitor at all** — no scrape job would be generated for it, so there'd be nothing on `/targets`
-for it whatsoever.
-
-The reliable way to tell them apart (independent of `/targets` UI quirks):
-
-- **Wrong `spec.selector` (this break):** the SM is adopted but selects no Service → a scrape job
-  with **no live target**. Cross-check with `kubectl -n demo get endpoints sample-app` (the Service
-  *does* have endpoints) vs. the SM's selector — they don't match.
-- **Missing `release` label:** the SM is **never adopted** → no scrape job at all. Cross-check by
-  confirming the label is absent from `kubectl -n demo get servicemonitor sample-app -o yaml`.
-
-Debugging rule: **adopted-but-no-target → fix the ServiceMonitor→Service selector; not-adopted →
-fix the discovery label** (or the Prometheus's `serviceMonitorSelector`).
-</details>
-
 ---
 
-## Step 5 — fix: match the selector to the Service's labels
+### Step 5 — fix: match the selector to the Service's labels
 
 Patch the selector to the label the Service actually carries (`app: sample-app`). Nothing else
 changes.
@@ -370,42 +260,12 @@ kubectl -n demo patch servicemonitor sample-app --type=merge \
 **Task:** wait ~30 s (the operator regenerates config and Prometheus reloads), then refresh
 <http://localhost:9090/targets>. Our target now shows **UP**.
 
-<details><summary>Solution / expected output</summary>
-
-Within a reload cycle, the pool flips to a live target:
-
-```text
-serviceMonitor/demo/sample-app/0 (1 / 1 up)
-  Endpoint                          State   Labels
-  http://10.244.x.x:8080/metrics    UP      job="sample-app" ...
-```
-
-The operator saw the edited ServiceMonitor, resolved `app: sample-app` to the `sample-app` Service,
-looked up that Service's **endpoints** (the running Pod), and wrote a scrape job pointing at the
-Pod's `:8080/metrics`. **You never touched `prometheus.yml`.** If it's still 0/0, give it another
-reload cycle or confirm the `port: web` name matches the Service's port name (see the next
-question).
-</details>
-
 **Question (required):** why must the ServiceMonitor's `endpoints[].port` be `web` (a **name**), not
 `8080` (a number)?
 
-<details><summary>Answer</summary>
-
-Because the field is defined as the **name of a port on the Service**, not a raw port number. A
-Kubernetes Service can expose several named ports, and the same numeric port can appear under
-different names on different Services — so the ServiceMonitor references a port by the **stable
-name** (`web`) the Service assigns it. The operator looks up the Service's `spec.ports[]`, finds the
-entry whose `name` is `web`, and scrapes that. That's exactly why the Service in Step 2 gives its
-port `name: web`. If you write a **number** there, the operator can't match it to a named port and
-the target won't appear — a subtle failure that looks just like the Step-4 break. (`PodMonitor`
-differs — it can take a raw `targetPort` number — but `ServiceMonitor.endpoints[].port` is a
-**name**.)
-</details>
-
 ---
 
-## Step 6 — generate load, then run a PromQL query
+### Step 6 — generate load, then run a PromQL query
 
 `http_requests_total` barely moves until the app serves real requests, and `rate()` needs a couple
 of data points in its window. Generate traffic against the app's `/` handler, wait for a scrape or
@@ -436,39 +296,7 @@ curl -s 'http://localhost:9090/api/v1/query' \
   python3 -m json.tool
 ```
 
-<details><summary>Solution / expected output</summary>
-
-```console
-{
-    "status": "success",
-    "data": {
-        "resultType": "vector",
-        "result": [
-            {
-                "metric": {
-                    "__name__": "http_requests_total",
-                    "code": "200",
-                    "method": "get",
-                    "job": "sample-app",
-                    "namespace": "demo",
-                    "pod": "sample-app-xxxxxxxxx-xxxxx"
-                },
-                "value": [ 1718000000, "0.66" ]
-            }
-        ]
-    }
-}
-```
-
-The `value` is `[timestamp, "<per-second rate>"]` — here **~0.66 requests/sec** for `code="200"`,
-averaged over the trailing 5 minutes (200 requests spread across the window). The raw counter
-(`http_requests_total`) only ever climbs; **`rate(counter[5m])`** turns it into the useful
-per-second rate and handles counter resets. Add `sum(rate(http_requests_total[5m]))` to get total
-**traffic** across all Pods — golden signal #2 in one line. (The exact number depends on timing; any
-non-zero rate proves the scrape → query path works.)
-</details>
-
-## Expected observations
+## Observe
 
 - **You never edited scrape config.** You applied a `ServiceMonitor`; the operator resolved the
   Service's endpoints and generated the Prometheus scrape job — the S22 operator pattern for real.
@@ -482,7 +310,35 @@ non-zero rate proves the scrape → query path works.)
 - **The stack scrapes cluster + node health out of the box** via `kube-state-metrics` and
   `node-exporter`, each with its own pre-applied ServiceMonitor.
 
-## Cleanup / panic reset
+## Challenge
+
+Prometheus shows zero targets for your ServiceMonitor even though the app Pods are
+Ready. Diagnose selector layer (ServiceMonitor→Service labels versus endpoints/port name),
+fix the match, and prove /targets or the ServiceMonitor selection becomes non-empty.
+
+**Difficulty:** Advanced
+
+**Success criteria:** Identify whether the ServiceMonitor selector misses the Service labels or the
+port name mismatches, apply a corrected ServiceMonitor, and show at least one up target or
+non-empty Endpoints selected for the scrape job.
+
+**Hints:** Compare serviceMonitor.spec.selector with Service labels and endpoints.port with the
+Service's named port; use kubectl get servicemonitor,svc,endpoints -n demo.
+
+[Spoiler: challenge solution](./23-prometheus.solution.md#challenge-solution)
+
+## Verify
+
+Confirm Prometheus Operator evidence before cleanup.
+
+```bash
+kubectl -n demo get deploy,svc,servicemonitor,endpoints -l lab=s23
+kubectl -n monitoring get prometheus,servicemonitor | head
+```
+
+Expected: the app and ServiceMonitor still exist so target selection can be re-checked.
+
+## Cleanup / reset
 
 ```bash
 # stop any port-forwards still running in this shell
@@ -491,11 +347,11 @@ kill "$PROM_PF" "$APP_PF" 2>/dev/null; true
 # scoped cleanup — everything you added carries lab: s23
 kubectl -n demo delete servicemonitor -l lab=s23 --ignore-not-found
 kubectl -n demo delete deploy,svc -l lab=s23 --ignore-not-found
-kubectl delete namespace demo --ignore-not-found
+# panic reset: remove the lab Namespace via your cluster UI / burn kind — do not use an unqualified ns delete here
 
 # remove the whole stack
 helm uninstall monitoring -n monitoring
-kubectl delete namespace monitoring --ignore-not-found
+# panic reset: remove the lab Namespace via your cluster UI / burn kind — do not use an unqualified ns delete here
 
 rm -f app.yaml servicemonitor.yaml
 
@@ -517,21 +373,6 @@ kubectl -n demo scale deploy/sample-app --replicas=3
 kubectl -n demo rollout status deploy/sample-app
 # refresh http://localhost:9090/targets
 ```
-
-<details><summary>What you should see</summary>
-
-The `serviceMonitor/demo/sample-app/0` pool grows from **1/1 up** to **3/3 up** — one target per
-Pod endpoint — with **no** change to any ServiceMonitor and **no** hand-edited config. You changed
-the Deployment's replica count; the Service's endpoints changed; the operator noticed and
-regenerated the scrape config. That is the reconcile loop from S22/S03 running under monitoring:
-
-```text
-serviceMonitor/demo/sample-app/0 (3 / 3 up)
-```
-
-Scale back with `kubectl -n demo scale deploy/sample-app --replicas=1` and the pool shrinks to 1/1.
-This is exactly why static scrape config can't survive Kubernetes — and why the operator exists.
-</details>
 
 ## Facilitator notes — verify on a rehearsal run
 

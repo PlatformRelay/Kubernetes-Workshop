@@ -9,6 +9,8 @@ import {
   CONTRACTED_LABS,
   DAY_1_LABS,
   DAY_2_LABS,
+  DAY_3_LABS,
+  DEFERRED_LAB_EXCEPTIONS,
   auditContractDocumentation,
   auditDayOneCommandTruth,
   auditLab,
@@ -363,7 +365,7 @@ test('keeps contributor and facilitator guidance aligned with the enforced slice
   assert.deepEqual(auditContractDocumentation(), []);
 });
 
-test('inventories Day 1 and Day 2 participant labs in the enforced contract', () => {
+test('inventories Day 1–3 participant labs in the enforced contract (S24 deferred)', () => {
   assert.deepEqual(DAY_1_LABS, [
     'labs/day-1/01-containers.md',
     'labs/day-1/02-container-security.md',
@@ -384,12 +386,37 @@ test('inventories Day 1 and Day 2 participant labs in the enforced contract', ()
     'labs/day-2/15-jobs.md',
     'labs/day-2/16-hpa.md',
   ]);
-  assert.deepEqual(CONTRACTED_LABS, [...DAY_1_LABS, ...DAY_2_LABS]);
-  assert.equal(CONTRACTED_LABS.length, 16);
+  assert.deepEqual(DAY_3_LABS, [
+    'labs/day-3/17-pod-security.md',
+    'labs/day-3/18-networkpolicy.md',
+    'labs/day-3/19-rbac.md',
+    'labs/day-3/20-helm.md',
+    'labs/day-3/21-gitops.md',
+    'labs/day-3/22-operator-concept.md',
+    'labs/day-3/23-prometheus.md',
+    'labs/day-3/25-pod-escape.md',
+    'labs/day-3/26-capstone.md',
+  ]);
+  assert.deepEqual(DEFERRED_LAB_EXCEPTIONS, [
+    {
+      path: 'labs/day-3/24-kubebuilder.md',
+      reason: 'S24 kubebuilder is a deferred stub; sibling-solution contract waits on toolchain authoring',
+    },
+  ]);
+  assert.ok(!DAY_3_LABS.includes('labs/day-3/24-kubebuilder.md'));
+  assert.ok(!CONTRACTED_LABS.includes('labs/day-3/24-kubebuilder.md'));
+  assert.deepEqual(CONTRACTED_LABS, [...DAY_1_LABS, ...DAY_2_LABS, ...DAY_3_LABS]);
+  assert.equal(CONTRACTED_LABS.length, 25);
 });
 
 test('audits every Day 2 participant lab against the sibling-solution contract', () => {
   const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
   const errors = auditLabs(DAY_2_LABS.map((path) => resolve(repo, path)));
+  assert.deepEqual(errors, [], errors.join('\n'));
+});
+
+test('audits every Day 3 contracted lab against the sibling-solution contract', () => {
+  const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+  const errors = auditLabs(DAY_3_LABS.map((path) => resolve(repo, path)));
   assert.deepEqual(errors, [], errors.join('\n'));
 });

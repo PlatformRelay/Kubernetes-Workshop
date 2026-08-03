@@ -1,5 +1,7 @@
 # Lab 17 — Pod security (S17)
 
+<!-- lab-contract:v1 -->
+
 | | |
 | --- | --- |
 | **Section** | S17 — Pod security (securityContext + Pod Security Standards) |
@@ -50,7 +52,14 @@ Everything is labelled `app: s17` so cleanup is a single label selector.
 
 ---
 
-## Step 0 — put the `restricted` bar on your namespace
+## Guided task
+
+Work through the steps without opening the companion unless you are blocked. The spoiler
+contains exact commands, expected state, explanations, and recovery guidance.
+
+[Spoiler: guided solutions and expected output](./17-pod-security.solution.md#guided-solutions)
+
+### Step 0 — put the `restricted` bar on your namespace
 
 Pod Security Admission is configured by **labels on the Namespace object**. Which path you take
 depends on your environment.
@@ -78,27 +87,9 @@ kubectl get namespace "$NS" --show-labels
 kubectl get namespace "$NS" -o jsonpath='{.metadata.labels}' | tr ',' '\n' | grep pod-security
 ```
 
-<details><summary>Solution / expected output</summary>
-
-```console
-$ kubectl get namespace "$NS" -o jsonpath='{.metadata.labels}' | tr ',' '\n' | grep pod-security
-"pod-security.kubernetes.io/audit":"restricted"
-"pod-security.kubernetes.io/enforce":"restricted"
-"pod-security.kubernetes.io/warn":"restricted"
-```
-
-`enforce` is the only mode that **rejects**; `warn` returns a `Warning:` to `kubectl` and
-`audit` writes to the API audit log — both still create the Pod. We set all three so you *see*
-the violations (`warn`) as well as *hit* them (`enforce`).
-
-If the `label` command fails on a shared cluster with `namespaces ... is forbidden`, that's
-expected — you don't have rights on the Namespace object. Use the pre-labelled namespace, or
-switch to kind.
-</details>
-
 ---
 
-## Step 1 — break: the insecure Pod is refused at the door
+### Step 1 — break: the insecure Pod is refused at the door
 
 ```bash
 cat > pod-insecure.yaml <<'EOF'
@@ -126,44 +117,12 @@ get created, and which four fields are named?
 kubectl get pod web        # is it there?
 ```
 
-<details><summary>Solution / expected output</summary>
-
-```console
-$ kubectl apply -f pod-insecure.yaml
-Error from server (Forbidden): error when creating "pod-insecure.yaml": pods "web" is forbidden:
-violates PodSecurity "restricted:latest": allowPrivilegeEscalation != false (container "web" must
-set securityContext.allowPrivilegeEscalation=false), unrestricted capabilities (container "web"
-must set securityContext.capabilities.drop=["ALL"]), runAsNonRoot != true (pod or container "web"
-must set securityContext.runAsNonRoot=true), seccompProfile (pod or container "web" must set
-securityContext.seccompProfile.type to "RuntimeDefault" or "Localhost")
-
-$ kubectl get pod web
-Error from server (NotFound): pods "web" not found
-```
-
-Four violations, listed in one message — the exact four fields `restricted` gates:
-`allowPrivilegeEscalation`, `capabilities.drop`, `runAsNonRoot`, `seccompProfile`. This is
-**admission** enforcement: the API server refused the request, so the Pod was **never created**
-(`NotFound`) — there is nothing to restart, nothing to delete. Contrast that with the OOMKill in
-Lab 13, where the Pod existed and *then* died.
-</details>
-
 **Question:** we applied a **bare Pod** and got the full violation list immediately. What would
 have happened if we'd wrapped the same container in a **Deployment**?
 
-<details><summary>Answer</summary>
-
-The **Deployment** would be **admitted** — PSA doesn't check the Deployment, it checks **Pods**.
-The Deployment's controller then tries to create Pods from the template, and *those* are rejected
-at admission. You'd see a healthy-looking Deployment with `0` ready replicas, and the rejection
-would only surface in `kubectl describe rs <name>` / events (`FailedCreate ... violates
-PodSecurity`), not at your `apply`. A bare Pod fails **synchronously and loudly**, which is why
-this lab uses one — but the same rules apply to every Pod a controller spawns.
-</details>
-
 ---
 
-## Step 2 — fix: clear the four gates, one at a time
+### Step 2 — fix: clear the four gates, one at a time
 
 The Pod was never created, so each fix is just another `apply` of the same `web` Pod with one
 more field. Watch the violation list shrink by exactly one each time.
@@ -189,19 +148,6 @@ spec:
 EOF
 kubectl apply -f pod-step.yaml
 ```
-
-<details><summary>Expected output — three left</summary>
-
-```console
-Error from server (Forbidden): error when creating "pod-step.yaml": pods "web" is forbidden:
-violates PodSecurity "restricted:latest": allowPrivilegeEscalation != false (...), unrestricted
-capabilities (...), seccompProfile (...)
-```
-
-`runAsNonRoot != true` is gone; three violations remain. (Setting `runAsUser: 65532` isn't
-required by `restricted` — `runAsNonRoot: true` alone satisfies it — but it makes the non-root
-user explicit and guarantees a UID this image can actually run as.)
-</details>
 
 > **⚠️ Why this image?** `runAsNonRoot: true` is a *promise the image must keep*. Admission only
 > checks that the **field is set**, so it passes — but the **kubelet** checks the image's real
@@ -234,16 +180,6 @@ EOF
 kubectl apply -f pod-step.yaml
 ```
 
-<details><summary>Expected output — two left</summary>
-
-```console
-Error from server (Forbidden): ... violates PodSecurity "restricted:latest":
-unrestricted capabilities (...), seccompProfile (...)
-```
-
-`allowPrivilegeEscalation != false` is cleared; two violations remain.
-</details>
-
 **2c — drop all capabilities** (again, the full file plus one field):
 
 ```bash
@@ -268,17 +204,6 @@ spec:
 EOF
 kubectl apply -f pod-step.yaml
 ```
-
-<details><summary>Expected output — one left</summary>
-
-```console
-Error from server (Forbidden): ... violates PodSecurity "restricted:latest":
-seccompProfile (container "web" must set securityContext.seccompProfile.type to "RuntimeDefault"
-or "Localhost")
-```
-
-Only `seccompProfile` is left — the last gate.
-</details>
 
 **2d — add the seccomp profile → admitted.** Apply the complete hardened manifest:
 
@@ -309,24 +234,9 @@ kubectl apply -f pod-hardened.yaml
 kubectl get pod web -w        # Ctrl-C once it's Running
 ```
 
-<details><summary>Solution / expected output</summary>
-
-```console
-$ kubectl apply -f pod-hardened.yaml
-pod/web created
-
-$ kubectl get pod web
-NAME   READY   STATUS    RESTARTS   AGE
-web    1/1     Running   0          12s
-```
-
-All four gates pass, PSA admits the Pod, and because the image genuinely runs as non-root the
-kubelet is happy too — `1/1 Running`. **The policy never changed; your manifest did.**
-</details>
-
 ---
 
-## Step 3 — beyond `restricted`: a read-only root filesystem
+### Step 3 — beyond `restricted`: a read-only root filesystem
 
 `readOnlyRootFilesystem: true` is **not** one of the four `restricted` gates — it's extra
 defence-in-depth (a foothold can't drop tools or rewrite binaries). But it changes runtime
@@ -360,20 +270,6 @@ kubectl get pod web-ro -w        # Ctrl-C once Running
 ```
 
 **Task:** the Pod runs — why didn't `readOnlyRootFilesystem` hurt it?
-
-<details><summary>Solution / expected output</summary>
-
-```console
-$ kubectl get pod web-ro
-NAME     READY   STATUS    RESTARTS   AGE
-web-ro   1/1     Running   0          10s
-```
-
-The demo image was **built for this**: it's distroless, logs to stdout, and keeps its state in
-memory — it never writes to its own filesystem, so mounting `/` read-only costs it nothing.
-That's the goal state for your own images. Most real-world apps aren't there yet, which is the
-next beat.
-</details>
 
 Now the **break**: a container that writes a PID file at startup — the classic pattern that
 `readOnlyRootFilesystem` trips over.
@@ -412,23 +308,6 @@ kubectl get pod writer-ro
 kubectl logs writer-ro --previous 2>/dev/null || kubectl logs writer-ro
 ```
 
-<details><summary>Solution / expected output</summary>
-
-```console
-$ kubectl get pod writer-ro
-NAME        READY   STATUS             RESTARTS      AGE
-writer-ro   0/1     CrashLoopBackOff   3 (20s ago)   90s
-
-$ kubectl logs writer-ro
-sh: can't create /var/run/app.pid: Read-only file system
-```
-
-The Pod **passed admission** — this is a **runtime** failure. The app needs to write its PID
-file, but with `readOnlyRootFilesystem: true` the whole root filesystem (including `/var/run`)
-is read-only, so the startup command fails → the container exits → `CrashLoopBackOff`.
-The error **names the path** it couldn't write — that's your list of what to make writable.
-</details>
-
 **Task:** fix it by mounting a **writable `emptyDir`** over the one path the app needs, keeping
 the root filesystem read-only everywhere else.
 
@@ -463,25 +342,9 @@ kubectl apply -f pod-writer-fixed.yaml
 kubectl get pod writer-ro -w        # Ctrl-C once Running
 ```
 
-<details><summary>Solution / expected output</summary>
-
-```console
-$ kubectl get pod writer-ro
-NAME        READY   STATUS    RESTARTS   AGE
-writer-ro   1/1     Running   0          15s
-```
-
-The `emptyDir` gives the container a small **writable** scratch volume at exactly the path it
-needs, while `/` and everything else stays read-only. If an app complains about a *different*
-path, read the log line, add one more `emptyDir` mount for it, and re-apply — the method is
-always "the error names the path; mount a writable volume there." This is the answer to
-"how do I give a read-only-rootfs container a writable spot": **not** by dropping
-`readOnlyRootFilesystem`, but by carving out just the paths that must be writable.
-</details>
-
 ---
 
-## Step 4 — observe: prove it's actually locked down
+### Step 4 — observe: prove it's actually locked down
 
 Two proofs. First, the demo app really is non-root — its image has no shell, so attach a debug
 container that shares its PID namespace and read the process list:
@@ -501,31 +364,7 @@ kubectl exec writer-ro -- touch /var/run/ok
 **Question:** what UID are the processes, and why does the write to `/` fail while
 `/var/run` works?
 
-<details><summary>Answer / expected output</summary>
-
-```console
-$ kubectl debug -it web-ro --image=busybox:1.37 --target=web -- ps
-PID   USER     TIME  COMMAND
-    1 65532     0:00 /workshop-web
-...
-
-$ kubectl exec writer-ro -- id
-uid=65532 gid=65532 groups=65532
-
-$ kubectl exec writer-ro -- touch /nope
-touch: /nope: Read-only file system
-command terminated with exit code 1
-
-$ kubectl exec writer-ro -- touch /var/run/ok      # succeeds — the emptyDir carve-out
-```
-
-`uid=65532`, not `0` — both containers are **non-root** (the `runAsNonRoot`/`runAsUser`
-promise, kept by the image in one case and by `runAsUser` in the other). The write to `/`
-fails with **`Read-only file system`** because `readOnlyRootFilesystem: true` mounts the root
-read-only; only the `emptyDir` path (`/var/run`) is writable.
-</details>
-
-## Expected observations
+## Observe
 
 - **Admission** enforcement (PSA): a Pod that violates `restricted` is **rejected at `apply`**
   and **never created** — the error lists **every** broken rule at once.
@@ -537,7 +376,37 @@ read-only; only the `emptyDir` path (`/var/run`) is writable.
   write to disk need an `emptyDir` over each writable path.
 - **Admission vs runtime** is the mental model: rejected-before-it-exists vs exists-then-fails.
 
-## Cleanup / panic reset
+## Challenge
+
+A Deployment's Pods are refused with a multi-rule PodSecurity "restricted" violation list,
+even though the image already runs as non-root. Diagnose which of the four restricted fields
+are still missing from the Pod template, then restore admission without weakening the
+namespace enforce label.
+
+**Difficulty:** Intermediate
+
+**Success criteria:** Identify every missing restricted field named in the admission error output, patch or
+re-apply a Pod/Deployment template that includes all four gates, and show apply succeeds
+(or dry-run=server admits) while the namespace still enforces restricted.
+
+**Hints:** Compare the violation list to runAsNonRoot, allowPrivilegeEscalation, capabilities.drop,
+and seccompProfile; keep enforce=restricted and use kubectl apply --dry-run=server to confirm.
+
+[Spoiler: challenge solution](./17-pod-security.solution.md#challenge-solution)
+
+## Verify
+
+Confirm Pod Security evidence before cleanup.
+
+```bash
+kubectl get pod -n "$NS" -l app=s17
+kubectl get namespace "$NS" --show-labels | tr ',' '\n' | grep pod-security || true
+```
+
+Expected: hardened/read-only/writer-fixed Pods from the guided path still exist (or were
+intentionally deleted) and the namespace labels explain admit vs reject behaviour.
+
+## Cleanup / reset
 
 ```bash
 # scoped cleanup — everything this lab made is labelled app=s17
@@ -572,22 +441,3 @@ kubectl label namespace psa-demo pod-security.kubernetes.io/warn=restricted
 kubectl run canary --image=ghcr.io/platformrelay/workshop-web:v1 -n psa-demo
 kubectl get pod canary -n psa-demo
 ```
-
-<details><summary>What you're looking at</summary>
-
-```console
-$ kubectl run canary --image=ghcr.io/platformrelay/workshop-web:v1 -n psa-demo
-Warning: would violate PodSecurity "restricted:latest": allowPrivilegeEscalation != false (...),
-unrestricted capabilities (...), runAsNonRoot != true (...), seccompProfile (...)
-pod/canary created
-
-$ kubectl get pod canary -n psa-demo
-NAME     READY   STATUS    RESTARTS   AGE
-canary   1/1     Running   0          8s
-```
-
-Same four violations as Step 1 — but under **`warn`** the Pod is **created anyway** and you just
-get a heads-up. That's how you migrate a namespace to `restricted` without an outage: `warn`
-(and `audit`) to discover the offenders, fix them, *then* `enforce`. Clean up:
-`kubectl delete namespace psa-demo`.
-</details>
