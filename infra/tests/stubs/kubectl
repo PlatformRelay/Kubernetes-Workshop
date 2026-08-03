@@ -5,6 +5,7 @@
 #   MOCK_KUBECTL_CONTEXT=...        -> `kubectl config current-context`
 #   MOCK_CLUSTER_REACHABLE_EXIT=N   -> exit code for `kubectl cluster-info`
 #   MOCK_NODES_READY=0              -> nodes report NotReady
+#   MOCK_NODES_WAIT_EXIT=N          -> exit code for waiting until all nodes Ready
 #   MOCK_SMOKE_EXIT=N               -> exit code for `kubectl wait` (smoke Pod)
 set -eu
 
@@ -48,6 +49,11 @@ case "${args[0]:-}" in
     fi
     ;;
   wait)
+    for a in "${args[@]}"; do
+      if [ "$a" = "nodes" ]; then
+        exit "${MOCK_NODES_WAIT_EXIT:-0}"
+      fi
+    done
     exit "${MOCK_SMOKE_EXIT:-0}"
     ;;
   run | delete)

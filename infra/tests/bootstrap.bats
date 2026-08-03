@@ -68,6 +68,16 @@ setup() {
   grep -q -- "mise install --locked" "$MOCK_LOG"
 }
 
+@test "up fails before cluster creation when the managed tool install fails" {
+  export MOCK_MISE_EXIT=23
+
+  run "$ROOT/workshop" up
+
+  [ "$status" -ne 0 ]
+  echo "$output" | grep -q "mise install failed"
+  ! grep -q -- "kind create cluster" "$MOCK_LOG"
+}
+
 @test "up uses the mise tool environment when managed tools are absent from the host PATH" {
   # Reproduce a fresh Ubuntu install: mise itself is reachable and successfully
   # installs the lockfile, but kind/kubectl are only exposed by `mise exec`.
@@ -124,6 +134,28 @@ setup() {
   grep -q -- "mise install --locked" "$MOCK_LOG"
   grep -q -- "mise exec -- env make -C $ROOT kind-up" "$MOCK_LOG"
   echo "$output" | grep -q "environment is ready"
+}
+
+@test "up waits a bounded time for all kind nodes before running doctor" {
+  export MOCK_CLUSTER_EXISTS=0
+
+  run "$ROOT/workshop" up
+
+  [ "$status" -eq 0 ]
+  grep -q -- "kubectl --context kind-workshop wait --for=condition=Ready nodes --all --timeout=180s" "$MOCK_LOG"
+}
+
+@test "up fails honestly when kind nodes do not become Ready before the timeout" {
+  export MOCK_CLUSTER_EXISTS=0
+  export MOCK_NODES_WAIT_EXIT=1
+
+  run "$ROOT/workshop" up
+
+  [ "$status" -ne 0 ]
+  echo "$output" | grep -q "nodes did not become Ready within 180s"
+  grep -q -- "kind create cluster" "$MOCK_LOG"
+  ! echo "$output" | grep -q "Running doctor"
+  ! echo "$output" | grep -q "environment is ready"
 }
 
 # --- engine probe: preference order Docker -> Podman -------------------------

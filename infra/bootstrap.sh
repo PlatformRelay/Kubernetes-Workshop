@@ -329,11 +329,20 @@ print_shell_activation_hint() {
 # engine. `env FOO=bar` with an empty token list is a harmless no-op, so the
 # docker (default) path is unaffected.
 cluster_up() {
-  local provider
+  local provider timeout
   provider="$(kind_provider_env)"
   spin "Creating the kind cluster (make kind-up)" \
     run_in_toolchain env ${provider:+"$provider"} make -C "$REPO_ROOT" kind-up || {
     err "kind cluster creation failed — see output above."
+    return 1
+  }
+
+  timeout="${WORKSHOP_NODE_READY_TIMEOUT:-180s}"
+  spin "Waiting for all kind nodes to become Ready (timeout: ${timeout})" \
+    run_in_toolchain kubectl --context "kind-${WORKSHOP_CLUSTER_NAME}" \
+      wait --for=condition=Ready nodes --all --timeout="$timeout" || {
+    err "kind nodes did not become Ready within ${timeout} — inspect with:"
+    say "  kubectl --context kind-${WORKSHOP_CLUSTER_NAME} get nodes"
     return 1
   }
   ok "kind cluster '${WORKSHOP_CLUSTER_NAME}' ready"
