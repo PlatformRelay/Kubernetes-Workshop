@@ -177,6 +177,7 @@ describe('deck manifest validation', () => {
       'S24 is schedulable as a hands-on lab.',
       'Fully authored and runnable today: S24.',
       'S24 can be scheduled as a hands-on lab.',
+      'S24 can, after installing Go, be scheduled as a hands-on lab.',
       'S24 is, after the toolchain is installed, runnable.',
     ]) {
       const mutated = new Map(base)
@@ -312,6 +313,9 @@ describe('deck manifest validation', () => {
     assert.throws(
       () => validatePlanningLanguage('Treat the totals as measured facts.'),
       /planning estimate.*measured/i,
+    )
+    assert.doesNotThrow(
+      () => validatePlanningLanguage('The totals are neither measured facts nor actual durations.'),
     )
   })
 

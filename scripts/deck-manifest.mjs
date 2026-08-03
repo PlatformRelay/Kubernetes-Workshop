@@ -235,15 +235,20 @@ export function validateCanonicalScheduleTables(manifest, markdown) {
 export function validatePlanningLanguage(markdown, manifest = sections) {
   const measuredNumber = /\b(?:measured|actual)\b[^\n.]{0,120}\b\d+\s*(?:min(?:ute)?s?)\b/i
   const measuredNumberReverse = /\b\d+\s*(?:min(?:ute)?s?)\b[^\n.]{0,120}\b(?:measured|actual)\b/i
-  if (measuredNumber.test(markdown) || measuredNumberReverse.test(markdown))
-    throw new Error('An unrehearsed planning estimate is presented as measured timing')
   const statements = markdown.replaceAll('\n', ' ').split(/(?<=[.!?])\s+/)
   for (const statement of statements) {
-    const withoutNegations = statement.replace(
-      /\b(?:not|never|isn['’]t|aren['’]t|is not|are not|was not|were not)\s+(?:actually\s+)?(?:measured|actual)\b/gi,
-      '',
-    )
+    const withoutNegations = statement
+      .replace(
+        /\bneither\s+(?:measured|actual)\s+(?:facts?|timings?|durations?|totals?|time)\s+nor\s+(?:measured|actual)\s+(?:facts?|timings?|durations?|totals?|time)\b/gi,
+        '',
+      )
+      .replace(
+        /\b(?:not|never|isn['’]t|aren['’]t|is not|are not|was not|were not)\s+(?:actually\s+)?(?:measured|actual)\b/gi,
+        '',
+      )
     const timingSubject = /\b(?:facts?|timings?|durations?|totals?|time)\b/i
+    if (measuredNumber.test(withoutNegations) || measuredNumberReverse.test(withoutNegations))
+      throw new Error('An unrehearsed planning estimate is presented as measured timing')
     if (/\b(?:measured|actual)\b/i.test(withoutNegations) && timingSubject.test(withoutNegations))
       throw new Error('An unrehearsed planning estimate is presented as measured timing')
   }
@@ -409,7 +414,7 @@ export function validateStatusClaims(manifest, documents) {
           .replace(/\bnot(?:\s+\w+){0,3}\s+(?:fully\s+)?(?:authored|runnable|schedulable)\b/gi, '')
           .replace(/\b(?:cannot|can't|must not|should not)\b[^.;]{0,60}\b(?:schedule|scheduled)\b/gi, '')
           .replace(/\bunauthored\b/gi, '')
-        const positiveClaim = /\bfully authored\b|\brunnable\b|\bschedulable\b|\bcan\s+be\s+scheduled\b|\bis(?:\s*,[^,]+,)?\s+authored\b/i
+        const positiveClaim = /\bfully authored\b|\brunnable\b|\bschedulable\b|\bcan(?:\s*,[^,]{1,80},)?\s+be\s+scheduled\b|\bis(?:\s*,[^,]+,)?\s+authored\b/i
         if (positiveClaim.test(withoutNegations)) {
           throw new Error(
             `${section.id} status contradiction in ${path}: deferred but claimed authored/runnable/schedulable`,
