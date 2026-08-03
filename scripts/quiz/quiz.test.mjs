@@ -41,9 +41,38 @@ test('validator rejects duplicate IDs and an answer outside the option set', () 
     error => {
       assert.match(error.stderr, /duplicate question id/)
       assert.match(error.stderr, /answer must name exactly one option/)
-      assert.match(error.stderr, /difficulty must be one of/)
-      assert.match(error.stderr, /unsupported field/)
+      assert.match(error.stderr, /difficulty.*allowed values/)
+      assert.match(error.stderr, /additional properties/)
       assert.match(error.stderr, /unknown section S99/)
+      return true
+    },
+  )
+})
+
+test('JSON Schema rejects empty banks, empty references, and malformed option IDs', () => {
+  const bank = JSON.parse(readFileSync(questionsPath, 'utf8'))
+  bank.questions[0].references = []
+  bank.questions[0].options[0].id = 'INVALID!'
+  bank.questions.splice(1)
+  const directory = mkdtempSync(path.join(tmpdir(), 'quiz-schema-'))
+  const invalidPath = path.join(directory, 'invalid.json')
+  writeFileSync(invalidPath, JSON.stringify(bank))
+
+  assert.throws(
+    () => run('scripts/quiz/validate.mjs', [invalidPath]),
+    error => {
+      assert.match(error.stderr, /references.*must NOT have fewer than 1 items/)
+      assert.match(error.stderr, /options\/0\/id.*must match pattern/)
+      return true
+    },
+  )
+
+  bank.questions = []
+  writeFileSync(invalidPath, JSON.stringify(bank))
+  assert.throws(
+    () => run('scripts/quiz/validate.mjs', [invalidPath]),
+    error => {
+      assert.match(error.stderr, /questions.*must NOT have fewer than 1 items/)
       return true
     },
   )
@@ -98,6 +127,47 @@ test('license gate fails closed for forbidden, unknown, and unpinned runtime evi
   const unresolvedPath = path.join(directory, 'unresolved.json')
   writeFileSync(unresolvedPath, JSON.stringify(unresolved))
   assert.throws(() => run('scripts/quiz/license-gate.mjs', [unresolvedPath]), /Command failed/)
+
+  const emptyRuntime = JSON.parse(readFileSync(evidence, 'utf8'))
+  emptyRuntime.candidates[0].runtimeComponents = []
+  emptyRuntime.candidates[0].dependencyLicenseCoverage = 'complete'
+  emptyRuntime.candidates[0].fossGate.passed = true
+  const emptyRuntimePath = path.join(directory, 'empty-runtime.json')
+  writeFileSync(emptyRuntimePath, JSON.stringify(emptyRuntime))
+  assert.throws(
+    () => run('scripts/quiz/license-gate.mjs', [emptyRuntimePath]),
+    error => {
+      assert.match(error.stderr, /runtimeComponents must be a non-empty array/)
+      return true
+    },
+  )
+
+  const noSbom = JSON.parse(readFileSync(evidence, 'utf8'))
+  noSbom.candidates[0].dependencyLicenseCoverage = 'complete'
+  noSbom.candidates[0].fossGate.passed = true
+  noSbom.candidates[0].sbomEvidence = []
+  const noSbomPath = path.join(directory, 'no-sbom.json')
+  writeFileSync(noSbomPath, JSON.stringify(noSbom))
+  assert.throws(
+    () => run('scripts/quiz/license-gate.mjs', [noSbomPath]),
+    error => {
+      assert.match(error.stderr, /SBOM evidence is incomplete/)
+      return true
+    },
+  )
+
+  const missingVerdict = JSON.parse(readFileSync(evidence, 'utf8'))
+  delete missingVerdict.candidates[0].fossGate
+  const missingVerdictPath = path.join(directory, 'missing-verdict.json')
+  writeFileSync(missingVerdictPath, JSON.stringify(missingVerdict))
+  assert.throws(
+    () => run('scripts/quiz/license-gate.mjs', [missingVerdictPath]),
+    error => {
+      assert.match(error.stderr, /fossGate\.passed must be a boolean/)
+      assert.doesNotMatch(error.stderr, /TypeError/)
+      return true
+    },
+  )
 })
 
 test('committed SBOMs identify the exact evaluated source and expose license gaps', () => {
@@ -120,4 +190,29 @@ test('committed SBOMs identify the exact evaluated source and expose license gap
     assert.equal(sbom.metadata.component.name, candidate.runtimeComponents[0].imageDigest)
     assert.ok(sbom.components.some(component => (component.licenses ?? []).length === 0))
   }
+})
+
+test('offline rehearsal records replayable reveal, reset, and failure-fallback evidence', () => {
+  const directory = mkdtempSync(path.join(tmpdir(), 'quiz-rehearsal-'))
+  const timestamp = '2026-08-04T00:00:00Z'
+  run('scripts/quiz/rehearse-offline.mjs', ['--out', directory, '--timestamp', timestamp])
+
+  const transcript = readFileSync(path.join(directory, 'transcript.md'), 'utf8')
+  assert.match(transcript, new RegExp(timestamp))
+  assert.match(transcript, /Scope: offline fallback only; no live service was exercised/)
+  assert.match(transcript, /Reveal check: PASS — 0 participant answers; 3 facilitator answers/)
+  assert.match(transcript, /Reset check: PASS — repeated export produced identical SHA-256 outputs/)
+  assert.match(transcript, /Failure fallback: PASS — participant and facilitator files remain readable without an audience service/)
+  assert.match(transcript, /Input SHA-256: `[0-9a-f]{64}`/)
+
+  const first = transcript
+  run('scripts/quiz/rehearse-offline.mjs', ['--out', directory, '--timestamp', timestamp])
+  assert.equal(readFileSync(path.join(directory, 'transcript.md'), 'utf8'), first)
+})
+
+test('CI enforces quiz schema, license, and rehearsal contracts', () => {
+  const workflow = readFileSync(path.join(root, '.github/workflows/ci.yml'), 'utf8')
+  assert.match(workflow, /pnpm run quiz:validate/)
+  assert.match(workflow, /pnpm run quiz:license-gate/)
+  assert.match(workflow, /pnpm run test:quiz/)
 })

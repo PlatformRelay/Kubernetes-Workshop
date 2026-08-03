@@ -8,6 +8,10 @@
       "sourceCommit": "3e80ce2ea25286d1b591ea327acdbfeb31fa33e3",
       "release": "v2.5.1",
       "dependencyLicenseCoverage": "incomplete",
+      "sbomEvidence": [
+        { "kind": "source", "path": "sbom/claper-source.cdx.json.gz", "identity": "3e80ce2ea25286d1b591ea327acdbfeb31fa33e3" },
+        { "kind": "image", "path": "sbom/claper-image.cdx.json.gz", "identity": "ghcr.io/claperco/claper@sha256:4f733dc50b0c77517db402541f88c5489d4c9eedb32ac6c5eef7cadd8a594196", "runtimeComponent": "claper" }
+      ],
       "runtimeComponents": [
         {
           "name": "claper",
@@ -33,6 +37,10 @@
       "sourceCommit": "4d1f1d31653752718cd41b13ca7820621f5626a7",
       "release": "master snapshot",
       "dependencyLicenseCoverage": "incomplete",
+      "sbomEvidence": [
+        { "kind": "source", "path": "sbom/classquiz-source.cdx.json.gz", "identity": "4d1f1d31653752718cd41b13ca7820621f5626a7" },
+        { "kind": "image", "path": "sbom/classquiz-backend-image.cdx.json.gz", "identity": "ghcr.io/mawoka-myblock/classquiz-backend@sha256:ae13b64132422574c12a2a751a4bbc3c5b676125dacbad020da98660fbeb9aca", "runtimeComponent": "classquiz-backend" }
+      ],
       "runtimeComponents": [
         {
           "name": "classquiz-backend",
@@ -76,6 +84,10 @@
       "sourceCommit": "5d5e0319bed814b7e3ee36b06f42538d5efea5d9",
       "release": "v0.3.2",
       "dependencyLicenseCoverage": "incomplete",
+      "sbomEvidence": [
+        { "kind": "source", "path": "sbom/quizdock-source.cdx.json.gz", "identity": "5d5e0319bed814b7e3ee36b06f42538d5efea5d9" },
+        { "kind": "image", "path": "sbom/quizdock-image.cdx.json.gz", "identity": "docker.io/fchaussin/quizdock@sha256:d3af1033fff017beb060fb52c94caa372e35646cff5b35fb9590313240de67fb", "runtimeComponent": "quizdock" }
+      ],
       "runtimeComponents": [
         {
           "name": "quizdock",

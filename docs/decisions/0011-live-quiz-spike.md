@@ -15,7 +15,9 @@ cluster resets cannot remove it; local kind is only a development option.
 The spike inspected Claper 2.5.1, a ClassQuiz master snapshot, and QuizDock 0.3.2. Exact source, image,
 license, SBOM, scoring, and rehearsal evidence is recorded in
 [the spike results](evidence/0011-live-quiz-spike/results.md). A portable three-section prototype lives
-under [`quiz/`](../../quiz/README.md).
+under [`quiz/`](../../quiz/README.md). The
+[recorded offline rehearsal](evidence/0011-live-quiz-spike/rehearsal/transcript.md) is an auditable
+command transcript and generated-output snapshot; it is explicitly not a live-service rehearsal.
 
 ## Options considered
 

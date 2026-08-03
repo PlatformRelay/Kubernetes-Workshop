@@ -21,4 +21,7 @@ trivy image --scanners license --format cyclonedx --output <candidate>-image.cdx
 
 Trivy 0.72.0 produced all files on 2026-08-03; `gzip -9` compressed them. The quiz test suite decompresses
 the artifacts, checks source commits/image digests against the inventory, and asserts that the unresolved
-license gaps remain visible. These are evidence snapshots, not a continuously current dependency report.
+license gaps remain visible. The license gate itself decompresses the referenced SBOMs and requires an
+identity-matched, completely licensed source SBOM plus one completely licensed image SBOM for every
+declared runtime component before a candidate can pass. These are evidence snapshots, not a continuously
+current dependency report.

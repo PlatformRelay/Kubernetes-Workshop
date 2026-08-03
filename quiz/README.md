@@ -16,11 +16,19 @@ node scripts/quiz/validate.mjs
 node --test scripts/quiz/quiz.test.mjs
 node scripts/quiz/license-gate.mjs docs/decisions/evidence/0011-live-quiz-spike/candidates.json
 node scripts/quiz/export.mjs --out dist-quiz
+node scripts/quiz/rehearse-offline.mjs --out dist-quiz --timestamp 2026-08-04T00:06:23+02:00
 ```
+
+AJV enforces `questions.schema.json`; the validator then applies semantic relationships that JSON Schema
+does not express, including canonical section membership, unique IDs, and answer-to-option references.
 
 The export command creates separate participant and facilitator Markdown plus a non-production adapter
 preview. Participant output deliberately omits answers. The facilitator output can be printed or used
 for a show-of-hands fallback when the live service or venue internet is unavailable.
+
+The rehearsal command replays validation and export, records input/output hashes, checks reveal separation,
+and verifies deterministic offline reset. A committed example lives in the ADR evidence directory. It does
+not exercise or make claims about a live quiz service.
 
 The adapter preview records what an eventual integration would need; it does not upload questions or
 claim API compatibility. Claper has no stable documented bulk-import API at the evaluated commit,

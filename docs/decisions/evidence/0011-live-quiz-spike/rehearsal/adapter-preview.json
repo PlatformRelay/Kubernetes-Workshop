@@ -1,0 +1,32 @@
+{
+  "claper": {
+    "importMode": "manual",
+    "productionReady": false,
+    "questionIds": [
+      "S05-Q-SPK-01",
+      "S07-Q-SPK-01",
+      "S09-Q-SPK-01"
+    ],
+    "note": "No stable documented bulk question-import API was found at the evaluated source commit."
+  },
+  "classquiz": {
+    "importMode": "authenticated-native-export-shape",
+    "productionReady": false,
+    "questionIds": [
+      "S05-Q-SPK-01",
+      "S07-Q-SPK-01",
+      "S09-Q-SPK-01"
+    ],
+    "note": "The native import endpoint requires an authenticated user and its own versioned archive shape."
+  },
+  "quizdock": {
+    "importMode": "authenticated-rest-api",
+    "productionReady": false,
+    "questionIds": [
+      "S05-Q-SPK-01",
+      "S07-Q-SPK-01",
+      "S09-Q-SPK-01"
+    ],
+    "note": "OpenAPI exposes quiz and question creation, but authentication and semantic mapping still need an integration test."
+  }
+}

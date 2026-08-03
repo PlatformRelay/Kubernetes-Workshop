@@ -14,8 +14,10 @@ resolves to a source-available/SSPL release. ClassQuiz remains a useful comparis
 required service set and the weakest immutable release boundary.
 
 The offline prototype was rehearsed by validating the three-question bank and generating independent
-participant, facilitator, and adapter-preview outputs. It proves content portability and answer hiding;
-it does not prove any live candidate UX.
+participant, facilitator, and adapter-preview outputs. The
+[timestamped command transcript](rehearsal/transcript.md) records inputs, SHA-256 output hashes, reveal,
+deterministic reset/replay, and failure-fallback observations. It proves content portability and answer
+hiding; it does not prove any live candidate UX.
 
 ## Hard license and provenance gate
 
@@ -32,7 +34,11 @@ version 7.4.10. Because the tag is mutable, the released QuizDock Compose file c
 identity across installations.
 
 `trivy 0.72.0` generated the committed source and exact-digest application-image SBOMs with the `fs` and
-`image` subcommands, `--scanners license`, and CycloneDX output. Missing license assertions are treated as unknown and therefore fail closed; a clean
+`image` subcommands, `--scanners license`, and CycloneDX output. The machine-readable inventory links
+each candidate to those files. The license gate decompresses and inspects every reference, validates
+source/image identity, requires evidence for every declared runtime component, and accepts a passing
+candidate only when every discovered component has an allowlisted FOSS license. Missing license
+assertions are treated as unknown and therefore fail closed; a clean
 "no forbidden license found" scan is not equivalent to complete proof. `cosign verify` found no signature
 for any evaluated application-image digest. These observations are evidence gaps, not allegations that
 the unnamed dependencies are non-free.
@@ -71,9 +77,12 @@ winner because the hard gate precedes functional scoring.
 ## Adapter and offline rehearsal
 
 The portable schema has one representative question for Pod lifecycle (S05), Service endpoint diagnosis
-(S07), and GatewayClass ownership (S09). `node --test scripts/quiz/quiz.test.mjs` proves:
+(S07), and GatewayClass ownership (S09). AJV 8.17.1 enforces `questions.schema.json` as the structural
+source of truth while the validator adds cross-field and canonical-section rules.
+`node --test scripts/quiz/quiz.test.mjs` proves:
 
 - stable and unique section/question IDs and a single valid answer;
+- non-empty banks/references and correctly formed option IDs;
 - three to five options with distractor rationale;
 - participant export excludes answers while facilitator export includes answer and reasoning;
 - all adapter previews preserve stable IDs and explicitly report `productionReady: false`; and

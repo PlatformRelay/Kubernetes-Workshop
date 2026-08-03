@@ -37,6 +37,10 @@
     "showcase:gif": "node scripts/make-showcase-gif.mjs",
     "test:deck": "node --test scripts/deck.test.mjs",
     "test:provenance": "node --test scripts/workshop-provenance.test.mjs",
+    "test:quiz": "node --test scripts/quiz/quiz.test.mjs",
+    "quiz:validate": "node scripts/quiz/validate.mjs",
+    "quiz:license-gate": "node scripts/quiz/license-gate.mjs docs/decisions/evidence/0011-live-quiz-spike/candidates.json",
+    "quiz:export": "node scripts/quiz/export.mjs --out dist-quiz",
     "lint": "markdownlint-cli2",
     "lint:fix": "markdownlint-cli2 --fix",
     "link-check": "node scripts/link-check.mjs"
@@ -47,6 +51,7 @@
     "vue": "^3.5.33"
   },
   "devDependencies": {
+    "ajv": "8.17.1",
     "markdownlint-cli2": "^0.23.2",
     "playwright-chromium": "^1.61.1",
     "sharp": "^0.35.3",
