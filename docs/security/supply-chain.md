@@ -27,6 +27,13 @@ patched floors enforceable without network access; updating it requires a
 reviewed refresh from the GitHub Global Security Advisory API. Malformed or
 empty evidence fails closed.
 
+Recorded vulnerable ranges use a deliberately small grammar: one or more
+comma-separated `>`, `>=`, `<`, `<=`, or `=` comparators with exact `x.y.z`
+versions. Every segment is required; OR expressions, wildcards, prereleases,
+and empty segments are rejected. For a range with an upper bound, the recorded
+first patched version must be above an inclusive bound or at/above an exclusive
+bound before any lock entry is evaluated.
+
 An accepted risk must be added to `supply-chain/dependency-audit.json` with all
 of these fields:
 

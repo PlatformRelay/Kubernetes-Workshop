@@ -99,8 +99,9 @@ function compareVersions(left, right) {
 }
 
 function parseVersionRange(range) {
-  const comparators = String(range).split(',').map((part) => part.trim()).filter(Boolean)
-  if (comparators.length === 0) return null
+  if (typeof range !== 'string') return null
+  const comparators = range.split(',').map((part) => part.trim())
+  if (comparators.length === 0 || comparators.some((part) => part === '')) return null
   const parsed = []
   for (const comparator of comparators) {
     const match = comparator.match(/^(<=|>=|<|>|=)\s*(\d+\.\d+\.\d+)$/)
@@ -124,6 +125,20 @@ function isVersionInRange(version, comparators) {
     if (!matches) return false
   }
   return true
+}
+
+function isPatchedFloorConsistent(version, comparators) {
+  const upperBounds = comparators.filter(({ operator }) => ['<', '<=', '='].includes(operator))
+  if (upperBounds.length === 0) return isVersionInRange(version, comparators) === false
+  const upper = upperBounds.reduce((strictest, candidate) => {
+    const comparison = compareVersions(candidate.version, strictest.version)
+    if (comparison < 0) return candidate
+    if (comparison > 0) return strictest
+    if (candidate.operator === '<' && strictest.operator !== '<') return candidate
+    return strictest
+  })
+  const comparison = compareVersions(version, upper.version)
+  return upper.operator === '<' ? comparison >= 0 : comparison > 0
 }
 
 function isValidNpmPackageName(value) {
@@ -160,6 +175,10 @@ export function evaluateLockedAdvisories(lockfileContents, evidence) {
   const validationErrors = []
   const validatedAdvisories = []
   for (const advisory of evidence?.advisories ?? []) {
+    if (!advisory || typeof advisory !== 'object' || Array.isArray(advisory)) {
+      validationErrors.push('<missing id>: malformed checked-in advisory evidence')
+      continue
+    }
     const comparators = parseVersionRange(advisory.vulnerableVersionRange)
     if (
       !GHSA_ID.test(advisory.id ?? '')
@@ -173,7 +192,7 @@ export function evaluateLockedAdvisories(lockfileContents, evidence) {
       validationErrors.push(`${advisory.id ?? '<missing id>'}: malformed checked-in advisory evidence`)
       continue
     }
-    if (isVersionInRange(advisory.firstPatchedVersion, comparators) !== false) {
+    if (!isPatchedFloorConsistent(advisory.firstPatchedVersion, comparators)) {
       validationErrors.push(`${advisory.id}: first patched version ${advisory.firstPatchedVersion} contradicts its vulnerable range`)
       continue
     }

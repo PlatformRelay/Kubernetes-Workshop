@@ -199,6 +199,54 @@ test('validates every range comparator before evaluating versions', () => {
   assert.match(result.message, /malformed checked-in advisory evidence/)
 })
 
+test('rejects empty comparator segments', () => {
+  const valid = advisoryEvidence.advisories[1]
+  const result = evaluateLockedAdvisories('packages: {}\n', {
+    ...advisoryEvidence,
+    advisories: [{ ...valid, vulnerableVersionRange: '>= 5.0.0,, <= 5.2.1' }],
+  })
+
+  assert.equal(result.ok, false)
+  assert.match(result.message, /malformed checked-in advisory evidence/)
+})
+
+test('rejects null and non-object advisory records without throwing', () => {
+  for (const advisory of [null, 'not-an-object', 42, []]) {
+    const result = evaluateLockedAdvisories('packages: {}\n', {
+      ...advisoryEvidence,
+      advisories: [advisory],
+    })
+    assert.equal(result.ok, false)
+    assert.match(result.message, /malformed checked-in advisory evidence/)
+  }
+})
+
+test('requires patched floors above bounded vulnerable intervals', () => {
+  const valid = advisoryEvidence.advisories[1]
+  for (const advisory of [
+    { ...valid, firstPatchedVersion: '4.9.9' },
+    { ...valid, firstPatchedVersion: '5.2.1' },
+    { ...valid, vulnerableVersionRange: '>= 5.0.0, < 5.2.2', firstPatchedVersion: '5.2.1' },
+  ]) {
+    const result = evaluateLockedAdvisories('packages: {}\n', {
+      ...advisoryEvidence,
+      advisories: [advisory],
+    })
+    assert.equal(result.ok, false)
+    assert.match(result.message, /first patched version .* contradicts/i)
+  }
+
+  const exclusiveUpper = evaluateLockedAdvisories('packages: {}\n', {
+    ...advisoryEvidence,
+    advisories: [{
+      ...valid,
+      vulnerableVersionRange: '>= 5.0.0, < 5.2.2',
+      firstPatchedVersion: '5.2.2',
+    }],
+  })
+  assert.equal(exclusiveUpper.ok, true, exclusiveUpper.message)
+})
+
 test('validates the complete evidence set before matching the lock', () => {
   const [postcss, jsYaml] = advisoryEvidence.advisories
   const result = evaluateLockedAdvisories('packages:\n  postcss@8.5.16: {}\n', {
