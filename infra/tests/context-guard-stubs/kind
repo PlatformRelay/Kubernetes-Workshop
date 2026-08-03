@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+set -eu
+
+echo "kind $*" >> "${MOCK_LOG:?stub requires MOCK_LOG}"
+[ "${MOCK_KIND_EXIT:-0}" = 0 ] || exit "$MOCK_KIND_EXIT"
+
+case "$*" in
+  "get clusters") printf '%s\n' "${MOCK_KIND_CLUSTERS-}" ;;
+  "get nodes --name "*) printf '%s\n' "${MOCK_KIND_NODES-}" ;;
+esac

@@ -7,8 +7,8 @@
 >
 > - **Do NOT run any step against a shared, managed, or production cluster.** The escape Pod
 >   reads the node's filesystem — on a real cluster that is a real compromise.
-> - Every offensive step is gated by **`context-check.sh`**, which **exits non-zero** unless your
->   current context is a `kind-…` context. Run it before you do anything else.
+> - Every offensive step is gated by **`context-check.sh`**, which verifies the exact local kind
+>   cluster, its provider metadata, and a workshop ownership marker. Run it before anything offensive.
 > - The "attack" is a single **benign read** (`cat /host/etc/os-release`) to *prove* host access.
 >   We **never** dump Secrets or credentials, and we **never** write to the host. The danger of
 >   doing so is explained in words, not performed.
@@ -48,7 +48,8 @@ The lab turns on one contrast: the settings that make an escape possible are **e
 
 ## Files used
 
-- `context-check.sh` — refuses to proceed unless the current context is a `kind-…` context. This is
+- `context-check.sh` — refuses to proceed unless the current target is the exact, locally owned
+  disposable kind cluster. This is
   the workshop's shared safety guard, kept byte-identical to the tested canonical
   [`infra/context-guard.sh`](../../infra/context-guard.sh).
 - `pod-escape.yaml` — the `privileged` + `hostPath: /` Pod. **Dangerous by design.**
@@ -62,36 +63,115 @@ cluster is disposable anyway.
 ## Step 0 — a throwaway cluster, and the guard that gates everything
 
 ```bash
-kind create cluster --name escape-lab
-export NS=escape
-kubectl create namespace "$NS"
-kubectl config set-context --current --namespace="$NS"
-kubectl get nodes
+export WORKSHOP_CLUSTER_NAME=escape-lab
+kind create cluster --name "$WORKSHOP_CLUSTER_NAME"
 ```
 
-Now write the guard. **Every offensive step below runs this first.** This is the workshop's
-**shared** kind-only safety guard — its canonical, shellcheck'd and bats-tested source of truth
-lives at [`infra/context-guard.sh`](../../infra/context-guard.sh); the heredoc below is
-byte-identical to it, so the lab stays a standalone, copy-pasteable artifact (ADR 0009) while the
-guard is still tested in CI.
+Now write the guard. Its `--claim` mode can establish the ownership marker on an existing disposable
+cluster, but only **after** the exact context, loopback API endpoint, local kind provider, and node
+metadata have all passed. Every later offensive step runs the stricter read-only check.
 
 ```bash
 cat > context-check.sh <<'EOF'
 #!/usr/bin/env sh
-# Refuse to run offensive steps anywhere but a kind cluster you own.
-ctx="$(kubectl config current-context 2>/dev/null)"
-case "$ctx" in
-  kind-*)
-    echo "OK: current context is '$ctx' (a kind cluster) — safe to proceed."
-    ;;
-  *)
-    echo "REFUSING: current context is '$ctx', which is NOT a kind- context." >&2
-    echo "This lab performs a container escape and must run ONLY in a throwaway kind cluster." >&2
-    exit 1
-    ;;
+# Fail closed unless this is the exact, locally owned disposable kind cluster.
+
+set -eu
+
+marker_name="platformrelay-workshop-ownership"
+claim_marker=false
+
+refuse() {
+  echo "REFUSING: $*" >&2
+  echo "This lab performs a container escape and must run ONLY in a disposable kind cluster you own." >&2
+  exit 1
+}
+
+case "${1:-}" in
+  "") ;;
+  --claim) claim_marker=true ;;
+  *) refuse "unknown option '$1'" ;;
 esac
+[ "$#" -le 1 ] || refuse "too many arguments"
+
+expected_cluster="${WORKSHOP_CLUSTER_NAME:-workshop}"
+printf '%s\n' "$expected_cluster" | LC_ALL=C grep -Eq '^[a-z0-9]([-a-z0-9.]*[a-z0-9])?$' || \
+  refuse "WORKSHOP_CLUSTER_NAME is not a safe kind cluster name"
+expected_context="kind-${expected_cluster}"
+expected_node="${expected_cluster}-control-plane"
+
+if ! context="$(kubectl config current-context 2>/dev/null)" || [ -z "$context" ]; then
+  refuse "kubectl has no readable current context"
+fi
+if ! cluster="$(kubectl config view --minify -o 'jsonpath={.contexts[0].context.cluster}' 2>/dev/null)" || [ -z "$cluster" ]; then
+  refuse "kubectl cannot resolve the current kubeconfig cluster"
+fi
+if ! server="$(kubectl config view --minify -o 'jsonpath={.clusters[0].cluster.server}' 2>/dev/null)" || [ -z "$server" ]; then
+  refuse "kubectl cannot resolve the current cluster server"
+fi
+if ! namespace="$(kubectl config view --minify -o 'jsonpath={.contexts[0].context.namespace}' 2>/dev/null)"; then
+  refuse "kubectl cannot resolve the current namespace"
+fi
+namespace="${namespace:-default}"
+
+[ "$context" = "$expected_context" ] || \
+  refuse "context must be exactly '$expected_context'"
+[ "$cluster" = "$expected_context" ] || \
+  refuse "kubeconfig cluster must be exactly '$expected_context'"
+printf '%s\n' "$server" | LC_ALL=C grep -Eq '^https://(127\.0\.0\.1|localhost|\[::1\]):[0-9]+$' || \
+  refuse "API server is not a loopback kind endpoint"
+printf '%s\n' "$namespace" | LC_ALL=C grep -Eq '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$' || \
+  refuse "current namespace is not a safe Kubernetes namespace name"
+
+echo "Resolved Kubernetes target:"
+echo "  context: $context"
+echo "  cluster: $cluster"
+echo "  server: $server"
+echo "  namespace: $namespace"
+
+if ! local_clusters="$(kind get clusters 2>/dev/null)"; then
+  refuse "kind cannot enumerate local clusters"
+fi
+printf '%s\n' "$local_clusters" | grep -Fxq "$expected_cluster" || \
+  refuse "'$expected_cluster' is not a cluster owned by the local kind provider"
+
+if ! kind_nodes="$(kind get nodes --name "$expected_cluster" 2>/dev/null)"; then
+  refuse "kind cannot resolve nodes for '$expected_cluster'"
+fi
+printf '%s\n' "$kind_nodes" | grep -Fxq "$expected_node" || \
+  refuse "kind does not report the expected control-plane node '$expected_node'"
+
+if ! node_identity="$(kubectl get node "$expected_node" -o 'jsonpath={.metadata.labels.kubernetes\.io/hostname}|{.spec.providerID}' 2>/dev/null)"; then
+  refuse "kubectl cannot read the expected kind node identity"
+fi
+case "$node_identity" in
+  "$expected_node|kind://"*"/$expected_cluster/$expected_node") ;;
+  *) refuse "node metadata does not identify the expected kind provider/cluster" ;;
+esac
+
+if ownership_cluster="$(kubectl --namespace kube-system get configmap "$marker_name" -o 'jsonpath={.data.cluster}' 2>/dev/null)"; then
+  [ "$ownership_cluster" = "$expected_cluster" ] || \
+    refuse "ownership marker belongs to '$ownership_cluster', not '$expected_cluster'"
+else
+  [ "$claim_marker" = true ] || \
+    refuse "workshop ownership marker is missing; recreate the cluster or run this guard once with --claim"
+  kubectl create configmap "$marker_name" \
+    --namespace kube-system \
+    --from-literal="cluster=$expected_cluster" >/dev/null || \
+    refuse "could not create the workshop ownership marker"
+  echo "Ownership marker created for disposable cluster '$expected_cluster'."
+fi
+
+echo "OK: disposable workshop kind cluster identity verified — safe to proceed."
 EOF
 chmod +x context-check.sh
+
+./context-check.sh --claim
+
+export NS=escape
+kubectl create namespace "$NS"
+kubectl config set-context --current --namespace="$NS"
+kubectl get nodes
 
 ./context-check.sh
 ```
@@ -102,14 +182,20 @@ anywhere else.
 <details><summary>Solution / expected output</summary>
 
 ```console
-$ ./context-check.sh
-OK: current context is 'kind-escape-lab' (a kind cluster) — safe to proceed.
+$ ./context-check.sh --claim
+Resolved Kubernetes target:
+  context: kind-escape-lab
+  cluster: kind-escape-lab
+  server: https://127.0.0.1:54321
+  namespace: default
+Ownership marker created for disposable cluster 'escape-lab'.
+OK: disposable workshop kind cluster identity verified — safe to proceed.
 ```
 
-`kind create cluster --name escape-lab` sets your kubectl context to **`kind-escape-lab`**. The
-guard matches `kind-*` and prints `OK`. On any other context (a shared/managed cluster is almost
-never named `kind-…`) it prints `REFUSING…` to stderr and **exits 1**, so a copy-pasted step won't
-run. It's a **fail-closed** check: unknown context → refuse.
+The port is assigned dynamically, so yours will differ. A name beginning with `kind-` is not enough:
+the guard also verifies the exact kubeconfig cluster, a loopback server, kind's local cluster/node
+inventory, the node's kind provider ID, and the ownership marker. Any missing or ambiguous evidence
+prints `REFUSING…` and exits 1. The normal `./context-check.sh` path never creates or changes anything.
 </details>
 
 > **⚠️ Why this guard matters.** The next step deliberately reads the node's filesystem. That's a

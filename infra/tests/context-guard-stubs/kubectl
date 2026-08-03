@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+set -eu
+
+echo "kubectl $*" >> "${MOCK_LOG:?stub requires MOCK_LOG}"
+
+case "$*" in
+  "config current-context")
+    [ "${MOCK_CURRENT_CONTEXT_EXIT:-0}" = 0 ] || exit "$MOCK_CURRENT_CONTEXT_EXIT"
+    printf '%s\n' "${MOCK_KUBECTL_CONTEXT-}"
+    ;;
+  "config view --minify -o jsonpath={.contexts[0].context.cluster}")
+    [ "${MOCK_CONFIG_VIEW_EXIT:-0}" = 0 ] || exit "$MOCK_CONFIG_VIEW_EXIT"
+    printf '%s' "${MOCK_KUBECTL_CLUSTER-}"
+    ;;
+  "config view --minify -o jsonpath={.clusters[0].cluster.server}")
+    [ "${MOCK_CONFIG_VIEW_EXIT:-0}" = 0 ] || exit "$MOCK_CONFIG_VIEW_EXIT"
+    printf '%s' "${MOCK_KUBECTL_SERVER-}"
+    ;;
+  "config view --minify -o jsonpath={.contexts[0].context.namespace}")
+    [ "${MOCK_CONFIG_VIEW_EXIT:-0}" = 0 ] || exit "$MOCK_CONFIG_VIEW_EXIT"
+    printf '%s' "${MOCK_KUBECTL_NAMESPACE-}"
+    ;;
+  "get node "*" -o jsonpath={.metadata.labels.kubernetes\\.io/hostname}|{.spec.providerID}")
+    [ "${MOCK_NODE_EXIT:-0}" = 0 ] || exit "$MOCK_NODE_EXIT"
+    printf '%s' "${MOCK_NODE_IDENTITY-}"
+    ;;
+  "--namespace kube-system get configmap platformrelay-workshop-ownership -o jsonpath={.data.cluster}")
+    [ "${MOCK_OWNERSHIP_EXIT:-0}" = 0 ] || exit "$MOCK_OWNERSHIP_EXIT"
+    printf '%s' "${MOCK_OWNERSHIP_CLUSTER-}"
+    ;;
+  "create configmap platformrelay-workshop-ownership --namespace kube-system --from-literal=cluster="*)
+    printf 'configmap/platformrelay-workshop-ownership created\n'
+    ;;
+  *)
+    ;;
+esac
