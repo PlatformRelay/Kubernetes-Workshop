@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { mkdtemp, mkdir, writeFile } from 'node:fs/promises'
+import { mkdtemp, mkdir, readFile, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import test from 'node:test'
@@ -130,6 +130,17 @@ test('rejects aliased Python HTTP clients and generic requests calls', async () 
   }
 })
 
+test('rejects Python URL variables passed through aliased HTTP clients', async () => {
+  for (const source of [
+    'import requests as r; url = "https://example.com/tool"; r.get(url)\n',
+    'import urllib.request as u; url = "https://example.com/tool"; u.urlopen(url)\n',
+  ]) {
+    const root = await fixture({ 'scripts/install.py': source })
+    const result = await checkSupplyChainPolicy(root)
+    assert.ok(result.errors.some((error) => error.includes('unreviewed remote-input callsite')))
+  }
+})
+
 test('rejects Node fetch remote inputs', async () => {
   const root = await fixture({
     'scripts/install.mjs': 'const response = await fetch("https://example.com/tool")\nawait response.text()\n',
@@ -138,6 +149,29 @@ test('rejects Node fetch remote inputs', async () => {
   const result = await checkSupplyChainPolicy(root)
 
   assert.ok(result.errors.some((error) => error.includes('unreviewed remote-input callsite')))
+})
+
+test('rejects Node fetch aliases and URL variables', async () => {
+  for (const source of [
+    'const get = fetch; await get("https://example.com/tool")\n',
+    'const get = fetch\nconst url = "https://example.com/tool"\nawait get(url)\n',
+  ]) {
+    const root = await fixture({ 'scripts/install.mjs': source })
+    const result = await checkSupplyChainPolicy(root)
+    assert.ok(result.errors.some((error) => error.includes('unreviewed remote-input callsite')))
+  }
+})
+
+test('ignores URLs outside executable remote-input calls', async () => {
+  const root = await fixture({
+    'scripts/info.py': 'print("https://example.com/docs")\nprint(\'requests.get("https://example.com/not-a-call")\')\n',
+    'scripts/info.mjs': '// await fetch("https://example.com/tool")\n/* fetch("https://example.com/block") */\nconsole.log("https://example.com/docs")\nconsole.log(\'fetch("https://example.com/not-a-call")\')\n',
+    '.github/workflows/ci.yml': `permissions: read-all\n# - uses: actions/checkout@v4\njobs: {}\n`,
+  })
+
+  const result = await checkSupplyChainPolicy(root)
+
+  assert.deepEqual(result.errors, [])
 })
 
 test('rejects remote execution embedded in workflow run scripts', async () => {
@@ -308,6 +342,19 @@ test('rejects workflow-wide write permissions', async () => {
   assert.ok(result.errors.some((error) => error.includes('workflow-wide write permission')))
 })
 
+test('rejects scalar and flow-style workflow write permissions', async () => {
+  for (const permissions of [
+    'permissions: write-all\njobs: {}\n',
+    'permissions: { contents: write }\njobs: {}\n',
+    'permissions: read-all\njobs:\n  test:\n    permissions: write-all\n    steps: []\n',
+    'permissions: read-all\njobs:\n  test:\n    permissions: { issues: write }\n    steps: []\n',
+  ]) {
+    const root = await fixture({ '.github/workflows/ci.yml': permissions })
+    const result = await checkSupplyChainPolicy(root)
+    assert.ok(result.errors.some((error) => error.includes('write permission')))
+  }
+})
+
 test('rejects unnecessary job-level write permissions', async () => {
   const root = await fixture({
     '.github/workflows/ci.yml': 'permissions:\n  contents: read\njobs:\n  test:\n    permissions:\n      contents: read\n      issues: write\n    steps: []\n',
@@ -326,4 +373,16 @@ test('requires every mise lock download to carry a sha256 checksum', async () =>
   const result = await checkSupplyChainPolicy(root)
 
   assert.ok(result.errors.some((error) => error.includes('mise.lock URL without adjacent sha256 checksum')))
+})
+
+test('setup truth distinguishes the unpinned mise installer from locked tool artifacts', async () => {
+  const repositoryRoot = path.resolve(import.meta.dirname, '..')
+  const [setup, bootstrap] = await Promise.all([
+    readFile(path.join(repositoryRoot, 'docs/setup.md'), 'utf8'),
+    readFile(path.join(repositoryRoot, 'infra/bootstrap.sh'), 'utf8'),
+  ])
+
+  assert.doesNotMatch(`${setup}\n${bootstrap}`, /checksummed by upstream/i)
+  assert.match(setup, /installer[\s\S]+not checksum-pinned[\s\S]+artifact checksums live in `mise\.lock`/i)
+  assert.match(bootstrap, /installer[\s\S]+not checksum-pinned[\s\S]+verified against mise\.lock/i)
 })

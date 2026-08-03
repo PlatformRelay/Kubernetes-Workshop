@@ -82,15 +82,18 @@ these work and are picked up automatically:
 ```bash
 # macOS / Linux
 brew install mise            # Homebrew
-curl https://mise.run | sh   # official installer (checksummed by upstream)
+curl https://mise.run | sh   # official installer; bytes are not checksum-pinned here
 
 # Windows participants run Linux tools inside WSL2 — see Step 3
 curl https://mise.run | sh
 ```
 
-The pinned versions live in `mise.toml` (human-readable) and `mise.lock`
-(checksummed). Participants who prefer to install tools by hand can read the
-exact versions out of those files — the lockfile *is* the documentation.
+The mise installer command above is an explicitly accepted, temporary risk:
+its downloaded bytes are not checksum-pinned by this repository. Once mise is
+present, the participant tools are a separate trust boundary: their pinned
+versions live in `mise.toml` and their artifact checksums live in `mise.lock`.
+Participants who prefer to install tools by hand can read the exact versions
+out of those files — the lockfile *is* the documentation.
 
 ## Step 3 — Windows: use WSL2 (partial support)
 

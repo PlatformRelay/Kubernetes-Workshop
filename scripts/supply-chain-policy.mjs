@@ -4,6 +4,7 @@ import { readFile, readdir } from 'node:fs/promises'
 import path from 'node:path'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
+import { parse as parseYaml } from 'yaml'
 
 const ACTION_SHA = /^[0-9a-f]{40}$/i
 const VERSION_COMMENT = /^v?\d+(?:\.\d+){0,2}(?:[-+][0-9A-Za-z.-]+)?$/
@@ -95,6 +96,7 @@ async function checkActions(root, errors) {
   for (const file of workflows) {
     const lines = (await readFile(file, 'utf8')).split(/\r?\n/)
     lines.forEach((line, index) => {
+      if (line.trimStart().startsWith('#')) return
       const match = line.match(/\buses:\s*([^\s#]+)(?:\s*#\s*(.+))?$/)
       if (!match || match[1].startsWith('./')) return
       if (match[1].startsWith('docker://')) {
@@ -119,44 +121,39 @@ async function checkActions(root, errors) {
 }
 
 function checkWorkflowPermissions(root, file, contents, errors) {
-  const lines = contents.split(/\r?\n/)
-  const start = lines.findIndex((line) => /^permissions\s*:/.test(line))
   const location = relative(root, file)
-  if (start === -1) {
+  let workflow
+  try {
+    workflow = parseYaml(contents)
+  } catch (error) {
+    errors.push(`${location}: workflow is not valid YAML: ${error.message}`)
+    return
+  }
+  if (!workflow || typeof workflow !== 'object' || !Object.hasOwn(workflow, 'permissions')) {
     errors.push(`${location}: workflow must declare explicit read-only top-level permissions`)
     return
   }
-  const permissionLines = [lines[start]]
-  for (let index = start + 1; index < lines.length; index += 1) {
-    if (/^[^\s#]/.test(lines[index])) break
-    permissionLines.push(lines[index])
-  }
-  if (/\bwrite(?:-all)?\b/.test(permissionLines.join('\n'))) {
-    errors.push(`${location}:${start + 1}: workflow-wide write permission is forbidden; grant write only on the publishing job`)
+  const topLevel = workflow.permissions
+  const topLevelWrites = topLevel === 'write-all'
+    || (topLevel && typeof topLevel === 'object' && Object.values(topLevel).includes('write'))
+  if (topLevelWrites) {
+    errors.push(`${location}: workflow-wide write permission is forbidden; grant write only on the publishing job`)
   }
 
-  let currentJob = ''
-  let inJobPermissions = false
-  lines.forEach((line, index) => {
-    const job = line.match(/^  ([A-Za-z0-9_-]+):\s*$/)
-    if (job) {
-      currentJob = job[1]
-      inJobPermissions = false
-      return
-    }
-    if (/^    permissions:\s*$/.test(line)) {
-      inJobPermissions = true
-      return
-    }
-    if (inJobPermissions && /^    \S/.test(line)) inJobPermissions = false
-    if (!inJobPermissions) return
-    const permission = line.match(/^      ([A-Za-z0-9_-]+):\s*write\s*(?:#.*)?$/)
-    if (!permission) return
+  for (const [currentJob, job] of Object.entries(workflow.jobs ?? {})) {
+    if (!job || typeof job !== 'object' || !Object.hasOwn(job, 'permissions')) continue
     const allowed = ALLOWED_JOB_WRITES.get(`${path.basename(file)}:${currentJob}`) ?? new Set()
-    if (!allowed.has(permission[1])) {
-      errors.push(`${location}:${index + 1}: job-level write permission ${permission[1]}:write is not allowed for ${currentJob}`)
+    if (job.permissions === 'write-all') {
+      errors.push(`${location}: job-level write permission write-all is not allowed for ${currentJob}`)
+      continue
     }
-  })
+    if (!job.permissions || typeof job.permissions !== 'object') continue
+    for (const [scope, access] of Object.entries(job.permissions)) {
+      if (access === 'write' && !allowed.has(scope)) {
+        errors.push(`${location}: job-level write permission ${scope}:write is not allowed for ${currentJob}`)
+      }
+    }
+  }
 }
 
 function isLoopback(url) {
@@ -165,6 +162,196 @@ function isLoopback(url) {
   } catch {
     return false
   }
+}
+
+function stripLanguageComments(contents, language) {
+  let quote = ''
+  let escaped = false
+  let blockComment = false
+  let result = ''
+  for (let index = 0; index < contents.length; index += 1) {
+    const char = contents[index]
+    const next = contents[index + 1]
+    if (blockComment) {
+      if (char === '*' && next === '/') {
+        blockComment = false
+        result += '  '
+        index += 1
+      } else {
+        result += char === '\n' ? '\n' : ' '
+      }
+      continue
+    }
+    if (quote) {
+      result += char
+      if (escaped) escaped = false
+      else if (char === '\\') escaped = true
+      else if (char === quote) quote = ''
+      continue
+    }
+    if (char === '"' || char === "'" || (language === 'node' && char === '`')) {
+      quote = char
+      result += char
+      continue
+    }
+    if (language === 'python' && char === '#') {
+      while (index < contents.length && contents[index] !== '\n') index += 1
+      result += index < contents.length ? '\n' : ''
+      continue
+    }
+    if (language === 'node' && char === '/' && next === '/') {
+      while (index < contents.length && contents[index] !== '\n') index += 1
+      result += index < contents.length ? '\n' : ''
+      continue
+    }
+    if (language === 'node' && char === '/' && next === '*') {
+      blockComment = true
+      result += '  '
+      index += 1
+      continue
+    }
+    result += char
+  }
+  return result
+}
+
+function splitStatements(line) {
+  const statements = []
+  let quote = ''
+  let escaped = false
+  let current = ''
+  for (const char of line) {
+    if (quote) {
+      current += char
+      if (escaped) escaped = false
+      else if (char === '\\') escaped = true
+      else if (char === quote) quote = ''
+      continue
+    }
+    if (char === '"' || char === "'" || char === '`') {
+      quote = char
+      current += char
+    } else if (char === ';') {
+      statements.push(current)
+      current = ''
+    } else {
+      current += char
+    }
+  }
+  statements.push(current)
+  return statements
+}
+
+function maskStringContents(value) {
+  let quote = ''
+  let escaped = false
+  let result = ''
+  for (const char of value) {
+    if (quote) {
+      if (escaped) {
+        escaped = false
+        result += ' '
+      } else if (char === '\\') {
+        escaped = true
+        result += ' '
+      } else if (char === quote) {
+        quote = ''
+        result += char
+      } else {
+        result += ' '
+      }
+    } else if (char === '"' || char === "'" || char === '`') {
+      quote = char
+      result += char
+    } else {
+      result += char
+    }
+  }
+  return result
+}
+
+function languageNetworkCallsites(contents, language) {
+  const requestAliases = new Set(['requests'])
+  const urllibAliases = new Set(['urllib.request'])
+  const urllibFunctions = new Set(['urlopen', 'urlretrieve'])
+  const subprocessAliases = new Set(['subprocess'])
+  const fetchAliases = new Set(['fetch'])
+  const stringVariables = new Map()
+  const callsites = []
+  const cleaned = stripLanguageComments(contents, language)
+
+  cleaned.split(/\r?\n/).forEach((line, lineIndex) => {
+    splitStatements(line).forEach((rawStatement) => {
+      const statement = rawStatement.trim()
+      if (!statement) return
+      if (language === 'python') {
+        const moduleImport = statement.match(/^import\s+(requests|urllib\.request|subprocess)(?:\s+as\s+([A-Za-z_]\w*))?$/)
+        if (moduleImport) {
+          const alias = moduleImport[2] ?? moduleImport[1]
+          if (moduleImport[1] === 'requests') requestAliases.add(alias)
+          if (moduleImport[1] === 'urllib.request') urllibAliases.add(alias)
+          if (moduleImport[1] === 'subprocess') subprocessAliases.add(alias)
+          return
+        }
+        const fromImport = statement.match(/^from\s+urllib\.request\s+import\s+(urlopen|urlretrieve)(?:\s+as\s+([A-Za-z_]\w*))?$/)
+        if (fromImport) {
+          urllibFunctions.add(fromImport[2] ?? fromImport[1])
+          return
+        }
+      }
+
+      const assignment = statement.match(language === 'python'
+        ? /^([A-Za-z_]\w*)\s*=\s*(["'])(https?:\/\/.*?)\2$/
+        : /^(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(["'`])(https?:\/\/.*?)\2$/)
+      if (assignment) {
+        stringVariables.set(assignment[1], assignment[3])
+        return
+      }
+      if (language === 'node') {
+        const alias = statement.match(/^(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*([A-Za-z_$][\w$]*)$/)
+        if (alias && fetchAliases.has(alias[2])) {
+          fetchAliases.add(alias[1])
+          return
+        }
+      }
+
+      const masked = maskStringContents(statement)
+      let call
+      if (language === 'python') {
+        const requestNames = [...requestAliases].map(escapeRegex).join('|')
+        const urllibNames = [...urllibAliases].map(escapeRegex).join('|')
+        const functionNames = [...urllibFunctions].map(escapeRegex).join('|')
+        const subprocessNames = [...subprocessAliases].map(escapeRegex).join('|')
+        call = masked.match(new RegExp(`\\b(?:(?:${requestNames})\\.(?:request|get|post|put|patch|delete)|(?:${urllibNames})\\.(?:urlopen|urlretrieve)|(?:${functionNames}))\\s*\\(`))
+        if (!call) {
+          const subprocessCall = masked.match(new RegExp(`\\b(?:${subprocessNames})\\.(?:run|call|check_call|check_output|Popen)\\s*\\(`))
+          if (subprocessCall) {
+            const open = masked.indexOf('(', subprocessCall.index)
+            const argumentsText = statement.slice(open + 1, statement.lastIndexOf(')'))
+            if (/["'](?:curl|wget)["']/.test(argumentsText)) call = subprocessCall
+          }
+        }
+      } else {
+        const fetchNames = [...fetchAliases].map(escapeRegex).join('|')
+        call = masked.match(new RegExp(`\\b(?:${fetchNames})\\s*\\(`))
+      }
+      if (!call) return
+      const open = masked.indexOf('(', call.index)
+      const close = statement.lastIndexOf(')')
+      const argumentsText = close > open ? statement.slice(open + 1, close) : statement.slice(open + 1)
+      const urls = [...argumentsText.matchAll(URL_PATTERN)].map((match) => match[0])
+      for (const [name, url] of stringVariables) {
+        if (new RegExp(`\\b${escapeRegex(name)}\\b`).test(argumentsText)) urls.push(url)
+      }
+      const externalUrls = [...new Set(urls)].filter((url) => !isLoopback(url))
+      callsites.push({ line: lineIndex + 1, externalUrls, dynamic: externalUrls.length === 0 })
+    })
+  })
+  return callsites
+}
+
+function escapeRegex(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
 async function checkRemoteInputs(root, exceptionById, errors) {
@@ -191,6 +378,19 @@ async function checkRemoteInputs(root, exceptionById, errors) {
     } catch (error) {
       if (error.code === 'ENOENT') continue
       throw error
+    }
+    const language = /\.py$/.test(file) ? 'python' : /\.(?:mjs|js|cjs|ts)$/.test(file) ? 'node' : ''
+    if (language) {
+      for (const callsite of languageNetworkCallsites(contents, language)) {
+        const location = `${relative(root, file)}:${callsite.line}`
+        if (callsite.dynamic) {
+          errors.push(`${location}: dynamic remote source: dynamic source is not an exact reviewed callsite`)
+        } else {
+          const kind = language === 'python' ? 'unverified Python remote input' : 'unverified remote input'
+          errors.push(`${location}: unreviewed remote-input callsite (${kind})`)
+        }
+      }
+      continue
     }
     const physicalLines = contents.split(/\r?\n/)
     const lines = []
@@ -229,7 +429,6 @@ async function checkRemoteInputs(root, exceptionById, errors) {
       const urls = [...expanded.matchAll(URL_PATTERN)].map((match) => match[0]).filter((url) => !isLoopback(url))
       const hasShellClient = DOWNLOAD_COMMAND.test(expanded)
       const hasDynamicClient = DYNAMIC_NETWORK_CALL.test(expanded)
-      const hasLanguageCall = /\.py$/.test(file) && /\b[A-Za-z_][A-Za-z0-9_.]*\s*\(/.test(expanded)
       if (urls.length === 0 && [...expanded.matchAll(URL_PATTERN)].some((match) => isLoopback(match[0]))) return
       const directShellCommand = trimmed.slice(Math.max(0, trimmed.search(DOWNLOAD_COMMAND)))
       if (DOWNLOAD_COMMAND.test(trimmed) && /\$(?:\{|[A-Za-z_])/.test(directShellCommand)) {
@@ -237,7 +436,7 @@ async function checkRemoteInputs(root, exceptionById, errors) {
         return
       }
       if (urls.length === 0 && !hasShellClient && !hasDynamicClient) return
-      if (urls.length > 0 && !hasShellClient && !hasDynamicClient && !hasLanguageCall) return
+      if (urls.length > 0 && !hasShellClient && !hasDynamicClient) return
       if (urls.length === 0) {
         const kind = hasShellClient ? 'curl/wget' : 'remote'
         errors.push(`${relative(root, file)}:${entry.startLine}: dynamic ${kind} source: dynamic source is not an exact reviewed callsite`)
@@ -331,7 +530,7 @@ async function main() {
     process.exitCode = 1
     return
   }
-  console.log('Supply-chain policy passed: Actions pinned, remote inputs governed, mise downloads checksummed.')
+  console.log('Supply-chain policy passed: Actions pinned, remote inputs governed, mise.lock artifacts checksummed.')
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {

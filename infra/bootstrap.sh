@@ -281,8 +281,8 @@ kind_provider_env() {
 }
 
 # --- Tools (mise) ------------------------------------------------------------
-# Install mise if absent (documented installer), then install the pinned
-# toolchain from mise.toml, verified against mise.lock.
+# Install mise if absent using the documented, unpinned installer exception;
+# then install the separate pinned toolchain verified against mise.lock.
 find_mise() {
   if command -v mise >/dev/null 2>&1; then
     command -v mise
@@ -315,7 +315,8 @@ ensure_mise() {
     say "curl https://mise.run | sh) then re-run. See docs/setup.md."
     return 1
   fi
-  # Interactive: the documented installer (checksummed by upstream).
+  # Interactive: the documented installer. Its bytes are not checksum-pinned
+  # by this repository; the exception below records that accepted risk.
   # supply-chain-exception: mise-bootstrap
   curl -fsSL https://mise.run | sh
   # mise installs to ~/.local/bin by default.
