@@ -1,10 +1,15 @@
 # ADR 0009: Single-file labs with in-file manifest heredocs
 
-- **Status:** accepted (supersedes [0005](0005-lab-manifests-and-example-code-layout.md))
+- **Status:** superseded by [0012](0012-sibling-lab-solutions.md)
 - **Scope:** the internal layout of a lab — how a lab's prose, manifests, broken variants, and
   reference solutions are stored and referenced. Supersedes [0005](0005-lab-manifests-and-example-code-layout.md),
   which mandated a per-lab folder tree (`manifests/`, `broken/`, `solutions/`, `src/`) that the
   shipped corpus never adopted.
+
+> **Superseded.** The single-file heredoc form remains, but the inline-`<details>`-for-every-task
+> rule does not match the shipped Day 1 sibling-solution contract.
+> [ADR 0012](0012-sibling-lab-solutions.md) records the updated convention and supersedes this one.
+> Kept for history.
 
 ## Context
 

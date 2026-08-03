@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, relative, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
@@ -181,8 +181,7 @@ function unsafeCommands(markdown) {
   const lines = markdown.split('\n');
   lines.forEach((line, index) => {
     const lineNumber = index + 1;
-    if (/\bkubectl\s+delete\s+(?:all|[^\s,]+(?:,[^\s]+)*)\s+--all\b/.test(line) &&
-        /\bkubectl\s+delete\s+all\s+--all\b/.test(line)) {
+    if (/\bkubectl\s+delete\s+all\s+--all\b/.test(line)) {
       errors.push(`line ${lineNumber}: broad kubectl delete (kubectl delete all --all)`);
     }
     if (/\bkubectl\s+delete\s+(?:namespace|namespaces|ns)\b/.test(line)) {
@@ -399,6 +398,9 @@ export function auditContractDocumentation(repoRoot = REPO_ROOT) {
   if (/with a spoiler for\s+every task/i.test(facilitator)) {
     errors.push('docs/facilitator-guide.md: still promises an inline spoiler for every task');
   }
+  if (/ingress2gateway\s+challenge/i.test(facilitator)) {
+    errors.push('docs/facilitator-guide.md: ingress2gateway must not be called the challenge');
+  }
   for (const evidence of ['S08', 'Ubuntu', '2026-08-03', 'Contour v1.33.5']) {
     if (!facilitator.includes(evidence)) {
       errors.push(`docs/facilitator-guide.md: missing S08 rehearsal evidence: ${evidence}`);
@@ -409,6 +411,32 @@ export function auditContractDocumentation(repoRoot = REPO_ROOT) {
     .find((line) => line.includes('add-on-heavy labs'));
   if (pendingAddons?.includes('S08')) {
     errors.push('docs/facilitator-guide.md: S08 is still listed as pending live rehearsal');
+  }
+
+  const adrIndex = read('docs/decisions/README.md');
+  const adrFiles = readdirSync(resolve(repoRoot, 'docs/decisions'))
+    .filter((name) => /^\d{4}-.+\.md$/.test(name))
+    .sort();
+  let acceptedSiblingContract = false;
+  for (const file of adrFiles) {
+    const text = read(`docs/decisions/${file}`);
+    const statusLine = text.split('\n').find((line) => /^\s*-\s*\*\*Status:\*\*/.test(line)) || '';
+    const accepted = /\baccepted\b/.test(statusLine) && !/\bsuperseded\b/.test(statusLine);
+    if (accepted && /Solutions live inline/i.test(text)) {
+      errors.push(`docs/decisions/${file}: accepted ADR still requires inline solutions`);
+    }
+    if (accepted && text.includes('NN-topic.solution.md')) {
+      acceptedSiblingContract = true;
+    }
+  }
+  if (!acceptedSiblingContract) {
+    errors.push('docs/decisions: an accepted ADR must name the NN-topic.solution.md sibling contract');
+  }
+  const adr0009Row = adrIndex
+    .split('\n')
+    .find((line) => line.includes('0009-single-file-lab-convention.md'));
+  if (!adr0009Row || !/superseded by 0012/i.test(adr0009Row)) {
+    errors.push('docs/decisions/README.md: ADR 0009 must be marked superseded after the sibling-solution decision');
   }
 
   return errors;
@@ -464,6 +492,16 @@ export function auditDayOneCommandTruth(repoRoot = REPO_ROOT) {
   if (!/Extension 2 \(optional, read-only\)/.test(lab08) ||
       !/not part of the challenge success criteria or verification/i.test(lab08)) {
     errors.push('Lab 08: ingress2gateway preview must be clearly optional and outside verification');
+  }
+
+  const prereq08 = section(lab08, 'Prerequisites');
+  if (!/\$NS[^\n]*default namespace/i.test(prereq08)) {
+    errors.push('Lab 08: Prerequisites must restate that $NS is the default namespace');
+  }
+  const cleanup08 = section(lab08, 'Cleanup / reset');
+  if (/TLS Secret from the stretch/i.test(cleanup08) ||
+      /cert files from the stretch/i.test(cleanup08)) {
+    errors.push('Lab 08: Cleanup must not label Challenge TLS as optional stretch');
   }
 
   return errors;

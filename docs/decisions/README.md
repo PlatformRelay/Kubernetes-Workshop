@@ -27,9 +27,10 @@ shaped the way it is — not just *what* it looks like.
 | [0006](0006-workshop-environment-and-iac.md) | Workshop environment provisioning and IaC | accepted |
 | [0007](0007-kubernetes-currency-and-version-pinning.md) | Kubernetes currency and version-pinning policy | accepted |
 | [0008](0008-validation-and-ci.md) | Validation and CI strategy | accepted |
-| [0009](0009-single-file-lab-convention.md) | Single-file labs with in-file manifest heredocs | accepted |
+| [0009](0009-single-file-lab-convention.md) | Single-file labs with in-file manifest heredocs | superseded by 0012 |
 | [0010](0010-task-runner-spike.md) | Keep the workshop entrypoint and defer a task-runner migration | accepted |
 | [0011](0011-live-quiz-spike.md) | Defer live-quiz adoption until a complete FOSS runtime passes | proposed |
+| [0012](0012-sibling-lab-solutions.md) | Single-file labs with sibling solution companions | accepted |
 
 ## Template
 
