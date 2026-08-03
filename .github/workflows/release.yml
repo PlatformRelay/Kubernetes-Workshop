@@ -1,10 +1,20 @@
 name: Release
 
-# Runs ONLY on version tags (e.g. `v1.2.0`). Ships the delivery decks — the full
-# superset and the canonical 3-day cut — as two artifacts on a GitHub Release:
+# Runs ONLY on version tags (e.g. `v1.2.0`). Ships the live Day 1/2/3 decks
+# plus compatibility full/3-day cuts as GitHub Release artifacts:
 #   1. PDF exports of each deck (print / hand-out friendly)
 #   2. a single .zip of the built static HTML decks with relative asset paths,
 #      so anyone can unzip it and open index.html offline (no server needed)
+#
+# Publication policy (US-RELEASE-1):
+#   - build-then-publish: the publish job needs: build and only uploads
+#     artifacts that already validated (fail_on_unmatched_files: true).
+#   - tags are immutable: scripts/release-tag-guard.sh refuses republishing
+#     when a tag/release already points at a different commit; same-commit
+#     retries are idempotent.
+#   - provenance: VITE_WORKSHOP_VERSION / VITE_WORKSHOP_SHA stamp every export.
+#   - write scope: contents: write only on the publish job.
+#
 # Ordinary pushes never release; cut a release by tagging:
 #
 #   git tag v0.2.0-beta.1 && git push origin v0.2.0-beta.1   # pre-release
@@ -50,12 +60,19 @@ jobs:
 
       - name: Export decks to PDF
         # slidev appends `.pdf`; GITHUB_REF_NAME is the tag (e.g. v1.2.0).
+        # Live path = Day 1/2/3; full + 3day remain compatibility exports.
         # VITE_WORKSHOP_* stamp tag + short SHA into global-bottom chrome
         # (US-BETA-8); vite.config.mjs also falls back to GITHUB_* / git.
         env:
           VITE_WORKSHOP_VERSION: ${{ github.ref_name }}
           VITE_WORKSHOP_SHA: ${{ github.sha }}
         run: |
+          pnpm exec slidev export slides-day-1.md \
+            --output "kubernetes-workshop-day-1-${GITHUB_REF_NAME}"
+          pnpm exec slidev export slides-day-2.md \
+            --output "kubernetes-workshop-day-2-${GITHUB_REF_NAME}"
+          pnpm exec slidev export slides-day-3.md \
+            --output "kubernetes-workshop-day-3-${GITHUB_REF_NAME}"
           pnpm exec slidev export slides.md \
             --output "kubernetes-workshop-full-${GITHUB_REF_NAME}"
           pnpm exec slidev export slides-3day.md \
@@ -64,14 +81,20 @@ jobs:
       - name: Build static HTML decks and bundle them
         # Relative base ("./") makes every asset path relative, so the decks
         # open straight from the filesystem after unzip — no web server, no
-        # base-path guesswork. Full deck at the bundle root; the 3-day cut and
-        # templates gallery nest under it, mirroring the Pages layout.
+        # base-path guesswork. Live day decks under day-N/; compatibility
+        # full deck at the bundle root; 3-day cut + templates nest under it.
         env:
           VITE_WORKSHOP_VERSION: ${{ github.ref_name }}
           VITE_WORKSHOP_SHA: ${{ github.sha }}
         run: |
           pnpm exec slidev build slides.md \
             --base ./ --out site
+          pnpm exec slidev build slides-day-1.md \
+            --base ./ --out site/day-1
+          pnpm exec slidev build slides-day-2.md \
+            --base ./ --out site/day-2
+          pnpm exec slidev build slides-day-3.md \
+            --base ./ --out site/day-3
           pnpm exec slidev build slides-3day.md \
             --base ./ --out site/3day
           pnpm exec slidev build slides-templates.md \
@@ -90,6 +113,9 @@ jobs:
         with:
           name: release-assets
           path: |
+            kubernetes-workshop-day-1-*.pdf
+            kubernetes-workshop-day-2-*.pdf
+            kubernetes-workshop-day-3-*.pdf
             kubernetes-workshop-full-*.pdf
             kubernetes-workshop-3day-*.pdf
             kubernetes-workshop-site-*.zip
@@ -103,6 +129,15 @@ jobs:
     permissions:
       contents: write # create the release and upload the validated assets
     steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 1
+
+      - name: Refuse moved release tags
+        # US-RELEASE-1: same-commit retry is idempotent; a tag/release that
+        # already points elsewhere must fail before softprops can rewrite it.
+        run: bash scripts/release-tag-guard.sh check "${{ github.ref_name }}" "${{ github.sha }}"
+
       - name: Download validated release artifacts
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
@@ -112,6 +147,9 @@ jobs:
         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         with:
           files: |
+            kubernetes-workshop-day-1-*.pdf
+            kubernetes-workshop-day-2-*.pdf
+            kubernetes-workshop-day-3-*.pdf
             kubernetes-workshop-full-*.pdf
             kubernetes-workshop-3day-*.pdf
             kubernetes-workshop-site-*.zip
