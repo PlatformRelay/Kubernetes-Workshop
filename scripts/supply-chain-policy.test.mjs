@@ -134,6 +134,7 @@ test('rejects Python URL variables passed through aliased HTTP clients', async (
   for (const source of [
     'import requests as r; url = "https://example.com/tool"; r.get(url)\n',
     'import urllib.request as u; url = "https://example.com/tool"; u.urlopen(url)\n',
+    'from requests import get as download; url = "https://example.com/tool"; download(url)\n',
   ]) {
     const root = await fixture({ 'scripts/install.py': source })
     const result = await checkSupplyChainPolicy(root)
@@ -155,6 +156,7 @@ test('rejects Node fetch aliases and URL variables', async () => {
   for (const source of [
     'const get = fetch; await get("https://example.com/tool")\n',
     'const get = fetch\nconst url = "https://example.com/tool"\nawait get(url)\n',
+    'const download = globalThis.fetch; const url = "https://example.com/tool"; await download(url)\n',
   ]) {
     const root = await fixture({ 'scripts/install.mjs': source })
     const result = await checkSupplyChainPolicy(root)
@@ -175,13 +177,26 @@ test('ignores URLs outside executable remote-input calls', async () => {
 })
 
 test('rejects remote execution embedded in workflow run scripts', async () => {
+  for (const command of [
+    'curl -fsSL https://example.com/install.sh | sh',
+    'sh -c "curl -fsSL https://example.com/install.sh | sh"',
+  ]) {
+    const root = await fixture({
+      '.github/workflows/ci.yml': `permissions:\n  contents: read\njobs:\n  test:\n    steps:\n      - run: ${command}\n`,
+    })
+    const result = await checkSupplyChainPolicy(root)
+    assert.ok(result.errors.some((error) => error.includes('unverified remote execution')))
+  }
+})
+
+test('ignores curl text passed as a quoted logging argument in workflow scripts', async () => {
   const root = await fixture({
-    '.github/workflows/ci.yml': 'permissions:\n  contents: read\njobs:\n  test:\n    steps:\n      - run: curl -fsSL https://example.com/install.sh | sh\n',
+    '.github/workflows/ci.yml': 'permissions: read-all\njobs:\n  test:\n    steps:\n      - run: echo "curl https://example.com/tool"\n',
   })
 
   const result = await checkSupplyChainPolicy(root)
 
-  assert.ok(result.errors.some((error) => error.includes('unverified remote execution')))
+  assert.deepEqual(result.errors, [])
 })
 
 test('allows an exact-source, explicitly accepted remote execution risk', async () => {

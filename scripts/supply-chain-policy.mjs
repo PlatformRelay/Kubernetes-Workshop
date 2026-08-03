@@ -270,12 +270,83 @@ function maskStringContents(value) {
   return result
 }
 
+function shellCommandNames(value) {
+  const source = value.trim().replace(/^(?:-\s*)?run:\s*/, '')
+  const segments = []
+  let quote = ''
+  let escaped = false
+  let current = ''
+  for (const char of source) {
+    if (quote) {
+      current += char
+      if (escaped) escaped = false
+      else if (char === '\\') escaped = true
+      else if (char === quote) quote = ''
+    } else if (char === '"' || char === "'") {
+      quote = char
+      current += char
+    } else if (';|&'.includes(char)) {
+      if (current.trim()) segments.push(current)
+      current = ''
+    } else {
+      current += char
+    }
+  }
+  if (current.trim()) segments.push(current)
+
+  const commands = []
+  for (const segment of segments) {
+    const words = []
+    quote = ''
+    escaped = false
+    current = ''
+    for (const char of segment.trim()) {
+      if (quote) {
+        if (escaped) {
+          current += char
+          escaped = false
+        } else if (char === '\\') {
+          escaped = true
+        } else if (char === quote) {
+          quote = ''
+        } else {
+          current += char
+        }
+      } else if (char === '"' || char === "'") {
+        quote = char
+      } else if (/\s/.test(char)) {
+        if (current) words.push(current)
+        current = ''
+      } else {
+        current += char
+      }
+    }
+    if (current) words.push(current)
+
+    let index = 0
+    while (/^(?:if|then|do|while|until|!)$/.test(words[index] ?? '')) index += 1
+    while (/^[A-Za-z_]\w*=/.test(words[index] ?? '')) index += 1
+    while (/^(?:env|sudo|command|exec)$/.test(words[index] ?? '')) {
+      index += 1
+      while (/^-|^[A-Za-z_]\w*=/.test(words[index] ?? '')) index += 1
+    }
+    const command = words[index]
+    if (!command) continue
+    commands.push(command)
+    if (/^(?:ba)?sh$/.test(command) && words[index + 1] === '-c' && words[index + 2]) {
+      commands.push(...shellCommandNames(words[index + 2]))
+    }
+  }
+  return commands
+}
+
 function languageNetworkCallsites(contents, language) {
   const requestAliases = new Set(['requests'])
+  const requestFunctions = new Set()
   const urllibAliases = new Set(['urllib.request'])
   const urllibFunctions = new Set(['urlopen', 'urlretrieve'])
   const subprocessAliases = new Set(['subprocess'])
-  const fetchAliases = new Set(['fetch'])
+  const fetchAliases = new Set(['fetch', 'globalThis.fetch'])
   const stringVariables = new Map()
   const callsites = []
   const cleaned = stripLanguageComments(contents, language)
@@ -298,6 +369,11 @@ function languageNetworkCallsites(contents, language) {
           urllibFunctions.add(fromImport[2] ?? fromImport[1])
           return
         }
+        const requestImport = statement.match(/^from\s+requests\s+import\s+(request|get|post|put|patch|delete)(?:\s+as\s+([A-Za-z_]\w*))?$/)
+        if (requestImport) {
+          requestFunctions.add(requestImport[2] ?? requestImport[1])
+          return
+        }
       }
 
       const assignment = statement.match(language === 'python'
@@ -308,7 +384,7 @@ function languageNetworkCallsites(contents, language) {
         return
       }
       if (language === 'node') {
-        const alias = statement.match(/^(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*([A-Za-z_$][\w$]*)$/)
+        const alias = statement.match(/^(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*([A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*)$/)
         if (alias && fetchAliases.has(alias[2])) {
           fetchAliases.add(alias[1])
           return
@@ -319,10 +395,12 @@ function languageNetworkCallsites(contents, language) {
       let call
       if (language === 'python') {
         const requestNames = [...requestAliases].map(escapeRegex).join('|')
+        const requestFunctionNames = [...requestFunctions].map(escapeRegex).join('|')
         const urllibNames = [...urllibAliases].map(escapeRegex).join('|')
         const functionNames = [...urllibFunctions].map(escapeRegex).join('|')
         const subprocessNames = [...subprocessAliases].map(escapeRegex).join('|')
-        call = masked.match(new RegExp(`\\b(?:(?:${requestNames})\\.(?:request|get|post|put|patch|delete)|(?:${urllibNames})\\.(?:urlopen|urlretrieve)|(?:${functionNames}))\\s*\\(`))
+        const importedRequests = requestFunctionNames ? `|(?:${requestFunctionNames})` : ''
+        call = masked.match(new RegExp(`\\b(?:(?:${requestNames})\\.(?:request|get|post|put|patch|delete)|(?:${urllibNames})\\.(?:urlopen|urlretrieve)|(?:${functionNames})${importedRequests})\\s*\\(`))
         if (!call) {
           const subprocessCall = masked.match(new RegExp(`\\b(?:${subprocessNames})\\.(?:run|call|check_call|check_output|Popen)\\s*\\(`))
           if (subprocessCall) {
@@ -427,11 +505,12 @@ async function checkRemoteInputs(root, exceptionById, errors) {
       }
       const expanded = expandVariables(trimmed)
       const urls = [...expanded.matchAll(URL_PATTERN)].map((match) => match[0]).filter((url) => !isLoopback(url))
-      const hasShellClient = DOWNLOAD_COMMAND.test(expanded)
+      const hasShellClient = shellCommandNames(expanded).some((command) => DOWNLOAD_COMMAND.test(command))
       const hasDynamicClient = DYNAMIC_NETWORK_CALL.test(expanded)
       if (urls.length === 0 && [...expanded.matchAll(URL_PATTERN)].some((match) => isLoopback(match[0]))) return
+      const hasDirectShellClient = shellCommandNames(trimmed).some((command) => DOWNLOAD_COMMAND.test(command))
       const directShellCommand = trimmed.slice(Math.max(0, trimmed.search(DOWNLOAD_COMMAND)))
-      if (DOWNLOAD_COMMAND.test(trimmed) && /\$(?:\{|[A-Za-z_])/.test(directShellCommand)) {
+      if (hasDirectShellClient && /\$(?:\{|[A-Za-z_])/.test(directShellCommand)) {
         errors.push(`${relative(root, file)}:${entry.startLine}: dynamic curl/wget source: dynamic source cannot match an exception`)
         return
       }
