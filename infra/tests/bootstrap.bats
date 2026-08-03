@@ -17,6 +17,19 @@ setup() {
   export MOCK_CLUSTER_EXISTS=1
 }
 
+run_workshop_in_pty() {
+  if [ "$(uname -s)" = "Darwin" ]; then
+    run script -q -e /dev/null "$ROOT/workshop" "$@"
+  else
+    local command="$ROOT/workshop"
+    local arg
+    for arg in "$@"; do
+      command="$command $arg"
+    done
+    run script -q -e -c "$command" /dev/null
+  fi
+}
+
 # --- usage / dispatch --------------------------------------------------------
 
 @test "no subcommand prints usage" {
@@ -223,6 +236,32 @@ setup() {
   run "$ROOT/workshop" up
   [ "$status" -eq 0 ]
   ! grep -q "^gum " "$MOCK_LOG"
+}
+
+@test "interactive up runs mise-managed cluster and readiness commands through gum" {
+  unset WORKSHOP_NONINTERACTIVE
+  unset CI
+  export MOCK_CLUSTER_EXISTS=0
+
+  run_workshop_in_pty up
+
+  [ "$status" -eq 0 ]
+  grep -q -- "gum spin --title Creating the kind cluster (make kind-up)" "$MOCK_LOG"
+  grep -q -- "mise exec -- env make -C $ROOT kind-up" "$MOCK_LOG"
+  grep -q -- "gum spin --title Waiting for all kind nodes to become Ready" "$MOCK_LOG"
+  grep -q -- "mise exec -- kubectl --context kind-workshop wait" "$MOCK_LOG"
+}
+
+@test "interactive down runs the mise-managed delete command through gum" {
+  unset WORKSHOP_NONINTERACTIVE
+  unset CI
+
+  run_workshop_in_pty down --yes
+
+  [ "$status" -eq 0 ]
+  grep -q -- "gum spin --title Deleting the kind cluster (make kind-down)" "$MOCK_LOG"
+  grep -q -- "mise exec -- make -C $ROOT kind-down" "$MOCK_LOG"
+  grep -q -- "kind delete cluster" "$MOCK_LOG"
 }
 
 # --- doctor verdict pass/fail ------------------------------------------------

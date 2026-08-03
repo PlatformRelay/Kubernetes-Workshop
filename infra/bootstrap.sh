@@ -299,6 +299,20 @@ run_in_toolchain() {
   fi
 }
 
+# Spinner variant for managed tools. `gum spin` starts its command with exec,
+# so it must receive a real executable rather than a shell function name.
+# Build the mise command here and preserve every caller argument verbatim.
+spin_in_toolchain() {
+  local title="$1" mise_path
+  shift
+  mise_path="$(find_mise || true)"
+  if [ -n "$mise_path" ]; then
+    spin "$title" "$mise_path" exec -- "$@"
+  else
+    spin "$title" "$@"
+  fi
+}
+
 # A child process cannot permanently change its caller's PATH. The bootstrap
 # itself therefore uses run_in_toolchain, while this hint keeps the hand-off to
 # copy-pasted lab commands honest on a shell that has not activated mise yet.
@@ -331,15 +345,15 @@ print_shell_activation_hint() {
 cluster_up() {
   local provider timeout
   provider="$(kind_provider_env)"
-  spin "Creating the kind cluster (make kind-up)" \
-    run_in_toolchain env ${provider:+"$provider"} make -C "$REPO_ROOT" kind-up || {
+  spin_in_toolchain "Creating the kind cluster (make kind-up)" \
+    env ${provider:+"$provider"} make -C "$REPO_ROOT" kind-up || {
     err "kind cluster creation failed — see output above."
     return 1
   }
 
   timeout="${WORKSHOP_NODE_READY_TIMEOUT:-180s}"
-  spin "Waiting for all kind nodes to become Ready (timeout: ${timeout})" \
-    run_in_toolchain kubectl --context "kind-${WORKSHOP_CLUSTER_NAME}" \
+  spin_in_toolchain "Waiting for all kind nodes to become Ready (timeout: ${timeout})" \
+    kubectl --context "kind-${WORKSHOP_CLUSTER_NAME}" \
       wait --for=condition=Ready nodes --all --timeout="$timeout" || {
     err "kind nodes did not become Ready within ${timeout} — inspect with:"
     say "  kubectl --context kind-${WORKSHOP_CLUSTER_NAME} get nodes"
@@ -349,8 +363,8 @@ cluster_up() {
 }
 
 cluster_down() {
-  spin "Deleting the kind cluster (make kind-down)" \
-    run_in_toolchain make -C "$REPO_ROOT" kind-down || {
+  spin_in_toolchain "Deleting the kind cluster (make kind-down)" \
+    make -C "$REPO_ROOT" kind-down || {
     err "kind cluster deletion failed — see output above."
     return 1
   }
