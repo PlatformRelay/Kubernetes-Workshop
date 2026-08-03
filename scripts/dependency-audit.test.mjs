@@ -149,6 +149,24 @@ test('fails closed when checked-in advisory evidence is empty or malformed', () 
   }
 })
 
+test('rejects noncanonical advisory IDs and invalid npm package names', () => {
+  const valid = advisoryEvidence.advisories[0]
+  for (const advisory of [
+    { ...valid, id: 'GHSA-aaaa-bbbb-cccc', source: 'https://github.com/advisories/GHSA-aaaa-bbbb-cccc' },
+    { ...valid, id: 'GHSA-r28c-9q8g', source: 'https://github.com/advisories/GHSA-r28c-9q8g' },
+    { ...valid, package: '   ' },
+    { ...valid, package: 'bad package' },
+    { ...valid, package: '@missing-slash' },
+  ]) {
+    const result = evaluateLockedAdvisories('packages: {}\n', {
+      ...advisoryEvidence,
+      advisories: [advisory],
+    })
+    assert.equal(result.ok, false)
+    assert.match(result.message, /malformed checked-in advisory evidence/)
+  }
+})
+
 test('fails lock entries inside recorded GitHub advisory ranges', () => {
   const result = evaluateLockedAdvisories(`
 packages:
@@ -185,4 +203,12 @@ test('repository lock satisfies the checked-in GitHub advisory evidence', async 
   const result = evaluateLockedAdvisories(lockfile, evidence)
 
   assert.equal(result.ok, true, result.message)
+})
+
+test('js-yaml override is bounded to the intended 5.x major', async () => {
+  const root = path.resolve(import.meta.dirname, '..')
+  const workspace = await readFile(path.join(root, 'pnpm-workspace.yaml'), 'utf8')
+
+  assert.match(workspace, /"js-yaml@>=5\.0\.0 <6\.0\.0": 5\.2\.3/)
+  assert.doesNotMatch(workspace, /"js-yaml@>=5\.0\.0":/)
 })

@@ -8,6 +8,8 @@ import { fileURLToPath } from 'node:url'
 import { parse as parseYaml } from 'yaml'
 
 const BLOCKED_SEVERITIES = new Set(['high', 'critical'])
+const GHSA_ID = /^GHSA-[23456789cfghjmpqrvwx]{4}-[23456789cfghjmpqrvwx]{4}-[23456789cfghjmpqrvwx]{4}$/
+const NPM_PACKAGE_NAME = /^(?:@[a-z0-9][a-z0-9._~-]*\/)?[a-z0-9][a-z0-9._~-]*$/
 
 function isIsoDate(value) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value ?? '')) return false
@@ -140,8 +142,10 @@ export function evaluateLockedAdvisories(lockfileContents, evidence) {
   const errors = []
   for (const advisory of evidence?.advisories ?? []) {
     if (
-      !/^GHSA-[0-9a-z-]+$/.test(advisory.id ?? '')
-      || !advisory.package
+      !GHSA_ID.test(advisory.id ?? '')
+      || typeof advisory.package !== 'string'
+      || advisory.package.length > 214
+      || !NPM_PACKAGE_NAME.test(advisory.package)
       || advisory.ecosystem !== 'npm'
       || !BLOCKED_SEVERITIES.has(advisory.severity)
       || !advisory.vulnerableVersionRange

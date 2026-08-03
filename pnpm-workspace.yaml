@@ -16,4 +16,4 @@ overrides:
   # GHSA-pm4m-ph32-ghv5 affects only js-yaml 5.0.0 through 5.2.1. Keep the
   # markdownlint 5.x line patched without forcing its unrelated 3.x/4.x users
   # across a major-version boundary.
-  "js-yaml@>=5.0.0": 5.2.3
+  "js-yaml@>=5.0.0 <6.0.0": 5.2.3
