@@ -316,6 +316,7 @@ ensure_mise() {
     return 1
   fi
   # Interactive: the documented installer (checksummed by upstream).
+  # supply-chain-exception: mise-bootstrap
   curl -fsSL https://mise.run | sh
   # mise installs to ~/.local/bin by default.
   export PATH="$HOME/.local/bin:$PATH"

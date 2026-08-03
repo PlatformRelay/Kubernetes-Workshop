@@ -1,0 +1,9 @@
+{
+  "remoteInputs": [
+    {
+      "id": "mise-bootstrap",
+      "reason": "The interactive convenience path uses mise's official installer, which verifies downloaded release artifacts. Non-interactive and CI paths fail closed when mise is absent.",
+      "expires": "2026-11-03"
+    }
+  ]
+}
