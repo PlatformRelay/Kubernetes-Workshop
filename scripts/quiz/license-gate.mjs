@@ -31,6 +31,10 @@ function readSbom(relativePath) {
   }
 }
 
+function missingLicenseCount(sbom) {
+  return sbom.components.filter(component => !Array.isArray(component.licenses) || component.licenses.length === 0).length
+}
+
 function sbomLicensesAreComplete(sbom) {
   return Array.isArray(sbom?.components) && sbom.components.length > 0 && sbom.components.every(component =>
     Array.isArray(component.licenses) && component.licenses.length > 0 && component.licenses.every(entry => {
@@ -57,14 +61,54 @@ for (const candidate of report.candidates ?? []) {
     allowedLicenses.has(component.license) && exactCommit.test(component.sourceCommit) && immutableImage.test(component.imageDigest),
   )
   const sbomEvidence = Array.isArray(candidate.sbomEvidence) ? candidate.sbomEvidence : []
+  const sourceReferences = sbomEvidence.filter(reference => reference.kind === 'source')
+  const imageReferences = sbomEvidence.filter(reference => reference.kind === 'image')
+  const candidateEvidenceErrors = []
+  if (sourceReferences.length !== 1 || imageReferences.length === 0) {
+    candidateEvidenceErrors.push(`${candidate.id}: sbomEvidence must include exactly one source and at least one image`)
+  }
   const inspected = sbomEvidence.map(reference => ({ reference, sbom: readSbom(reference.path) }))
-  const sourceEvidence = inspected.find(({ reference, sbom }) =>
-    reference.kind === 'source'
-      && reference.identity === candidate.sourceCommit
-      && sbom?.metadata?.component?.properties?.some(property =>
-        property.name === 'workshop:sourceCommit' && property.value === candidate.sourceCommit,
-      ),
-  )
+  for (const { reference, sbom } of inspected) {
+    const label = `${candidate.id}/${reference.path ?? '<missing path>'}`
+    if (!['source', 'image'].includes(reference.kind)) {
+      candidateEvidenceErrors.push(`${label}: kind must be source or image`)
+      continue
+    }
+    if (!sbom) {
+      candidateEvidenceErrors.push(`${label}: cannot be read as gzip CycloneDX JSON`)
+      continue
+    }
+    if (!Array.isArray(sbom.components) || sbom.components.length === 0) {
+      candidateEvidenceErrors.push(`${label}: SBOM components must be a non-empty array`)
+      continue
+    }
+    if (reference.componentCount !== sbom.components.length) {
+      candidateEvidenceErrors.push(`${label}: componentCount does not match SBOM contents`)
+    }
+    if (reference.missingLicenseCount !== missingLicenseCount(sbom)) {
+      candidateEvidenceErrors.push(`${label}: missingLicenseCount does not match SBOM contents`)
+    }
+    if (reference.kind === 'source') {
+      const sbomSourceCommit = sbom.metadata?.component?.properties?.find(property =>
+        property.name === 'workshop:sourceCommit'
+      )?.value
+      if (reference.identity !== candidate.sourceCommit || sbomSourceCommit !== candidate.sourceCommit) {
+        candidateEvidenceErrors.push(`${candidate.id}: source SBOM identity does not match candidate sourceCommit`)
+      }
+      continue
+    }
+    const runtimeComponent = candidate.runtimeComponents.find(component => component.name === reference.runtimeComponent)
+    if (!runtimeComponent
+      || reference.identity !== runtimeComponent.imageDigest
+      || sbom.metadata?.component?.name !== runtimeComponent.imageDigest) {
+      candidateEvidenceErrors.push(`${label}: image SBOM identity does not match its runtime component digest`)
+    }
+  }
+  if (candidateEvidenceErrors.length > 0) {
+    evidenceErrors.push(...candidateEvidenceErrors)
+    continue
+  }
+  const sourceEvidence = inspected.find(({ reference }) => reference.kind === 'source')
   const imageEvidenceIsComplete = candidate.runtimeComponents.every(component => inspected.some(({ reference, sbom }) =>
     reference.kind === 'image'
       && reference.runtimeComponent === component.name

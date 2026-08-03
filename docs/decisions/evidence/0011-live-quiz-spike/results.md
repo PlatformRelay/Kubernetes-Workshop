@@ -35,9 +35,10 @@ identity across installations.
 
 `trivy 0.72.0` generated the committed source and exact-digest application-image SBOMs with the `fs` and
 `image` subcommands, `--scanners license`, and CycloneDX output. The machine-readable inventory links
-each candidate to those files. The license gate decompresses and inspects every reference, validates
-source/image identity, requires evidence for every declared runtime component, and accepts a passing
-candidate only when every discovered component has an allowlisted FOSS license. Missing license
+each candidate to those files. The license gate decompresses and inspects every reference. Every candidate
+must provide readable, identity-bound source and application-image evidence whose recorded total and
+missing-license counts match the SBOM contents. A passing candidate additionally requires evidence for
+every declared runtime component and every discovered component must have an allowlisted FOSS license. Missing license
 assertions are treated as unknown and therefore fail closed; a clean
 "no forbidden license found" scan is not equivalent to complete proof. `cosign verify` found no signature
 for any evaluated application-image digest. These observations are evidence gaps, not allegations that

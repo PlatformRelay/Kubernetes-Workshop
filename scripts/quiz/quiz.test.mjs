@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
-import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import test from 'node:test'
@@ -18,6 +18,21 @@ function run(script, args = []) {
     cwd: root,
     encoding: 'utf8',
   })
+}
+
+function writeEvidenceFixture(report, mutateFiles = () => {}) {
+  const directory = mkdtempSync(path.join(tmpdir(), 'quiz-license-'))
+  const sbomDirectory = path.join(directory, 'sbom')
+  mkdirSync(sbomDirectory)
+  cpSync(
+    path.join(root, 'docs/decisions/evidence/0011-live-quiz-spike/sbom'),
+    sbomDirectory,
+    { recursive: true },
+  )
+  mutateFiles(directory)
+  const evidencePath = path.join(directory, 'candidates.json')
+  writeFileSync(evidencePath, JSON.stringify(report))
+  return evidencePath
 }
 
 test('prototype bank validates three stable section and question IDs', () => {
@@ -116,24 +131,20 @@ test('license gate fails closed for forbidden, unknown, and unpinned runtime evi
   const candidates = JSON.parse(readFileSync(evidence, 'utf8'))
   candidates.candidates[0].runtimeComponents[0].license = 'BUSL-1.1'
   candidates.candidates[0].fossGate.passed = true
-  const directory = mkdtempSync(path.join(tmpdir(), 'quiz-license-'))
-  const invalidPath = path.join(directory, 'invalid.json')
-  writeFileSync(invalidPath, JSON.stringify(candidates))
+  const invalidPath = writeEvidenceFixture(candidates)
   assert.throws(() => run('scripts/quiz/license-gate.mjs', [invalidPath]), /Command failed/)
 
   const unresolved = JSON.parse(readFileSync(evidence, 'utf8'))
   unresolved.candidates[1].dependencyLicenseCoverage = 'complete'
   unresolved.candidates[1].fossGate.passed = true
-  const unresolvedPath = path.join(directory, 'unresolved.json')
-  writeFileSync(unresolvedPath, JSON.stringify(unresolved))
+  const unresolvedPath = writeEvidenceFixture(unresolved)
   assert.throws(() => run('scripts/quiz/license-gate.mjs', [unresolvedPath]), /Command failed/)
 
   const emptyRuntime = JSON.parse(readFileSync(evidence, 'utf8'))
   emptyRuntime.candidates[0].runtimeComponents = []
   emptyRuntime.candidates[0].dependencyLicenseCoverage = 'complete'
   emptyRuntime.candidates[0].fossGate.passed = true
-  const emptyRuntimePath = path.join(directory, 'empty-runtime.json')
-  writeFileSync(emptyRuntimePath, JSON.stringify(emptyRuntime))
+  const emptyRuntimePath = writeEvidenceFixture(emptyRuntime)
   assert.throws(
     () => run('scripts/quiz/license-gate.mjs', [emptyRuntimePath]),
     error => {
@@ -146,25 +157,90 @@ test('license gate fails closed for forbidden, unknown, and unpinned runtime evi
   noSbom.candidates[0].dependencyLicenseCoverage = 'complete'
   noSbom.candidates[0].fossGate.passed = true
   noSbom.candidates[0].sbomEvidence = []
-  const noSbomPath = path.join(directory, 'no-sbom.json')
-  writeFileSync(noSbomPath, JSON.stringify(noSbom))
+  const noSbomPath = writeEvidenceFixture(noSbom)
   assert.throws(
     () => run('scripts/quiz/license-gate.mjs', [noSbomPath]),
     error => {
-      assert.match(error.stderr, /SBOM evidence is incomplete/)
+      assert.match(error.stderr, /sbomEvidence must include exactly one source and at least one image/)
       return true
     },
   )
 
   const missingVerdict = JSON.parse(readFileSync(evidence, 'utf8'))
   delete missingVerdict.candidates[0].fossGate
-  const missingVerdictPath = path.join(directory, 'missing-verdict.json')
-  writeFileSync(missingVerdictPath, JSON.stringify(missingVerdict))
+  const missingVerdictPath = writeEvidenceFixture(missingVerdict)
   assert.throws(
     () => run('scripts/quiz/license-gate.mjs', [missingVerdictPath]),
     error => {
       assert.match(error.stderr, /fossGate\.passed must be a boolean/)
       assert.doesNotMatch(error.stderr, /TypeError/)
+      return true
+    },
+  )
+})
+
+test('license gate verifies every declared SBOM reference before trusting a rejected verdict', () => {
+  const evidence = path.join(root, 'docs/decisions/evidence/0011-live-quiz-spike/candidates.json')
+
+  const missing = JSON.parse(readFileSync(evidence, 'utf8'))
+  missing.candidates[0].sbomEvidence = []
+  assert.throws(
+    () => run('scripts/quiz/license-gate.mjs', [writeEvidenceFixture(missing)]),
+    error => {
+      assert.match(error.stderr, /claper: sbomEvidence must include exactly one source and at least one image/)
+      return true
+    },
+  )
+
+  const nonexistent = JSON.parse(readFileSync(evidence, 'utf8'))
+  nonexistent.candidates[0].sbomEvidence[0].path = 'sbom/does-not-exist.cdx.json.gz'
+  assert.throws(
+    () => run('scripts/quiz/license-gate.mjs', [writeEvidenceFixture(nonexistent)]),
+    error => {
+      assert.match(error.stderr, /does-not-exist.*cannot be read as gzip CycloneDX JSON/)
+      return true
+    },
+  )
+
+  const corrupt = JSON.parse(readFileSync(evidence, 'utf8'))
+  corrupt.candidates[0].sbomEvidence[0].path = 'sbom/corrupt.cdx.json.gz'
+  const corruptPath = writeEvidenceFixture(corrupt, directory => {
+    writeFileSync(path.join(directory, 'sbom/corrupt.cdx.json.gz'), 'not gzip')
+  })
+  assert.throws(
+    () => run('scripts/quiz/license-gate.mjs', [corruptPath]),
+    error => {
+      assert.match(error.stderr, /corrupt.*cannot be read as gzip CycloneDX JSON/)
+      return true
+    },
+  )
+
+  const wrongIdentity = JSON.parse(readFileSync(evidence, 'utf8'))
+  wrongIdentity.candidates[0].sbomEvidence[0].identity = '0000000000000000000000000000000000000000'
+  assert.throws(
+    () => run('scripts/quiz/license-gate.mjs', [writeEvidenceFixture(wrongIdentity)]),
+    error => {
+      assert.match(error.stderr, /claper: source SBOM identity does not match candidate sourceCommit/)
+      return true
+    },
+  )
+
+  const wrongCount = JSON.parse(readFileSync(evidence, 'utf8'))
+  wrongCount.candidates[0].sbomEvidence[0].componentCount += 1
+  assert.throws(
+    () => run('scripts/quiz/license-gate.mjs', [writeEvidenceFixture(wrongCount)]),
+    error => {
+      assert.match(error.stderr, /claper-source.*componentCount does not match SBOM contents/)
+      return true
+    },
+  )
+
+  const wrongMissingCount = JSON.parse(readFileSync(evidence, 'utf8'))
+  wrongMissingCount.candidates[0].sbomEvidence[0].missingLicenseCount -= 1
+  assert.throws(
+    () => run('scripts/quiz/license-gate.mjs', [writeEvidenceFixture(wrongMissingCount)]),
+    error => {
+      assert.match(error.stderr, /claper-source.*missingLicenseCount does not match SBOM contents/)
       return true
     },
   )
