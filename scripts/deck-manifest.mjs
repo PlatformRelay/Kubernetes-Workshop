@@ -237,6 +237,16 @@ export function validatePlanningLanguage(markdown, manifest = sections) {
   const measuredNumberReverse = /\b\d+\s*(?:min(?:ute)?s?)\b[^\n.]{0,120}\b(?:measured|actual)\b/i
   if (measuredNumber.test(markdown) || measuredNumberReverse.test(markdown))
     throw new Error('An unrehearsed planning estimate is presented as measured timing')
+  const statements = markdown.replaceAll('\n', ' ').split(/(?<=[.!?])\s+/)
+  for (const statement of statements) {
+    const withoutNegations = statement.replace(
+      /\b(?:not|never|isn['’]t|aren['’]t|is not|are not|was not|were not)\s+(?:actually\s+)?(?:measured|actual)\b/gi,
+      '',
+    )
+    const timingSubject = /\b(?:facts?|timings?|durations?|totals?|time)\b/i
+    if (/\b(?:measured|actual)\b/i.test(withoutNegations) && timingSubject.test(withoutNegations))
+      throw new Error('An unrehearsed planning estimate is presented as measured timing')
+  }
   const totals = canonicalDayTotals(manifest)
   for (const line of markdown.split('\n')) {
     const durations = line.matchAll(/\bDay ([123])\b[^\n]{0,80}?\b(\d+)\s*(?:min(?:ute)?s?)\b/gi)
@@ -248,6 +258,126 @@ export function validatePlanningLanguage(markdown, manifest = sections) {
         throw new Error(`Day ${day} claims ${value} minutes; expected planning total ${expected}`)
       if (!/\b(?:planned|planning|estimate|target|unrehearsed)\b/i.test(line))
         throw new Error(`${value} min day total must be labelled planned or estimated`)
+    }
+  }
+  return true
+}
+
+function sectionIds(value) {
+  const ids = []
+  const pattern = /S(\d{2})(?:`?\s*[–-]\s*`?S?(\d{2}))?/g
+  for (const match of value.matchAll(pattern)) {
+    const start = Number(match[1])
+    const end = Number(match[2] ?? match[1])
+    if (end < start)
+      continue
+    for (let number = start; number <= end; number++)
+      ids.push(`S${String(number).padStart(2, '0')}`)
+  }
+  return ids
+}
+
+function environmentProfile(value) {
+  const environment = value.replace(/[*_`]/g, '').toLowerCase()
+  if (/\blocal\b[^.;|]{0,40}\bno cluster\b/.test(environment))
+    return 'local'
+  const hasKind = /\bkind\s*✓|\bkind-only\b/.test(environment)
+  const namespaceReadOnly = /\b(?:namespace|shared\s+ns)\b[^.;|]{0,80}\bread-only\b/.test(environment)
+  const namespaceFull = /\bnamespace\s*✓/.test(environment) && !namespaceReadOnly
+  if (hasKind && namespaceReadOnly)
+    return 'kind-with-namespace-read-only'
+  if (hasKind && namespaceFull)
+    return 'namespace-and-kind'
+  if (hasKind && /\bkind-only\b/.test(environment))
+    return 'kind-only'
+  return undefined
+}
+
+export function validateFrontDoorFacts(manifest, documents) {
+  const byId = new Map(manifest.map((section) => [section.id, section]))
+
+  const syllabus = documents.get('docs/syllabus.md') ?? ''
+  validateSyllabusCatalog(manifest, syllabus)
+
+  const readme = documents.get('README.md') ?? ''
+  const readmeAssignments = new Map()
+  for (const line of readme.split('\n')) {
+    const cells = line.split('|').slice(1, -1).map((cell) => cell.replaceAll('*', '').trim())
+    const day = Number(cells[0]?.match(/^Day ([123])$/)?.[1])
+    if (!day || cells.length < 3)
+      continue
+    for (const id of sectionIds(cells[2])) {
+      const assignments = readmeAssignments.get(id) ?? new Set()
+      assignments.add(day)
+      readmeAssignments.set(id, assignments)
+    }
+  }
+  for (const section of manifest.filter((item) => item.canonical)) {
+    const assignments = readmeAssignments.get(section.id) ?? new Set()
+    const wrongDay = [...assignments].find((day) => day !== section.day)
+    if (!assignments.has(section.day) || wrongDay) {
+      const claim = wrongDay ? `assigns ${section.id} to Day ${wrongDay}` : `does not assign ${section.id}`
+      throw new Error(`README.md ${claim}; manifest requires Day ${section.day}`)
+    }
+  }
+
+  const labsReadme = documents.get('labs/README.md') ?? ''
+  let labsDay
+  const labAssignments = new Map()
+  for (const line of labsReadme.split('\n')) {
+    if (/^##\s/.test(line))
+      labsDay = undefined
+    const heading = line.match(/^### Day ([123])\b/)
+    if (heading)
+      labsDay = Number(heading[1])
+    if (labsDay) {
+      for (const match of line.matchAll(/\.\/day-[123]\/(\d{2})-[^)]+\.md/g))
+        labAssignments.set(`S${match[1]}`, labsDay)
+    }
+  }
+  for (const section of manifest.filter((item) => item.environment)) {
+    const assigned = labAssignments.get(section.id)
+    if (assigned !== section.day) {
+      const claim = assigned ? `groups ${section.id} under Day ${assigned}` : `does not list ${section.id}`
+      throw new Error(`labs/README.md ${claim}; manifest requires Day ${section.day}`)
+    }
+  }
+
+  const facilitator = documents.get('docs/facilitator-guide.md') ?? ''
+  let facilitatorReferences = 0
+  for (const match of facilitator.matchAll(/\.\.\/labs\/day-([123])\/(\d{2})-[^)]+\.md/g)) {
+    const section = byId.get(`S${match[2]}`)
+    if (!section)
+      continue
+    facilitatorReferences++
+    const claimedDay = Number(match[1])
+    if (claimedDay !== section.day) {
+      throw new Error(
+        `docs/facilitator-guide.md assigns ${section.id} to Day ${claimedDay}; manifest requires Day ${section.day}`,
+      )
+    }
+  }
+  if (!facilitatorReferences)
+    throw new Error('docs/facilitator-guide.md must contain manifest-checkable lab references')
+
+  const matrix = documents.get('docs/validation-matrix.md') ?? ''
+  const matrixEnvironments = new Map()
+  for (const line of matrix.split('\n')) {
+    const cells = line.split('|').slice(1, -1).map((cell) => cell.trim())
+    const id = cells[1]?.match(/\bS\d{2}\b/)?.[0]
+    if (id && cells.length >= 6)
+      matrixEnvironments.set(id, cells[2])
+  }
+  for (const section of manifest.filter((item) => item.environment)) {
+    const claimed = matrixEnvironments.get(section.id)
+    if (!claimed)
+      throw new Error(`docs/validation-matrix.md is missing the ${section.id} environment`)
+    const expectedProfile = environmentProfile(section.environment)
+    const claimedProfile = environmentProfile(claimed)
+    if (!expectedProfile || claimedProfile !== expectedProfile) {
+      throw new Error(
+        `docs/validation-matrix.md ${section.id} environment contradicts the manifest (${expectedProfile ?? section.environment})`,
+      )
     }
   }
   return true
@@ -311,6 +441,7 @@ export function validateDocumentationTruth(manifest = sections, { repoRoot = res
   validateSyllabusCatalog(manifest, syllabus)
   validateSyllabusTimings(manifest, syllabus)
   validateCanonicalScheduleTables(manifest, syllabus)
+  validateFrontDoorFacts(manifest, documents)
   validateStatusClaims(manifest, documents)
   for (const markdown of documents.values())
     validatePlanningLanguage(markdown, manifest)

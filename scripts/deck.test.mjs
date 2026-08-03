@@ -9,6 +9,7 @@ import {
   findGeneratedDrift,
   renderDeck,
   validateCanonicalScheduleTables,
+  validateFrontDoorFacts,
   validatePlanningLanguage,
   validateSectionFrontmatter,
   validateStatusClaims,
@@ -307,6 +308,66 @@ describe('deck manifest validation', () => {
     )
     assert.doesNotThrow(
       () => validatePlanningLanguage('Day 2: 345 min planned (unrehearsed planning estimate).'),
+    )
+    assert.throws(
+      () => validatePlanningLanguage('Treat the totals as measured facts.'),
+      /planning estimate.*measured/i,
+    )
+  })
+
+  it('validates manifest day and environment facts in every structured front door', () => {
+    const root = join(import.meta.dirname, '..')
+    const paths = [
+      'README.md',
+      'docs/syllabus.md',
+      'docs/facilitator-guide.md',
+      'labs/README.md',
+      'docs/validation-matrix.md',
+    ]
+    const base = new Map(paths.map((path) => [path, readFileSync(join(root, path), 'utf8')]))
+    const manifest = [
+      section('S09', { day: 2, tier: 'recommended', environment: 'kind ✓ (CRDs + controller install) · namespace ✓ (CRDs/controller pre-provided)' }),
+      section('S23', { day: 3, tier: 'recommended', environment: 'kind ✓ (self-install) / namespace: read-only' }),
+    ]
+
+    const readmeDay = new Map(base)
+    readmeDay.set('README.md', base.get('README.md').replace(
+      '`S00`, `S03`–`S08`',
+      '`S00`, `S03`–`S09`',
+    ))
+    assert.throws(
+      () => validateFrontDoorFacts(manifest, readmeDay),
+      /README.*S09.*Day 2/i,
+    )
+
+    const labsDay = new Map(base)
+    const s09Line = base.get('labs/README.md').match(/^- \[`09-gateway-api`\].*$/m)?.[0]
+    labsDay.set('labs/README.md', base.get('labs/README.md')
+      .replace(`${s09Line}\n`, '')
+      .replace('### Day 2', `${s09Line}\n\n### Day 2`))
+    assert.throws(
+      () => validateFrontDoorFacts(manifest, labsDay),
+      /labs\/README.*S09.*Day 2/i,
+    )
+
+    const matrixEnvironment = new Map(base)
+    matrixEnvironment.set('docs/validation-matrix.md', base.get('docs/validation-matrix.md').replace(
+      'kind ✓ (self-install stack) / namespace: read-only',
+      'namespace ✓ / kind ✓',
+    ))
+    assert.throws(
+      () => validateFrontDoorFacts(manifest, matrixEnvironment),
+      /validation-matrix.*S23.*environment/i,
+    )
+
+    const facilitatorDay = new Map(base)
+    facilitatorDay.set('docs/facilitator-guide.md', base.get('docs/facilitator-guide.md').replace(
+      '../labs/day-3/23-prometheus.md',
+      '../labs/day-2/23-prometheus.md',
+    ))
+    assert.throws(
+      () => validateFrontDoorFacts(manifest, facilitatorDay),
+      /facilitator-guide.*S23.*Day 3/i,
     )
   })
 
