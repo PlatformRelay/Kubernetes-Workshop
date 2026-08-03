@@ -2,6 +2,7 @@
 
 import { readFile } from 'node:fs/promises'
 import { spawnSync } from 'node:child_process'
+import { Buffer } from 'node:buffer'
 import path from 'node:path'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
@@ -9,7 +10,8 @@ import { parse as parseYaml } from 'yaml'
 
 const BLOCKED_SEVERITIES = new Set(['high', 'critical'])
 const GHSA_ID = /^GHSA-[23456789cfghjmpqrvwx]{4}-[23456789cfghjmpqrvwx]{4}-[23456789cfghjmpqrvwx]{4}$/
-const NPM_PACKAGE_NAME = /^(?:@[a-z0-9][a-z0-9._~-]*\/)?[a-z0-9][a-z0-9._~-]*$/
+const NPM_UNSCOPED_NAME = /^[a-z0-9][a-z0-9._~-]*$/
+const NPM_SCOPED_LEAF = /^[a-z0-9._~-]+$/
 
 function isIsoDate(value) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value ?? '')) return false
@@ -96,13 +98,21 @@ function compareVersions(left, right) {
   return 0
 }
 
-function isVersionInRange(version, range) {
+function parseVersionRange(range) {
   const comparators = String(range).split(',').map((part) => part.trim()).filter(Boolean)
   if (comparators.length === 0) return null
+  const parsed = []
   for (const comparator of comparators) {
     const match = comparator.match(/^(<=|>=|<|>|=)\s*(\d+\.\d+\.\d+)$/)
     if (!match) return null
-    const comparison = compareVersions(version, match[2])
+    parsed.push({ operator: match[1], version: match[2] })
+  }
+  return parsed
+}
+
+function isVersionInRange(version, comparators) {
+  for (const comparator of comparators) {
+    const comparison = compareVersions(version, comparator.version)
     if (comparison === null) return null
     const matches = {
       '<': comparison < 0,
@@ -110,10 +120,18 @@ function isVersionInRange(version, range) {
       '=': comparison === 0,
       '>=': comparison >= 0,
       '>': comparison > 0,
-    }[match[1]]
+    }[comparator.operator]
     if (!matches) return false
   }
   return true
+}
+
+function isValidNpmPackageName(value) {
+  if (typeof value !== 'string' || Buffer.byteLength(value, 'utf8') > 214) return false
+  if (!value.startsWith('@')) return NPM_UNSCOPED_NAME.test(value)
+  const match = value.match(/^@([^/]+)\/(.+)$/)
+  if (!match || !NPM_UNSCOPED_NAME.test(match[1]) || !NPM_SCOPED_LEAF.test(match[2])) return false
+  return !['.', '..'].includes(match[2])
 }
 
 function escapeRegex(value) {
@@ -139,31 +157,37 @@ export function evaluateLockedAdvisories(lockfileContents, evidence) {
     return { ok: false, message: 'Checked-in advisory evidence requires a capture date, GitHub API source, and at least one advisory.' }
   }
 
-  const errors = []
+  const validationErrors = []
+  const validatedAdvisories = []
   for (const advisory of evidence?.advisories ?? []) {
+    const comparators = parseVersionRange(advisory.vulnerableVersionRange)
     if (
       !GHSA_ID.test(advisory.id ?? '')
-      || typeof advisory.package !== 'string'
-      || advisory.package.length > 214
-      || !NPM_PACKAGE_NAME.test(advisory.package)
+      || !isValidNpmPackageName(advisory.package)
       || advisory.ecosystem !== 'npm'
       || !BLOCKED_SEVERITIES.has(advisory.severity)
-      || !advisory.vulnerableVersionRange
-      || !advisory.firstPatchedVersion
+      || !comparators
+      || compareVersions(advisory.firstPatchedVersion, advisory.firstPatchedVersion) === null
       || advisory.source !== `https://github.com/advisories/${advisory.id}`
     ) {
-      errors.push(`${advisory.id ?? '<missing id>'}: malformed checked-in advisory evidence`)
+      validationErrors.push(`${advisory.id ?? '<missing id>'}: malformed checked-in advisory evidence`)
       continue
     }
-    if (isVersionInRange(advisory.firstPatchedVersion, advisory.vulnerableVersionRange) !== false) {
-      errors.push(`${advisory.id}: first patched version ${advisory.firstPatchedVersion} contradicts its vulnerable range`)
+    if (isVersionInRange(advisory.firstPatchedVersion, comparators) !== false) {
+      validationErrors.push(`${advisory.id}: first patched version ${advisory.firstPatchedVersion} contradicts its vulnerable range`)
       continue
     }
+    validatedAdvisories.push({ advisory, comparators })
+  }
+  if (validationErrors.length > 0) return { ok: false, message: validationErrors.join('\n') }
+
+  const errors = []
+  for (const { advisory, comparators } of validatedAdvisories) {
     const packageKey = new RegExp(`^${escapeRegex(advisory.package)}@([^()]+)`)
     for (const key of Object.keys(lockfile.packages)) {
       const version = key.match(packageKey)?.[1]
       if (!version) continue
-      const vulnerable = isVersionInRange(version, advisory.vulnerableVersionRange)
+      const vulnerable = isVersionInRange(version, comparators)
       if (vulnerable === null) {
         errors.push(`${advisory.id}: cannot compare ${advisory.package}@${version} with ${advisory.vulnerableVersionRange}`)
       } else if (vulnerable) {

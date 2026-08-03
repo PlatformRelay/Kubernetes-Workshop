@@ -167,6 +167,53 @@ test('rejects noncanonical advisory IDs and invalid npm package names', () => {
   }
 })
 
+test('accepts valid scoped dot and underscore leaves and enforces UTF-8 byte limits', () => {
+  const valid = advisoryEvidence.advisories[0]
+  for (const packageName of ['@scope/.pkg', '@scope/_pkg', 'a'.repeat(214)]) {
+    const result = evaluateLockedAdvisories('packages: {}\n', {
+      ...advisoryEvidence,
+      advisories: [{ ...valid, package: packageName }],
+    })
+    assert.equal(result.ok, true, `${packageName}: ${result.message}`)
+  }
+
+  const result = evaluateLockedAdvisories('packages: {}\n', {
+    ...advisoryEvidence,
+    advisories: [{ ...valid, package: 'a'.repeat(215) }],
+  })
+  assert.equal(result.ok, false)
+  assert.match(result.message, /malformed checked-in advisory evidence/)
+})
+
+test('validates every range comparator before evaluating versions', () => {
+  const valid = advisoryEvidence.advisories[0]
+  const result = evaluateLockedAdvisories('packages: {}\n', {
+    ...advisoryEvidence,
+    advisories: [{
+      ...valid,
+      vulnerableVersionRange: '> 999.0.0, NOT-A-RANGE',
+    }],
+  })
+
+  assert.equal(result.ok, false)
+  assert.match(result.message, /malformed checked-in advisory evidence/)
+})
+
+test('validates the complete evidence set before matching the lock', () => {
+  const [postcss, jsYaml] = advisoryEvidence.advisories
+  const result = evaluateLockedAdvisories('packages:\n  postcss@8.5.16: {}\n', {
+    ...advisoryEvidence,
+    advisories: [
+      postcss,
+      { ...jsYaml, package: '   ' },
+    ],
+  })
+
+  assert.equal(result.ok, false)
+  assert.match(result.message, /malformed checked-in advisory evidence/)
+  assert.doesNotMatch(result.message, /postcss@8\.5\.16/)
+})
+
 test('fails lock entries inside recorded GitHub advisory ranges', () => {
   const result = evaluateLockedAdvisories(`
 packages:
