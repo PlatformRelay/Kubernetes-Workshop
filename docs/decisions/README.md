@@ -29,6 +29,7 @@ shaped the way it is — not just *what* it looks like.
 | [0008](0008-validation-and-ci.md) | Validation and CI strategy | accepted |
 | [0009](0009-single-file-lab-convention.md) | Single-file labs with in-file manifest heredocs | accepted |
 | [0010](0010-task-runner-spike.md) | Keep the workshop entrypoint and defer a task-runner migration | accepted |
+| [0011](0011-live-quiz-spike.md) | Defer live-quiz adoption until a complete FOSS runtime passes | proposed |
 
 ## Template
 

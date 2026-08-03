@@ -1,0 +1,105 @@
+{
+  "observedAt": "2026-08-03",
+  "policy": "Every required runtime component and dependency must have verified OSI-approved or FSF-free licensing and immutable source/image identity. Unknown is a rejection, not a warning.",
+  "candidates": [
+    {
+      "id": "claper",
+      "source": "https://github.com/ClaperCo/Claper",
+      "sourceCommit": "3e80ce2ea25286d1b591ea327acdbfeb31fa33e3",
+      "release": "v2.5.1",
+      "dependencyLicenseCoverage": "incomplete",
+      "runtimeComponents": [
+        {
+          "name": "claper",
+          "license": "AGPL-3.0-only",
+          "sourceCommit": "3e80ce2ea25286d1b591ea327acdbfeb31fa33e3",
+          "imageDigest": "ghcr.io/claperco/claper@sha256:4f733dc50b0c77517db402541f88c5489d4c9eedb32ac6c5eef7cadd8a594196"
+        },
+        {
+          "name": "postgresql",
+          "license": "PostgreSQL",
+          "sourceCommit": "4fd4a0af49c8eafd82e823b632515ca44c93c688",
+          "imageDigest": "docker.io/library/postgres@sha256:74e110c41804365e3915fcc09d5e7a1eff50161aaa94d5da0e58e0cd75ae509c"
+        }
+      ],
+      "fossGate": {
+        "passed": false,
+        "reason": "The app and database licenses are FOSS, but the evaluated release publishes no complete dependency/license attestation; the source SBOM has 115 components and the application-image SBOM has 81 components without license assertions. The upstream chart also uses mutable latest and cannot establish this runtime identity."
+      }
+    },
+    {
+      "id": "classquiz",
+      "source": "https://github.com/mawoka-myblock/ClassQuiz",
+      "sourceCommit": "4d1f1d31653752718cd41b13ca7820621f5626a7",
+      "release": "master snapshot",
+      "dependencyLicenseCoverage": "incomplete",
+      "runtimeComponents": [
+        {
+          "name": "classquiz-backend",
+          "license": "MPL-2.0",
+          "sourceCommit": "b454f37fc20ba99ec9f70c2671ca39683d1a456a",
+          "imageDigest": "ghcr.io/mawoka-myblock/classquiz-backend@sha256:ae13b64132422574c12a2a751a4bbc3c5b676125dacbad020da98660fbeb9aca"
+        },
+        {
+          "name": "classquiz-caddy",
+          "license": "MPL-2.0",
+          "sourceCommit": "4d1f1d31653752718cd41b13ca7820621f5626a7",
+          "imageDigest": "ghcr.io/mawoka-myblock/classquiz-caddy@sha256:d36aafba4dd0ec4f715bda3602bc6b5a0e78f6f8580170c66b1613c77ab195a4"
+        },
+        {
+          "name": "postgresql",
+          "license": "PostgreSQL",
+          "sourceCommit": "unresolved-by-spike",
+          "imageDigest": "unresolved-mutable-postgres-14-alpine"
+        },
+        {
+          "name": "valkey",
+          "license": "BSD-3-Clause",
+          "sourceCommit": "unresolved-by-spike",
+          "imageDigest": "docker.io/valkey/valkey@sha256:ee91f7a174ac4d6a6b0685b3a60e321f0a9dbbb691f9b0e285be2ba1d1be8328"
+        },
+        {
+          "name": "meilisearch",
+          "license": "MIT",
+          "sourceCommit": "unresolved-by-spike",
+          "imageDigest": "docker.io/getmeili/meilisearch@sha256:94bb999a7c7afa81a64872186b553699213614f705824dd73909a2556fd9b132"
+        }
+      ],
+      "fossGate": {
+        "passed": false,
+        "reason": "The repository license and named services are FOSS, but the official stack mixes independently moving master images, a locally built frontend, and mutable dependency tags. The backend image does not correspond to the evaluated repository head, and its image SBOM has 28 components without license assertions."
+      }
+    },
+    {
+      "id": "quizdock",
+      "source": "https://github.com/quizdock/quiz-dock",
+      "sourceCommit": "5d5e0319bed814b7e3ee36b06f42538d5efea5d9",
+      "release": "v0.3.2",
+      "dependencyLicenseCoverage": "incomplete",
+      "runtimeComponents": [
+        {
+          "name": "quizdock",
+          "license": "MIT",
+          "sourceCommit": "5d5e0319bed814b7e3ee36b06f42538d5efea5d9",
+          "imageDigest": "docker.io/fchaussin/quizdock@sha256:d3af1033fff017beb060fb52c94caa372e35646cff5b35fb9590313240de67fb"
+        },
+        {
+          "name": "postgresql",
+          "license": "PostgreSQL",
+          "sourceCommit": "4f9ced003ba58a854656ba150d146243d27ae3ac",
+          "imageDigest": "docker.io/library/postgres@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777"
+        },
+        {
+          "name": "redis-7-alpine-current-resolution",
+          "license": "RSALv2 and SSPL-1.0",
+          "sourceCommit": "31c68732e7311d95e4c833b8fa50aa561ced577f",
+          "imageDigest": "docker.io/library/redis@sha256:e7723ff73d963f5cc6d9c4643ea3d989527a402a319239054e9472a7fb9219a2"
+        }
+      ],
+      "fossGate": {
+        "passed": false,
+        "reason": "The application is MIT, but its production compose uses mutable redis:7-alpine. On the observation date that tag resolves to Redis 7.4.10, whose required RSALv2/SSPL licensing violates the workshop policy. The application-image SBOM also has 8 components without license assertions. A Valkey substitution is plausible but was not verified and cannot be assumed."
+      }
+    }
+  ]
+}

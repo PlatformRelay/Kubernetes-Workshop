@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/PlatformRelay/Kubernetes-Workshop/quiz/questions.schema.json",
+  "title": "Kubernetes workshop portable question bank",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "questions"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schemaVersion": { "const": 1 },
+    "questions": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/question" }
+    }
+  },
+  "$defs": {
+    "option": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "text", "rationale"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+        "text": { "type": "string", "minLength": 1 },
+        "rationale": { "type": "string", "minLength": 1 }
+      }
+    },
+    "question": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id", "section", "prompt", "options", "answer", "explanation",
+        "difficulty", "learningObjective", "references"
+      ],
+      "properties": {
+        "id": { "type": "string", "pattern": "^S[0-9]{2}-Q-[A-Z0-9-]+$" },
+        "section": { "type": "string", "pattern": "^S[0-9]{2}$" },
+        "prompt": { "type": "string", "minLength": 1 },
+        "options": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 5,
+          "items": { "$ref": "#/$defs/option" }
+        },
+        "answer": { "type": "string", "minLength": 1 },
+        "explanation": { "type": "string", "minLength": 1 },
+        "difficulty": { "enum": ["introductory", "intermediate", "advanced"] },
+        "learningObjective": { "type": "string", "minLength": 1 },
+        "references": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "pattern": "^https://" }
+        }
+      }
+    }
+  }
+}
