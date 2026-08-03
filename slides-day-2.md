@@ -13,31 +13,31 @@ layout: cover
 Day 2 — Modern routing and running workloads well.
 
 ---
-# S09 · Gateway API · recommended · Day 2
+# S09 · Gateway API · recommended · Day 2 · authored
 src: ./pages/S09-gateway-api/index.md
 ---
 
 ---
-# S10 · ConfigMap & Secret · core · Day 2
+# S10 · ConfigMap & Secret · core · Day 2 · authored
 src: ./pages/S10-config/index.md
 ---
 
 ---
-# S11 · Storage (PV/PVC/StorageClass) · core · Day 2
+# S11 · Storage (PV/PVC/StorageClass) · core · Day 2 · authored
 src: ./pages/S11-storage/index.md
 ---
 
 ---
-# S12 · StatefulSet · recommended · Day 2
+# S12 · StatefulSet · recommended · Day 2 · authored
 src: ./pages/S12-statefulset/index.md
 ---
 
 ---
-# S13 · Resources & limits · core · Day 2
+# S13 · Resources & limits · core · Day 2 · authored
 src: ./pages/S13-resources/index.md
 ---
 
 ---
-# S14 · Health probes · core · Day 2
+# S14 · Health probes · core · Day 2 · authored
 src: ./pages/S14-probes/index.md
 ---

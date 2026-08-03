@@ -521,7 +521,7 @@ Forward to S24: you've now USED two operators — next, a peek at building one.
 layout: lab
 lab: labs/day-3/23-prometheus.md
 duration: 25 min
-env: kind ✓ (self-install) / namespace: read-only
+env: 'kind ✓ (self-install) / namespace: read-only'
 ---
 
 ## Lab 23 — Scrape your app

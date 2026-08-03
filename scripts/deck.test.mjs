@@ -6,8 +6,13 @@ import { describe, it } from 'node:test'
 
 import {
   findGeneratedDrift,
+  validatePlanningLanguage,
+  validateSectionFrontmatter,
+  validateStatusClaims,
+  validateSyllabusCatalog,
   validateManifest,
 } from './deck-manifest.mjs'
+import { checkLinks } from './link-check.mjs'
 import {
   parseSelection,
   resolveSelection,
@@ -21,6 +26,7 @@ const section = (id, overrides = {}) => ({
   tier: 'core',
   day: 1,
   canonical: true,
+  status: 'authored',
   ...overrides,
 })
 
@@ -79,6 +85,96 @@ describe('deck manifest validation', () => {
       ]), { repoRoot: root }),
       ['slides-day-1.md', 'slides-day-2.md'],
     )
+  })
+
+  it('rejects contradictory section day and tier frontmatter', () => {
+    assert.throws(
+      () => validateSectionFrontmatter(
+        section('S23', {
+          day: 3,
+          tier: 'recommended',
+          environment: 'kind ✓ (self-install) / namespace: read-only',
+        }),
+        `---\nday: Day 2\nsection: '23'\ntier: optional\n---\n\n---\nlayout: lab\nenv: 'kind ✓ (self-install) / namespace: read-only'\n---\n`,
+      ),
+      /S23.*day.*tier/i,
+    )
+  })
+
+  it('rejects a missing or YAML-unsafe environment warning', () => {
+    const s23 = section('S23', {
+      day: 3,
+      tier: 'recommended',
+      environment: 'kind ✓ (self-install) / namespace: read-only',
+    })
+    const base = `---\nday: Day 3\nsection: '23'\ntier: recommended\n---\n`
+
+    assert.throws(
+      () => validateSectionFrontmatter(s23, `${base}\n---\nlayout: lab\n---\n`),
+      /S23.*environment/i,
+    )
+    assert.throws(
+      () => validateSectionFrontmatter(
+        s23,
+        `${base}\n---\nlayout: lab\nenv: kind ✓ (self-install) / namespace: read-only\n---\n`,
+      ),
+      /S23.*quote.*environment/i,
+    )
+  })
+
+  it('rejects contradictory authored and deferred syllabus status', () => {
+    const manifest = [
+      section('S23', { day: 3, tier: 'recommended', status: 'authored' }),
+      section('S24', { day: 3, tier: 'optional', status: 'deferred' }),
+    ]
+    const catalog = `
+| ID | Section | Tier | Day | Status | Track |
+| --- | --- | --- | --- | --- | --- |
+| S23 | Prometheus Operator | recommended | 3 | authored | Operators |
+| S24 | Operator dev 101 | optional | 3 | authored | Operators |
+`
+
+    assert.throws(
+      () => validateSyllabusCatalog(manifest, catalog),
+      /S24.*status.*deferred/i,
+    )
+  })
+
+  it('requires every front-door document to identify deferred sections', () => {
+    const manifest = [section('S24', { status: 'deferred', environment: 'kind-only' })]
+    const documents = new Map([
+      ['README.md', '**0 of 1 sections are fully authored**; S24 is deferred.'],
+      ['docs/syllabus.md', 'S24 is deferred.'],
+      ['docs/facilitator-guide.md', 'S24 is authored.'],
+      ['labs/README.md', 'S24 is deferred.'],
+      ['docs/validation-matrix.md', '| lab | S24 | `deferred` |'],
+    ])
+    assert.throws(
+      () => validateStatusClaims(manifest, documents),
+      /facilitator-guide.*S24.*deferred/i,
+    )
+  })
+
+  it('rejects planning estimates presented as measured timings', () => {
+    assert.throws(
+      () => validatePlanningLanguage('Day 1 measured time: 365 min.'),
+      /planning estimate.*measured/i,
+    )
+    assert.throws(
+      () => validatePlanningLanguage('Day 2: 345 min.'),
+      /345.*planned/i,
+    )
+    assert.doesNotThrow(
+      () => validatePlanningLanguage('Day 2: 345 min planned (unrehearsed planning estimate).'),
+    )
+  })
+
+  it('reports broken links in every configured front-door document', () => {
+    const root = mkdtempSync(join(tmpdir(), 'workshop-docs-'))
+    writeFileSync(join(root, 'README.md'), '[missing](docs/missing.md)\n')
+
+    const result = checkLinks({ repoRoot: root, docs: ['README.md'] })
+    assert.match(result.errors.join('\n'), /missing internal target docs\/missing\.md/i)
   })
 })
 

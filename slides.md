@@ -13,141 +13,141 @@ layout: cover
 Content superset — Compatibility deck containing every authored section.
 
 ---
-# S00 · Welcome & setup · core · Day 1
+# S00 · Welcome & setup · core · Day 1 · authored
 src: ./pages/S00-welcome/index.md
 ---
 
 ---
-# S01 · Containers · recommended · Day 1
+# S01 · Containers · recommended · Day 1 · authored
 src: ./pages/S01-containers/index.md
 ---
 
 ---
-# S02 · Container security & supply chain · recommended · Day 1
+# S02 · Container security & supply chain · recommended · Day 1 · authored
 src: ./pages/S02-container-security/index.md
 ---
 
 ---
-# S03 · Kubernetes mental model · core · Day 1
+# S03 · Kubernetes mental model · core · Day 1 · authored
 src: ./pages/S03-mental-model/index.md
 ---
 
 ---
-# S04 · kubectl · core · Day 1
+# S04 · kubectl · core · Day 1 · authored
 src: ./pages/S04-kubectl/index.md
 ---
 
 ---
-# S05 · Pod · core · Day 1
+# S05 · Pod · core · Day 1 · authored
 src: ./pages/S05-pod/index.md
 ---
 
 ---
-# S06 · Deployment · core · Day 1
+# S06 · Deployment · core · Day 1 · authored
 src: ./pages/S06-deployment/index.md
 ---
 
 ---
-# S07 · Service · core · Day 1
+# S07 · Service · core · Day 1 · authored
 src: ./pages/S07-service/index.md
 ---
 
 ---
-# S08 · Ingress · core · Day 1
+# S08 · Ingress · core · Day 1 · authored
 src: ./pages/S08-ingress/index.md
 ---
 
 ---
-# S09 · Gateway API · recommended · Day 2
+# S09 · Gateway API · recommended · Day 2 · authored
 src: ./pages/S09-gateway-api/index.md
 ---
 
 ---
-# S10 · ConfigMap & Secret · core · Day 2
+# S10 · ConfigMap & Secret · core · Day 2 · authored
 src: ./pages/S10-config/index.md
 ---
 
 ---
-# S11 · Storage (PV/PVC/StorageClass) · core · Day 2
+# S11 · Storage (PV/PVC/StorageClass) · core · Day 2 · authored
 src: ./pages/S11-storage/index.md
 ---
 
 ---
-# S12 · StatefulSet · recommended · Day 2
+# S12 · StatefulSet · recommended · Day 2 · authored
 src: ./pages/S12-statefulset/index.md
 ---
 
 ---
-# S13 · Resources & limits · core · Day 2
+# S13 · Resources & limits · core · Day 2 · authored
 src: ./pages/S13-resources/index.md
 ---
 
 ---
-# S14 · Health probes · core · Day 2
+# S14 · Health probes · core · Day 2 · authored
 src: ./pages/S14-probes/index.md
 ---
 
 ---
-# S15 · Jobs & CronJobs · recommended · Day 2
+# S15 · Jobs & CronJobs · recommended · Day 2 · authored
 src: ./pages/S15-jobs/index.md
 ---
 
 ---
-# S16 · Autoscaling (HPA) · optional · Day 2
+# S16 · Autoscaling (HPA) · optional · Day 2 · authored
 src: ./pages/S16-hpa/index.md
 ---
 
 ---
-# S17 · Pod security · core · Day 3
+# S17 · Pod security · core · Day 3 · authored
 src: ./pages/S17-pod-security/index.md
 ---
 
 ---
-# S18 · NetworkPolicy · recommended · Day 3
+# S18 · NetworkPolicy · recommended · Day 3 · authored
 src: ./pages/S18-networkpolicy/index.md
 ---
 
 ---
-# S19 · RBAC · optional · Day 3
+# S19 · RBAC · optional · Day 3 · authored
 src: ./pages/S19-rbac/index.md
 ---
 
 ---
-# S20 · Helm · core · Day 3
+# S20 · Helm · core · Day 3 · authored
 src: ./pages/S20-helm/index.md
 ---
 
 ---
-# S21 · GitOps with Argo CD · recommended · Day 3
+# S21 · GitOps with Argo CD · recommended · Day 3 · authored
 src: ./pages/S21-gitops/index.md
 ---
 
 ---
-# S22 · The operator pattern · recommended · Day 3
+# S22 · The operator pattern · recommended · Day 3 · authored
 src: ./pages/S22-operator-pattern/index.md
 ---
 
 ---
-# S23 · Prometheus Operator · recommended · Day 3
+# S23 · Prometheus Operator · recommended · Day 3 · authored
 src: ./pages/S23-prometheus-operator/index.md
 ---
 
 ---
-# S24 · Operator dev 101 (kubebuilder) · optional · Day 3
+# S24 · Operator dev 101 (kubebuilder) · optional · Day 3 · deferred
 src: ./pages/S24-kubebuilder/index.md
 ---
 
 ---
-# S25 · Security & pod escape · recommended · Day 3
+# S25 · Security & pod escape · recommended · Day 3 · authored
 src: ./pages/S25-pod-escape/index.md
 ---
 
 ---
-# S26 · Best practices · core · Day 3
+# S26 · Best practices · core · Day 3 · authored
 src: ./pages/S26-best-practices/index.md
 ---
 
 ---
-# S27 · Wrap-up & next steps · core · Day 3
+# S27 · Wrap-up & next steps · core · Day 3 · authored
 src: ./pages/S27-wrap-up/index.md
 ---

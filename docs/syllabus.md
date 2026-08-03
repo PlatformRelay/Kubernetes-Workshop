@@ -70,36 +70,36 @@ section is a self-contained, individually toggleable unit.
 **Tier:** `core` (always in the cut) · `recommended` (in the cut if time allows) ·
 `optional` (cut first). **Day** is the suggested grouping for the canonical 3-day cut.
 
-| ID | Section | Tier | Day | Track |
-| --- | --- | --- | --- | --- |
-| S00 | Welcome & setup | core | 1 | Foundations |
-| S01 | Containers | recommended | 1 | Foundations |
-| S02 | Container security & supply chain | recommended | 1 | Foundations |
-| S03 | Kubernetes mental model | core | 1 | Foundations |
-| S04 | kubectl | core | 1 | Foundations |
-| S05 | Pod *(red line 1/5)* | core | 1 | Core |
-| S06 | Deployment *(red line 2/5)* | core | 1 | Core |
-| S07 | Service *(red line 3/5)* | core | 1 | Core |
-| S08 | Ingress *(red line 4/5)* | core | 1 | Core |
-| S09 | Gateway API *(red line 5/5)* | recommended | 2 | Core |
-| S10 | ConfigMap & Secret | core | 2 | Core |
-| S11 | Storage (PV/PVC/StorageClass) | core | 2 | Workloads |
-| S12 | StatefulSet | recommended | 2 | Workloads |
-| S13 | Resources & limits | core | 2 | Workloads |
-| S14 | Health probes | core | 2 | Workloads |
-| S15 | Jobs & CronJobs | recommended | 2 | Workloads |
-| S16 | Autoscaling (HPA) | optional | 2 | Workloads |
-| S17 | Pod security (securityContext + PSS) | core | 3 | Security |
-| S18 | NetworkPolicy | recommended | 3 | Security |
-| S19 | RBAC | optional | 3 | Security |
-| S20 | Helm | core | 3 | Delivery |
-| S21 | GitOps with Argo CD | recommended | 3 | Delivery |
-| S22 | The operator pattern | recommended | 3 | Operators |
-| S23 | Prometheus Operator | recommended | 3 | Operators |
-| S24 | Operator dev 101 (kubebuilder) | optional | 3 | Operators |
-| S25 | Security & pod escape | recommended | 3 | Security |
-| S26 | Best practices (capstone) | core | 3 | Wrap |
-| S27 | Wrap-up & next steps | core | 3 | Wrap |
+| ID | Section | Tier | Day | Status | Track |
+| --- | --- | --- | --- | --- | --- |
+| S00 | Welcome & setup | core | 1 | authored | Foundations |
+| S01 | Containers | recommended | 1 | authored | Foundations |
+| S02 | Container security & supply chain | recommended | 1 | authored | Foundations |
+| S03 | Kubernetes mental model | core | 1 | authored | Foundations |
+| S04 | kubectl | core | 1 | authored | Foundations |
+| S05 | Pod *(red line 1/5)* | core | 1 | authored | Core |
+| S06 | Deployment *(red line 2/5)* | core | 1 | authored | Core |
+| S07 | Service *(red line 3/5)* | core | 1 | authored | Core |
+| S08 | Ingress *(red line 4/5)* | core | 1 | authored | Core |
+| S09 | Gateway API *(red line 5/5)* | recommended | 2 | authored | Core |
+| S10 | ConfigMap & Secret | core | 2 | authored | Core |
+| S11 | Storage (PV/PVC/StorageClass) | core | 2 | authored | Workloads |
+| S12 | StatefulSet | recommended | 2 | authored | Workloads |
+| S13 | Resources & limits | core | 2 | authored | Workloads |
+| S14 | Health probes | core | 2 | authored | Workloads |
+| S15 | Jobs & CronJobs | recommended | 2 | authored | Workloads |
+| S16 | Autoscaling (HPA) | optional | 2 | authored | Workloads |
+| S17 | Pod security (securityContext + PSS) | core | 3 | authored | Security |
+| S18 | NetworkPolicy | recommended | 3 | authored | Security |
+| S19 | RBAC | optional | 3 | authored | Security |
+| S20 | Helm | core | 3 | authored | Delivery |
+| S21 | GitOps with Argo CD | recommended | 3 | authored | Delivery |
+| S22 | The operator pattern | recommended | 3 | authored | Operators |
+| S23 | Prometheus Operator | recommended | 3 | authored | Operators |
+| S24 | Operator dev 101 (kubebuilder) | optional | 3 | deferred | Operators |
+| S25 | Security & pod escape | recommended | 3 | authored | Security |
+| S26 | Best practices (capstone) | core | 3 | authored | Wrap |
+| S27 | Wrap-up & next steps | core | 3 | authored | Wrap |
 
 > **Suggested day** is guidance, not a hard schedule. Toggle any `recommended` /
 > `optional` section off to fit a shorter room.
@@ -205,8 +205,9 @@ first knobs to reach for.
 
 **Sections:** S17, S20, S21, S22, S23, S25, S26, S27.
 
-- **S18 NetworkPolicy**, **S19 RBAC**, and **S24 kubebuilder** are the **toggles** to
-  drop if the day runs long.
+- **S18 NetworkPolicy** and **S19 RBAC** are optional add-backs for a longer delivery.
+  **S24 kubebuilder is deferred and is not schedulable** until its paired slides and lab
+  meet the authoring contract.
 
 | Section | Slides | Lab | Total |
 | --- | --- | --- | --- |
@@ -223,8 +224,8 @@ first knobs to reach for.
 > **Reading the totals.** Day 1 (365) and Day 2 (345) sit under the ~390 target, leaving
 > headroom for the S01/S02 pre-read (Day 1) and the S15/S16 add-backs (Day 2). Day 3 as
 > listed sums to **420** — over target — so a facilitator running to time should drop one
-> of the Day-3 toggles (S18/S19/S24 are already excluded above; consider deferring the
-> optional-tier S24 elsewhere or trimming the S26 capstone lab). These are unrehearsed
+> of the Day-3 add-backs (S18/S19 are already excluded, and deferred S24 is not
+> schedulable); trim the S26 capstone lab or move a recommended section. These are unrehearsed
 > planning estimates; the [facilitator guide](./facilitator-guide.md#timing--pacing)
 > covers how to pace against them.
 

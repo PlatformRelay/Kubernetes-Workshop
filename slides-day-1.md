@@ -13,36 +13,36 @@ layout: cover
 Day 1 — Foundations and the core red line.
 
 ---
-# S00 · Welcome & setup · core · Day 1
+# S00 · Welcome & setup · core · Day 1 · authored
 src: ./pages/S00-welcome/index.md
 ---
 
 ---
-# S03 · Kubernetes mental model · core · Day 1
+# S03 · Kubernetes mental model · core · Day 1 · authored
 src: ./pages/S03-mental-model/index.md
 ---
 
 ---
-# S04 · kubectl · core · Day 1
+# S04 · kubectl · core · Day 1 · authored
 src: ./pages/S04-kubectl/index.md
 ---
 
 ---
-# S05 · Pod · core · Day 1
+# S05 · Pod · core · Day 1 · authored
 src: ./pages/S05-pod/index.md
 ---
 
 ---
-# S06 · Deployment · core · Day 1
+# S06 · Deployment · core · Day 1 · authored
 src: ./pages/S06-deployment/index.md
 ---
 
 ---
-# S07 · Service · core · Day 1
+# S07 · Service · core · Day 1 · authored
 src: ./pages/S07-service/index.md
 ---
 
 ---
-# S08 · Ingress · core · Day 1
+# S08 · Ingress · core · Day 1 · authored
 src: ./pages/S08-ingress/index.md
 ---

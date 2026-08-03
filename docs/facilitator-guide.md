@@ -77,8 +77,8 @@ planning target.
 - **Target: ~390 min of content per day at ~50/50 slides:lab.** That is roughly a
   6.5-hour teaching day before breaks — budget a real timetable (arrival, two coffee
   breaks, lunch, wrap) on top.
-- The canonical cut lands **Day 1 ≈ 365 min**, **Day 2 ≈ 345 min**, **Day 3 ≈ 420 min**
-  as planned. Days 1–2 sit under target (headroom for the S01/S02 container on-ramp and
+- **Planned:** the canonical cut lands **Day 1 ≈ 365 min**, **Day 2 ≈ 345 min**,
+  and **Day 3 ≈ 420 min planned**. Days 1–2 sit under target (headroom for the S01/S02 container on-ramp and
   the S15/S16 add-backs); **Day 3 is over target**. Note the listed 420 is already
   computed *without* S18/S19/S24 (they are excluded from the cut), so dropping those does
   not help — to run to time, **trim the S26 capstone lab** (or defer S24 if you had added

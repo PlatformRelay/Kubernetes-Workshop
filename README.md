@@ -64,13 +64,18 @@ that same running app. Roughly by day:
 
 | Day | Theme | Sections |
 | --- | --- | --- |
-| **Day 1** | Foundations, containers, and the core red line | `S00`–`S08` |
-| **Day 2** | Modern routing and running workloads well | `S09`–`S16` |
-| **Day 3** | Security, delivery, operators, best practices | `S17`–`S27` |
+| **Day 1** | Foundations and the core red line | `S00`, `S03`–`S08` |
+| **Day 2** | Modern routing and running workloads well | `S09`–`S14` |
+| **Day 3** | Security, delivery, operators, best practices | `S17`, `S20`–`S23`, `S25`–`S27` |
 
-The full section map — tiers (`core` / `recommended` / `optional`), per-section timings,
-the exact 3-day cut, and CKA/CKAD alignment — lives in the syllabus. It is the single
-source of truth for the schedule; this overview only summarizes it.
+The day entries above are the default delivery. Authored on-ramp and add-back sections
+(`S01`, `S02`, `S15`, `S16`, `S18`, `S19`) live in **Optional / Appendix**; `S24` is
+listed there only as a deferred stub and is not schedulable.
+
+The full section map — tiers (`core` / `recommended` / `optional`), authored/deferred
+status, per-section timings, the exact 3-day cut, and CKA/CKAD alignment — lives in the
+syllabus. These facts are contract-checked against `scripts/deck-manifest.mjs`; this
+overview only summarizes them.
 
 **→ [Full syllabus & section map](docs/syllabus.md)**
 

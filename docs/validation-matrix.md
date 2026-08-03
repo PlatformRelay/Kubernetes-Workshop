@@ -34,7 +34,8 @@ here is invented — every version/URL is cited from the repo as it ships today.
 | --- | --- |
 | `server-dry-run` | The lab's apply-able manifests are documented as **server-dry-run-clean** against a live cluster per the repo's status notes (roadmap M4/M5 progress + AR-05). **Not** re-verified in a clean rehearsal here, and **no** add-on install or behaviour/timing was executed. |
 | `kind-smoke` | Reserved for the future automated nightly smoke (**US-ENV-4**): the lab ran end-to-end on a clean kind cluster. **No lab is in this state yet.** |
-| `unrun` | No dry-run applies (local/read-only labs with no apply step, or the deferred stub), **or** the apply-able part exists but the cluster-wide add-on install / full behaviour has not been executed end-to-end in a clean environment. |
+| `unrun` | No dry-run applies (local/read-only labs with no apply step), **or** the apply-able part exists but the cluster-wide add-on install / full behaviour has not been executed end-to-end in a clean environment. |
+| `deferred` | The section is not schedulable because its paired slides and lab have not met the authoring contract. |
 
 > **Honesty rule (US-BETA-3 / AR-05).** No lab is marked `validated`, and none is
 > `kind-smoke`. Builds and dry-runs prove **syntax**, not behaviour. Per roadmap
@@ -42,7 +43,8 @@ here is invented — every version/URL is cited from the repo as it ships today.
 > the workshop has **not** had a full clean-environment rehearsal: the `kind` add-on
 > installs, controller/CRD timings, and the verbatim `describe`/error strings in spoilers
 > have **not** been run end-to-end. Timings and behaviour are **not** claimed here until
-> rehearsed under US-BETA-6. Everything is therefore `server-dry-run` or `unrun`, which
+> rehearsed under US-BETA-6. Authored labs are therefore `server-dry-run` or `unrun`;
+> the unauthored S24 stub is `deferred`, which
 > reconciles with M7.
 
 **Traceability (N1).** Every row's validation-state assignment is auditable against a
@@ -107,7 +109,7 @@ labs**, not here.
 | [`day-3/21-gitops.md`](../labs/day-3/21-gitops.md) | S21 GitOps (Argo CD) | kind ✓ (installs Argo CD) / shared NS: read-only | **Argo CD** | Argo CD [`install.yaml` — **unpinned (`stable` branch)**](https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml); app repo [`argoproj/argocd-example-apps` guestbook](https://github.com/argoproj/argocd-example-apps.git) — **see defect D3** | `unrun` |
 | [`day-3/22-operator-concept.md`](../labs/day-3/22-operator-concept.md) | S22 Operator pattern | kind ✓ (self-install) / namespace: read-only | **cert-manager** | cert-manager [`cert-manager.yaml` v1.21.0](https://github.com/cert-manager/cert-manager/releases/download/v1.21.0/cert-manager.yaml); images `quay.io/jetstack/*` | `unrun` |
 | [`day-3/23-prometheus.md`](../labs/day-3/23-prometheus.md) | S23 Prometheus Operator | kind ✓ (self-install stack) / namespace: read-only | **kube-prometheus-stack** (Prometheus Operator + Prometheus + Grafana) | [`prometheus-community` Helm repo](https://prometheus-community.github.io/helm-charts); **chart version unpinned** (`helm install`, no `--version`); app image `quay.io/brancz/prometheus-example-app:v0.6.0` — **see defect D4** | `unrun` |
-| [`day-3/24-kubebuilder.md`](../labs/day-3/24-kubebuilder.md) | S24 Operator dev (kubebuilder) † | kind-only · advanced | **kubebuilder toolchain** (Go + kubebuilder) — *aspirational* | none pinned (**deferred stub**, unauthored) | `unrun` |
+| [`day-3/24-kubebuilder.md`](../labs/day-3/24-kubebuilder.md) | S24 Operator dev (kubebuilder) † | kind-only · advanced | **kubebuilder toolchain** (Go + kubebuilder) — *aspirational* | none pinned (**deferred stub**, unauthored) | `deferred` |
 | [`day-3/25-pod-escape.md`](../labs/day-3/25-pod-escape.md) | S25 Security & pod escape | **kind-only · strictly defensive** (no shared path) | **None** — throwaway kind cluster + `context-check.sh` guard | none pinned (uses in-cluster tools) | `unrun` |
 | [`day-3/26-capstone.md`](../labs/day-3/26-capstone.md) | S26 Best practices (capstone) | namespace ✓ / kind ✓ | None | image pinned by digest (checklist fix); reuses `web` manifests | `unrun` |
 

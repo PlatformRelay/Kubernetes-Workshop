@@ -13,36 +13,36 @@ layout: cover
 Optional / Appendix — On-ramp, add-backs, and advanced sections.
 
 ---
-# S01 · Containers · recommended · Day 1
+# S01 · Containers · recommended · Day 1 · authored
 src: ./pages/S01-containers/index.md
 ---
 
 ---
-# S02 · Container security & supply chain · recommended · Day 1
+# S02 · Container security & supply chain · recommended · Day 1 · authored
 src: ./pages/S02-container-security/index.md
 ---
 
 ---
-# S15 · Jobs & CronJobs · recommended · Day 2
+# S15 · Jobs & CronJobs · recommended · Day 2 · authored
 src: ./pages/S15-jobs/index.md
 ---
 
 ---
-# S16 · Autoscaling (HPA) · optional · Day 2
+# S16 · Autoscaling (HPA) · optional · Day 2 · authored
 src: ./pages/S16-hpa/index.md
 ---
 
 ---
-# S18 · NetworkPolicy · recommended · Day 3
+# S18 · NetworkPolicy · recommended · Day 3 · authored
 src: ./pages/S18-networkpolicy/index.md
 ---
 
 ---
-# S19 · RBAC · optional · Day 3
+# S19 · RBAC · optional · Day 3 · authored
 src: ./pages/S19-rbac/index.md
 ---
 
 ---
-# S24 · Operator dev 101 (kubebuilder) · optional · Day 3
+# S24 · Operator dev 101 (kubebuilder) · optional · Day 3 · deferred
 src: ./pages/S24-kubebuilder/index.md
 ---

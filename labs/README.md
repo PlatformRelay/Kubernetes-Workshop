@@ -134,7 +134,9 @@ The setup lab defines the reusable panic reset; later labs point back to it.
 
 ## Layout
 
-Labs are grouped by day, matching the [3-day cut](../docs/syllabus.md#the-canonical-3-day-cut).
+Labs are grouped by their suggested day in the section manifest. The canonical
+[3-day cut](../docs/syllabus.md#the-canonical-3-day-cut) is a smaller subset; add-back
+labs remain here so facilitators can compose a longer delivery.
 The numeric prefix is the section ID (Lab `NN` ↔ section `SNN`). Every authored lab below
 is a direct link — click straight into any one:
 

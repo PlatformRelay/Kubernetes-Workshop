@@ -5,6 +5,7 @@ import {
   findGeneratedDrift,
   renderGeneratedDecks,
   sections,
+  validateDocumentationTruth,
   validateManifest,
 } from './deck-manifest.mjs'
 
@@ -12,6 +13,7 @@ const repoRoot = resolve(import.meta.dirname, '..')
 const check = process.argv.includes('--check')
 
 validateManifest(sections, { repoRoot })
+validateDocumentationTruth(sections, { repoRoot })
 const expected = renderGeneratedDecks(sections)
 const drift = findGeneratedDrift(expected, { repoRoot })
 

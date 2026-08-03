@@ -13,41 +13,41 @@ layout: cover
 Day 3 — Security, delivery, operators, and best practices.
 
 ---
-# S17 · Pod security · core · Day 3
+# S17 · Pod security · core · Day 3 · authored
 src: ./pages/S17-pod-security/index.md
 ---
 
 ---
-# S20 · Helm · core · Day 3
+# S20 · Helm · core · Day 3 · authored
 src: ./pages/S20-helm/index.md
 ---
 
 ---
-# S21 · GitOps with Argo CD · recommended · Day 3
+# S21 · GitOps with Argo CD · recommended · Day 3 · authored
 src: ./pages/S21-gitops/index.md
 ---
 
 ---
-# S22 · The operator pattern · recommended · Day 3
+# S22 · The operator pattern · recommended · Day 3 · authored
 src: ./pages/S22-operator-pattern/index.md
 ---
 
 ---
-# S23 · Prometheus Operator · recommended · Day 3
+# S23 · Prometheus Operator · recommended · Day 3 · authored
 src: ./pages/S23-prometheus-operator/index.md
 ---
 
 ---
-# S25 · Security & pod escape · recommended · Day 3
+# S25 · Security & pod escape · recommended · Day 3 · authored
 src: ./pages/S25-pod-escape/index.md
 ---
 
 ---
-# S26 · Best practices · core · Day 3
+# S26 · Best practices · core · Day 3 · authored
 src: ./pages/S26-best-practices/index.md
 ---
 
 ---
-# S27 · Wrap-up & next steps · core · Day 3
+# S27 · Wrap-up & next steps · core · Day 3 · authored
 src: ./pages/S27-wrap-up/index.md
 ---

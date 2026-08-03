@@ -15,15 +15,16 @@
 
 import { readFileSync, existsSync, statSync } from 'node:fs';
 import { dirname, resolve, relative } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
-const DOCS = [
+export const DOCS = [
   'README.md',
   'docs/syllabus.md',
   'docs/facilitator-guide.md',
   'docs/beta-limitations.md',
+  'docs/validation-matrix.md',
   'labs/README.md',
 ];
 
@@ -114,87 +115,80 @@ function findPlaceholders(markdown) {
   return hits;
 }
 
-const errors = [];
-const info = [];
-
-// Cache heading slugs per resolved file path.
-const slugCache = new Map();
-function slugsFor(absPath) {
-  if (slugCache.has(absPath)) return slugCache.get(absPath);
-  let slugs = new Set();
-  if (existsSync(absPath) && statSync(absPath).isFile()) {
-    slugs = headingSlugs(readFileSync(absPath, 'utf8'));
-  }
-  slugCache.set(absPath, slugs);
-  return slugs;
-}
-
-for (const doc of DOCS) {
-  const absDoc = resolve(REPO_ROOT, doc);
-  if (!existsSync(absDoc)) {
-    errors.push(`${doc}: file listed for checking does not exist`);
-    continue;
-  }
-  const md = readFileSync(absDoc, 'utf8');
-  const docDir = dirname(absDoc);
-
-  for (const { token, line } of findPlaceholders(md)) {
-    errors.push(`${doc}:${line}: unresolved placeholder \`${token}\``);
+export function checkLinks({ repoRoot = REPO_ROOT, docs = DOCS } = {}) {
+  const errors = [];
+  const info = [];
+  const slugCache = new Map();
+  function slugsFor(absPath) {
+    if (slugCache.has(absPath)) return slugCache.get(absPath);
+    let slugs = new Set();
+    if (existsSync(absPath) && statSync(absPath).isFile()) {
+      slugs = headingSlugs(readFileSync(absPath, 'utf8'));
+    }
+    slugCache.set(absPath, slugs);
+    return slugs;
   }
 
-  for (const { target, line } of extractLinks(md)) {
-    // Skip pure external / protocol links (informational only).
-    if (/^(https?:|mailto:|tel:)/i.test(target)) {
-      info.push(`${doc}:${line}: external ${target}`);
+  for (const doc of docs) {
+    const absDoc = resolve(repoRoot, doc);
+    if (!existsSync(absDoc)) {
+      errors.push(`${doc}: file listed for checking does not exist`);
       continue;
     }
-    // A placeholder used as a link target is caught by findPlaceholders already,
-    // but guard against it resolving to a bogus file.
-    if (target.includes('<') && target.includes('>')) continue;
+    const md = readFileSync(absDoc, 'utf8');
+    const docDir = dirname(absDoc);
 
-    const [pathPart, anchor] = target.split('#');
+    for (const { token, line } of findPlaceholders(md)) {
+      errors.push(`${doc}:${line}: unresolved placeholder \`${token}\``);
+    }
 
-    if (pathPart === '') {
-      // Same-file anchor (#section).
-      if (anchor && !slugsFor(absDoc).has(anchor)) {
-        errors.push(`${doc}:${line}: broken same-file anchor #${anchor}`);
+    for (const { target, line } of extractLinks(md)) {
+      if (/^(https?:|mailto:|tel:)/i.test(target)) {
+        info.push(`${doc}:${line}: external ${target}`);
+        continue;
       }
-      continue;
-    }
+      if (target.includes('<') && target.includes('>')) continue;
 
-    // Resolve the linked file relative to the current doc.
-    const absTarget = resolve(docDir, pathPart);
+      const [pathPart, anchor] = target.split('#');
+      if (pathPart === '') {
+        if (anchor && !slugsFor(absDoc).has(anchor))
+          errors.push(`${doc}:${line}: broken same-file anchor #${anchor}`);
+        continue;
+      }
 
-    if (!existsSync(absTarget)) {
-      errors.push(
-        `${doc}:${line}: missing internal target ${pathPart} ` +
-          `(resolved ${relative(REPO_ROOT, absTarget)})`
-      );
-      continue;
-    }
-
-    // Anchor into another file → verify the heading exists there (only for .md).
-    if (anchor && absTarget.endsWith('.md')) {
-      if (!slugsFor(absTarget).has(anchor)) {
+      const absTarget = resolve(docDir, pathPart);
+      if (!existsSync(absTarget)) {
         errors.push(
-          `${doc}:${line}: broken anchor #${anchor} in ${pathPart}`
+          `${doc}:${line}: missing internal target ${pathPart} ` +
+            `(resolved ${relative(repoRoot, absTarget)})`
         );
+        continue;
       }
+
+      if (anchor && absTarget.endsWith('.md') && !slugsFor(absTarget).has(anchor))
+        errors.push(`${doc}:${line}: broken anchor #${anchor} in ${pathPart}`);
     }
   }
+  return { errors, info };
 }
 
-if (process.env.LINK_CHECK_VERBOSE) {
+function run() {
+  const { errors, info } = checkLinks();
+  if (process.env.LINK_CHECK_VERBOSE) {
   for (const line of info) console.log(`info: ${line}`);
+  }
+
+  if (errors.length > 0) {
+    console.error(`link-check: FAILED with ${errors.length} problem(s):`);
+    for (const e of errors) console.error(`  ✗ ${e}`);
+    process.exit(1);
+  }
+
+  console.log(
+    `link-check: OK — ${DOCS.length} docs, no placeholders, ` +
+      `all internal links and anchors resolve.`
+  );
 }
 
-if (errors.length > 0) {
-  console.error(`link-check: FAILED with ${errors.length} problem(s):`);
-  for (const e of errors) console.error(`  ✗ ${e}`);
-  process.exit(1);
-}
-
-console.log(
-  `link-check: OK — ${DOCS.length} docs, no placeholders, ` +
-    `all internal links and anchors resolve.`
-);
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href)
+  run();
