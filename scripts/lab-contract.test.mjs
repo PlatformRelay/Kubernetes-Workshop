@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import test from 'node:test';
@@ -77,11 +77,11 @@ The labelled Pod reaches the Running phase.
 
 ## Explanation
 
-The label connects the Service to the Pod.
+The Service selects this Pod because the corrected application label matches its selector exactly.
 
 ## Troubleshooting and recovery
 
-Run \`kubectl describe pod example -n "$NS"\` and inspect Events.
+Restore the label with \`kubectl label pod example app=example --overwrite -n "$NS"\`.
 
 ## Challenge solution
 
@@ -94,11 +94,11 @@ kubectl label pod example app=example -n "$NS"
 
 ### Expected state / output
 
-One ready endpoint is present.
+The Service reports one ready endpoint address for the corrected Pod.
 
 ### Explanation
 
-The corrected label matches the selector.
+The endpoint appears because the corrected Pod label now matches the Service selector.
 
 ### Hints
 
@@ -172,21 +172,112 @@ test('rejects challenges without assessable metadata or transfer work', () => {
 test('rejects vacuous solution companions and mismatched hints', () => {
   const weakSolution = validSolution
     .replace('```bash\n# Terminal B:\nkubectl label pod example app=example -n "$NS"\n```', 'Run kubectl.')
-    .replace('One ready endpoint is present.', '')
-    .replace('The corrected label matches the selector.', '')
+    .replace('The Service reports one ready endpoint address for the corrected Pod.', '')
+    .replace('The endpoint appears because the corrected Pod label now matches the Service selector.', '')
     .replace('Compare the Service selector with the Pod labels.', 'Read the docs.');
   const errors = auditLab(fixture({ lab: validLab, solution: weakSolution }));
 
-  assert.ok(errors.some((error) => error.includes('Challenge solution needs exact commands or a manifest')));
-  assert.ok(errors.some((error) => error.includes('Challenge expected state / output is empty')));
-  assert.ok(errors.some((error) => error.includes('Challenge explanation is empty')));
+  assert.ok(errors.some((error) => error.includes('Challenge solution needs substantive commands or a manifest')));
+  assert.ok(errors.some((error) => error.includes('Challenge expected state / output needs an observable result')));
+  assert.ok(errors.some((error) => error.includes('Challenge explanation needs a causal account')));
   assert.ok(errors.some((error) => error.includes('Challenge hints do not match')));
+});
+
+test('rejects syntactically complete placeholder challenge and solution text', () => {
+  const placeholderLab = validLab
+    .replace('Diagnose why the labelled Pod is not selected.', 'Diagnose.')
+    .replace('**Difficulty:** Intermediate', '**Difficulty:** x')
+    .replace(
+      '**Success criteria:** Explain the mismatch and restore one ready endpoint.',
+      '**Success criteria:** x',
+    )
+    .replace('**Hints:** Compare the Service selector with the Pod labels.', '**Hints:** x');
+  const placeholderSolution = validSolution
+    .replace(
+      '# stage: create the guided object\nkubectl run example --image=busybox:1.37 -l workshop.example/lab=01 -n "$NS"',
+      'echo x',
+    )
+    .replace('The labelled Pod reaches the Running phase.', '`x`')
+    .replace(
+      'The Service selects this Pod because the corrected application label matches its selector exactly.',
+      '`x`',
+    )
+    .replace(
+      'Restore the label with `kubectl label pod example app=example --overwrite -n "$NS"`.',
+      'Restore with `kubectl x`.',
+    )
+    .replace(
+      '# Terminal B:\nkubectl label pod example app=example -n "$NS"',
+      'echo x',
+    )
+    .replace('The Service reports one ready endpoint address for the corrected Pod.', '`x`')
+    .replace(
+      'The endpoint appears because the corrected Pod label now matches the Service selector.',
+      '`x`',
+    )
+    .replace('Compare the Service selector with the Pod labels.', 'x');
+  const errors = auditLab(fixture({ lab: placeholderLab, solution: placeholderSolution }));
+
+  for (const expected of [
+    'Challenge task is too shallow',
+    'Challenge Difficulty must be Beginner, Intermediate, or Advanced',
+    'Challenge Success criteria need an action and observable success signal',
+    'Challenge Hints need actionable guidance',
+    'Guided solutions need substantive commands or a manifest',
+    'Expected state / output needs an observable result',
+    'Explanation needs a causal account',
+    'Troubleshooting needs a concrete corrective command',
+    'Challenge solution needs substantive commands or a manifest',
+    'Challenge expected state / output needs an observable result',
+    'Challenge explanation needs a causal account',
+  ]) {
+    assert.ok(errors.some((error) => error.includes(expected)), `missing error: ${expected}`);
+  }
 });
 
 test('guards the known Day 1 command regressions', () => {
   const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
   const errors = auditDayOneCommandTruth(root);
   assert.deepEqual(errors, []);
+});
+
+test('rejects a colliding Lab 08 class and mandatory unpinned translation', () => {
+  const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+  const root = mkdtempSync(join(tmpdir(), 'lab-command-truth-'));
+  const day = join(root, 'labs', 'day-1');
+  mkdirSync(day, { recursive: true });
+  for (const name of [
+    '02-container-security.md',
+    '07-service.md',
+    '07-service.solution.md',
+    '08-ingress.md',
+  ]) {
+    const source = readFileSync(resolve(repo, 'labs', 'day-1', name), 'utf8');
+    const content = name === '08-ingress.md'
+      ? source
+        .replace(
+          'export INGRESS_CLASS="platformrelay-lab08-$(openssl rand -hex 6)"',
+          'export INGRESS_CLASS=contour',
+        )
+        .replace('grep -Fx -- "--ingress-class-name=$INGRESS_CLASS"', 'grep contour')
+        .replace(
+          '\\"value\\":\\"--ingress-class-name=$INGRESS_CLASS\\"',
+          '\\"value\\":\\"--ingress-class-name=contour\\"',
+        )
+        .replace('kubectl get ingressclass "$INGRESS_CLASS" >/dev/null', 'true')
+        .replace(
+          'report the returned application version, and explain why TLS needs SNI rather than only an\nHTTP Host header.',
+          'translate the Ingress and identify one Gateway plus two HTTPRoutes.',
+        )
+        .replace('not part of the challenge success criteria or verification', 'part of verification')
+      : source;
+    writeFileSync(join(day, name), content);
+  }
+
+  const errors = auditDayOneCommandTruth(root);
+  assert.ok(errors.some((error) => error.includes('collision-safe class isolation')));
+  assert.ok(errors.some((error) => error.includes('must not be mandatory')));
+  assert.ok(errors.some((error) => error.includes('clearly optional')));
 });
 
 test('keeps contributor and facilitator guidance aligned with the enforced slice', () => {

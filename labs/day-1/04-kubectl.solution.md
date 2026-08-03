@@ -262,15 +262,16 @@ to see exactly what would change before you commit.
 
 ## Explanation
 
-Client dry-run renders locally; server dry-run exercises API validation and admission
+Client dry-run renders locally, while server dry-run exercises API validation and admission
 without persistence. JSONPath and label selectors query structured API data directly, and
 `kubectl diff` previews the server-rendered delta without applying it.
 
 ## Troubleshooting and recovery
 
-If server dry-run is Forbidden, use the namespace-scoped command from
-Step 4 and show the error to the facilitator. Delete only local `web.yaml` if it was saved;
-the lab intentionally creates no cluster object.
+If server dry-run is Forbidden, recover with the local preview
+`kubectl create deployment web --image=ghcr.io/platformrelay/workshop-web:v1 --dry-run=client -o yaml`
+and show the admission error to the facilitator. Delete only the local file with
+`rm -f web.yaml`; the lab intentionally creates no cluster object.
 
 ## Challenge solution
 

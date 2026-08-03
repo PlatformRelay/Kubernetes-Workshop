@@ -43,9 +43,9 @@ Choose exactly one environment and set all four variables. Shared-cluster learne
 replace the placeholders with values from the facilitator; do not reuse the kind examples.
 
 ```bash
-# Local kind:
+# Local kind: generate a workshop-specific class name for this disposable cluster.
 export LAB_ENV=kind
-export INGRESS_CLASS=contour
+export INGRESS_CLASS="platformrelay-lab08-$(openssl rand -hex 6)"
 export WEB_HOST=web.example.com
 export WEB2_HOST=web2.example.com
 
@@ -56,6 +56,12 @@ export WEB2_HOST=web2.example.com
 # export WEB2_HOST=<assigned-v2-dns-hostname>
 
 case "$LAB_ENV" in kind|shared) ;; *) echo "LAB_ENV must be kind or shared" >&2; false ;; esac
+if [ "$LAB_ENV" = shared ]; then
+  kubectl get ingressclass "$INGRESS_CLASS" >/dev/null || {
+    echo "Ask the facilitator for an existing permitted IngressClass" >&2
+    false
+  }
+fi
 ```
 
 ## Files used
@@ -64,7 +70,7 @@ case "$LAB_ENV" in kind|shared) ;; *) echo "LAB_ENV must be kind or shared" >&2;
   (image `workshop-web:v2`). The workshop image is a tiny Go server on **:8080** whose
   response body prints its **version**, pod name, request count, and readiness — so you can
   always tell which backend answered.
-- `ingressclass.yaml` — the `contour` IngressClass (kind path; Step 2).
+- `ingressclass.yaml` — the generated workshop-specific IngressClass (kind path; Step 2).
 - `ingress.yaml` — the Ingress routing `$WEB_HOST` → `web` and `$WEB2_HOST` → `web2`
   (the manifest the slide magic-move builds).
 - `ingress-no-pathtype.yaml` — a deliberately broken copy with `pathType` removed (Step 6).
@@ -82,8 +88,22 @@ contains exact commands, expected state, explanations, and recovery guidance.
 
 The version is pinned to match `infra/versions.env` (`CONTOUR_VERSION=v1.33.5`).
 
+First prove the generated class is not already claimed by either an IngressClass object or a
+controller argument. Stop instead of taking over a collision. Then install Contour and configure
+this lab's controller to watch only that class.
+
 ```bash
+if kubectl get ingressclass "$INGRESS_CLASS" >/dev/null 2>&1 ||
+   kubectl get deployment -A \
+     -o jsonpath='{range .items[*]}{range .spec.template.spec.containers[*].args}{.}{"\n"}{end}{end}' \
+     | grep -Fx -- "--ingress-class-name=$INGRESS_CLASS"; then
+  echo "Ingress class collision: $INGRESS_CLASS" >&2
+  false
+fi
+
 kubectl apply -f https://raw.githubusercontent.com/projectcontour/contour/v1.33.5/examples/render/contour.yaml
+kubectl -n projectcontour patch deployment contour --type=json \
+  -p="[{\"op\":\"add\",\"path\":\"/spec/template/spec/containers/0/args/-\",\"value\":\"--ingress-class-name=$INGRESS_CLASS\"}]"
 
 # Wait until both halves are ready: the contour controller (Deployment)
 # and the envoy data plane (DaemonSet):
@@ -96,22 +116,23 @@ kubectl -n projectcontour get pods
 
 ### Step 2 (kind only) — create the IngressClass
 
-Run `kubectl get ingressclass` right now: **it's empty.** The Contour quickstart ships the
-controller but **no IngressClass object** — the matchmaker between your Ingress and the
-controller is something you declare. Create it:
+The Contour quickstart ships no IngressClass object. Create the generated matchmaker now; its
+name is also the class argument you added to this lab's Contour Deployment:
 
 ```bash
-cat > ingressclass.yaml <<'EOF'
+cat > ingressclass.yaml <<EOF
 apiVersion: networking.k8s.io/v1
 kind: IngressClass
 metadata:
-  name: contour
+  name: ${INGRESS_CLASS}
 spec:
   controller: projectcontour.io/ingress-controller
 EOF
 
 kubectl apply -f ingressclass.yaml
-kubectl get ingressclass
+kubectl get ingressclass "$INGRESS_CLASS"
+kubectl -n projectcontour get deployment contour \
+  -o jsonpath='{.spec.template.spec.containers[0].args}' | grep -F -- "--ingress-class-name=$INGRESS_CLASS"
 ```
 
 **Question:** how does Contour decide which Ingresses are *its*? (Hint: it's the name.)
@@ -266,10 +287,13 @@ kubectl apply -f ingress-no-pathtype.yaml
 
 **Task:** does the apply succeed? What is the error, and which line is it about?
 
-**Break 2 (silent).** Now point `ingressClassName` at a class **nobody owns**:
+**Break 2 (silent).** Now point `ingressClassName` at a generated class **nobody owns**:
 
 ```bash
-kubectl patch ingress web --type=merge -p '{"spec":{"ingressClassName":"legacy"}}'
+UNOWNED_CLASS="${INGRESS_CLASS}-unowned"
+kubectl get ingressclass "$UNOWNED_CLASS" --ignore-not-found
+kubectl patch ingress web --type=merge \
+  -p "{\"spec\":{\"ingressClassName\":\"$UNOWNED_CLASS\"}}"
 if [ "$LAB_ENV" = kind ]; then
   curl -sS -o /dev/null -w 'http=%{http_code}\n' \
     -H "Host: $WEB_HOST" http://127.0.0.1/ ; echo "curl exit=$?"
@@ -300,8 +324,9 @@ fi
 
 - The controller is **two halves**: a `contour` Deployment (watches the API) and an `envoy`
   DaemonSet (moves the packets) — matching the object-vs-engine mental model.
-- The quickstart ships **no IngressClass**; you created the matchmaker yourself, and
-  `kubectl get ingressclass` now proves who owns the `contour` name.
+- The quickstart ships **no IngressClass**; on kind you generated an unclaimed workshop-specific
+  name, configured Contour to watch it, and created the matching class object. On shared clusters,
+  you reused only the facilitator-approved existing class.
 - On kind the Ingress **`ADDRESS` stays empty** (the envoy `LoadBalancer` Service is
   `<pending>` — no LB provider), yet routing **works** via the node's ports 80/443 mapped to
   `127.0.0.1`. Empty ADDRESS ≠ broken; `describe` + `curl` are the truth.
@@ -318,8 +343,8 @@ Create a self-signed cert as a Secret and reference it in the Ingress.
 **Difficulty:** Advanced
 
 **Success criteria:** Prove HTTPS reaches the correct backend in your selected environment,
-explain why TLS needs SNI rather than only an HTTP Host header, then translate the Ingress
-and identify one Gateway plus two HTTPRoutes.
+report the returned application version, and explain why TLS needs SNI rather than only an
+HTTP Host header.
 
 **Hints:** Branch on `LAB_ENV`; kind needs `curl --resolve` for DNS and SNI, while shared
 clusters use the facilitator-provided DNS host directly.
@@ -342,6 +367,9 @@ fi
 [Spoiler: challenge solution](./08-ingress.solution.md#challenge-solution)
 
 ### Extension 2 (optional, read-only) — preview the Gateway API translation
+
+This extension is **not part of the challenge success criteria or verification**. The bootstrap
+does not install or pin this tool, and output shape can vary by version; skip it when unavailable.
 
 The retirement slide's bridge is a real tool: **`ingress2gateway`**
 ([kubernetes-sigs/ingress2gateway](https://github.com/kubernetes-sigs/ingress2gateway))

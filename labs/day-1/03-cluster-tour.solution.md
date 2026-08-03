@@ -309,7 +309,9 @@ the desired/observed split that controllers continuously reconcile.
 
 A Forbidden response on nodes or `kube-system` is expected on a
 shared cluster. Use the namespace path and confirm `kubectl auth can-i get pods -n "$NS"`.
-If the context is wrong, stop and return to Lab 00 rather than changing another namespace.
+On local kind, restore the workshop context with
+`kubectl config use-context kind-workshop`; on a shared cluster, stop and ask the facilitator
+for the assigned context rather than changing another namespace.
 
 ## Challenge solution
 

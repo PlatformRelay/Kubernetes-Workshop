@@ -216,14 +216,16 @@ is Lab 06. Keep your `pod.yaml`; you extend it next.
 
 ## Explanation
 
-A Pod groups one or more containers under one lifecycle identity. The kubelet can restart
+A Pod groups one or more containers under one lifecycle identity. Because the kubelet owns
+container lifecycle, it can restart
 a failed container inside that Pod, but only a higher-level controller creates a replacement
 Pod after deletion. Events explain pull and scheduling failures that the phase alone hides.
 
 ## Troubleshooting and recovery
 
 For `ImagePullBackOff`, inspect `kubectl describe pod web-typo -n "$NS"`
-and restore the pinned image in `pod.yaml`. Remove only the named lab Pods; do not clear
+and restore the pinned image in `pod.yaml`, then run `kubectl apply -f pod.yaml -n "$NS"`.
+Remove only the named lab Pods; do not clear
 other participants' workloads.
 
 ## Challenge solution

@@ -11,10 +11,16 @@ Set the same explicit environment variables as the participant lab before runnin
 ```bash
 # Local kind defaults; shared-cluster learners replace all four values as instructed.
 export LAB_ENV=kind
-export INGRESS_CLASS=contour
+export INGRESS_CLASS="platformrelay-lab08-$(openssl rand -hex 6)"
 export WEB_HOST=web.example.com
 export WEB2_HOST=web2.example.com
 case "$LAB_ENV" in kind|shared) ;; *) echo "LAB_ENV must be kind or shared" >&2; false ;; esac
+if [ "$LAB_ENV" = shared ]; then
+  kubectl get ingressclass "$INGRESS_CLASS" >/dev/null || {
+    echo "Ask the facilitator for an existing permitted IngressClass" >&2
+    false
+  }
+fi
 ```
 
 ### Step 1 (kind only) — install the Contour ingress controller
@@ -22,7 +28,17 @@ case "$LAB_ENV" in kind|shared) ;; *) echo "LAB_ENV must be kind or shared" >&2;
 The version is pinned to match `infra/versions.env` (`CONTOUR_VERSION=v1.33.5`).
 
 ```bash
+if kubectl get ingressclass "$INGRESS_CLASS" >/dev/null 2>&1 ||
+   kubectl get deployment -A \
+     -o jsonpath='{range .items[*]}{range .spec.template.spec.containers[*].args}{.}{"\n"}{end}{end}' \
+     | grep -Fx -- "--ingress-class-name=$INGRESS_CLASS"; then
+  echo "Ingress class collision: $INGRESS_CLASS" >&2
+  false
+fi
+
 kubectl apply -f https://raw.githubusercontent.com/projectcontour/contour/v1.33.5/examples/render/contour.yaml
+kubectl -n projectcontour patch deployment contour --type=json \
+  -p="[{\"op\":\"add\",\"path\":\"/spec/template/spec/containers/0/args/-\",\"value\":\"--ingress-class-name=$INGRESS_CLASS\"}]"
 
 # Wait until both halves are ready: the contour controller (Deployment)
 # and the envoy data plane (DaemonSet):
@@ -55,7 +71,7 @@ which is how your curls will get in.
 
 <details><summary>Shared-cluster path — do this instead of Steps 1–2</summary>
 
-Do **not** install anything. Confirm the controller's class exists, and note its name:
+Do **not** install or patch anything. Confirm the facilitator-approved class exists:
 
 ```console
 $ kubectl get ingressclass
@@ -63,30 +79,32 @@ NAME      CONTROLLER                             PARAMETERS   AGE
 contour   projectcontour.io/ingress-controller   <none>       30d
 ```
 
-Set `INGRESS_CLASS`, `WEB_HOST`, and `WEB2_HOST` to the facilitator-provided values. Skip every
-step labelled `kind only`; the shared path never creates or deletes cluster-scoped resources.
+Set `INGRESS_CLASS`, `WEB_HOST`, and `WEB2_HOST` to the facilitator-provided values. This is the
+safe alternative when policy prevents arbitrary classes: skip every step labelled `kind only`;
+the shared path never creates, patches, or deletes cluster-scoped resources.
 </details>
 
 ---
 
 ### Step 2 (kind only) — create the IngressClass
 
-Run `kubectl get ingressclass` right now: **it's empty.** The Contour quickstart ships the
-controller but **no IngressClass object** — the matchmaker between your Ingress and the
-controller is something you declare. Create it:
+The quickstart has no class object. Create the generated class whose name matches the controller
+argument added in Step 1:
 
 ```bash
-cat > ingressclass.yaml <<'EOF'
+cat > ingressclass.yaml <<EOF
 apiVersion: networking.k8s.io/v1
 kind: IngressClass
 metadata:
-  name: contour
+  name: ${INGRESS_CLASS}
 spec:
   controller: projectcontour.io/ingress-controller
 EOF
 
 kubectl apply -f ingressclass.yaml
-kubectl get ingressclass
+kubectl get ingressclass "$INGRESS_CLASS"
+kubectl -n projectcontour get deployment contour \
+  -o jsonpath='{.spec.template.spec.containers[0].args}' | grep -F -- "--ingress-class-name=$INGRESS_CLASS"
 ```
 
 <details><summary>Solution / expected output</summary>
@@ -94,12 +112,12 @@ kubectl get ingressclass
 ```console
 $ kubectl apply -f ingressclass.yaml
 ingressclass.networking.k8s.io/contour created
-$ kubectl get ingressclass
-NAME      CONTROLLER                             PARAMETERS   AGE
-contour   projectcontour.io/ingress-controller   <none>       5s
+$ kubectl get ingressclass "$INGRESS_CLASS"
+NAME                            CONTROLLER                             PARAMETERS   AGE
+platformrelay-lab08-a1b2c3d4   projectcontour.io/ingress-controller   <none>       5s
 ```
 
-The `contour` **IngressClass** now exists — that *name* is what your Ingress will reference
+The generated **IngressClass** now exists — that *name* is what your Ingress will reference
 in `ingressClassName`. The `controller:` string records which implementation owns the class.
 </details>
 
@@ -107,13 +125,10 @@ in `ingressClassName`. The `controller:` string records which implementation own
 
 <details><summary>Answer</summary>
 
-By **class name**. Without extra configuration, Contour accepts every Ingress whose
-`ingressClassName` (or legacy annotation) is **`contour`** — or that sets **no class at
-all**. It doesn't even require the IngressClass *object* to exist to route traffic; the
-object is the cluster's public record of the class (it's what `kubectl get ingressclass`
-shows, and where a default class would be marked). Other controllers are stricter — always
-check `kubectl get ingressclass` first on an unfamiliar cluster. Step 6 shows what happens
-when the name doesn't match anything.
+By **class name**. The `--ingress-class-name=$INGRESS_CLASS` argument restricts this lab's Contour
+instance to the generated name, and the IngressClass object publishes the same contract through
+the Kubernetes API. The preflight prevents the lab from claiming an existing name. On a shared
+cluster you reuse the facilitator-approved class instead of changing controller configuration.
 </details>
 
 ---
@@ -377,10 +392,13 @@ Nothing changes on the cluster: your working Ingress from Step 4 is still servin
 long-gone `extensions/v1beta1` API) will not apply on a modern cluster.
 </details>
 
-**Break 2 (silent).** Now point `ingressClassName` at a class **nobody owns**:
+**Break 2 (silent).** Now point `ingressClassName` at a generated class **nobody owns**:
 
 ```bash
-kubectl patch ingress web --type=merge -p '{"spec":{"ingressClassName":"legacy"}}'
+UNOWNED_CLASS="${INGRESS_CLASS}-unowned"
+kubectl get ingressclass "$UNOWNED_CLASS" --ignore-not-found
+kubectl patch ingress web --type=merge \
+  -p "{\"spec\":{\"ingressClassName\":\"$UNOWNED_CLASS\"}}"
 if [ "$LAB_ENV" = kind ]; then
   curl -sS -o /dev/null -w 'http=%{http_code}\n' \
     -H "Host: $WEB_HOST" http://127.0.0.1/ ; echo "curl exit=$?"
@@ -399,7 +417,7 @@ change, and where would you diagnose it?
 Representative kind output:
 
 ```console
-$ kubectl patch ingress web --type=merge -p '{"spec":{"ingressClassName":"legacy"}}'
+$ kubectl patch ingress web --type=merge -p '{"spec":{"ingressClassName":"platformrelay-lab08-a1b2c3d4-unowned"}}'
 ingress.networking.k8s.io/web patched
 $ curl -sS -o /dev/null -w 'http=%{http_code}\n' -H 'Host: web.example.com' http://127.0.0.1/ ; echo "curl exit=$?"
 curl: (56) Recv failure: Connection reset by peer
@@ -409,7 +427,7 @@ curl exit=56
 
 This is the real 2026-08-03 kind/Contour replay. A 404 is also valid when the data plane
 keeps a default virtual host. The manifest is schema-valid, so the API server accepts it;
-no controller owns `legacy`, Contour withdraws the route, and the externally visible symptom
+no controller owns the generated `-unowned` class, Contour withdraws the route, and the symptom
 is controller-dependent. Diagnose by comparing `ingressClassName` with
 `kubectl get ingressclass`, then inspect Ingress events and controller logs.
 </details>
@@ -475,7 +493,8 @@ doesn't exist) fail silent at runtime.
 
 ## Explanation
 
-The Ingress object declares host/path routing, but a matching IngressClass and controller
+The Ingress object declares host/path routing, but it only works because a matching
+IngressClass and controller
 turn that declaration into proxy configuration. Schema mistakes fail loudly at admission;
 environment mistakes such as an unowned class fail at runtime. TLS routing additionally
 uses SNI before HTTP headers exist.
@@ -484,6 +503,7 @@ uses SNI before HTTP headers exist.
 
 If the Ingress applies but does not route, compare
 `spec.ingressClassName` with `kubectl get ingressclass` and inspect controller events.
+For local kind, restore the known-good object with `kubectl apply -f ingress.yaml`.
 On a shared cluster, do not install or remove the controller; ask the facilitator for the
 assigned class and hostnames.
 
@@ -502,26 +522,24 @@ case "$LAB_ENV" in
   kind) curl --noproxy '*' -sk --resolve "$WEB_HOST:443:127.0.0.1" "https://$WEB_HOST/" ;;
   shared) curl --noproxy '*' -sk "https://$WEB_HOST/" ;;
 esac
-
-ingress2gateway print --providers=ingress-nginx \
-  --ingress-nginx-ingress-class="$INGRESS_CLASS" --input-file ingress.yaml \
-  > gateway-preview.yaml
-grep -E '^kind: (Gateway|HTTPRoute)$|^  hostnames:' gateway-preview.yaml
 ```
 
 ### Expected state / output
 
-HTTPS returns `workshop-web v1`. The preview contains a `Gateway` and `HTTPRoute` resources; the two
-Ingress hosts appear as HTTPRoute `hostnames`. If `ingress2gateway` is unavailable, record that the
-translation portion is skipped rather than installing an unapproved binary during the lab.
+HTTPS returns `workshop-web v1`, proving that TLS terminates at the selected Ingress route.
 
 ### Explanation
 
 On kind, `--resolve` supplies both the connection address and TLS SNI; a Host header alone is too
-late for certificate selection. On a shared cluster, facilitator-provided DNS supplies both. The
-translation preserves host/path/backend intent while changing it to Gateway API resource types.
+late for certificate selection. On a shared cluster, the facilitator-provided DNS name supplies both.
 
 ### Hints
 
 Branch on `LAB_ENV`; kind needs `curl --resolve` for DNS and SNI, while shared clusters use the
 facilitator-provided DNS host directly.
+
+### Optional extension answer
+
+`ingress2gateway` is not installed or pinned by the bootstrap, so its preview is deliberately not
+part of challenge verification. When an approved version is already available, inspect its output
+for Gateway API resource kinds and `hostnames`; do not assert a fixed resource count across versions.

@@ -491,9 +491,10 @@ never commits the secret to a layer.
 
 ## Troubleshooting and recovery
 
-If BuildKit rejects `--secret`, confirm your engine supports
-BuildKit and rerun the exact hardened build command. If optional signing leaves a registry
-behind, remove only `lab-registry`; never prune unrelated images or volumes.
+If BuildKit rejects `--secret`, confirm your engine supports BuildKit and rerun
+`$ENGINE build -f Dockerfile.hardened --secret id=deploy_key,src=deploy_key -t demo:hardened .`.
+If optional signing leaves a registry behind, remove it with
+`$ENGINE rm -f lab-registry`; never prune unrelated images or volumes.
 
 ## Challenge solution
 

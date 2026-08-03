@@ -75,8 +75,49 @@ function normalized(markdown) {
     .toLowerCase();
 }
 
-function hasExecutableFence(markdown) {
-  return /```(?:bash|sh|yaml|console)\s+[\s\S]*?```/.test(markdown);
+function words(markdown) {
+  return normalized(markdown).match(/[\p{Letter}\p{Number}]+/gu) ?? [];
+}
+
+function executableFences(markdown) {
+  return [...markdown.matchAll(/```(bash|sh|yaml|console)\s+([\s\S]*?)```/g)]
+    .map((match) => ({ language: match[1], body: match[2] }));
+}
+
+function hasSubstantiveExecutableFence(markdown) {
+  return executableFences(markdown).some(({ language, body }) => {
+    if (language === 'yaml') {
+      return /(?:^|\n)\s*(?:apiVersion|kind):\s*\S+/m.test(body) && words(body).length >= 6;
+    }
+    const commands = body
+      .split('\n')
+      .map((line) => line.replace(/^\s*\$\s*/, '').trim())
+      .filter((line) => line && !line.startsWith('#') && !/^(?:echo|printf)\b/.test(line) &&
+        !/^(?:true|false|:)\s*$/.test(line));
+    return commands.some((line) => words(line).length >= 3 &&
+      /(?:^|[;&|]\s*|\s)(?:kubectl|docker|podman|nerdctl|curl|wget|trivy|cosign|openssl|git|find|grep|sed|cat|\$ENGINE)\b/.test(line),
+    );
+  });
+}
+
+function hasObservableResult(markdown) {
+  return words(markdown).length >= 6 &&
+    /ready|running|cached|exists|absent|present|returns?|prints?|output|status|count|address|endpoint|http|https|uid|digest|component|resource|replica|match|field|path|succeeds?|fails?|reaches?|appears?|disappears?/i.test(markdown);
+}
+
+function hasCausalAccount(markdown) {
+  return words(markdown).length >= 10 &&
+    /because|therefore|\bso\b|when|while|due|caus|means|allows?|permits?|requires?|retains?|removes?|preserves?|invalidates?|tracks?|supplies?|trades?|asks?/i.test(markdown);
+}
+
+function hasConcreteCorrectiveCommand(markdown) {
+  const code = [
+    ...executableFences(markdown).map(({ body }) => body),
+    ...[...markdown.matchAll(/`([^`]+)`/g)].map((match) => match[1]),
+  ];
+  return /restore|reapply|rerun|remove|delete|undo|patch|reset|retry|fix|recover/i.test(markdown) &&
+    code.some((snippet) => words(snippet).length >= 3 &&
+      /(?:kubectl\s+(?:apply|delete|patch|label|create|rollout\s+undo|config\s+use-context)|\$ENGINE\s+(?:build|rm)|(?:^|\s)rm\s+-)/.test(snippet));
 }
 
 function headings(markdown) {
@@ -170,12 +211,28 @@ export function auditLab(labPath) {
   errors.push(...unsafeCommands(markdown).map((error) => `${display}: ${error}`));
 
   const challenge = section(markdown, 'Challenge');
+  const challengeTask = challenge.split(/\n\*\*Difficulty:\*\*/i)[0];
   const difficulty = field(challenge, 'Difficulty', 'Success criteria');
   const successCriteria = field(challenge, 'Success criteria', 'Hints');
   const hints = field(challenge, 'Hints');
   if (!difficulty) errors.push(`${display}: missing Challenge Difficulty`);
   if (!successCriteria) errors.push(`${display}: missing Challenge Success criteria`);
   if (!hints) errors.push(`${display}: missing Challenge Hints`);
+  if (words(challengeTask).length < 8) {
+    errors.push(`${display}: Challenge task is too shallow`);
+  }
+  if (difficulty && !/^(?:Beginner|Intermediate|Advanced)$/i.test(difficulty)) {
+    errors.push(`${display}: Challenge Difficulty must be Beginner, Intermediate, or Advanced`);
+  }
+  if (successCriteria && (words(successCriteria).length < 8 ||
+      !/build|create|delete|find|produce|prove|measure|identify|show|keep|restore|run|scan|generate|explain|compare/i.test(successCriteria) ||
+      !/ready|running|cached|exists|absent|present|returns?|prints?|output|status|count|address|endpoint|http|https|uid|digest|component|resource|replica|match|reaches?|appears?|disappears?|field|path/i.test(successCriteria))) {
+    errors.push(`${display}: Challenge Success criteria need an action and observable success signal`);
+  }
+  if (hints && (words(hints).length < 7 ||
+      !/compare|use|inspect|record|capture|reuse|pipe|keep|branch|move|watch|confirm|start|look|check/i.test(hints))) {
+    errors.push(`${display}: Challenge Hints need actionable guidance`);
+  }
   if (!/diagnos|compare|predict|explain|adapt|change|without|prove|investigate|measure|infer|design|translate/i.test(challenge)) {
     errors.push(`${display}: Challenge must require transfer or diagnosis`);
   }
@@ -215,31 +272,31 @@ export function auditLab(labPath) {
   const explanation = section(solution, 'Explanation');
   const troubleshooting = section(solution, 'Troubleshooting and recovery');
   const challengeSolution = section(solution, 'Challenge solution');
-  if (!hasExecutableFence(guidedSolution)) {
-    errors.push(`${relative(REPO_ROOT, solutionPath)}: Guided solutions need exact commands or a manifest`);
+  if (!hasSubstantiveExecutableFence(guidedSolution)) {
+    errors.push(`${relative(REPO_ROOT, solutionPath)}: Guided solutions need substantive commands or a manifest`);
   }
-  if (normalized(expectedState).length < 20) {
-    errors.push(`${relative(REPO_ROOT, solutionPath)}: Expected state / output is empty`);
+  if (!hasObservableResult(expectedState)) {
+    errors.push(`${relative(REPO_ROOT, solutionPath)}: Expected state / output needs an observable result`);
   }
-  if (normalized(explanation).length < 20) {
-    errors.push(`${relative(REPO_ROOT, solutionPath)}: Explanation is empty`);
+  if (!hasCausalAccount(explanation)) {
+    errors.push(`${relative(REPO_ROOT, solutionPath)}: Explanation needs a causal account`);
   }
-  if (normalized(troubleshooting).length < 20 || !/`[^`]+`|```/.test(troubleshooting)) {
-    errors.push(`${relative(REPO_ROOT, solutionPath)}: Troubleshooting needs likely-failure recovery commands`);
+  if (!hasConcreteCorrectiveCommand(troubleshooting)) {
+    errors.push(`${relative(REPO_ROOT, solutionPath)}: Troubleshooting needs a concrete corrective command`);
   }
 
   const challengeCommands = section(challengeSolution, 'Commands / manifest', 3);
   const challengeExpected = section(challengeSolution, 'Expected state / output', 3);
   const challengeExplanation = section(challengeSolution, 'Explanation', 3);
   const challengeHints = section(challengeSolution, 'Hints', 3);
-  if (!hasExecutableFence(challengeCommands)) {
-    errors.push(`${relative(REPO_ROOT, solutionPath)}: Challenge solution needs exact commands or a manifest`);
+  if (!hasSubstantiveExecutableFence(challengeCommands)) {
+    errors.push(`${relative(REPO_ROOT, solutionPath)}: Challenge solution needs substantive commands or a manifest`);
   }
-  if (normalized(challengeExpected).length < 20) {
-    errors.push(`${relative(REPO_ROOT, solutionPath)}: Challenge expected state / output is empty`);
+  if (!hasObservableResult(challengeExpected)) {
+    errors.push(`${relative(REPO_ROOT, solutionPath)}: Challenge expected state / output needs an observable result`);
   }
-  if (normalized(challengeExplanation).length < 20) {
-    errors.push(`${relative(REPO_ROOT, solutionPath)}: Challenge explanation is empty`);
+  if (!hasCausalAccount(challengeExplanation)) {
+    errors.push(`${relative(REPO_ROOT, solutionPath)}: Challenge explanation needs a causal account`);
   }
   if (!hints || !normalized(challengeHints).includes(normalized(hints))) {
     errors.push(`${relative(REPO_ROOT, solutionPath)}: Challenge hints do not match participant hints`);
@@ -330,6 +387,25 @@ export function auditDayOneCommandTruth(repoRoot = REPO_ROOT) {
   }
   if (lab08.includes('if kubectl get secret web-tls')) {
     errors.push('Lab 08: TLS verification must branch on LAB_ENV, not Secret existence');
+  }
+  for (const token of [
+    'export INGRESS_CLASS="platformrelay-lab08-$(openssl rand -hex 6)"',
+    'grep -Fx -- "--ingress-class-name=$INGRESS_CLASS"',
+    '\\"value\\":\\"--ingress-class-name=$INGRESS_CLASS\\"',
+    'kubectl get ingressclass "$INGRESS_CLASS" >/dev/null',
+  ]) {
+    if (!lab08.includes(token)) {
+      errors.push(`Lab 08: missing collision-safe class isolation token: ${token}`);
+    }
+  }
+  const challenge08 = section(lab08, 'Challenge');
+  const criteria08 = field(challenge08, 'Success criteria', 'Hints');
+  if (/ingress2gateway|Gateway|HTTPRoute|translat/i.test(criteria08)) {
+    errors.push('Lab 08: unpinned ingress2gateway must not be mandatory challenge acceptance');
+  }
+  if (!/Extension 2 \(optional, read-only\)/.test(lab08) ||
+      !/not part of the challenge success criteria or verification/i.test(lab08)) {
+    errors.push('Lab 08: ingress2gateway preview must be clearly optional and outside verification');
   }
 
   return errors;
