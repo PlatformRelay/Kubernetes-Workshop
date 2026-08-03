@@ -185,6 +185,18 @@ describe('deck manifest validation', () => {
         /S24.*contradict.*deferred/i,
       )
     }
+
+    for (const validNegation of [
+      "S24 isn't runnable.",
+      'S24 is neither authored nor runnable.',
+    ]) {
+      const mutated = new Map(base)
+      mutated.set('docs/facilitator-guide.md', `S24 is deferred. ${validNegation}`)
+      assert.doesNotThrow(
+        () => validateStatusClaims(manifest, mutated),
+        validNegation,
+      )
+    }
   })
 
   it('renders deferred deck status from the manifest', () => {

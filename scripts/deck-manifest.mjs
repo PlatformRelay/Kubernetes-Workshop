@@ -274,6 +274,8 @@ export function validateStatusClaims(manifest, documents) {
         const withoutNegations = statement
           .replace(/[*_>`#]/g, ' ')
           .replace(/\b\d+\s+of\s+\d+\s+sections are fully authored\b/gi, '')
+          .replace(/\b(?:is\s+)?neither\s+(?:fully\s+)?(?:authored|runnable|schedulable)(?:\s+nor\s+(?:fully\s+)?(?:authored|runnable|schedulable))+\b/gi, '')
+          .replace(/\bisn['’]t(?:\s+\w+){0,3}\s+(?:fully\s+)?(?:authored|runnable|schedulable)\b/gi, '')
           .replace(/\bnot(?:\s+\w+){0,3}\s+(?:fully\s+)?(?:authored|runnable|schedulable)\b/gi, '')
           .replace(/\b(?:cannot|can't|must not|should not)\b[^.;]{0,60}\b(?:schedule|scheduled)\b/gi, '')
           .replace(/\bunauthored\b/gi, '')
