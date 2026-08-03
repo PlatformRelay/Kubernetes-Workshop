@@ -54,6 +54,7 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: pnpm test:labs
       - run: pnpm lint
 
   link-check:

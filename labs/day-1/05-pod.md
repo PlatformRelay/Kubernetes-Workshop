@@ -1,5 +1,7 @@
 # Lab 05 — Pod (S05)
 
+<!-- lab-contract:v1 -->
+
 | | |
 | --- | --- |
 | **Section** | S05 — Pod *(red line 1/5)* |
@@ -26,7 +28,14 @@ red-line step **1 of 5**.
 
 ---
 
-## Step 1 — write the canonical Pod manifest
+## Guided task
+
+Work through the steps without opening the companion unless you are blocked. The spoiler
+contains exact commands, expected state, explanations, and recovery guidance.
+
+[Spoiler: guided solutions and expected output](./05-pod.solution.md#guided-solutions)
+
+### Step 1 — write the canonical Pod manifest
 
 Build `pod.yaml`. On the slides you saw this grown field by field; here is the finished base.
 
@@ -61,24 +70,9 @@ kubectl apply --dry-run=server -f pod.yaml     # server validates; no object cre
 kubectl apply -f pod.yaml
 ```
 
-<details><summary>Solution / expected output</summary>
-
-```console
-$ kubectl apply --dry-run=server -f pod.yaml
-pod/web created (server dry run)
-
-$ kubectl apply -f pod.yaml
-pod/web created
-```
-
-`--dry-run=server` sends the manifest through the API server's validation and admission
-checks but rolls back instead of persisting — the safest way to catch a bad field before it
-is real. (Offline with no cluster, use `--dry-run=client` for schema-only checks.)
-</details>
-
 ---
 
-## Step 2 — watch it come alive
+### Step 2 — watch it come alive
 
 ```bash
 kubectl get pod web -w        # -w = watch; Ctrl-C to stop once it is Running
@@ -87,24 +81,9 @@ kubectl get pod web -w        # -w = watch; Ctrl-C to stop once it is Running
 **Task:** watch the phase transitions. What phases does the Pod pass through before
 `Running`?
 
-<details><summary>Solution / expected output</summary>
-
-```console
-$ kubectl get pod web -w
-NAME   READY   STATUS              RESTARTS   AGE
-web    0/1     Pending             0          0s
-web    0/1     ContainerCreating   0          1s
-web    1/1     Running             0          4s
-```
-
-`Pending` (accepted, being scheduled / image pulling) → `ContainerCreating` → `Running`
-with `READY 1/1`. Press **Ctrl-C** to exit the watch. The first pull may take longer while
-the image downloads.
-</details>
-
 ---
 
-## Step 3 — inspect: describe, logs, debug
+### Step 3 — inspect: describe, logs, debug
 
 Three commands you will use in every debugging session for the rest of the workshop.
 
@@ -124,45 +103,11 @@ kubectl debug -it web --image=busybox:1.37 --target=web -- sh
 Inside the debug shell, confirm you are in the container's context (not on your host) by
 checking the process list — the demo server should be PID 1. Type `exit` to leave.
 
-<details><summary>Solution / expected output</summary>
-
-```console
-$ kubectl exec -it web -- sh
-error: Internal error occurred: ... exec: "sh": executable file not found in $PATH
-
-$ kubectl debug -it web --image=busybox:1.37 --target=web -- sh
-/ # ps
-PID   USER     TIME  COMMAND
-    1 65532     0:00 /workshop-web
-   13 root      0:00 sh
-   19 root      0:00 ps
-/ # exit
-```
-
-The demo image is **distroless** — it contains the server binary and nothing else, not even
-`sh`, so there is nothing for `exec` to run. `kubectl debug` instead attaches an
-**ephemeral container** (here: busybox, which has a shell) to the running Pod;
-`--target=web` shares the app container's PID namespace, so `ps` shows `/workshop-web` as
-**PID 1** — the container has its own PID namespace, so its main process is process 1.
-`kubectl logs web` shows the server's startup line
-(`workshop-web v1 listening on :8080 …`); `describe` shows an `Events` section ending in
-`Started container web`.
-</details>
-
 **Question:** you never installed a shell in the Pod — where does the `debug` shell run?
-
-<details><summary>Answer</summary>
-
-`kubectl debug` adds an **ephemeral container** to the Pod's spec via the API server; the
-**kubelet** starts it from the toolbox image you named (`busybox:1.37`) *inside the Pod's
-namespaces* and streams it back. It is not SSH and needs no extra port — and unlike a shell
-baked into the app image, it is only there while you debug. (Plain `kubectl exec` works the
-same way but can only run binaries that already exist in the container's image.)
-</details>
 
 ---
 
-## Step 4 — break it: a bad image (ImagePullBackOff)
+### Step 4 — break it: a bad image (ImagePullBackOff)
 
 The single most common Pod failure. Apply a Pod whose image tag does not exist (imagine a
 mistyped tag):
@@ -174,31 +119,7 @@ kubectl get pod web-typo          # repeat a few times, or add -w
 
 **Task:** the Pod never reaches `Running`. Read `describe` and name the exact reason.
 
-<details><summary>Solution / expected output</summary>
-
-```console
-$ kubectl get pod web-typo
-NAME       READY   STATUS             RESTARTS   AGE
-web-typo   0/1     ImagePullBackOff   0          25s
-
-$ kubectl describe pod web-typo | sed -n '/Events:/,$p'
-Events:
-  Type     Reason     Age                From     Message
-  ----     ------     ----               ----     -------
-  Normal   Scheduled  30s                default  Successfully assigned .../web-typo to ...
-  Normal   Pulling    15s (x2 over 29s)  kubelet  Pulling image "ghcr.io/platformrelay/workshop-web:v9.99-nope"
-  Warning  Failed     14s (x2 over 28s)  kubelet  Failed to pull image "ghcr.io/platformrelay/workshop-web:v9.99-nope": ... manifest ... not found
-  Warning  Failed     14s (x2 over 28s)  kubelet  Error: ErrImagePull
-  Normal   BackOff    2s  (x2 over 27s)  kubelet  Back-off pulling image "ghcr.io/platformrelay/workshop-web:v9.99-nope"
-  Warning  Failed     2s  (x2 over 27s)  kubelet  Error: ImagePullBackOff
-```
-
-The status is **`ImagePullBackOff`**; the *events* tell you why — the tag `v9.99-nope` does
-not exist, so the pull fails and the kubelet backs off retrying. The events section, not the
-one-word status, is where the real answer always lives.
-</details>
-
-## Step 5 — fix it, then meet the punchline
+### Step 5 — fix it, then meet the punchline
 
 There is no clean way to "edit" a bare Pod's image, so delete the broken one and (for the
 punchline) delete the good one too:
@@ -211,21 +132,7 @@ kubectl get pods            # what's left?
 
 **Task:** after deleting `web`, is it recreated?
 
-<details><summary>Solution / expected output</summary>
-
-```console
-$ kubectl delete pod web
-pod "web" deleted
-$ kubectl get pods
-No resources found in <your-namespace> namespace.
-```
-
-**Nothing recreates it.** A bare Pod has no controller watching it — delete it (or let its
-node fail) and it is simply gone. That is exactly the problem a **Deployment** solves, which
-is Lab 06. Keep your `pod.yaml`; you extend it next.
-</details>
-
-## Expected observations
+## Observe
 
 - `web` goes `Pending → ContainerCreating → Running` and reports `READY 1/1`.
 - `describe` and `logs` work against the running Pod; `exec … sh` fails (distroless — no
@@ -234,17 +141,7 @@ is Lab 06. Keep your `pod.yaml`; you extend it next.
   identically on kind and the shared cluster.
 - Deleting the Pod does **not** bring it back — no controller owns it.
 
-## Cleanup / panic reset
-
-```bash
-kubectl delete pod web web-typo --ignore-not-found
-# or the namespace-safe panic reset from Lab 00:
-kubectl delete pod --all -n "$NS" --ignore-not-found
-```
-
-Leave `pod.yaml` on disk for Lab 06.
-
-## Stretch (optional)
+## Challenge
 
 A bare Pod can restart its *container* without a controller. Prove it: run a container
 that exits on purpose and watch the `RESTARTS` counter, given the default
@@ -255,21 +152,24 @@ kubectl run crash --image=busybox:1.37 -- sh -c 'sleep 10; exit 1'
 kubectl get pod crash -w          # watch RESTARTS climb, Pod stays
 ```
 
-<details><summary>Solution / what you're looking at</summary>
+[Spoiler: challenge solution](./05-pod.solution.md#challenge-solution)
 
-```console
-$ kubectl get pod crash -w
-NAME    READY   STATUS    RESTARTS     AGE
-crash   1/1     Running   0            5s
-crash   0/1     Error     0            12s
-crash   1/1     Running   1 (2s ago)   14s
-crash   0/1     Error     1 (12s ago)  24s
+## Verify
+
+Verify the lab's punchline before cleanup: the deleted bare Pod stays deleted.
+
+```bash
+kubectl get pod web web-typo -n "$NS" --ignore-not-found
 ```
 
-The **container** restarted in place (`RESTARTS` climbs) because a Pod's default
-`restartPolicy` is `Always` — but it is still the *same Pod object*, and once you delete
-that Pod nothing recreates it. Container restart ≠ Pod recreation; only a controller does
-the latter. (Left long enough, the kubelet backs off between restarts —
-`CrashLoopBackOff`, the sibling of the `ImagePullBackOff` you met in Step 4.) Clean up:
-`kubectl delete pod crash`, then the panic reset above.
-</details>
+Expected: no output. A `web` Pod appearing again would mean a controller owns it.
+
+## Cleanup / reset
+
+```bash
+kubectl delete pod web web-typo crash -n "$NS" --ignore-not-found
+# or the namespace-safe panic reset from Lab 00:
+kubectl delete pod --all -n "$NS" --ignore-not-found
+```
+
+Leave `pod.yaml` on disk for Lab 06.

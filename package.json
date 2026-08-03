@@ -36,6 +36,7 @@
     "render:3day": "slidev export slides-3day.md --format png --per-slide --output dist-render-3day",
     "showcase:gif": "node scripts/make-showcase-gif.mjs",
     "test:deck": "node --test scripts/deck.test.mjs",
+    "test:labs": "node --test scripts/lab-contract.test.mjs && node scripts/lab-contract.mjs",
     "test:provenance": "node --test scripts/workshop-provenance.test.mjs",
     "test:quiz": "node --test scripts/quiz/quiz.test.mjs",
     "quiz:validate": "node scripts/quiz/validate.mjs",
