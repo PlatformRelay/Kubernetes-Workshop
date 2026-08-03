@@ -1,7 +1,17 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
-export const sections = [
+export const sectionTimings = {
+  S00: [20, 15], S01: [30, 25], S02: [30, 25], S03: [30, 20],
+  S04: [25, 25], S05: [30, 25], S06: [35, 30], S07: [30, 30],
+  S08: [25, 25], S09: [30, 25], S10: [25, 25], S11: [30, 30],
+  S12: [30, 30], S13: [30, 30], S14: [30, 30], S15: [20, 20],
+  S16: [20, 20], S17: [30, 25], S18: [25, 25], S19: [25, 25],
+  S20: [30, 30], S21: [30, 25], S22: [25, 15], S23: [30, 25],
+  S24: [40, 40], S25: [35, 30], S26: [30, 40], S27: [20, 0],
+}
+
+const sectionDefinitions = [
   { id: 'S00', slug: 'welcome', title: 'Welcome & setup', tier: 'core', day: 1, canonical: true, status: 'authored', environment: 'namespace ✓ / kind ✓' },
   { id: 'S01', slug: 'containers', title: 'Containers', tier: 'recommended', day: 1, canonical: false, status: 'authored', environment: 'local — no cluster needed' },
   { id: 'S02', slug: 'container-security', title: 'Container security & supply chain', tier: 'recommended', day: 1, canonical: false, status: 'authored', environment: 'local — no cluster needed' },
@@ -32,13 +42,18 @@ export const sections = [
   { id: 'S27', slug: 'wrap-up', title: 'Wrap-up & next steps', tier: 'core', day: 3, canonical: true, status: 'authored' },
 ]
 
+export const sections = sectionDefinitions.map((section) => {
+  const [slidesMinutes, labMinutes] = sectionTimings[section.id] ?? []
+  return { ...section, slidesMinutes, labMinutes }
+})
+
 export const generatedDecks = [
   { file: 'slides-day-1.md', title: 'Day 1', description: 'Foundations and the core red line', select: (s) => s.day === 1 && s.canonical },
   { file: 'slides-day-2.md', title: 'Day 2', description: 'Modern routing and running workloads well', select: (s) => s.day === 2 && s.canonical },
   { file: 'slides-day-3.md', title: 'Day 3', description: 'Security, delivery, operators, and best practices', select: (s) => s.day === 3 && s.canonical },
-  { file: 'slides-optional.md', title: 'Optional / Appendix', description: 'On-ramp, add-backs, and advanced sections', select: (s) => !s.canonical },
+  { file: 'slides-optional.md', title: 'Optional / Appendix', description: 'Authored on-ramp and add-backs, plus advanced and deferred material', select: (s) => !s.canonical },
   { file: 'slides-3day.md', title: '3-day compatibility cut', description: 'The three canonical days in one compatibility deck', select: (s) => s.canonical },
-  { file: 'slides.md', title: 'Content superset', description: 'Compatibility deck containing every authored section', select: () => true },
+  { file: 'slides.md', title: 'Content superset', description: 'Compatibility deck containing every section source, including deferred stubs', select: () => true },
 ]
 
 export function sectionPath(section) {
@@ -60,7 +75,9 @@ export function validateManifest(manifest = sections, { repoRoot = resolve(impor
 
     if (!/^S\d{2}$/.test(section.id) || ![1, 2, 3].includes(section.day)
       || !['core', 'recommended', 'optional'].includes(section.tier)
-      || !['authored', 'deferred'].includes(section.status)) {
+      || !['authored', 'deferred'].includes(section.status)
+      || !Number.isInteger(section.slidesMinutes) || section.slidesMinutes < 0
+      || !Number.isInteger(section.labMinutes) || section.labMinutes < 0) {
       throw new Error(`Invalid manifest metadata for ${section.id}`)
     }
     if (!existsSync(resolve(repoRoot, source)))
@@ -154,15 +171,83 @@ export function validateSyllabusCatalog(manifest, markdown) {
   return true
 }
 
-export function validatePlanningLanguage(markdown) {
-  const measuredNumber = /\b(?:measured|actual)\s+(?:time|timing|total)?\s*:?\s*~?\d+\s*min/i
-  if (measuredNumber.test(markdown))
-    throw new Error('An unrehearsed planning estimate is presented as measured timing')
+export function validateSyllabusTimings(manifest, markdown) {
+  const rows = new Map()
   for (const line of markdown.split('\n')) {
-    if (/\bDay [123]\b.*\b(?:365|345|420)\s*min\b/i.test(line)
-      && !/\b(?:planned|planning|estimate|target|unrehearsed)\b/i.test(line)) {
-      const value = line.match(/(?:365|345|420)/)?.[0]
-      throw new Error(`${value} min day total must be labelled planned or estimated`)
+    const cells = line.split('|').slice(1, -1).map((cell) => cell.trim())
+    const id = cells[0]?.match(/^S\d{2}/)?.[0]
+    if (!id || cells.length !== 5 || !/^\d+$/.test(cells[3] ?? '')
+      || !/^(?:\d+|—)$/.test(cells[4] ?? ''))
+      continue
+    rows.set(id, { slides: Number(cells[3]), lab: cells[4] === '—' ? 0 : Number(cells[4]) })
+  }
+  for (const section of manifest) {
+    const row = rows.get(section.id)
+    if (!row)
+      throw new Error(`${section.id} is missing from the syllabus timing table`)
+    const problems = []
+    if (row.slides !== section.slidesMinutes)
+      problems.push(`slides must be ${section.slidesMinutes}`)
+    if (row.lab !== section.labMinutes)
+      problems.push(`lab time must be ${section.labMinutes}`)
+    if (problems.length)
+      throw new Error(`${section.id} syllabus timing contradiction: ${problems.join('; ')}`)
+  }
+  return true
+}
+
+export function canonicalDayTotals(manifest = sections) {
+  const totals = new Map([1, 2, 3].map((day) => [day, { slides: 0, lab: 0, total: 0 }]))
+  for (const section of manifest.filter((item) => item.canonical)) {
+    const day = totals.get(section.day)
+    day.slides += section.slidesMinutes
+    day.lab += section.labMinutes
+    day.total += section.slidesMinutes + section.labMinutes
+  }
+  return totals
+}
+
+export function validateCanonicalScheduleTables(manifest, markdown) {
+  const expected = canonicalDayTotals(manifest)
+  const found = new Map()
+  for (const line of markdown.split('\n')) {
+    const cells = line.split('|').slice(1, -1).map((cell) => cell.replaceAll('*', '').trim())
+    const match = cells[0]?.match(/^Day ([123])$/)
+    if (match && cells.length === 4 && cells.slice(1).every((cell) => /^\d+$/.test(cell)))
+      found.set(Number(match[1]), cells.slice(1).map(Number))
+  }
+  for (const [day, totals] of expected) {
+    if (totals.total === 0)
+      continue
+    const row = found.get(day)
+    if (!row)
+      throw new Error(`Day ${day} canonical schedule total row is missing`)
+    const [slides, lab, total] = row
+    if (slides !== totals.slides || lab !== totals.lab || total !== totals.total) {
+      throw new Error(
+        `Day ${day} canonical schedule must be slides ${totals.slides}, lab ${totals.lab}, total ${totals.total}`,
+      )
+    }
+  }
+  return true
+}
+
+export function validatePlanningLanguage(markdown, manifest = sections) {
+  const measuredNumber = /\b(?:measured|actual)\b[^\n.]{0,120}\b\d+\s*(?:min(?:ute)?s?)\b/i
+  const measuredNumberReverse = /\b\d+\s*(?:min(?:ute)?s?)\b[^\n.]{0,120}\b(?:measured|actual)\b/i
+  if (measuredNumber.test(markdown) || measuredNumberReverse.test(markdown))
+    throw new Error('An unrehearsed planning estimate is presented as measured timing')
+  const totals = canonicalDayTotals(manifest)
+  for (const line of markdown.split('\n')) {
+    const durations = line.matchAll(/\bDay ([123])\b[^\n]{0,80}?\b(\d+)\s*(?:min(?:ute)?s?)\b/gi)
+    for (const match of durations) {
+      const day = Number(match[1])
+      const value = Number(match[2])
+      const expected = totals.get(day)?.total
+      if (value !== expected)
+        throw new Error(`Day ${day} claims ${value} minutes; expected planning total ${expected}`)
+      if (!/\b(?:planned|planning|estimate|target|unrehearsed)\b/i.test(line))
+        throw new Error(`${value} min day total must be labelled planned or estimated`)
     }
   }
   return true
@@ -181,6 +266,9 @@ export function validateStatusClaims(manifest, documents) {
       const reverse = new RegExp(`deferred[\\s\\S]{0,240}${section.id}`, 'i')
       if (!forward.test(markdown) && !reverse.test(markdown))
         throw new Error(`${path} must identify ${section.id} as deferred`)
+      const positiveClaim = new RegExp(String.raw`${section.id}[^\n.]{0,80}\b(?:is|remains)\s+(?:fully\s+)?(?:authored|runnable|schedulable)\b`, 'i')
+      if (positiveClaim.test(markdown))
+        throw new Error(`${section.id} status contradiction in ${path}: deferred but claimed authored/runnable/schedulable`)
     }
   }
   const matrix = documents.get('docs/validation-matrix.md') ?? ''
@@ -204,9 +292,11 @@ export function validateDocumentationTruth(manifest = sections, { repoRoot = res
   const documents = new Map(paths.map((path) => [path, readFileSync(resolve(repoRoot, path), 'utf8')]))
   const syllabus = documents.get('docs/syllabus.md')
   validateSyllabusCatalog(manifest, syllabus)
+  validateSyllabusTimings(manifest, syllabus)
+  validateCanonicalScheduleTables(manifest, syllabus)
   validateStatusClaims(manifest, documents)
   for (const markdown of documents.values())
-    validatePlanningLanguage(markdown)
+    validatePlanningLanguage(markdown, manifest)
   return true
 }
 
@@ -215,7 +305,11 @@ export function renderDeck(selected, { title, description, generated = true } = 
     ? '<!-- Generated by scripts/generate-decks.mjs from scripts/deck-manifest.mjs. Do not edit. -->\n'
     : ''
   const imports = selected.map((section) => `---\n# ${section.id} · ${section.title} · ${section.tier} · Day ${section.day} · ${section.status}\nsrc: ${sectionPath(section)}\n---`).join('\n\n')
-  return `---\ntheme: ./theme\ntitle: Kubernetes Practitioner Workshop — ${title}\ninfo: |\n  Open source, vendor-neutral Kubernetes workshop.\n  ${description}. Sections are imported from the shared section library.\nlayout: cover\n---\n${marker}\n# Kubernetes Practitioner Workshop\n\n${title} — ${description}.\n\n${imports}\n`
+  const deferred = selected.filter((section) => section.status === 'deferred').map((section) => section.id)
+  const statusNotice = deferred.length
+    ? `\n> **Status:** ${deferred.join(', ')} ${deferred.length === 1 ? 'is' : 'are'} deferred and not schedulable.\n`
+    : ''
+  return `---\ntheme: ./theme\ntitle: Kubernetes Practitioner Workshop — ${title}\ninfo: |\n  Open source, vendor-neutral Kubernetes workshop.\n  ${description}. Sections are imported from the shared section library.\nlayout: cover\n---\n${marker}\n# Kubernetes Practitioner Workshop\n\n${title} — ${description}.\n${statusNotice}\n${imports}\n`
 }
 
 export function renderGeneratedDecks(manifest = sections) {

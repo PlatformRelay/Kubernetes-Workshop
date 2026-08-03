@@ -5,11 +5,15 @@ import { join } from 'node:path'
 import { describe, it } from 'node:test'
 
 import {
+  canonicalDayTotals,
   findGeneratedDrift,
+  renderDeck,
+  validateCanonicalScheduleTables,
   validatePlanningLanguage,
   validateSectionFrontmatter,
   validateStatusClaims,
   validateSyllabusCatalog,
+  validateSyllabusTimings,
   validateManifest,
 } from './deck-manifest.mjs'
 import { checkLinks } from './link-check.mjs'
@@ -27,6 +31,8 @@ const section = (id, overrides = {}) => ({
   day: 1,
   canonical: true,
   status: 'authored',
+  slidesMinutes: 10,
+  labMinutes: 10,
   ...overrides,
 })
 
@@ -152,6 +158,95 @@ describe('deck manifest validation', () => {
     assert.throws(
       () => validateStatusClaims(manifest, documents),
       /facilitator-guide.*S24.*deferred/i,
+    )
+  })
+
+  it('rejects deferred status alongside authored, runnable, or schedulable claims', () => {
+    const manifest = [section('S24', { status: 'deferred', environment: 'kind-only' })]
+    const base = new Map([
+      ['README.md', '**0 of 1 sections are fully authored**; S24 is deferred.'],
+      ['docs/syllabus.md', 'S24 is deferred.'],
+      ['docs/facilitator-guide.md', 'S24 is deferred.'],
+      ['labs/README.md', 'S24 is deferred.'],
+      ['docs/validation-matrix.md', '| lab | S24 deferred | `deferred` |'],
+    ])
+    for (const contradiction of [
+      'S24 is fully authored.',
+      'S24 is runnable today.',
+      'S24 is schedulable as a hands-on lab.',
+    ]) {
+      const mutated = new Map(base)
+      mutated.set('docs/facilitator-guide.md', `S24 is deferred. ${contradiction}`)
+      assert.throws(
+        () => validateStatusClaims(manifest, mutated),
+        /S24.*contradict.*deferred/i,
+      )
+    }
+  })
+
+  it('renders deferred deck status from the manifest', () => {
+    const markdown = renderDeck([
+      section('S24', { status: 'deferred' }),
+    ], { title: 'Optional', description: 'Optional material' })
+    assert.match(markdown, /S24.*deferred.*not schedulable/i)
+  })
+
+  it('derives canonical totals and rejects timing drift and measured variants', () => {
+    const manifest = [
+      section('S00', { canonical: true, day: 1, slidesMinutes: 30, labMinutes: 20 }),
+      section('S03', { canonical: true, day: 1, slidesMinutes: 25, labMinutes: 25 }),
+    ]
+    assert.deepEqual(canonicalDayTotals(manifest).get(1), {
+      slides: 55,
+      lab: 45,
+      total: 100,
+    })
+    assert.doesNotThrow(
+      () => validatePlanningLanguage('Day 1: 100 minutes planned.', manifest),
+    )
+    assert.throws(
+      () => validatePlanningLanguage('Day 1: 101 minutes planned.', manifest),
+      /Day 1.*101.*expected.*100/i,
+    )
+    assert.throws(
+      () => validatePlanningLanguage(
+        'The actual workshop duration recorded for Day 1 was 100 minutes.',
+        manifest,
+      ),
+      /planning estimate.*measured/i,
+    )
+    assert.throws(
+      () => validatePlanningLanguage(
+        'Day 1 took 100 minutes in the measured rehearsal run.',
+        manifest,
+      ),
+      /planning estimate.*measured/i,
+    )
+  })
+
+  it('rejects per-section timing drift from the manifest', () => {
+    const manifest = [
+      section('S23', { day: 3, slidesMinutes: 30, labMinutes: 25 }),
+    ]
+    const timings = `
+| ID | Outcome | Lab | Slides | Lab time |
+| --- | --- | --- | --- | --- |
+| S23 | Observe an operator. | lab.md | 31 | 25 |
+`
+    assert.throws(
+      () => validateSyllabusTimings(manifest, timings),
+      /S23.*slides.*30/i,
+    )
+  })
+
+  it('rejects canonical schedule table totals that drift from the manifest', () => {
+    const manifest = [
+      section('S00', { canonical: true, day: 1, slidesMinutes: 30, labMinutes: 20 }),
+    ]
+    const schedule = '| **Day 1** | **30** | **20** | **51** |\n'
+    assert.throws(
+      () => validateCanonicalScheduleTables(manifest, schedule),
+      /Day 1.*total.*50/i,
     )
   })
 

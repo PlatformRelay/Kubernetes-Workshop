@@ -160,9 +160,10 @@ the planned slot, not delivered content. See the
 ## The canonical 3-day cut
 
 The boil-down that a facilitator delivers by default. Target **~390 min/day at ~50/50**.
-Everything **not** listed is toggled off for that delivery (still fully authored in the
-superset). The cut is deliberately adjustable — the listed add-backs and toggles are the
-first knobs to reach for.
+Everything **not** listed is toggled off for that delivery. Authored add-backs remain
+available in the Optional / Appendix deck; deferred entries are visible as stubs but are
+not schedulable. The cut is deliberately adjustable — the listed add-backs are the first
+knobs to reach for.
 
 ### Day 1 (~365 min planned)
 
