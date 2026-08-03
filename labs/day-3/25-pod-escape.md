@@ -69,7 +69,8 @@ kind create cluster --name "$WORKSHOP_CLUSTER_NAME"
 
 Now write the guard. Its `--claim` mode can establish the ownership marker on an existing disposable
 cluster, but only **after** the exact context, loopback API endpoint, local kind provider, and node
-metadata have all passed. Every later offensive step runs the stricter read-only check.
+metadata have all passed. The endpoint must equal the server in kind's own generated kubeconfig.
+Every later offensive step runs the stricter read-only check in the `escape` namespace.
 
 ```bash
 cat > context-check.sh <<'EOF'
@@ -99,6 +100,9 @@ printf '%s\n' "$expected_cluster" | LC_ALL=C grep -Eq '^[a-z0-9]([-a-z0-9.]*[a-z
   refuse "WORKSHOP_CLUSTER_NAME is not a safe kind cluster name"
 expected_context="kind-${expected_cluster}"
 expected_node="${expected_cluster}-control-plane"
+expected_namespace="${WORKSHOP_LAB_NAMESPACE:-escape}"
+printf '%s\n' "$expected_namespace" | LC_ALL=C grep -Eq '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$' || \
+  refuse "WORKSHOP_LAB_NAMESPACE is not a safe Kubernetes namespace name"
 
 if ! context="$(kubectl config current-context 2>/dev/null)" || [ -z "$context" ]; then
   refuse "kubectl has no readable current context"
@@ -122,6 +126,13 @@ printf '%s\n' "$server" | LC_ALL=C grep -Eq '^https://(127\.0\.0\.1|localhost|\[
   refuse "API server is not a loopback kind endpoint"
 printf '%s\n' "$namespace" | LC_ALL=C grep -Eq '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$' || \
   refuse "current namespace is not a safe Kubernetes namespace name"
+if [ "$claim_marker" = true ]; then
+  [ "$namespace" = default ] || \
+    refuse "marker claim must start in the 'default' namespace"
+else
+  [ "$namespace" = "$expected_namespace" ] || \
+    refuse "current namespace must be exactly '$expected_namespace'"
+fi
 
 echo "Resolved Kubernetes target:"
 echo "  context: $context"
@@ -134,6 +145,14 @@ if ! local_clusters="$(kind get clusters 2>/dev/null)"; then
 fi
 printf '%s\n' "$local_clusters" | grep -Fxq "$expected_cluster" || \
   refuse "'$expected_cluster' is not a cluster owned by the local kind provider"
+
+if ! kind_kubeconfig="$(kind get kubeconfig --name "$expected_cluster" 2>/dev/null)"; then
+  refuse "kind cannot read the canonical kubeconfig for '$expected_cluster'"
+fi
+kind_server="$(printf '%s\n' "$kind_kubeconfig" | awk '$1 == "server:" { print $2; exit }')"
+[ -n "$kind_server" ] || refuse "kind kubeconfig has no API server"
+[ "$server" = "$kind_server" ] || \
+  refuse "current API server does not match kind's '$expected_cluster' kubeconfig"
 
 if ! kind_nodes="$(kind get nodes --name "$expected_cluster" 2>/dev/null)"; then
   refuse "kind cannot resolve nodes for '$expected_cluster'"
@@ -149,10 +168,14 @@ case "$node_identity" in
   *) refuse "node metadata does not identify the expected kind provider/cluster" ;;
 esac
 
-if ownership_cluster="$(kubectl --namespace kube-system get configmap "$marker_name" -o 'jsonpath={.data.cluster}' 2>/dev/null)"; then
+if ownership_cluster="$(kubectl --namespace kube-system get configmap "$marker_name" -o 'jsonpath={.data.cluster}' 2>&1)"; then
   [ "$ownership_cluster" = "$expected_cluster" ] || \
     refuse "ownership marker belongs to '$ownership_cluster', not '$expected_cluster'"
 else
+  case "$ownership_cluster" in
+    *"Error from server (NotFound):"*"$marker_name"*" not found") ;;
+    *) refuse "ownership marker lookup failed without an explicit NotFound response" ;;
+  esac
   [ "$claim_marker" = true ] || \
     refuse "workshop ownership marker is missing; recreate the cluster or run this guard once with --claim"
   kubectl create configmap "$marker_name" \
@@ -193,9 +216,10 @@ OK: disposable workshop kind cluster identity verified — safe to proceed.
 ```
 
 The port is assigned dynamically, so yours will differ. A name beginning with `kind-` is not enough:
-the guard also verifies the exact kubeconfig cluster, a loopback server, kind's local cluster/node
-inventory, the node's kind provider ID, and the ownership marker. Any missing or ambiguous evidence
-prints `REFUSING…` and exits 1. The normal `./context-check.sh` path never creates or changes anything.
+the guard also verifies the exact kubeconfig cluster and namespace, the API server from kind's own
+kubeconfig, kind's local cluster/node inventory, the node's kind provider ID, and the ownership
+marker. Any missing or ambiguous evidence prints `REFUSING…` and exits 1. The normal
+`./context-check.sh` path never creates or changes anything.
 </details>
 
 > **⚠️ Why this guard matters.** The next step deliberately reads the node's filesystem. That's a
@@ -277,6 +301,8 @@ kubectl wait --for=condition=Ready pod/escape --timeout=60s
 benign read**. Compare the container's own `/etc/os-release` with the node's at `/host/etc/os-release`.
 
 ```bash
+./context-check.sh || { echo "guard failed — stopping"; exit 1; }
+
 echo "== container image OS =="
 kubectl exec escape -- cat /etc/os-release | grep -E '^(NAME|PRETTY_NAME)='
 
@@ -532,12 +558,18 @@ if you do **one** thing, label your namespaces `restricted`.
 
 ```bash
 # scoped cleanup — everything this lab made is labelled app=s25
+./context-check.sh || { echo "guard failed — stopping"; exit 1; }
 kubectl delete pod -l app=s25 -n "$NS" --ignore-not-found
+
+./context-check.sh || { echo "guard failed — stopping"; exit 1; }
 kubectl delete namespace "$NS" --ignore-not-found
-rm -f context-check.sh pod-escape.yaml pod-hardened.yaml
 
 # PANIC RESET (recommended) — the cluster was disposable; throw the whole thing away:
-kind delete cluster --name escape-lab
+./context-check.sh || { echo "guard failed — stopping"; exit 1; }
+kind delete cluster --name "$WORKSHOP_CLUSTER_NAME"
+
+# Remove the guard only after every destructive command it protects is finished.
+rm -f context-check.sh pod-escape.yaml pod-hardened.yaml
 ```
 
 > **Panic option: delete the cluster.** Because the escape Pod had the host root mounted read-write,
@@ -577,7 +609,8 @@ Under **`warn`**, the API server returns the *same* six-violation list as a **`W
 **creates the Pod anyway** (there's the escape running again). `warn` is discovery, not a block;
 only **`enforce`** rejects. That's the real-world migration play: `warn` (and `audit`) to find
 offenders across a namespace, fix them, **then** `enforce`. Because this namespace only `warn`s, the
-escape Pod runs — so tear it down: `kubectl delete namespace s25-warn`.
+escape Pod runs — so tear it down with a fresh guard check:
+`./context-check.sh && kubectl delete namespace s25-warn`.
 </details>
 
 > **⚠️ Why the stretch stays kind-only too.** `warn` **creates** the Pod — so this scratch namespace

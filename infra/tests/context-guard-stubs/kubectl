@@ -25,7 +25,15 @@ case "$*" in
     printf '%s' "${MOCK_NODE_IDENTITY-}"
     ;;
   "--namespace kube-system get configmap platformrelay-workshop-ownership -o jsonpath={.data.cluster}")
-    [ "${MOCK_OWNERSHIP_EXIT:-0}" = 0 ] || exit "$MOCK_OWNERSHIP_EXIT"
+    if [ "${MOCK_OWNERSHIP_EXIT:-0}" != 0 ]; then
+      case "${MOCK_OWNERSHIP_ERROR_KIND:-notfound}" in
+        notfound) printf '%s\n' "${MOCK_OWNERSHIP_ERROR-}" >&2 ;;
+        forbidden) printf '%s\n' 'Error from server (Forbidden): configmaps is forbidden' >&2 ;;
+        timeout) printf '%s\n' 'Unable to connect to the server: context deadline exceeded' >&2 ;;
+        tls) printf '%s\n' 'Unable to connect to the server: x509: certificate signed by unknown authority' >&2 ;;
+      esac
+      exit "$MOCK_OWNERSHIP_EXIT"
+    fi
     printf '%s' "${MOCK_OWNERSHIP_CLUSTER-}"
     ;;
   "create configmap platformrelay-workshop-ownership --namespace kube-system --from-literal=cluster="*)

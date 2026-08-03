@@ -17,10 +17,12 @@ setup() {
   export MOCK_KUBECTL_NAMESPACE="escape"
   export MOCK_KIND_CLUSTERS="workshop"
   export MOCK_KIND_NODES="workshop-control-plane"
+  export MOCK_KIND_SERVER="https://127.0.0.1:6443"
   export MOCK_NODE_IDENTITY="workshop-control-plane|kind://docker/workshop/workshop-control-plane"
   export MOCK_OWNERSHIP_CLUSTER="workshop"
+  export MOCK_OWNERSHIP_ERROR='Error from server (NotFound): configmaps "platformrelay-workshop-ownership" not found'
   unset MOCK_CURRENT_CONTEXT_EXIT MOCK_CONFIG_VIEW_EXIT MOCK_KIND_EXIT
-  unset MOCK_NODE_EXIT MOCK_OWNERSHIP_EXIT
+  unset MOCK_NODE_EXIT MOCK_OWNERSHIP_EXIT MOCK_OWNERSHIP_ERROR_KIND
 }
 
 write_guarded_step() {
@@ -74,6 +76,16 @@ assert_guarded_apply_refused() {
 
 @test "deceptive kind-* context pointing to a non-kind server fails closed" {
   export MOCK_KUBECTL_SERVER="https://prod.example.invalid:6443"
+  assert_guarded_apply_refused
+}
+
+@test "deceptive kind-* context on another loopback API server fails closed" {
+  export MOCK_KUBECTL_SERVER="https://127.0.0.1:7443"
+  assert_guarded_apply_refused
+}
+
+@test "wrong lab namespace fails closed before a guarded mutation" {
+  export MOCK_KUBECTL_NAMESPACE="default"
   assert_guarded_apply_refused
 }
 
@@ -147,18 +159,87 @@ assert_guarded_apply_refused() {
 
 @test "claim mode safely establishes a missing marker after identity checks" {
   export MOCK_OWNERSHIP_EXIT=1
+  export MOCK_KUBECTL_NAMESPACE="default"
   run "$ROOT/infra/context-guard.sh" --claim
   [ "$status" -eq 0 ]
   grep -q '^kubectl create configmap platformrelay-workshop-ownership --namespace kube-system --from-literal=cluster=workshop$' "$MOCK_LOG"
   echo "$output" | grep -q "Ownership marker created"
 }
 
+@test "claim mode fails closed on marker Forbidden without creating anything" {
+  export MOCK_OWNERSHIP_EXIT=1
+  export MOCK_OWNERSHIP_ERROR_KIND=forbidden
+  export MOCK_KUBECTL_NAMESPACE="default"
+  run "$ROOT/infra/context-guard.sh" --claim
+  [ "$status" -ne 0 ]
+  echo "$output" | grep -q "REFUSING"
+  ! grep -q '^kubectl create ' "$MOCK_LOG"
+}
+
+@test "claim mode fails closed on marker timeout without creating anything" {
+  export MOCK_OWNERSHIP_EXIT=1
+  export MOCK_OWNERSHIP_ERROR_KIND=timeout
+  export MOCK_KUBECTL_NAMESPACE="default"
+  run "$ROOT/infra/context-guard.sh" --claim
+  [ "$status" -ne 0 ]
+  echo "$output" | grep -q "REFUSING"
+  ! grep -q '^kubectl create ' "$MOCK_LOG"
+}
+
+@test "claim mode fails closed on marker TLS error without creating anything" {
+  export MOCK_OWNERSHIP_EXIT=1
+  export MOCK_OWNERSHIP_ERROR_KIND=tls
+  export MOCK_KUBECTL_NAMESPACE="default"
+  run "$ROOT/infra/context-guard.sh" --claim
+  [ "$status" -ne 0 ]
+  echo "$output" | grep -q "REFUSING"
+  ! grep -q '^kubectl create ' "$MOCK_LOG"
+}
+
 @test "claim mode never creates a marker when provider identity is wrong" {
   export MOCK_OWNERSHIP_EXIT=1
+  export MOCK_KUBECTL_NAMESPACE="default"
   export MOCK_NODE_IDENTITY="workshop-control-plane|gce://project/zone/workshop-control-plane"
   run "$ROOT/infra/context-guard.sh" --claim
   [ "$status" -ne 0 ]
   ! grep -q '^kubectl create ' "$MOCK_LOG"
+}
+
+@test "S25 host-read command block starts with an independent guard before escape execs" {
+  lab="$ROOT/labs/day-3/25-pod-escape.md"
+  run awk '
+    /\*\*Task:\*\* prove you.re reading/ { task=1 }
+    task && /^```bash$/ { code=1; next }
+    code && /^```$/ { exit bad || execs == 0 }
+    code && /^\.\/context-check\.sh / { armed=1; next }
+    code && /^kubectl exec escape / {
+      execs++
+      if (!armed) bad=1
+    }
+  ' "$lab"
+  [ "$status" -eq 0 ]
+}
+
+@test "S25 cleanup re-guards each destructive delete before removing the guard" {
+  lab="$ROOT/labs/day-3/25-pod-escape.md"
+  run awk '
+    /^## Cleanup \/ panic reset/ { cleanup=1 }
+    cleanup && /^```bash$/ { code=1; next }
+    code && /^```$/ { exit bad || deletes != 3 || !removed }
+    code && /^\.\/context-check\.sh / { armed=1; next }
+    code && /^(kubectl delete pod|kubectl delete namespace|kind delete cluster)/ {
+      deletes++
+      if (!armed || removed) bad=1
+      armed=0
+      if ($1 == "kind") cluster_deleted=1
+      next
+    }
+    code && /^rm -f context-check\.sh/ {
+      if (!cluster_deleted) bad=1
+      removed=1
+    }
+  ' "$lab"
+  [ "$status" -eq 0 ]
 }
 
 @test "S25 inline guard is a non-empty byte-identical copy of the canonical guard" {

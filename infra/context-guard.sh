@@ -24,6 +24,9 @@ printf '%s\n' "$expected_cluster" | LC_ALL=C grep -Eq '^[a-z0-9]([-a-z0-9.]*[a-z
   refuse "WORKSHOP_CLUSTER_NAME is not a safe kind cluster name"
 expected_context="kind-${expected_cluster}"
 expected_node="${expected_cluster}-control-plane"
+expected_namespace="${WORKSHOP_LAB_NAMESPACE:-escape}"
+printf '%s\n' "$expected_namespace" | LC_ALL=C grep -Eq '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$' || \
+  refuse "WORKSHOP_LAB_NAMESPACE is not a safe Kubernetes namespace name"
 
 if ! context="$(kubectl config current-context 2>/dev/null)" || [ -z "$context" ]; then
   refuse "kubectl has no readable current context"
@@ -47,6 +50,13 @@ printf '%s\n' "$server" | LC_ALL=C grep -Eq '^https://(127\.0\.0\.1|localhost|\[
   refuse "API server is not a loopback kind endpoint"
 printf '%s\n' "$namespace" | LC_ALL=C grep -Eq '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$' || \
   refuse "current namespace is not a safe Kubernetes namespace name"
+if [ "$claim_marker" = true ]; then
+  [ "$namespace" = default ] || \
+    refuse "marker claim must start in the 'default' namespace"
+else
+  [ "$namespace" = "$expected_namespace" ] || \
+    refuse "current namespace must be exactly '$expected_namespace'"
+fi
 
 echo "Resolved Kubernetes target:"
 echo "  context: $context"
@@ -59,6 +69,14 @@ if ! local_clusters="$(kind get clusters 2>/dev/null)"; then
 fi
 printf '%s\n' "$local_clusters" | grep -Fxq "$expected_cluster" || \
   refuse "'$expected_cluster' is not a cluster owned by the local kind provider"
+
+if ! kind_kubeconfig="$(kind get kubeconfig --name "$expected_cluster" 2>/dev/null)"; then
+  refuse "kind cannot read the canonical kubeconfig for '$expected_cluster'"
+fi
+kind_server="$(printf '%s\n' "$kind_kubeconfig" | awk '$1 == "server:" { print $2; exit }')"
+[ -n "$kind_server" ] || refuse "kind kubeconfig has no API server"
+[ "$server" = "$kind_server" ] || \
+  refuse "current API server does not match kind's '$expected_cluster' kubeconfig"
 
 if ! kind_nodes="$(kind get nodes --name "$expected_cluster" 2>/dev/null)"; then
   refuse "kind cannot resolve nodes for '$expected_cluster'"
@@ -74,10 +92,14 @@ case "$node_identity" in
   *) refuse "node metadata does not identify the expected kind provider/cluster" ;;
 esac
 
-if ownership_cluster="$(kubectl --namespace kube-system get configmap "$marker_name" -o 'jsonpath={.data.cluster}' 2>/dev/null)"; then
+if ownership_cluster="$(kubectl --namespace kube-system get configmap "$marker_name" -o 'jsonpath={.data.cluster}' 2>&1)"; then
   [ "$ownership_cluster" = "$expected_cluster" ] || \
     refuse "ownership marker belongs to '$ownership_cluster', not '$expected_cluster'"
 else
+  case "$ownership_cluster" in
+    *"Error from server (NotFound):"*"$marker_name"*" not found") ;;
+    *) refuse "ownership marker lookup failed without an explicit NotFound response" ;;
+  esac
   [ "$claim_marker" = true ] || \
     refuse "workshop ownership marker is missing; recreate the cluster or run this guard once with --claim"
   kubectl create configmap "$marker_name" \

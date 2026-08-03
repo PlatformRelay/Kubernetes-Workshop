@@ -7,4 +7,11 @@ echo "kind $*" >> "${MOCK_LOG:?stub requires MOCK_LOG}"
 case "$*" in
   "get clusters") printf '%s\n' "${MOCK_KIND_CLUSTERS-}" ;;
   "get nodes --name "*) printf '%s\n' "${MOCK_KIND_NODES-}" ;;
+  "get kubeconfig --name "*)
+    printf '%s\n' \
+      'apiVersion: v1' \
+      'clusters:' \
+      '- cluster:' \
+      "    server: ${MOCK_KIND_SERVER-}"
+    ;;
 esac
