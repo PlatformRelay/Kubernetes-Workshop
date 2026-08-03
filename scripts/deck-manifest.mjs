@@ -51,9 +51,9 @@ export const generatedDecks = [
   { file: 'slides-day-1.md', title: 'Day 1', description: 'Foundations and the core red line', select: (s) => s.day === 1 && s.canonical },
   { file: 'slides-day-2.md', title: 'Day 2', description: 'Modern routing and running workloads well', select: (s) => s.day === 2 && s.canonical },
   { file: 'slides-day-3.md', title: 'Day 3', description: 'Security, delivery, operators, and best practices', select: (s) => s.day === 3 && s.canonical },
-  { file: 'slides-optional.md', title: 'Optional / Appendix', description: 'Authored on-ramp and add-backs, plus advanced and deferred material', select: (s) => !s.canonical },
+  { file: 'slides-optional.md', title: 'Optional / Appendix', description: 'On-ramp, add-backs, and advanced material', select: (s) => !s.canonical },
   { file: 'slides-3day.md', title: '3-day compatibility cut', description: 'The three canonical days in one compatibility deck', select: (s) => s.canonical },
-  { file: 'slides.md', title: 'Content superset', description: 'Compatibility deck containing every section source, including deferred stubs', select: () => true },
+  { file: 'slides.md', title: 'Content superset', description: 'Compatibility deck containing every section source', select: () => true },
 ]
 
 export function sectionPath(section) {
@@ -266,9 +266,24 @@ export function validateStatusClaims(manifest, documents) {
       const reverse = new RegExp(`deferred[\\s\\S]{0,240}${section.id}`, 'i')
       if (!forward.test(markdown) && !reverse.test(markdown))
         throw new Error(`${path} must identify ${section.id} as deferred`)
-      const positiveClaim = new RegExp(String.raw`${section.id}[^\n.]{0,80}\b(?:is|remains)\s+(?:fully\s+)?(?:authored|runnable|schedulable)\b`, 'i')
-      if (positiveClaim.test(markdown))
-        throw new Error(`${section.id} status contradiction in ${path}: deferred but claimed authored/runnable/schedulable`)
+      const blocks = markdown.split(/\n\s*\n/)
+      const statements = blocks.flatMap((block) => block.startsWith('|')
+        ? block.split('\n')
+        : block.replaceAll('\n', ' ').split(/(?<=[.!?])\s+/))
+      for (const statement of statements.filter((item) => item.includes(section.id))) {
+        const withoutNegations = statement
+          .replace(/[*_>`#]/g, ' ')
+          .replace(/\b\d+\s+of\s+\d+\s+sections are fully authored\b/gi, '')
+          .replace(/\bnot(?:\s+\w+){0,3}\s+(?:fully\s+)?(?:authored|runnable|schedulable)\b/gi, '')
+          .replace(/\b(?:cannot|can't|must not|should not)\b[^.;]{0,60}\b(?:schedule|scheduled)\b/gi, '')
+          .replace(/\bunauthored\b/gi, '')
+        const positiveClaim = /\bfully authored\b|\brunnable\b|\bschedulable\b|\bcan\s+be\s+scheduled\b|\bis(?:\s*,[^,]+,)?\s+authored\b/i
+        if (positiveClaim.test(withoutNegations)) {
+          throw new Error(
+            `${section.id} status contradiction in ${path}: deferred but claimed authored/runnable/schedulable`,
+          )
+        }
+      }
     }
   }
   const matrix = documents.get('docs/validation-matrix.md') ?? ''
@@ -306,9 +321,13 @@ export function renderDeck(selected, { title, description, generated = true } = 
     : ''
   const imports = selected.map((section) => `---\n# ${section.id} · ${section.title} · ${section.tier} · Day ${section.day} · ${section.status}\nsrc: ${sectionPath(section)}\n---`).join('\n\n')
   const deferred = selected.filter((section) => section.status === 'deferred').map((section) => section.id)
+  if (deferred.length && /\b(?:all|every|fully)\b[^.]{0,40}\bauthored\b/i.test(description))
+    throw new Error('Deck description contradiction: deferred selection says fully authored')
+  if (!deferred.length && /\b(?:deferred|stub)\b/i.test(description))
+    throw new Error('Deck description contradiction: authored selection says deferred')
   const statusNotice = deferred.length
     ? `\n> **Status:** ${deferred.join(', ')} ${deferred.length === 1 ? 'is' : 'are'} deferred and not schedulable.\n`
-    : ''
+    : '\n> **Status:** All selected sections are authored.\n'
   return `---\ntheme: ./theme\ntitle: Kubernetes Practitioner Workshop — ${title}\ninfo: |\n  Open source, vendor-neutral Kubernetes workshop.\n  ${description}. Sections are imported from the shared section library.\nlayout: cover\n---\n${marker}\n# Kubernetes Practitioner Workshop\n\n${title} — ${description}.\n${statusNotice}\n${imports}\n`
 }
 

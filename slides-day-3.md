@@ -12,6 +12,8 @@ layout: cover
 
 Day 3 — Security, delivery, operators, and best practices.
 
+> **Status:** All selected sections are authored.
+
 ---
 # S17 · Pod security · core · Day 3 · authored
 src: ./pages/S17-pod-security/index.md

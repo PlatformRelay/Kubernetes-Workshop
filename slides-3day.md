@@ -12,6 +12,8 @@ layout: cover
 
 3-day compatibility cut — The three canonical days in one compatibility deck.
 
+> **Status:** All selected sections are authored.
+
 ---
 # S00 · Welcome & setup · core · Day 1 · authored
 src: ./pages/S00-welcome/index.md

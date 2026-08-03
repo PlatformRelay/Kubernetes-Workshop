@@ -12,6 +12,8 @@ layout: cover
 
 Day 1 — Foundations and the core red line.
 
+> **Status:** All selected sections are authored.
+
 ---
 # S00 · Welcome & setup · core · Day 1 · authored
 src: ./pages/S00-welcome/index.md

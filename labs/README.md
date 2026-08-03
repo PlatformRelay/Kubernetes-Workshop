@@ -162,7 +162,7 @@ Because the deck is a **superset** (more sections than fit in three days), some 
 outside the default 3-day cut (e.g. Jobs, HPA, RBAC). These are fully authored and
 runnable regardless — see the [syllabus](../docs/syllabus.md) for which sections a given
 delivery includes. One optional section, **S24 (kubebuilder)**, is a **deferred stub** —
-it needs a Go toolchain and is authored in a later milestone; see the
+it needs a Go toolchain and is planned for a later milestone; see the
 [facilitator guide](../docs/facilitator-guide.md).
 
 ## How to start

@@ -174,6 +174,9 @@ describe('deck manifest validation', () => {
       'S24 is fully authored.',
       'S24 is runnable today.',
       'S24 is schedulable as a hands-on lab.',
+      'Fully authored and runnable today: S24.',
+      'S24 can be scheduled as a hands-on lab.',
+      'S24 is, after the toolchain is installed, runnable.',
     ]) {
       const mutated = new Map(base)
       mutated.set('docs/facilitator-guide.md', `S24 is deferred. ${contradiction}`)
@@ -189,6 +192,37 @@ describe('deck manifest validation', () => {
       section('S24', { status: 'deferred' }),
     ], { title: 'Optional', description: 'Optional material' })
     assert.match(markdown, /S24.*deferred.*not schedulable/i)
+  })
+
+  it('derives deck status through deferred and authored transitions', () => {
+    const topic = section('S24', { status: 'deferred' })
+    const deferred = renderDeck([topic], { title: 'Optional', description: 'Advanced material' })
+    const authored = renderDeck(
+      [{ ...topic, status: 'authored' }],
+      { title: 'Optional', description: 'Advanced material' },
+    )
+
+    assert.match(deferred, /S24.*deferred.*not schedulable/i)
+    assert.doesNotMatch(deferred, /all selected sections are authored/i)
+    assert.match(authored, /all selected sections are authored/i)
+    assert.doesNotMatch(authored, /S24.*deferred/i)
+  })
+
+  it('rejects a supplied deck description that contradicts selected status', () => {
+    assert.throws(
+      () => renderDeck(
+        [section('S24', { status: 'deferred' })],
+        { title: 'Superset', description: 'Every section is fully authored' },
+      ),
+      /description.*deferred.*fully authored/i,
+    )
+    assert.throws(
+      () => renderDeck(
+        [section('S24', { status: 'authored' })],
+        { title: 'Superset', description: 'Includes deferred stubs' },
+      ),
+      /description.*authored.*deferred/i,
+    )
   })
 
   it('derives canonical totals and rejects timing drift and measured variants', () => {

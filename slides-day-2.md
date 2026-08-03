@@ -12,6 +12,8 @@ layout: cover
 
 Day 2 — Modern routing and running workloads well.
 
+> **Status:** All selected sections are authored.
+
 ---
 # S09 · Gateway API · recommended · Day 2 · authored
 src: ./pages/S09-gateway-api/index.md
