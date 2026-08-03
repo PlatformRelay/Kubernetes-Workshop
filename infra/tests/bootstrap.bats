@@ -98,19 +98,26 @@ run_workshop_in_pty() {
   # doctor can use those managed binaries.
   local host_bin="$BATS_TEST_TMPDIR/host-bin"
   local managed_bin="$BATS_TEST_TMPDIR/managed-bin"
-  mkdir -p "$host_bin" "$managed_bin"
+  local runner_bin="$BATS_TEST_TMPDIR/runner-bin"
+  mkdir -p "$host_bin" "$managed_bin" "$runner_bin"
   ln -s "$ROOT/infra/tests/stubs/docker" "$host_bin/docker"
   ln -s "$ROOT/infra/tests/stubs/podman" "$host_bin/podman"
   ln -s "$ROOT/infra/tests/stubs/mise" "$host_bin/mise"
   ln -s "$ROOT/infra/tests/stubs/kind" "$managed_bin/kind"
   ln -s "$ROOT/infra/tests/stubs/kubectl" "$managed_bin/kubectl"
+  # Match ubuntu-latest, which currently exposes an unmanaged kubectl globally.
+  ln -s "$ROOT/infra/tests/stubs/kubectl" "$runner_bin/kubectl"
 
-  export PATH="$host_bin:/usr/bin:/bin:/usr/sbin:/sbin"
+  export PATH="$runner_bin:$PATH"
+  [ "$(command -v kubectl)" = "$runner_bin/kubectl" ]
+  create_isolated_host_path "$host_bin" \
+    bash env sh dirname head uname grep nproc awk make rm
+  export PATH="$host_bin"
   export MOCK_MISE_EXEC_PATH="$managed_bin"
   export MOCK_REQUIRE_MISE_EXEC=1
   export MOCK_CLUSTER_EXISTS=0
-  ! command -v kind
-  ! command -v kubectl
+  [ -z "$(command -v kind 2>/dev/null || true)" ]
+  [ -z "$(command -v kubectl 2>/dev/null || true)" ]
 
   run "$ROOT/workshop" up
 
@@ -134,12 +141,14 @@ run_workshop_in_pty() {
   ln -s "$ROOT/infra/tests/stubs/kind" "$managed_bin/kind"
   ln -s "$ROOT/infra/tests/stubs/kubectl" "$managed_bin/kubectl"
 
+  create_isolated_host_path "$host_bin" \
+    bash env sh dirname head uname grep nproc awk make rm
   export HOME="$BATS_TEST_TMPDIR/home"
-  export PATH="$host_bin:/usr/bin:/bin:/usr/sbin:/sbin"
+  export PATH="$host_bin"
   export MOCK_MISE_EXEC_PATH="$managed_bin"
   export MOCK_REQUIRE_MISE_EXEC=1
   export MOCK_CLUSTER_EXISTS=0
-  ! command -v mise
+  [ -z "$(command -v mise 2>/dev/null || true)" ]
 
   run "$ROOT/workshop" up
 

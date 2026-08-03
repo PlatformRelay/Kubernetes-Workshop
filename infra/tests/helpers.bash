@@ -22,3 +22,17 @@ setup_mocks() {
   # shellcheck source=../versions.env disable=SC1091
   . "$ROOT/infra/versions.env"
 }
+
+# Build a minimal host PATH from explicitly selected real commands. Tests that
+# model a fresh machine must not inherit runner-provided kind/kubectl binaries.
+create_isolated_host_path() {
+  local target="$1" command_path name
+  shift
+  mkdir -p "$target"
+  for name in "$@"; do
+    command_path="$(command -v "$name" 2>/dev/null || true)"
+    if [ -n "$command_path" ]; then
+      ln -s "$command_path" "$target/$name"
+    fi
+  done
+}
