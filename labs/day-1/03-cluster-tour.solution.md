@@ -284,7 +284,7 @@ decided *which node* the Pod's `spec` runs on?
 
 ---
 
-## Expected state
+## Expected state / output
 
 - `kubectl get nodes -o wide` shows a `CONTAINER-RUNTIME` of `containerd`/`cri-o` —
   the CRI stack from S01 (or a `Forbidden` you can explain, on a locked-down shared
@@ -299,6 +299,12 @@ decided *which node* the Pod's `spec` runs on?
 
 ---
 
+## Explanation
+
+Kubernetes exposes its resource schema through discovery and `kubectl explain`. Cluster
+scope and namespace scope are authorization boundaries, while `spec` and `status` expose
+the desired/observed split that controllers continuously reconcile.
+
 ## Troubleshooting and recovery
 
 A Forbidden response on nodes or `kube-system` is expected on a
@@ -307,17 +313,25 @@ If the context is wrong, stop and return to Lab 00 rather than changing another 
 
 ## Challenge solution
 
-`explain` has a `--recursive` mode that prints the whole tree of a kind — handy for
-discovering fields you didn't know existed.
+### Commands / manifest
 
 ```bash
-kubectl explain pod.spec --recursive | head -40
+kubectl explain pod.spec --recursive | grep -i -E 'readiness|liveness'
+kubectl explain pod.spec.containers.readinessProbe
+kubectl explain pod.spec.containers.livenessProbe
 ```
 
-<details><summary>What you're looking at</summary>
+### Expected state / output
 
-The full nested field tree of `pod.spec` with no descriptions — a fast map of
-everything a Pod spec *can* contain. Pipe it to `grep` to hunt a field, e.g.
-`kubectl explain pod.spec --recursive | grep -i probe` to preview the health-probe
-fields you'll meet in S14.
-</details>
+The recursive search reveals both probe fields below `containers`; the focused commands identify
+each as an object and show its supported child fields.
+
+### Explanation
+
+Recursive output is a discovery map, while a focused `kubectl explain` validates the exact API path
+and schema. This is safer than guessing field names from memory or an outdated example.
+
+### Hints
+
+Pipe recursive output through `grep -i -E 'readiness|liveness'`, then confirm each result with a
+focused `kubectl explain` command.

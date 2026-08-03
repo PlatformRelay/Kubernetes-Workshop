@@ -343,7 +343,7 @@ nothing from the builder except the files you explicitly copy.
 
 ---
 
-## Expected state
+## Expected state / output
 
 - `$ENGINE build` produces `demo:1`; the container runs and `curl localhost:8080` answers.
 - The process runs as **UID 10001**, confirmed inside (`id`), from the host (`top`), and in the
@@ -355,6 +355,13 @@ nothing from the builder except the files you explicitly copy.
 
 ---
 
+## Explanation
+
+The lab separates image identity, runtime identity, and build-cache behaviour. Tags are
+movable names, while an image digest identifies exact bytes. A multi-stage build discards
+the compiler and source, and Docker reuses only the layers whose inputs and preceding
+layers remain unchanged.
+
 ## Troubleshooting and recovery
 
 If a port is busy, remove only this lab's named container with
@@ -363,12 +370,7 @@ If a port is busy, remove only this lab's named container with
 
 ## Challenge solution
 
-Prove the source really is baked into one layer: rebuild changing **only** `ENV PORT`, and confirm
-the expensive `go build` layer is reused.
-
-<details><summary>Solution / expected output</summary>
-
-Edit just the `ENV` line so it sits **after** the build, rebuild, and watch:
+### Commands / manifest
 
 ```console
 $ sed -i.bak 's/ENV PORT=8080/ENV PORT=9090/' Dockerfile && rm -f Dockerfile.bak
@@ -378,7 +380,18 @@ $ $ENGINE build -t demo:3 .
  => [5/5] ...ENV/USER re-applied
 ```
 
-Because `COPY` and `RUN go build` didn't change, their cached layers are reused — only the cheap
-metadata below rebuilds. **Layer ordering is a performance tool:** put the slow, stable steps high
-and the fast, churning ones low. (Reset with `git checkout` or re-run Step 1's heredoc.)
-</details>
+### Expected state / output
+
+The second build reports the source `COPY` and expensive `RUN go build` steps as `CACHED`. Only
+the cheap metadata layer below them changes. Restore the original Dockerfile with the Step 1
+heredoc after recording the result.
+
+### Explanation
+
+Docker invalidates a layer and every layer below it. Moving frequently changed metadata below the
+slow build step preserves the build cache without changing the resulting application binary.
+
+### Hints
+
+Move `ENV PORT` below `RUN go build`, then compare the second build's `COPY` and `RUN` lines with
+the first build.

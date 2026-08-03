@@ -205,7 +205,7 @@ node fail) and it is simply gone. That is exactly the problem a **Deployment** s
 is Lab 06. Keep your `pod.yaml`; you extend it next.
 </details>
 
-## Expected state
+## Expected state / output
 
 - `web` goes `Pending → ContainerCreating → Running` and reports `READY 1/1`.
 - `describe` and `logs` work against the running Pod; `exec … sh` fails (distroless — no
@@ -213,6 +213,12 @@ is Lab 06. Keep your `pod.yaml`; you extend it next.
 - The bad-tag image sits in **`ImagePullBackOff`**, and its `Events` name the missing tag —
   identically on kind and the shared cluster.
 - Deleting the Pod does **not** bring it back — no controller owns it.
+
+## Explanation
+
+A Pod groups one or more containers under one lifecycle identity. The kubelet can restart
+a failed container inside that Pod, but only a higher-level controller creates a replacement
+Pod after deletion. Events explain pull and scheduling failures that the phase alone hides.
 
 ## Troubleshooting and recovery
 
@@ -222,30 +228,32 @@ other participants' workloads.
 
 ## Challenge solution
 
-A bare Pod can restart its *container* without a controller. Prove it: run a container
-that exits on purpose and watch the `RESTARTS` counter, given the default
-`restartPolicy: Always`.
+### Commands / manifest
 
 ```bash
-kubectl run crash --image=busybox:1.37 -- sh -c 'sleep 10; exit 1'
-kubectl get pod crash -w          # watch RESTARTS climb, Pod stays
+kubectl run crash -n "$NS" --image=busybox:1.37 -- sh -c 'sleep 10; exit 1'
+UID_BEFORE=$(kubectl get pod crash -n "$NS" -o jsonpath='{.metadata.uid}')
+until [ "$(kubectl get pod crash -n "$NS" -o jsonpath='{.status.containerStatuses[0].restartCount}')" -ge 1 ]; do
+  sleep 2
+done
+UID_AFTER=$(kubectl get pod crash -n "$NS" -o jsonpath='{.metadata.uid}')
+test "$UID_BEFORE" = "$UID_AFTER"
+kubectl get pod crash -n "$NS"
+kubectl delete pod crash -n "$NS"
+kubectl get pod crash -n "$NS" --ignore-not-found
 ```
 
-<details><summary>Solution / what you're looking at</summary>
+### Expected state / output
 
-```console
-$ kubectl get pod crash -w
-NAME    READY   STATUS    RESTARTS     AGE
-crash   1/1     Running   0            5s
-crash   0/1     Error     0            12s
-crash   1/1     Running   1 (2s ago)   14s
-crash   0/1     Error     1 (12s ago)  24s
-```
+The restart count reaches at least one while both captured UIDs remain identical. After deletion,
+the final `get` prints nothing: no controller recreates this bare Pod.
 
-The **container** restarted in place (`RESTARTS` climbs) because a Pod's default
-`restartPolicy` is `Always` — but it is still the *same Pod object*, and once you delete
-that Pod nothing recreates it. Container restart ≠ Pod recreation; only a controller does
-the latter. (Left long enough, the kubelet backs off between restarts —
-`CrashLoopBackOff`, the sibling of the `ImagePullBackOff` you met in Step 4.) Clean up:
-`kubectl delete pod crash -n "$NS"`, then use the reset in the participant lab.
-</details>
+### Explanation
+
+The kubelet restarts a failed container according to the Pod's `restartPolicy`, retaining the Pod
+object and UID. Pod replacement requires a controller such as a Deployment or Job.
+
+### Hints
+
+Capture `metadata.uid` before and after the restart; a controller changes Pod objects, while the
+kubelet restarts containers inside one Pod.

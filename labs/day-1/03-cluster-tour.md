@@ -157,6 +157,14 @@ decided *which node* the Pod's `spec` runs on?
 `explain` has a `--recursive` mode that prints the whole tree of a kind — handy for
 discovering fields you didn't know existed.
 
+**Difficulty:** Beginner
+
+**Success criteria:** Locate the readiness and liveness probe fields without using web
+search, name their full field paths, and explain where they sit below `pod.spec`.
+
+**Hints:** Pipe recursive output through `grep -i -E 'readiness|liveness'`, then confirm
+each result with a focused `kubectl explain` command.
+
 ```bash
 kubectl explain pod.spec --recursive | head -40
 ```

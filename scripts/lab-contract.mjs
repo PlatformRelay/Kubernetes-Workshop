@@ -28,10 +28,56 @@ const REQUIRED_LAB_HEADINGS = [
 
 const REQUIRED_SOLUTION_HEADINGS = [
   'Guided solutions',
-  'Expected state',
+  'Expected state / output',
+  'Explanation',
   'Troubleshooting and recovery',
   'Challenge solution',
 ];
+
+function section(markdown, heading, level = 2) {
+  const marker = `${'#'.repeat(level)} ${heading}`;
+  const body = [];
+  let collecting = false;
+  let inFence = false;
+  for (const line of markdown.split('\n')) {
+    if (/^\s*(```|~~~)/.test(line)) {
+      if (collecting) body.push(line);
+      inFence = !inFence;
+      continue;
+    }
+    if (!inFence && line.trim() === marker) {
+      collecting = true;
+      continue;
+    }
+    if (collecting && !inFence) {
+      const next = line.match(/^(#{1,6})\s+/);
+      if (next && next[1].length <= level) break;
+    }
+    if (collecting) body.push(line);
+  }
+  return body.join('\n').trim();
+}
+
+function field(sectionBody, name, nextName) {
+  const end = nextName
+    ? `(?=\\n\\*\\*${nextName}:\\*\\*)`
+    : '(?=\\n\\s*\\n|$)';
+  const match = sectionBody.match(new RegExp(`\\*\\*${name}:\\*\\*\\s*([\\s\\S]*?)${end}`, 'i'));
+  return match?.[1].trim() ?? '';
+}
+
+function normalized(markdown) {
+  return markdown
+    .replace(/[`*_#>]/g, '')
+    .replace(/-/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
+
+function hasExecutableFence(markdown) {
+  return /```(?:bash|sh|yaml|console)\s+[\s\S]*?```/.test(markdown);
+}
 
 function headings(markdown) {
   const result = new Map();
@@ -123,6 +169,17 @@ export function auditLab(labPath) {
 
   errors.push(...unsafeCommands(markdown).map((error) => `${display}: ${error}`));
 
+  const challenge = section(markdown, 'Challenge');
+  const difficulty = field(challenge, 'Difficulty', 'Success criteria');
+  const successCriteria = field(challenge, 'Success criteria', 'Hints');
+  const hints = field(challenge, 'Hints');
+  if (!difficulty) errors.push(`${display}: missing Challenge Difficulty`);
+  if (!successCriteria) errors.push(`${display}: missing Challenge Success criteria`);
+  if (!hints) errors.push(`${display}: missing Challenge Hints`);
+  if (!/diagnos|compare|predict|explain|adapt|change|without|prove|investigate|measure|infer|design|translate/i.test(challenge)) {
+    errors.push(`${display}: Challenge must require transfer or diagnosis`);
+  }
+
   const solutionPath = absoluteLab.replace(/\.md$/, '.solution.md');
   const solutionName = solutionPath.split('/').at(-1);
   const links = solutionLinks(markdown, solutionName);
@@ -151,6 +208,41 @@ export function auditLab(labPath) {
   }
   if (links.includes('challenge-solution') && !solutionSlugs.has('challenge-solution')) {
     errors.push(`${display}: dangling challenge solution link`);
+  }
+
+  const guidedSolution = section(solution, 'Guided solutions');
+  const expectedState = section(solution, 'Expected state / output');
+  const explanation = section(solution, 'Explanation');
+  const troubleshooting = section(solution, 'Troubleshooting and recovery');
+  const challengeSolution = section(solution, 'Challenge solution');
+  if (!hasExecutableFence(guidedSolution)) {
+    errors.push(`${relative(REPO_ROOT, solutionPath)}: Guided solutions need exact commands or a manifest`);
+  }
+  if (normalized(expectedState).length < 20) {
+    errors.push(`${relative(REPO_ROOT, solutionPath)}: Expected state / output is empty`);
+  }
+  if (normalized(explanation).length < 20) {
+    errors.push(`${relative(REPO_ROOT, solutionPath)}: Explanation is empty`);
+  }
+  if (normalized(troubleshooting).length < 20 || !/`[^`]+`|```/.test(troubleshooting)) {
+    errors.push(`${relative(REPO_ROOT, solutionPath)}: Troubleshooting needs likely-failure recovery commands`);
+  }
+
+  const challengeCommands = section(challengeSolution, 'Commands / manifest', 3);
+  const challengeExpected = section(challengeSolution, 'Expected state / output', 3);
+  const challengeExplanation = section(challengeSolution, 'Explanation', 3);
+  const challengeHints = section(challengeSolution, 'Hints', 3);
+  if (!hasExecutableFence(challengeCommands)) {
+    errors.push(`${relative(REPO_ROOT, solutionPath)}: Challenge solution needs exact commands or a manifest`);
+  }
+  if (normalized(challengeExpected).length < 20) {
+    errors.push(`${relative(REPO_ROOT, solutionPath)}: Challenge expected state / output is empty`);
+  }
+  if (normalized(challengeExplanation).length < 20) {
+    errors.push(`${relative(REPO_ROOT, solutionPath)}: Challenge explanation is empty`);
+  }
+  if (!hints || !normalized(challengeHints).includes(normalized(hints))) {
+    errors.push(`${relative(REPO_ROOT, solutionPath)}: Challenge hints do not match participant hints`);
   }
 
   return errors;
@@ -202,6 +294,42 @@ export function auditContractDocumentation(repoRoot = REPO_ROOT) {
     .find((line) => line.includes('add-on-heavy labs'));
   if (pendingAddons?.includes('S08')) {
     errors.push('docs/facilitator-guide.md: S08 is still listed as pending live rehearsal');
+  }
+
+  return errors;
+}
+
+export function auditDayOneCommandTruth(repoRoot = REPO_ROOT) {
+  const errors = [];
+  const read = (path) => readFileSync(resolve(repoRoot, path), 'utf8');
+  const lab02 = read('labs/day-1/02-container-security.md');
+  const lab07 = read('labs/day-1/07-service.md');
+  const solution07 = read('labs/day-1/07-service.solution.md');
+  const lab08 = read('labs/day-1/08-ingress.md');
+
+  const verify02 = section(lab02, 'Verify');
+  if (!/save demo:hardened[^\n]*\|\s*tar -x/.test(verify02) || !verify02.includes('gzip -dc')) {
+    errors.push('Lab 02: final secret absence check must extract and inspect compressed layers');
+  }
+  if (/grep\s+-aRq[^\n]*hardened\.tar/.test(verify02)) {
+    errors.push('Lab 02: final secret absence check must not grep only the outer archive');
+  }
+
+  if (!lab07.includes('sleep 3600') || !solution07.includes('sleep 3600')) {
+    errors.push('Lab 07: diagnostic client must remain alive for the complete lab');
+  }
+  if (!section(lab07, 'Cleanup / reset').includes('kubectl delete pod tmp')) {
+    errors.push('Lab 07: cleanup must delete the named diagnostic client');
+  }
+
+  for (const token of ['export LAB_ENV=', 'export WEB_HOST=', 'export WEB2_HOST=', 'host: ${WEB_HOST}', 'host: ${WEB2_HOST}']) {
+    if (!lab08.includes(token)) errors.push(`Lab 08: missing deterministic environment token: ${token}`);
+  }
+  if (!lab08.includes('curl -fsS "http://$WEB_HOST/"')) {
+    errors.push('Lab 08: shared-cluster path needs an exact DNS-host curl command');
+  }
+  if (lab08.includes('if kubectl get secret web-tls')) {
+    errors.push('Lab 08: TLS verification must branch on LAB_ENV, not Secret existence');
   }
 
   return errors;

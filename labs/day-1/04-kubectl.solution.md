@@ -248,7 +248,7 @@ to see exactly what would change before you commit.
 
 ---
 
-## Expected state
+## Expected state / output
 
 - `explain` answers schema questions (defaults, required fields, API group)
   authoritatively — no web search needed.
@@ -260,6 +260,12 @@ to see exactly what would change before you commit.
 
 ---
 
+## Explanation
+
+Client dry-run renders locally; server dry-run exercises API validation and admission
+without persistence. JSONPath and label selectors query structured API data directly, and
+`kubectl diff` previews the server-rendered delta without applying it.
+
 ## Troubleshooting and recovery
 
 If server dry-run is Forbidden, use the namespace-scoped command from
@@ -268,18 +274,28 @@ the lab intentionally creates no cluster object.
 
 ## Challenge solution
 
-`kubectl diff` previews a change against the live cluster without applying it. Generate a
-manifest, tweak it, and diff — all without creating anything permanent.
+### Commands / manifest
 
 ```bash
 kubectl create deployment web --image=ghcr.io/platformrelay/workshop-web:v1 --dry-run=client -o yaml > web.yaml
-kubectl diff -f web.yaml            # shows it would be CREATED (all new lines)
+kubectl diff -f web.yaml || test $? -eq 1
+sed -i.bak 's/replicas: 1/replicas: 3/' web.yaml && rm -f web.yaml.bak
+kubectl diff -f web.yaml || test $? -eq 1
+kubectl get deployment web --ignore-not-found
+rm -f web.yaml
 ```
 
-<details><summary>What you're looking at</summary>
+### Expected state / output
 
-`kubectl diff` renders the object server-side and shows the delta vs what's live. For a
-brand-new object every line is an addition. Change `replicas: 1` to `replicas: 3` in
-`web.yaml` and diff again to see a targeted change preview — the safe habit before any
-real `apply`. (Nothing is created; `diff` never writes.) Clean up with `rm -f web.yaml`.
-</details>
+Both diff commands show additions for a not-yet-created Deployment, and the second shows
+`replicas: 3`. The final `get` prints nothing, proving that no object was persisted.
+
+### Explanation
+
+`kubectl diff` asks the API server to render the proposed object but does not write it. Exit code 1
+means differences exist, so the guard treats that expected diagnostic result as success.
+
+### Hints
+
+`kubectl diff` exits 1 when differences exist; inspect its output, then verify with
+`kubectl get deployment web --ignore-not-found`.

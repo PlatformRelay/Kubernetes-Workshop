@@ -1,10 +1,15 @@
 import assert from 'node:assert/strict';
 import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import test from 'node:test';
+import { fileURLToPath } from 'node:url';
 
-import { auditContractDocumentation, auditLab } from './lab-contract.mjs';
+import {
+  auditContractDocumentation,
+  auditDayOneCommandTruth,
+  auditLab,
+} from './lab-contract.mjs';
 
 function fixture({ lab = '', solution = '' } = {}) {
   const root = mkdtempSync(join(tmpdir(), 'lab-contract-'));
@@ -40,6 +45,12 @@ Observe the result.
 
 Diagnose why the labelled Pod is not selected.
 
+**Difficulty:** Intermediate
+
+**Success criteria:** Explain the mismatch and restore one ready endpoint.
+
+**Hints:** Compare the Service selector with the Pod labels.
+
 [Spoiler: challenge solution](./01-example.solution.md#challenge-solution)
 
 ## Verify
@@ -55,19 +66,43 @@ const validSolution = `# Lab 01 — Example solutions
 
 ## Guided solutions
 
-\`kubectl run example --image=busybox:1.37 -l workshop.example/lab=01 -n "$NS"\`
+\`\`\`bash
+# stage: create the guided object
+kubectl run example --image=busybox:1.37 -l workshop.example/lab=01 -n "$NS"
+\`\`\`
 
-## Expected state
+## Expected state / output
 
-The Pod is Running.
+The labelled Pod reaches the Running phase.
+
+## Explanation
+
+The label connects the Service to the Pod.
 
 ## Troubleshooting and recovery
 
-Describe the Pod and inspect Events.
+Run \`kubectl describe pod example -n "$NS"\` and inspect Events.
 
 ## Challenge solution
 
-Fix the selector label and verify the endpoint.
+### Commands / manifest
+
+\`\`\`bash
+# Terminal B:
+kubectl label pod example app=example -n "$NS"
+\`\`\`
+
+### Expected state / output
+
+One ready endpoint is present.
+
+### Explanation
+
+The corrected label matches the selector.
+
+### Hints
+
+Compare the Service selector with the Pod labels.
 `;
 
 test('accepts a complete participant lab and sibling solution', () => {
@@ -118,6 +153,40 @@ test('rejects a dangling challenge-solution anchor', () => {
   }));
 
   assert.ok(errors.some((error) => error.includes('dangling challenge solution link')));
+});
+
+test('rejects challenges without assessable metadata or transfer work', () => {
+  const weak = validLab
+    .replace('**Difficulty:** Intermediate\n\n', '')
+    .replace('**Success criteria:** Explain the mismatch and restore one ready endpoint.\n\n', '')
+    .replace('**Hints:** Compare the Service selector with the Pod labels.\n\n', '')
+    .replace('Diagnose why the labelled Pod is not selected.', 'Run the command.');
+  const errors = auditLab(fixture({ lab: weak, solution: validSolution }));
+
+  assert.ok(errors.some((error) => error.includes('missing Challenge Difficulty')));
+  assert.ok(errors.some((error) => error.includes('missing Challenge Success criteria')));
+  assert.ok(errors.some((error) => error.includes('missing Challenge Hints')));
+  assert.ok(errors.some((error) => error.includes('must require transfer or diagnosis')));
+});
+
+test('rejects vacuous solution companions and mismatched hints', () => {
+  const weakSolution = validSolution
+    .replace('```bash\n# Terminal B:\nkubectl label pod example app=example -n "$NS"\n```', 'Run kubectl.')
+    .replace('One ready endpoint is present.', '')
+    .replace('The corrected label matches the selector.', '')
+    .replace('Compare the Service selector with the Pod labels.', 'Read the docs.');
+  const errors = auditLab(fixture({ lab: validLab, solution: weakSolution }));
+
+  assert.ok(errors.some((error) => error.includes('Challenge solution needs exact commands or a manifest')));
+  assert.ok(errors.some((error) => error.includes('Challenge expected state / output is empty')));
+  assert.ok(errors.some((error) => error.includes('Challenge explanation is empty')));
+  assert.ok(errors.some((error) => error.includes('Challenge hints do not match')));
+});
+
+test('guards the known Day 1 command regressions', () => {
+  const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+  const errors = auditDayOneCommandTruth(root);
+  assert.deepEqual(errors, []);
 });
 
 test('keeps contributor and facilitator guidance aligned with the enforced slice', () => {

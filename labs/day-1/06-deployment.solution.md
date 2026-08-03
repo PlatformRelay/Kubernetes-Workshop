@@ -217,7 +217,7 @@ new Pod is stuck in `ImagePullBackOff`, so the rollout never completes — but i
 takes the app down. `rollout undo` reverts to the last good ReplicaSet.
 </details>
 
-## Expected state
+## Expected state / output
 
 - `Deployment → ReplicaSet → Pods`; deleting a Pod triggers immediate recreation.
 - A new image spawns a **second ReplicaSet**; new scales up as old scales down, with no
@@ -225,6 +225,12 @@ takes the app down. `rollout undo` reverts to the last good ReplicaSet.
 - `rollout undo` restores the previous image (verified by jsonpath).
 - A bad-image rollout **stalls** with the new Pod in `ImagePullBackOff` while old Pods keep
   serving — recovered with `rollout undo`.
+
+## Explanation
+
+A Deployment reconciles ReplicaSets, and ReplicaSets reconcile Pods. Rolling-update knobs
+bound unavailable and extra replicas; history points at prior Pod templates, so undo can
+restore the last known-good template after a stalled image rollout.
 
 ## Troubleshooting and recovery
 
@@ -234,20 +240,31 @@ newest ReplicaSet and its Pods before retrying.
 
 ## Challenge solution
 
-Make the rollout visibly gradual by widening the surge, then roll a new image and watch the
-Pod counts.
+### Commands / manifest
 
 ```bash
 kubectl patch deployment web --type=merge \
   -p '{"spec":{"strategy":{"rollingUpdate":{"maxSurge":2,"maxUnavailable":0}}}}'
-kubectl set image deployment/web web=ghcr.io/platformrelay/workshop-web:v2
+# Keep this watch running in Terminal A and record the minimum Ready and peak total counts.
 kubectl get pods -l app=web -w
+
+# Terminal B:
+kubectl set image deployment/web web=ghcr.io/platformrelay/workshop-web:v2
+kubectl rollout status deployment/web --timeout=180s
+kubectl get deployment web -o jsonpath='{.status.readyReplicas}{" ready; "}{.status.replicas}{" current\n"}'
 ```
 
-<details><summary>Solution / what you're looking at</summary>
+### Expected state / output
 
-With `maxUnavailable: 0` the Deployment never drops below 3 ready Pods, and `maxSurge: 2`
-lets it run up to 5 during the switch — so you briefly see extra Pods appear before old ones
-terminate. This is the safest (but slowest, most resource-hungry) rolling-update setting.
-Reset with `kubectl rollout undo deployment/web` and the panic reset above.
-</details>
+The watch never falls below three Ready Pods and may briefly show up to five total Pods. The final
+Deployment status returns to `3 ready; 3 current`.
+
+### Explanation
+
+`maxUnavailable: 0` protects availability, while `maxSurge: 2` permits two replacement Pods above
+the desired replica count. This trades extra temporary capacity for a safer rollout.
+
+### Hints
+
+Keep `kubectl get pods -w` in one terminal and run patch/image commands in another; count `Running`
+plus `ContainerCreating` Pods at the peak.

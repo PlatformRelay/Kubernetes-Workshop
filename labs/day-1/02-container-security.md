@@ -315,6 +315,15 @@ The distroless base still showed a couple of components in the SBOM. Try
 and a CA bundle). Scan and SBOM both — how close to a truly empty bill of materials can you get, and
 what breaks (TLS, timezones) when you go all the way to `scratch`?
 
+**Difficulty:** Advanced
+
+**Success criteria:** Build both distroless and scratch variants, scan each image,
+generate an SBOM for each, run each by digest, and explain which runtime files scratch
+needs for HTTPS.
+
+**Hints:** Reuse the existing builder stage; copy the binary and CA bundle into scratch,
+then compare `trivy image`, CycloneDX SBOM, and runtime HTTP results side by side.
+
 [Spoiler: challenge solution](./02-container-security.solution.md#challenge-solution)
 
 ## Verify
@@ -323,8 +332,14 @@ Prove the hardened artifact is non-root and that the fake secret is absent befor
 
 ```bash
 $ENGINE image inspect demo:hardened --format 'user={{.Config.User}}'
-$ENGINE save demo:hardened -o /tmp/hardened.tar
-if grep -aRq 'DEPLOY-SECRET-DO-NOT-SHIP' /tmp/hardened.tar; then exit 1; fi
+rm -rf /tmp/hardened-layers && mkdir -p /tmp/hardened-layers
+$ENGINE save demo:hardened | tar -x -C /tmp/hardened-layers
+if find /tmp/hardened-layers -type f \
+  -exec sh -c 'gzip -dc "$1" 2>/dev/null || cat "$1"' _ {} \; \
+  | grep -aq 'DEPLOY-SECRET-DO-NOT-SHIP'; then
+  echo "secret leaked into hardened image" >&2
+  exit 1
+fi
 trivy image --severity HIGH,CRITICAL demo:hardened
 ```
 
@@ -340,9 +355,10 @@ Everything lived in `app/`, a few images, and (optionally) a local registry — 
 $ENGINE rm -f lab-registry 2>/dev/null || true
 
 # remove the images this lab built
-$ENGINE rmi -f demo:insecure demo:secret-rm demo:hardened localhost:5000/demo:hardened 2>/dev/null || true
+$ENGINE rmi -f demo:insecure demo:secret-rm demo:hardened demo:distroless demo:scratch \
+  localhost:5000/demo:hardened 2>/dev/null || true
 
 # remove extracted layers, generated artifacts, and the project
-rm -f sbom.json /tmp/hardened.tar                 # SBOM and verification archive
-rm -rf /tmp/dig /tmp/dig2 && cd .. && rm -rf app
+rm -f sbom.json sbom-distroless.json sbom-scratch.json
+rm -rf /tmp/dig /tmp/dig2 /tmp/hardened-layers && cd .. && rm -rf app
 ```

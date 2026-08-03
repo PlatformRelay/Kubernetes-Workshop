@@ -135,6 +135,14 @@ first, and why?
 `kubectl diff` previews a change against the live cluster without applying it. Generate a
 manifest, tweak it, and diff — all without creating anything permanent.
 
+**Difficulty:** Intermediate
+
+**Success criteria:** Show the initial create diff, change replicas from one to three,
+show the changed diff, and prove no `web` Deployment was persisted.
+
+**Hints:** `kubectl diff` exits 1 when differences exist; inspect its output, then verify
+with `kubectl get deployment web --ignore-not-found`.
+
 ```bash
 kubectl create deployment web --image=ghcr.io/platformrelay/workshop-web:v1 --dry-run=client -o yaml > web.yaml
 kubectl diff -f web.yaml            # shows it would be CREATED (all new lines)

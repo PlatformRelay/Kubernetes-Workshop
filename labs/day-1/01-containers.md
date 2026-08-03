@@ -225,6 +225,14 @@ $ENGINE images demo
 Prove the source really is baked into one layer: rebuild changing **only** `ENV PORT`, and confirm
 the expensive `go build` layer is reused.
 
+**Difficulty:** Intermediate
+
+**Success criteria:** Build `demo:3`, show `RUN go build` is cached while only the
+metadata layer changes, and explain how Dockerfile ordering produced that result.
+
+**Hints:** Move `ENV PORT` below `RUN go build`, then compare the second build's `COPY`
+and `RUN` lines with the first build.
+
 [Spoiler: challenge solution](./01-containers.solution.md#challenge-solution)
 
 ## Verify

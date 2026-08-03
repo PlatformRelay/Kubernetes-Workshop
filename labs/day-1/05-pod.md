@@ -147,6 +147,14 @@ A bare Pod can restart its *container* without a controller. Prove it: run a con
 that exits on purpose and watch the `RESTARTS` counter, given the default
 `restartPolicy: Always`.
 
+**Difficulty:** Intermediate
+
+**Success criteria:** Observe at least one restart, prove the Pod UID stays unchanged,
+then delete it and explain why the container restarted but the Pod is not recreated.
+
+**Hints:** Capture `metadata.uid` before and after the restart; a controller changes Pod
+objects, while the kubelet restarts containers inside one Pod.
+
 ```bash
 kubectl run crash --image=busybox:1.37 -- sh -c 'sleep 10; exit 1'
 kubectl get pod crash -w          # watch RESTARTS climb, Pod stays

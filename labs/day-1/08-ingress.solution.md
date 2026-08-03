@@ -6,6 +6,17 @@ ephemeral values literally.
 
 ## Guided solutions
 
+Set the same explicit environment variables as the participant lab before running any step:
+
+```bash
+# Local kind defaults; shared-cluster learners replace all four values as instructed.
+export LAB_ENV=kind
+export INGRESS_CLASS=contour
+export WEB_HOST=web.example.com
+export WEB2_HOST=web2.example.com
+case "$LAB_ENV" in kind|shared) ;; *) echo "LAB_ENV must be kind or shared" >&2; false ;; esac
+```
+
 ### Step 1 (kind only) — install the Contour ingress controller
 
 The version is pinned to match `infra/versions.env` (`CONTOUR_VERSION=v1.33.5`).
@@ -38,7 +49,7 @@ envoy-m5kwp                     2/2     Running     0          90s
 Two halves, matching the slide's mental model: **contour** (the controller — watches Ingress
 objects) and **envoy** (the data plane — actually proxies traffic). The `contour-certgen`
 Job runs once to wire TLS between them and then shows `Completed`. The envoy DaemonSet binds
-**hostPorts 80/443** on the node; your Lab 00 kind config maps those to `localhost:80/443`,
+**hostPorts 80/443** on the node; your Lab 00 kind config maps those to `127.0.0.1:80/443`,
 which is how your curls will get in.
 </details>
 
@@ -52,9 +63,8 @@ NAME      CONTROLLER                             PARAMETERS   AGE
 contour   projectcontour.io/ingress-controller   <none>       30d
 ```
 
-Use that class name in `ingress.yaml` (replace `contour` if your cluster's class differs),
-and use the **hostnames your facilitator assigned** instead of `web.example.com` /
-`web2.example.com`. Skip every `kind`-specific command below.
+Set `INGRESS_CLASS`, `WEB_HOST`, and `WEB2_HOST` to the facilitator-provided values. Skip every
+step labelled `kind only`; the shared path never creates or deletes cluster-scoped resources.
 </details>
 
 ---
@@ -188,21 +198,21 @@ One Ingress, one entry point, **two hosts**: the `Host` header decides which Ser
 the request.
 
 ```bash
-cat > ingress.yaml <<'EOF'
+cat > ingress.yaml <<EOF
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: web
 spec:
-  ingressClassName: contour        # must match `kubectl get ingressclass`
+  ingressClassName: ${INGRESS_CLASS}
   rules:
-    - host: web.example.com        # shared cluster: use your assigned hostnames
+    - host: ${WEB_HOST}
       http:
         paths:
           - path: /                # everything on this host → the v1 backend
             pathType: Prefix
             backend: { service: { name: web, port: { number: 80 } } }
-    - host: web2.example.com       # second site, same single entry point
+    - host: ${WEB2_HOST}
       http:
         paths:
           - path: /                # → the v2 backend
@@ -244,7 +254,7 @@ Rules:
 external IP of its `envoy` Service (type `LoadBalancer`) into the Ingress status, and on a
 kind cluster there is no load-balancer provider, so that Service sits at `<pending>` forever.
 Traffic still flows: the envoy DaemonSet listens on the node's ports 80/443 directly, and
-Lab 00's kind config maps those to `localhost`. On a cloud or shared cluster, `ADDRESS`
+Lab 00's kind config maps those to `127.0.0.1`. On a cloud or shared cluster, `ADDRESS`
 fills in with the load-balancer address after a few seconds.
 
 `describe` is the real health check here: each host resolved to its backend **endpoints on
@@ -258,26 +268,28 @@ fills in with the load-balancer address after a few seconds.
 Send requests to the one entry point; the `Host` header decides which backend answers.
 
 ```bash
-# kind path (envoy published on localhost:80 via the Lab 00 port mappings):
-curl -sH 'Host: web.example.com'  http://localhost/
-curl -sH 'Host: web2.example.com' http://localhost/
-
-# Shared-cluster path (real hostnames resolve to the ingress load balancer):
-# curl http://web.example.com/        # substitute your assigned hostnames
-# curl http://web2.example.com/
+if [ "$LAB_ENV" = kind ]; then
+  curl -fsS -H "Host: $WEB_HOST" http://127.0.0.1/
+  curl -fsS -H "Host: $WEB2_HOST" http://127.0.0.1/
+else
+  curl -fsS "http://$WEB_HOST/"
+  curl -fsS "http://$WEB2_HOST/"
+fi
 ```
 
 **Task:** which version answers each hostname? How can you tell?
 
 <details><summary>Solution / expected output</summary>
 
+Representative kind output (the exported kind defaults are shown here):
+
 ```console
-$ curl -sH 'Host: web.example.com'  http://localhost/
+$ curl -sH 'Host: web.example.com'  http://127.0.0.1/
 workshop-web v1
 pod: web-6f8c9d7b4-x2lqp
 requests served: 1
 ready: true
-$ curl -sH 'Host: web2.example.com' http://localhost/
+$ curl -sH 'Host: web2.example.com' http://127.0.0.1/
 workshop-web v2
 pod: web2-7b9d5c6f8-lm4tt
 requests served: 1
@@ -296,9 +308,13 @@ the trick when DNS isn't wired up.)
 
 <details><summary>Answer</summary>
 
-```console
-$ curl -s -o /dev/null -w '%{http_code}\n' -H 'Host: nope.example.com' http://localhost/
-404
+```bash
+if [ "$LAB_ENV" = kind ]; then
+  curl -s -o /dev/null -w '%{http_code}\n' -H 'Host: nope.example.com' http://127.0.0.1/
+else
+  # Use an unassigned host only when the facilitator confirms it resolves to this ingress endpoint.
+  echo "Ask the facilitator for the shared-cluster unmatched-host check"
+fi
 ```
 
 **404** — straight from the proxy. No rule matched the host and this Ingress defines no
@@ -328,15 +344,15 @@ field** (`URLRewrite` filter).
 path. Prove it: write a copy of the Ingress with the field removed and try to apply it.
 
 ```bash
-cat > ingress-no-pathtype.yaml <<'EOF'
+cat > ingress-no-pathtype.yaml <<EOF
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: web
 spec:
-  ingressClassName: contour
+  ingressClassName: ${INGRESS_CLASS}
   rules:
-    - host: web.example.com
+    - host: ${WEB_HOST}
       http:
         paths:
           - path: /                # pathType deliberately omitted
@@ -365,8 +381,13 @@ long-gone `extensions/v1beta1` API) will not apply on a modern cluster.
 
 ```bash
 kubectl patch ingress web --type=merge -p '{"spec":{"ingressClassName":"legacy"}}'
-curl -sS -o /dev/null -w 'http=%{http_code}\n' \
-  -H 'Host: web.example.com' http://localhost/ ; echo "curl exit=$?"
+if [ "$LAB_ENV" = kind ]; then
+  curl -sS -o /dev/null -w 'http=%{http_code}\n' \
+    -H "Host: $WEB_HOST" http://127.0.0.1/ ; echo "curl exit=$?"
+else
+  curl -sS -o /dev/null -w 'http=%{http_code}\n' \
+    "http://$WEB_HOST/" ; echo "curl exit=$?"
+fi
 ```
 
 **Task:** the patch succeeded but routing stopped. Depending on the controller's current
@@ -375,10 +396,12 @@ change, and where would you diagnose it?
 
 <details><summary>Solution / expected output</summary>
 
+Representative kind output:
+
 ```console
 $ kubectl patch ingress web --type=merge -p '{"spec":{"ingressClassName":"legacy"}}'
 ingress.networking.k8s.io/web patched
-$ curl -sS -o /dev/null -w 'http=%{http_code}\n' -H 'Host: web.example.com' http://localhost/ ; echo "curl exit=$?"
+$ curl -sS -o /dev/null -w 'http=%{http_code}\n' -H 'Host: web.example.com' http://127.0.0.1/ ; echo "curl exit=$?"
 curl: (56) Recv failure: Connection reset by peer
 http=000
 curl exit=56
@@ -395,19 +418,25 @@ is controller-dependent. Diagnose by comparing `ingressClassName` with
 
 ```bash
 kubectl apply -f ingress.yaml
-curl -sH 'Host: web.example.com' http://localhost/ | head -1
+if [ "$LAB_ENV" = kind ]; then
+  curl -fsS -H "Host: $WEB_HOST" http://127.0.0.1/ | head -1
+else
+  curl -fsS "http://$WEB_HOST/" | head -1
+fi
 ```
 
 <details><summary>Solution / expected output</summary>
 
+Representative kind output:
+
 ```console
 $ kubectl apply -f ingress.yaml
 ingress.networking.k8s.io/web configured
-$ curl -sH 'Host: web.example.com' http://localhost/ | head -1
+$ curl -sH 'Host: web.example.com' http://127.0.0.1/ | head -1
 workshop-web v1
 ```
 
-Restoring `ingressClassName: contour` lets the controller claim the Ingress again; it
+Restoring `ingressClassName: $INGRESS_CLASS` lets the selected controller claim the Ingress again; it
 re-programs envoy within a second or two. (Break 1 never touched the live object — the API
 server rejected it outright — so the class patch was the only thing to undo.)
 </details>
@@ -429,7 +458,7 @@ at apply; mistakes *about the world around the object* (a class nobody owns, a S
 doesn't exist) fail silent at runtime.
 </details>
 
-## Expected state
+## Expected state / output
 
 - The controller is **two halves**: a `contour` Deployment (watches the API) and an `envoy`
   DaemonSet (moves the packets) — matching the object-vs-engine mental model.
@@ -437,12 +466,19 @@ doesn't exist) fail silent at runtime.
   `kubectl get ingressclass` now proves who owns the `contour` name.
 - On kind the Ingress **`ADDRESS` stays empty** (the envoy `LoadBalancer` Service is
   `<pending>` — no LB provider), yet routing **works** via the node's ports 80/443 mapped to
-  `localhost`. Empty ADDRESS ≠ broken; `describe` + `curl` are the truth.
-- `web.example.com` answers **`workshop-web v1`**, `web2.example.com` answers
+  `127.0.0.1`. Empty ADDRESS ≠ broken; `describe` + `curl` are the truth.
+- `$WEB_HOST` answers **`workshop-web v1`**, `$WEB2_HOST` answers
   **`workshop-web v2`** — host-based fan-out, provable from the response body.
 - An undeclared host returns **404** from the proxy.
 - A missing (or mistyped) `pathType` is **rejected at apply time** — loud. A wrong
   `ingressClassName` applies cleanly and just **stops routing** — silent.
+
+## Explanation
+
+The Ingress object declares host/path routing, but a matching IngressClass and controller
+turn that declaration into proxy configuration. Schema mistakes fail loudly at admission;
+environment mistakes such as an unowned class fail at runtime. TLS routing additionally
+uses SNI before HTTP headers exist.
 
 ## Troubleshooting and recovery
 
@@ -453,60 +489,39 @@ assigned class and hostnames.
 
 ## Challenge solution
 
-Create a self-signed cert as a Secret and reference it in the Ingress.
+### Commands / manifest
 
 ```bash
 openssl req -x509 -newkey rsa:2048 -nodes -days 1 \
-  -keyout tls.key -out tls.crt -subj "/CN=web.example.com"
+  -keyout tls.key -out tls.crt -subj "/CN=$WEB_HOST" \
+  -addext "subjectAltName=DNS:$WEB_HOST"
 kubectl create secret tls web-tls --cert=tls.crt --key=tls.key
 kubectl patch ingress web --type=merge \
-  -p '{"spec":{"tls":[{"hosts":["web.example.com"],"secretName":"web-tls"}]}}'
-curl --noproxy '*' -sk --resolve web.example.com:443:127.0.0.1 \
-  https://web.example.com/ | head -1
-```
+  -p "{\"spec\":{\"tls\":[{\"hosts\":[\"$WEB_HOST\"],\"secretName\":\"web-tls\"}]}}"
+case "$LAB_ENV" in
+  kind) curl --noproxy '*' -sk --resolve "$WEB_HOST:443:127.0.0.1" "https://$WEB_HOST/" ;;
+  shared) curl --noproxy '*' -sk "https://$WEB_HOST/" ;;
+esac
 
-<details><summary>Solution / what you're looking at</summary>
-
-```console
-$ curl --noproxy '*' -sk --resolve web.example.com:443:127.0.0.1 https://web.example.com/ | head -1
-workshop-web v1
-```
-
-The controller now terminates TLS on :443 using your Secret (`-k` skips verification because
-the cert is self-signed). `--resolve` sets both the connection address and TLS SNI; a Host
-header alone is too late for certificate selection. Once a host has TLS, the controller may **redirect** plain-HTTP
-requests for it to HTTPS — try `curl -i -H 'Host: web.example.com' http://localhost/` and
-read the status code. Real clusters use cert-manager to issue trusted certs automatically.
-Clean up with the panic reset above.
-</details>
-
-### Extension 2 (optional, read-only) — preview the Gateway API translation
-
-The retirement slide's bridge is a real tool: **`ingress2gateway`**
-([kubernetes-sigs/ingress2gateway](https://github.com/kubernetes-sigs/ingress2gateway))
-mechanically converts Ingress resources into Gateway API resources. If you have it
-installed, run it against your manifest — it changes nothing on the cluster:
-
-```bash
-# Providers are named for the annotation dialects the tool can translate; our
-# Ingress uses only spec fields, so the provider choice here only tells the tool
-# which ingress class name to read:
 ingress2gateway print --providers=ingress-nginx \
-  --ingress-nginx-ingress-class=contour --input-file ingress.yaml
+  --ingress-nginx-ingress-class="$INGRESS_CLASS" --input-file ingress.yaml \
+  > gateway-preview.yaml
+grep -E '^kind: (Gateway|HTTPRoute)$|^  hostnames:' gateway-preview.yaml
 ```
 
-**Task:** which Gateway API kinds appear in the output, and where did your two `host:`
-rules go?
+### Expected state / output
 
-<details><summary>Answer (shape of the output — details vary by tool version)</summary>
+HTTPS returns `workshop-web v1`. The preview contains a `Gateway` and `HTTPRoute` resources; the two
+Ingress hosts appear as HTTPRoute `hostnames`. If `ingress2gateway` is unavailable, record that the
+translation portion is skipped rather than installing an unapproved binary during the lab.
 
-You get a **`Gateway`** (the entry point — one HTTP listener) and **`HTTPRoute`** resources
-(the rules). Your `host:` values become HTTPRoute **`hostnames`**, each `path`/`pathType`
-becomes a typed **`matches`** entry, and each `backend.service` becomes a **`backendRefs`**
-entry — same Services, same ports. That's the whole point of the bridge: the routing rules
-you wrote today survive the move to Gateway API. Don't apply the output — Lab 09 builds the
-Gateway API stack properly, with a controller behind it.
+### Explanation
 
-If the tool isn't installed, skip this — it's a preview of the next section, not a
-dependency.
-</details>
+On kind, `--resolve` supplies both the connection address and TLS SNI; a Host header alone is too
+late for certificate selection. On a shared cluster, facilitator-provided DNS supplies both. The
+translation preserves host/path/backend intent while changing it to Gateway API resource types.
+
+### Hints
+
+Branch on `LAB_ENV`; kind needs `curl --resolve` for DNS and SNI, while shared clusters use the
+facilitator-provided DNS host directly.

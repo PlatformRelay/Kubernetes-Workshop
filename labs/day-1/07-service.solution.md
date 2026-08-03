@@ -80,7 +80,7 @@ Cluster DNS gives every Service a name. From a temporary Pod, fetch the demo app
 page by the Service name `web`:
 
 ```bash
-kubectl run tmp --restart=Never --image=busybox:1.36 -- sleep 300
+kubectl run tmp --restart=Never --image=busybox:1.36 -- sleep 3600
 kubectl wait --for=condition=Ready pod/tmp --timeout=60s
 kubectl exec tmp -- wget -qO- http://web
 ```
@@ -168,7 +168,7 @@ Restoring `app: web` repopulates the EndpointSlice within a second and traffic f
 Same manifest, one label — that is the whole difference between working and silently dead.
 </details>
 
-## Expected state
+## Expected state / output
 
 - The Service gets a stable `ClusterIP`; its EndpointSlice lists **one address per Pod**.
 - `http://web` resolves via cluster DNS and returns the demo app's status body — the
@@ -176,6 +176,12 @@ Same manifest, one label — that is the whole difference between working and si
 - A wrong selector leaves the Service **healthy-looking but with zero endpoints**, and
   requests time out — identically in both environments.
 - Fixing the selector repopulates endpoints and restores traffic immediately.
+
+## Explanation
+
+A Service selector produces EndpointSlice membership from Pod labels and readiness. DNS
+resolves the stable Service name, while EndpointSlices track ephemeral Pod addresses. A
+valid Service with an empty slice is therefore healthy-looking but unable to route.
 
 ## Troubleshooting and recovery
 
@@ -185,8 +191,7 @@ selector with `kubectl patch service web -n "$NS" --type=merge -p
 
 ## Challenge solution
 
-Watch an endpoint leave the set the moment its Pod is deleted — the behaviour Lab 14
-(probes) builds on.
+### Commands / manifest
 
 ```bash
 # Terminal A:
@@ -194,15 +199,27 @@ kubectl get endpointslices -l kubernetes.io/service-name=web -w
 # Terminal B:
 POD=$(kubectl get pods -n "$NS" -l app=web --field-selector=status.phase=Running \
   -o jsonpath='{.items[0].metadata.name}')
+OLD_IP=$(kubectl get pod "$POD" -n "$NS" -o jsonpath='{.status.podIP}')
 kubectl delete pod "$POD" -n "$NS"
+kubectl rollout status deployment/web -n "$NS" --timeout=180s
+NEW_IPS=$(kubectl get endpointslices -n "$NS" -l kubernetes.io/service-name=web \
+  -o jsonpath='{range .items[*].endpoints[*]}{.addresses[0]}{"\n"}{end}')
+printf 'removed=%s\ncurrent=%s\n' "$OLD_IP" "$NEW_IPS"
+! printf '%s\n' "$NEW_IPS" | grep -Fx "$OLD_IP"
 ```
 
-<details><summary>Solution / what you're looking at</summary>
+### Expected state / output
 
-In Terminal A the deleted Pod's IP disappears from the `ENDPOINTS` list, then a new IP (the
-ReplicaSet's replacement Pod) is added once it is Ready. The EndpointSlice tracks Pod
-**readiness and existence** live — in Lab 14 you make a Pod fail its readiness probe to leave
-the set *without* being deleted. The command resolves exactly one Pod name before deleting it;
-the output pipe from the old exercise was not a resource selector. Clean up with the reset in
-the participant lab.
-</details>
+The recorded address disappears from the EndpointSlice watch, and a replacement address appears
+after the Deployment returns to Available. The final assertion succeeds only when the old IP is no
+longer selected.
+
+### Explanation
+
+EndpointSlices track the addresses of selected, ready Pods. Deleting one exact Pod removes its
+address; the ReplicaSet then creates a replacement that joins only after it becomes Ready.
+
+### Hints
+
+Record the chosen Pod name and IP before deletion; use the EndpointSlice watch to match the removed
+and replacement addresses.

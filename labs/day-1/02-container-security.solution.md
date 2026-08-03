@@ -468,7 +468,7 @@ digest.)
 
 ---
 
-## Expected state
+## Expected state / output
 
 - The **insecure** image runs as **root** and makes Trivy inspect the application plus the
   compiler, formatter, build tools, and hundreds of base packages.
@@ -482,6 +482,13 @@ digest.)
 
 ---
 
+## Explanation
+
+Multi-stage builds, distroless runtimes, non-root users, SBOMs, and digest pinning reduce
+different risks; none proves an image vulnerability-free. Deleting a file in a later layer
+adds a whiteout but leaves earlier layer bytes recoverable, while a BuildKit secret mount
+never commits the secret to a layer.
+
 ## Troubleshooting and recovery
 
 If BuildKit rejects `--secret`, confirm your engine supports
@@ -490,26 +497,63 @@ behind, remove only `lab-registry`; never prune unrelated images or volumes.
 
 ## Challenge solution
 
-The distroless base still showed a couple of components in the SBOM. Try
-`gcr.io/distroless/static-debian12:nonroot` vs building `FROM scratch` (copy only the static binary
-and a CA bundle). Scan and SBOM both — how close to a truly empty bill of materials can you get, and
-what breaks (TLS, timezones) when you go all the way to `scratch`?
+### Commands / manifest
 
-<details><summary>Solution / expected output</summary>
+Create a second runtime variant that copies only the static application and the CA bundle from the
+same builder stage:
 
-`FROM scratch` with just the binary yields an SBOM with essentially **one component** (your binary)
-and a scan of **0** — but you lose the CA certificates (HTTPS calls fail with x509 errors) and
-`/etc/passwd`/timezone data. Distroless exists precisely to add that minimal, non-root runtime
-scaffolding back without dragging in a shell or package manager:
+```bash
+cat > Dockerfile.scratch <<'EOF'
+FROM golang:1.24 AS build
+WORKDIR /src
+COPY . .
+RUN CGO_ENABLED=0 go build -o /bin/app .
 
-```console
-# scratch: copy the CA bundle yourself or TLS breaks
 FROM scratch
 COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=build /bin/app /bin/app
-USER 65532
+ENV PORT=8080
+USER 65532:65532
 ENTRYPOINT ["/bin/app"]
+EOF
+
+sed 's|FROM gcr.io/distroless/static:nonroot|FROM gcr.io/distroless/static-debian12:nonroot|' \
+  Dockerfile.hardened > Dockerfile.distroless
+$ENGINE build -f Dockerfile.distroless --secret id=deploy_key,src=deploy_key \
+  -t demo:distroless .
+$ENGINE build -f Dockerfile.scratch -t demo:scratch .
+
+trivy image --severity HIGH,CRITICAL demo:distroless
+trivy image --severity HIGH,CRITICAL demo:scratch
+trivy image --format cyclonedx --output sbom-distroless.json demo:distroless
+trivy image --format cyclonedx --output sbom-scratch.json demo:scratch
+
+$ENGINE image inspect demo:distroless --format '{{.Size}} {{.Config.User}}'
+$ENGINE image inspect demo:scratch --format '{{.Size}} {{.Config.User}}'
+
+DISTROLESS_DIGEST=$($ENGINE image inspect demo:distroless --format '{{.Id}}')
+SCRATCH_DIGEST=$($ENGINE image inspect demo:scratch --format '{{.Id}}')
+$ENGINE run -d --name demo-distroless -p 18081:8080 "$DISTROLESS_DIGEST"
+$ENGINE run -d --name demo-scratch -p 18082:8080 "$SCRATCH_DIGEST"
+curl -fsS http://127.0.0.1:18081/
+curl -fsS http://127.0.0.1:18082/
+$ENGINE rm -f demo-distroless demo-scratch
 ```
 
-The lesson: smaller is safer until it's broken — distroless is the pragmatic floor for most apps.
-</details>
+### Expected state / output
+
+Both containers answer HTTP and run as UID/GID `65532`. The scratch image and its CycloneDX SBOM
+are smaller, while the application binary's findings remain comparable. Exact vulnerability counts
+depend on the current database; record and compare them rather than expecting zero.
+
+### Explanation
+
+`scratch` removes runtime OS files, but it does not remove vulnerabilities compiled into the Go
+binary. Copying the CA bundle supports outbound HTTPS; an application that needs timezone data,
+name-to-user lookup, or other runtime files must copy those deliberately. This demo only serves
+HTTP, so the CA requirement is inferred from the filesystem comparison, not proven by its request.
+
+### Hints
+
+Reuse the existing builder stage; copy the binary and CA bundle into `scratch`, then compare
+`trivy image`, CycloneDX SBOM, and runtime HTTP results side by side.

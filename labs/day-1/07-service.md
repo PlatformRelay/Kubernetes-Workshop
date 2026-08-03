@@ -79,7 +79,7 @@ Cluster DNS gives every Service a name. From a temporary Pod, fetch the demo app
 page by the Service name `web`:
 
 ```bash
-kubectl run tmp --restart=Never --image=busybox:1.36 -- sleep 300
+kubectl run tmp --restart=Never --image=busybox:1.36 -- sleep 3600
 kubectl wait --for=condition=Ready pod/tmp --timeout=60s
 kubectl exec tmp -- wget -qO- http://web
 ```
@@ -124,6 +124,15 @@ kubectl exec tmp -- wget -qO- http://web | head -1
 
 Watch an endpoint leave the set the moment its Pod is deleted — the behaviour Lab 14
 (probes) builds on.
+
+**Difficulty:** Intermediate
+
+**Success criteria:** Delete exactly one selected Pod, identify its endpoint address
+disappearing, observe the replacement address arrive, and explain how readiness controls
+EndpointSlice membership.
+
+**Hints:** Record the chosen Pod name and IP before deletion; use the EndpointSlice watch
+to match the removed and replacement addresses.
 
 ```bash
 # Terminal A:

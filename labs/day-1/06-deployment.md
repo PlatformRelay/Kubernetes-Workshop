@@ -148,6 +148,15 @@ kubectl get pods -l app=web
 Make the rollout visibly gradual by widening the surge, then roll a new image and watch the
 Pod counts.
 
+**Difficulty:** Intermediate
+
+**Success criteria:** Record the minimum Ready count and maximum total Pod count during
+the rollout, relate them to `maxUnavailable: 0` and `maxSurge: 2`, and explain the resource
+trade-off.
+
+**Hints:** Keep `kubectl get pods -w` in one terminal and run patch/image commands in
+another; count Running plus ContainerCreating Pods at the peak.
+
 ```bash
 kubectl patch deployment web --type=merge \
   -p '{"spec":{"strategy":{"rollingUpdate":{"maxSurge":2,"maxUnavailable":0}}}}'
