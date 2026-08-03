@@ -8,3 +8,8 @@ shamefullyHoist: true
 allowBuilds:
   playwright-chromium: true
   sharp: true
+
+overrides:
+  # GHSA-r28c-9q8g-f849 is fixed in 8.5.18. Keep every transitive Vue/Vite
+  # consumer on the current patched PostCSS line until upstream ranges converge.
+  postcss: 8.5.25
