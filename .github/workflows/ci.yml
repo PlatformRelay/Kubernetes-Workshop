@@ -21,6 +21,9 @@ env:
   # dependency-build allowlist. (GitHub Actions also sets CI=true itself.)
   CI: "true"
 
+permissions:
+  contents: read
+
 jobs:
   supply-chain:
     name: Supply-chain policy and dependency audit

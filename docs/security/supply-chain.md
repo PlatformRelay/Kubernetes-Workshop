@@ -34,7 +34,8 @@ of these fields:
 
 Expired or malformed exceptions fail the gate. An audit command that cannot
 return parseable scanner output exits separately as **scanner unavailable**; it
-is never reported as a clean result. CI fails closed. For a time-critical
+is never reported as a clean result. Unexpected scanner status and high/critical
+metadata that disagrees with the advisory records fail the same way. CI fails closed. For a time-critical
 release, the only waiver is a reviewed, committed advisory exception with an
 owner and near-term expiry—never an environment variable that silently skips
 the scanner.
@@ -52,20 +53,36 @@ Container actions, if introduced, must use an image digest. Local actions under
 `./` are allowed. Renovate's GitHub Actions manager has `pinDigests: true`, so
 updates remain reviewable proposals and preserve immutable references.
 
+Every workflow declares read-only permissions at the workflow level. Jobs that
+publish an image, Pages deployment, or release artifact opt into only the write
+or OIDC permissions they need. Release assembly and validation run in a
+separate read-only job; only the final publication job receives `contents:
+write`.
+
 ## Remote downloads
 
 The policy currently covers two executable trust boundaries:
 
 - every artifact URL generated in `mise.lock` must have a `sha256` checksum in
   the same platform entry;
-- `infra/`, `setup/`, and the `workshop` launcher may not download a remote
-  input—or pipe one into a shell—without a named, documented, unexpired entry
-  in `supply-chain/exceptions.json`.
+- maintained shell/Python setup and automation under `infra/`, `setup/`,
+  `scripts/`, `.github/`, plus the root launch/task surfaces may not download a
+  remote input—or pipe one into a shell—without a named, documented, unexpired
+  entry in `supply-chain/exceptions.json`;
+- variable-indirected `curl`/`wget` and Python `urllib` sources fail because the
+  gate cannot audit their origin statically.
+
+Each exception binds an exact HTTPS `source` to one of two auditable kinds:
+
+- `sha256` requires the declared 64-character checksum and a matching
+  `sha256sum -c` in the same command chain before use;
+- `accepted-risk` states plainly that the bytes are not checksum-pinned and
+  gives the reason and expiry for that temporary risk acceptance.
 
 The interactive mise convenience installer is the only current exception. It
-is isolated from non-interactive/CI setup, relies on mise's upstream artifact
-verification, and expires on **2026-11-03** so the bootstrap path must be
-reviewed again.
+is isolated from non-interactive/CI setup, but the installer bytes themselves
+are **not checksum-pinned**. That accepted risk expires on **2026-11-03** so the
+bootstrap path must be reviewed again.
 
 Learner-facing labs currently contain direct, versioned `kubectl apply -f URL`
 commands. They are intentionally not misrepresented as checksum-verified by

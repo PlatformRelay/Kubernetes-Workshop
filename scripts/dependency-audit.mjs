@@ -8,19 +8,38 @@ import { fileURLToPath } from 'node:url'
 
 const BLOCKED_SEVERITIES = new Set(['high', 'critical'])
 
-export function parseAuditOutput(stdout) {
+function isIsoDate(value) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value ?? '')) return false
+  const parsed = new Date(`${value}T00:00:00Z`)
+  return !Number.isNaN(parsed.valueOf()) && parsed.toISOString().slice(0, 10) === value
+}
+
+export function parseAuditOutput(stdout, status = 0) {
   let report
   try {
     report = JSON.parse(stdout)
   } catch {
     return { report: null, error: 'Dependency scanner unavailable or returned invalid JSON.' }
   }
+  if (status !== 0 && status !== 1) {
+    return { report: null, error: `Dependency scanner failed with unexpected exit status ${status}.` }
+  }
   if (
     !report
+    || report.error
     || typeof report.advisories !== 'object'
     || typeof report.metadata?.vulnerabilities !== 'object'
   ) {
     return { report: null, error: 'Dependency scanner unavailable: response is not an audit report.' }
+  }
+  const advisoryCounts = { high: 0, critical: 0 }
+  for (const advisory of Object.values(report.advisories)) {
+    if (advisory.severity in advisoryCounts) advisoryCounts[advisory.severity] += 1
+  }
+  for (const severity of BLOCKED_SEVERITIES) {
+    if ((report.metadata.vulnerabilities[severity] ?? 0) !== advisoryCounts[severity]) {
+      return { report: null, error: `Dependency scanner returned inconsistent ${severity} vulnerability metadata.` }
+    }
   }
   return { report, error: null }
 }
@@ -33,7 +52,7 @@ export function evaluateAudit(report, policy, today = new Date().toISOString().s
       errors.push(`Exception ${exception.id ?? '<missing id>'} requires reason and owner`)
       continue
     }
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(exception.expires ?? '')) {
+    if (!isIsoDate(exception.expires)) {
       errors.push(`Exception ${exception.id} requires an ISO expiry date`)
       continue
     }
@@ -77,7 +96,7 @@ async function main() {
     encoding: 'utf8',
     maxBuffer: 20 * 1024 * 1024,
   })
-  const parsed = parseAuditOutput(audit.stdout)
+  const parsed = parseAuditOutput(audit.stdout, audit.status)
   if (!parsed.report) {
     console.error(`${parsed.error} (exit ${audit.status ?? 'unknown'}).`)
     if (audit.stderr) console.error(audit.stderr.trim())
