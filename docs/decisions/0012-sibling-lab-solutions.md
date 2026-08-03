@@ -13,10 +13,12 @@ from [0005](0005-lab-manifests-and-example-code-layout.md) with one Markdown fil
 in-file heredoc manifests. Its Decision, however, still required every task and question to carry an
 inline `<details>` spoiler in that same file and forbade a separate `solutions/` companion.
 
-Day 1 Labs 01–08 and Day 2 Labs 09–16, `AGENT.md`, `labs/README.md`, and the lab-contract
-checker now ship a different contract: the participant file stays spoiler-light, and answers
-live in a sibling `NN-topic.solution.md` linked at `#guided-solutions` and `#challenge-solution`.
-Leaving 0009 accepted would tell authors to undo a convention the corpus and CI already enforce.
+Day 1 Labs 01–08, Day 2 Labs 09–16, and Day 3 Labs 17–23 + 25–26, `AGENT.md`,
+`labs/README.md`, and the lab-contract checker now ship a different contract: the participant
+file stays spoiler-light, and answers live in a sibling `NN-topic.solution.md` linked at
+`#guided-solutions` and `#challenge-solution`. **S24** (kubebuilder) remains a deferred stub
+and is an explicit reviewed exception outside the inventory. Leaving 0009 accepted would tell
+authors to undo a convention the corpus and CI already enforce.
 
 ## Options considered
 
@@ -26,14 +28,14 @@ Leaving 0009 accepted would tell authors to undo a convention the corpus and CI 
 2. **Restore a per-lab `solutions/` folder tree (0005).** Rejected again: high churn for no
    learner-visible gain; the sibling companion already separates answers without a folder tree.
 3. **Sibling `NN-topic.solution.md` beside the participant lab.** Chosen — it matches the shipped
-   Day 1 Labs 01–08 and Day 2 Labs 09–16 corpus, keeps the single-file heredoc apply-by-path form,
-   and lets contract tests enforce both halves.
+   Day 1–3 corpus (Labs 01–23, 25–26; S24 deferred), keeps the single-file heredoc apply-by-path
+   form, and lets contract tests enforce both halves.
 
 ## Decision
 
 A lab remains **one participant Markdown file**: `labs/day-N/NN-topic.md` (pairing with
-`pages/SNN-topic/`). For the enforced Day 1–2 slices (Labs 01–16) it is paired with a sibling
-**`NN-topic.solution.md`**.
+`pages/SNN-topic/`). For the enforced Day 1–3 slices (Labs 01–23, 25–26) it is paired with a
+sibling **`NN-topic.solution.md`**. S24 is deferred and excluded until the toolchain lab ships.
 
 Rules carried forward from 0009:
 
@@ -55,16 +57,16 @@ Rules that replace 0009's inline-spoiler mandate:
   `[Spoiler: challenge solution](./NN-topic.solution.md#challenge-solution)`.
 - **There is still no per-lab `solutions/` folder tree.** The companion is one sibling Markdown
   file beside `NN-topic.md`.
-- Day 3 may still use older inline-spoiler shapes until those labs are migrated; the contract
-  checker scopes the sibling requirement to Day 1 Labs 01–08 and Day 2 Labs 09–16.
+- The contract checker scopes the sibling requirement to Day 1 Labs 01–08, Day 2 Labs 09–16,
+  and Day 3 Labs 17–23, 25–26. S24 remains a reviewed deferred exception (no fake sibling).
 
 ## Consequences
 
-- The decision record matches the Day 1–2 corpus, `AGENT.md`, facilitator guidance, and
-  `pnpm test:labs`.
+- The decision record matches the Day 1–3 corpus (minus S24), `AGENT.md`, facilitator guidance,
+  and `pnpm test:labs`.
 - Facilitators can point stuck learners at the companion without spoiling the participant file for
   everyone else.
 - Validation ([0008](0008-validation-and-ci.md)) still materialises heredocs from the participant
   lab (and companion where needed) before dry-run; the folder-tree approach from 0005 stays retired.
 - Revert path: restore ADR 0009's prior Decision text / status, delete this ADR, and remove the
-  Day 1–2 `*.solution.md` siblings (plus the contract checks that require them).
+  Day 1–3 `*.solution.md` siblings (plus the contract checks that require them); keep S24 deferred.

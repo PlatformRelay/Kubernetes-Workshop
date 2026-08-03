@@ -81,8 +81,9 @@ the setup lab (`export NS=<your-namespace>`; kind users use `export NS=workshop`
 ## How the labs work
 
 The workshop teaches a repeatable rhythm: **explain → run → observe → break → fix →
-recap**. The labs are the "run / observe / break / fix" part. Day 1 Labs 01–08 and
-Day 2 Labs 09–16 are the slices enforced by `pnpm test:labs`; they follow this shape:
+recap**. The labs are the "run / observe / break / fix" part. Day 1 Labs 01–08,
+Day 2 Labs 09–16, and Day 3 Labs 17–23, 25–26 are the slices enforced by
+`pnpm test:labs` (S24 kubebuilder remains deferred); they follow this shape:
 
 1. **Title & metadata** — the matching section ID, an estimated time, and the
    Environment badge.
@@ -107,8 +108,9 @@ Contracted participant labs stay readable by keeping answers in a sibling
 
 Try each step **before** opening the companion. It contains the exact commands/manifests,
 representative expected state, why the result is correct, likely-failure recovery, and the
-challenge answer. Day 1 Labs 01–08 and Day 2 Labs 09–16 use this sibling convention; Day 3
-labs retain their legacy inline answers until they are migrated into the enforced inventory.
+challenge answer. Day 1 Labs 01–08, Day 2 Labs 09–16, and Day 3 Labs 17–23, 25–26 use this
+sibling convention. **S24** (`24-kubebuilder.md`) is a **deferred** stub outside the inventory
+— no invented Go/kubebuilder sibling solution until the toolchain lab ships.
 
 ## Completion matrix
 
@@ -118,7 +120,8 @@ Contract status for the `pnpm test:labs` inventory (sibling `NN-topic.solution.m
 | --- | --- | --- |
 | Day 1 · [`01`](./day-1/01-containers.md)–[`08`](./day-1/08-ingress.md) | yes | Enforced |
 | Day 2 · [`09`](./day-2/09-gateway-api.md)–[`16`](./day-2/16-hpa.md) | yes | Enforced |
-| Day 3 · [`17`](./day-3/17-pod-security.md)–[`26`](./day-3/26-capstone.md) | pending | Legacy inline spoilers; S24 deferred stub |
+| Day 3 · [`17`](./day-3/17-pod-security.md)–[`23`](./day-3/23-prometheus.md), [`25`](./day-3/25-pod-escape.md)–[`26`](./day-3/26-capstone.md) | yes | Enforced |
+| Day 3 · [`24`](./day-3/24-kubebuilder.md) | deferred | S24 stub — reviewed exception; no sibling until the toolchain lab ships |
 
 ### Break → fix
 
