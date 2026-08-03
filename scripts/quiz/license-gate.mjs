@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { lstatSync, readFileSync, realpathSync } from 'node:fs'
 import path from 'node:path'
 import { gunzipSync } from 'node:zlib'
 
@@ -18,17 +18,46 @@ const exactCommit = /^[0-9a-f]{40}$/
 const immutableImage = /^\S+@sha256:[0-9a-f]{64}$/
 const evidenceErrors = []
 const evidenceDirectory = path.dirname(evidencePath)
+const evidenceRoot = realpathSync(evidenceDirectory)
+
+function isInside(root, target) {
+  const relative = path.relative(root, target)
+  return relative !== '' && !relative.startsWith(`..${path.sep}`) && relative !== '..' && !path.isAbsolute(relative)
+}
+
+function pathContainsSymlink(root, target) {
+  const relative = path.relative(root, target)
+  let current = root
+  for (const segment of relative.split(path.sep)) {
+    current = path.join(current, segment)
+    if (lstatSync(current).isSymbolicLink()) return true
+  }
+  return false
+}
 
 function readSbom(relativePath) {
-  if (typeof relativePath !== 'string' || !relativePath.endsWith('.cdx.json.gz')) return null
+  if (typeof relativePath !== 'string' || !relativePath.endsWith('.cdx.json.gz')) {
+    return { error: 'path must name a .cdx.json.gz file' }
+  }
   const resolved = path.resolve(evidenceDirectory, relativePath)
-  if (!resolved.startsWith(`${evidenceDirectory}${path.sep}`)) return null
+  if (!isInside(evidenceDirectory, resolved)) return { error: 'path escapes the evidence root' }
   try {
-    return JSON.parse(gunzipSync(readFileSync(resolved), { encoding: 'utf8' }))
+    if (pathContainsSymlink(evidenceDirectory, resolved)) return { error: 'symlinks are not allowed' }
+    const real = realpathSync(resolved)
+    if (!isInside(evidenceRoot, real)) return { error: 'resolved path escapes the evidence root' }
+    if (!lstatSync(real).isFile()) return { error: 'evidence target must be a regular file' }
+    return { sbom: JSON.parse(gunzipSync(readFileSync(real), { encoding: 'utf8' })) }
   }
   catch {
-    return null
+    return { error: 'cannot be read as gzip CycloneDX JSON' }
   }
+}
+
+function imageSourceCommit(sbom) {
+  const revision = sbom.metadata?.component?.properties?.find(property =>
+    property.name === 'aquasecurity:trivy:Labels:org.opencontainers.image.revision'
+  )?.value
+  return exactCommit.test(revision ?? '') ? revision : 'unknown'
 }
 
 function missingLicenseCount(sbom) {
@@ -57,6 +86,10 @@ for (const candidate of report.candidates ?? []) {
     evidenceErrors.push(`${candidate.id}: runtimeComponents must be a non-empty array`)
     continue
   }
+  if (!candidate.runtimeComponents.some(component => component.name === candidate.applicationComponent)) {
+    evidenceErrors.push(`${candidate.id}: applicationComponent must name one runtime component`)
+    continue
+  }
   const runtimeIsFoss = candidate.runtimeComponents.every(component =>
     allowedLicenses.has(component.license) && exactCommit.test(component.sourceCommit) && immutableImage.test(component.imageDigest),
   )
@@ -64,18 +97,21 @@ for (const candidate of report.candidates ?? []) {
   const sourceReferences = sbomEvidence.filter(reference => reference.kind === 'source')
   const imageReferences = sbomEvidence.filter(reference => reference.kind === 'image')
   const candidateEvidenceErrors = []
-  if (sourceReferences.length !== 1 || imageReferences.length === 0) {
+  if (sourceReferences.length !== 1
+    || !imageReferences.some(reference =>
+      reference.role === 'application' && reference.runtimeComponent === candidate.applicationComponent
+    )) {
     candidateEvidenceErrors.push(`${candidate.id}: sbomEvidence must include exactly one source and at least one image`)
   }
-  const inspected = sbomEvidence.map(reference => ({ reference, sbom: readSbom(reference.path) }))
-  for (const { reference, sbom } of inspected) {
+  const inspected = sbomEvidence.map(reference => ({ reference, ...readSbom(reference.path) }))
+  for (const { reference, sbom, error } of inspected) {
     const label = `${candidate.id}/${reference.path ?? '<missing path>'}`
     if (!['source', 'image'].includes(reference.kind)) {
       candidateEvidenceErrors.push(`${label}: kind must be source or image`)
       continue
     }
-    if (!sbom) {
-      candidateEvidenceErrors.push(`${label}: cannot be read as gzip CycloneDX JSON`)
+    if (error) {
+      candidateEvidenceErrors.push(`${label}: ${error}`)
       continue
     }
     if (!Array.isArray(sbom.components) || sbom.components.length === 0) {
@@ -102,6 +138,26 @@ for (const candidate of report.candidates ?? []) {
       || reference.identity !== runtimeComponent.imageDigest
       || sbom.metadata?.component?.name !== runtimeComponent.imageDigest) {
       candidateEvidenceErrors.push(`${label}: image SBOM identity does not match its runtime component digest`)
+      continue
+    }
+    if (!['application', 'runtime'].includes(reference.role)) {
+      candidateEvidenceErrors.push(`${label}: image role must be application or runtime`)
+      continue
+    }
+    const expectedRole = reference.runtimeComponent === candidate.applicationComponent ? 'application' : 'runtime'
+    if (reference.role !== expectedRole) {
+      candidateEvidenceErrors.push(`${label}: image role does not match candidate applicationComponent`)
+      continue
+    }
+    const discoveredSourceCommit = imageSourceCommit(sbom)
+    const expectedStatus = discoveredSourceCommit === 'unknown'
+      ? 'unknown'
+      : discoveredSourceCommit === runtimeComponent.sourceCommit
+        && (expectedRole !== 'application' || discoveredSourceCommit === candidate.sourceCommit)
+        ? 'match'
+        : 'mismatch'
+    if (reference.sourceCommit !== discoveredSourceCommit || reference.sourceCommitStatus !== expectedStatus) {
+      candidateEvidenceErrors.push(`${label}: recorded image source provenance does not match SBOM revision`)
     }
   }
   if (candidateEvidenceErrors.length > 0) {
@@ -114,6 +170,7 @@ for (const candidate of report.candidates ?? []) {
       && reference.runtimeComponent === component.name
       && reference.identity === component.imageDigest
       && sbom?.metadata?.component?.name === component.imageDigest
+      && reference.sourceCommitStatus === 'match'
       && sbomLicensesAreComplete(sbom),
   ))
   const sbomEvidenceIsComplete = Boolean(sourceEvidence)

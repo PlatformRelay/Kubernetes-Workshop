@@ -37,8 +37,11 @@ identity across installations.
 `image` subcommands, `--scanners license`, and CycloneDX output. The machine-readable inventory links
 each candidate to those files. The license gate decompresses and inspects every reference. Every candidate
 must provide readable, identity-bound source and application-image evidence whose recorded total and
-missing-license counts match the SBOM contents. A passing candidate additionally requires evidence for
-every declared runtime component and every discovered component must have an allowlisted FOSS license. Missing license
+missing-license counts match the SBOM contents. Image evidence also records the OCI source revision and
+whether it matches both the evaluated candidate and runtime-component source. ClassQuiz deliberately records
+`mismatch`: its backend image points to `b454f37`, not the evaluated `4d1f1d3` tree. A passing candidate
+additionally requires matching source provenance and evidence for every declared runtime component; every
+discovered component must have an allowlisted FOSS license. Missing license
 assertions are treated as unknown and therefore fail closed; a clean
 "no forbidden license found" scan is not equivalent to complete proof. `cosign verify` found no signature
 for any evaluated application-image digest. These observations are evidence gaps, not allegations that

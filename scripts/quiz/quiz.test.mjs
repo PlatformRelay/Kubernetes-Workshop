@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import test from 'node:test'
-import { gunzipSync } from 'node:zlib'
+import { gunzipSync, gzipSync } from 'node:zlib'
 
 const root = path.resolve(import.meta.dirname, '../..')
 const questionsPath = path.join(root, 'quiz/questions.prototype.json')
@@ -33,6 +33,17 @@ function writeEvidenceFixture(report, mutateFiles = () => {}) {
   const evidencePath = path.join(directory, 'candidates.json')
   writeFileSync(evidencePath, JSON.stringify(report))
   return evidencePath
+}
+
+function completeSbom(name, sourceCommit) {
+  const properties = sourceCommit
+    ? [{ name: 'aquasecurity:trivy:Labels:org.opencontainers.image.revision', value: sourceCommit }]
+    : []
+  return {
+    bomFormat: 'CycloneDX',
+    metadata: { component: { name, properties } },
+    components: [{ name: 'complete-component', licenses: [{ license: { id: 'MIT' } }] }],
+  }
 }
 
 test('prototype bank validates three stable section and question IDs', () => {
@@ -241,6 +252,79 @@ test('license gate verifies every declared SBOM reference before trusting a reje
     () => run('scripts/quiz/license-gate.mjs', [writeEvidenceFixture(wrongMissingCount)]),
     error => {
       assert.match(error.stderr, /claper-source.*missingLicenseCount does not match SBOM contents/)
+      return true
+    },
+  )
+})
+
+test('license gate binds application-image provenance to both evaluated and runtime source', () => {
+  const sourceA = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+  const sourceB = 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb'
+  const imageDigest = `registry.example/quiz@sha256:${'c'.repeat(64)}`
+  const report = {
+    candidates: [{
+      id: 'cross-source',
+      sourceCommit: sourceA,
+      applicationComponent: 'quiz',
+      runtimeComponents: [{ name: 'quiz', license: 'MIT', sourceCommit: sourceB, imageDigest }],
+      sbomEvidence: [
+        {
+          kind: 'source', path: 'sbom/source.cdx.json.gz', identity: sourceA,
+          componentCount: 1, missingLicenseCount: 0,
+        },
+        {
+          kind: 'image', role: 'application', path: 'sbom/image.cdx.json.gz', identity: imageDigest,
+          runtimeComponent: 'quiz', sourceCommit: sourceB, sourceCommitStatus: 'mismatch',
+          componentCount: 1, missingLicenseCount: 0,
+        },
+      ],
+      fossGate: { passed: true },
+    }],
+  }
+  const evidencePath = writeEvidenceFixture(report, directory => {
+    const sourceSbom = completeSbom('source', null)
+    sourceSbom.metadata.component.properties = [{ name: 'workshop:sourceCommit', value: sourceA }]
+    writeFileSync(path.join(directory, 'sbom/source.cdx.json.gz'), gzipSync(JSON.stringify(sourceSbom)))
+    writeFileSync(path.join(directory, 'sbom/image.cdx.json.gz'), gzipSync(JSON.stringify(completeSbom(imageDigest, sourceB))))
+  })
+
+  assert.throws(
+    () => run('scripts/quiz/license-gate.mjs', [evidencePath]),
+    error => {
+      assert.match(error.stderr, /recorded FOSS verdict does not match fail-closed evidence/)
+      return true
+    },
+  )
+
+  const unknownReport = structuredClone(report)
+  unknownReport.candidates[0].runtimeComponents[0].sourceCommit = sourceA
+  unknownReport.candidates[0].sbomEvidence[1].sourceCommit = 'unknown'
+  unknownReport.candidates[0].sbomEvidence[1].sourceCommitStatus = 'unknown'
+  unknownReport.candidates[0].fossGate.passed = false
+  const unknownEvidencePath = writeEvidenceFixture(unknownReport, directory => {
+    const sourceSbom = completeSbom('source', null)
+    sourceSbom.metadata.component.properties = [{ name: 'workshop:sourceCommit', value: sourceA }]
+    writeFileSync(path.join(directory, 'sbom/source.cdx.json.gz'), gzipSync(JSON.stringify(sourceSbom)))
+    writeFileSync(path.join(directory, 'sbom/image.cdx.json.gz'), gzipSync(JSON.stringify(completeSbom(imageDigest, null))))
+  })
+  assert.match(
+    run('scripts/quiz/license-gate.mjs', [unknownEvidencePath]),
+    /0 of 1 candidates passed the complete-runtime FOSS gate/,
+  )
+})
+
+test('license gate rejects symlinked evidence even when its lexical path is inside the evidence root', () => {
+  const evidence = path.join(root, 'docs/decisions/evidence/0011-live-quiz-spike/candidates.json')
+  const report = JSON.parse(readFileSync(evidence, 'utf8'))
+  report.candidates[0].sbomEvidence[0].path = 'sbom/symlink-source.cdx.json.gz'
+  const evidencePath = writeEvidenceFixture(report, directory => {
+    symlinkSync('claper-source.cdx.json.gz', path.join(directory, 'sbom/symlink-source.cdx.json.gz'))
+  })
+
+  assert.throws(
+    () => run('scripts/quiz/license-gate.mjs', [evidencePath]),
+    error => {
+      assert.match(error.stderr, /symlink-source.*symlinks are not allowed/)
       return true
     },
   )

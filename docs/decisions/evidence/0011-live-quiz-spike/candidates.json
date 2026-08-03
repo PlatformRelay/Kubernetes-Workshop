@@ -7,10 +7,11 @@
       "source": "https://github.com/ClaperCo/Claper",
       "sourceCommit": "3e80ce2ea25286d1b591ea327acdbfeb31fa33e3",
       "release": "v2.5.1",
+      "applicationComponent": "claper",
       "dependencyLicenseCoverage": "incomplete",
       "sbomEvidence": [
         { "kind": "source", "path": "sbom/claper-source.cdx.json.gz", "identity": "3e80ce2ea25286d1b591ea327acdbfeb31fa33e3", "componentCount": 123, "missingLicenseCount": 115 },
-        { "kind": "image", "path": "sbom/claper-image.cdx.json.gz", "identity": "ghcr.io/claperco/claper@sha256:4f733dc50b0c77517db402541f88c5489d4c9eedb32ac6c5eef7cadd8a594196", "runtimeComponent": "claper", "componentCount": 527, "missingLicenseCount": 81 }
+        { "kind": "image", "role": "application", "path": "sbom/claper-image.cdx.json.gz", "identity": "ghcr.io/claperco/claper@sha256:4f733dc50b0c77517db402541f88c5489d4c9eedb32ac6c5eef7cadd8a594196", "runtimeComponent": "claper", "sourceCommit": "3e80ce2ea25286d1b591ea327acdbfeb31fa33e3", "sourceCommitStatus": "match", "componentCount": 527, "missingLicenseCount": 81 }
       ],
       "runtimeComponents": [
         {
@@ -36,10 +37,11 @@
       "source": "https://github.com/mawoka-myblock/ClassQuiz",
       "sourceCommit": "4d1f1d31653752718cd41b13ca7820621f5626a7",
       "release": "master snapshot",
+      "applicationComponent": "classquiz-backend",
       "dependencyLicenseCoverage": "incomplete",
       "sbomEvidence": [
         { "kind": "source", "path": "sbom/classquiz-source.cdx.json.gz", "identity": "4d1f1d31653752718cd41b13ca7820621f5626a7", "componentCount": 97, "missingLicenseCount": 97 },
-        { "kind": "image", "path": "sbom/classquiz-backend-image.cdx.json.gz", "identity": "ghcr.io/mawoka-myblock/classquiz-backend@sha256:ae13b64132422574c12a2a751a4bbc3c5b676125dacbad020da98660fbeb9aca", "runtimeComponent": "classquiz-backend", "componentCount": 260, "missingLicenseCount": 28 }
+        { "kind": "image", "role": "application", "path": "sbom/classquiz-backend-image.cdx.json.gz", "identity": "ghcr.io/mawoka-myblock/classquiz-backend@sha256:ae13b64132422574c12a2a751a4bbc3c5b676125dacbad020da98660fbeb9aca", "runtimeComponent": "classquiz-backend", "sourceCommit": "b454f37fc20ba99ec9f70c2671ca39683d1a456a", "sourceCommitStatus": "mismatch", "componentCount": 260, "missingLicenseCount": 28 }
       ],
       "runtimeComponents": [
         {
@@ -83,10 +85,11 @@
       "source": "https://github.com/quizdock/quiz-dock",
       "sourceCommit": "5d5e0319bed814b7e3ee36b06f42538d5efea5d9",
       "release": "v0.3.2",
+      "applicationComponent": "quizdock",
       "dependencyLicenseCoverage": "incomplete",
       "sbomEvidence": [
         { "kind": "source", "path": "sbom/quizdock-source.cdx.json.gz", "identity": "5d5e0319bed814b7e3ee36b06f42538d5efea5d9", "componentCount": 396, "missingLicenseCount": 396 },
-        { "kind": "image", "path": "sbom/quizdock-image.cdx.json.gz", "identity": "docker.io/fchaussin/quizdock@sha256:d3af1033fff017beb060fb52c94caa372e35646cff5b35fb9590313240de67fb", "runtimeComponent": "quizdock", "componentCount": 266, "missingLicenseCount": 8 }
+        { "kind": "image", "role": "application", "path": "sbom/quizdock-image.cdx.json.gz", "identity": "docker.io/fchaussin/quizdock@sha256:d3af1033fff017beb060fb52c94caa372e35646cff5b35fb9590313240de67fb", "runtimeComponent": "quizdock", "sourceCommit": "5d5e0319bed814b7e3ee36b06f42538d5efea5d9", "sourceCommitStatus": "match", "componentCount": 266, "missingLicenseCount": 8 }
       ],
       "runtimeComponents": [
         {
