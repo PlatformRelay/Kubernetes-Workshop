@@ -11,14 +11,14 @@ import {
   auditLab,
 } from './lab-contract.mjs';
 
-function fixture({ lab = '', solution = '' } = {}) {
+function fixture({ lab = '', solution = '', name = '01-example' } = {}) {
   const root = mkdtempSync(join(tmpdir(), 'lab-contract-'));
   const day = join(root, 'labs', 'day-1');
   mkdirSync(day, { recursive: true });
-  const labPath = join(day, '01-example.md');
+  const labPath = join(day, `${name}.md`);
   writeFileSync(labPath, lab);
   if (solution !== null) {
-    writeFileSync(join(day, '01-example.solution.md'), solution);
+    writeFileSync(join(day, `${name}.solution.md`), solution);
   }
   return labPath;
 }
@@ -27,19 +27,33 @@ const validLab = `# Lab 01 — Example
 
 <!-- lab-contract:v1 -->
 
+| | |
+| --- | --- |
+| **Section** | S01 — Example |
+| **Environment** | namespace or kind |
+| **Estimated time** | 10 min |
+
+## Objective
+
+Diagnose a Service selector mismatch and restore a reachable endpoint using observable cluster state.
+
 ## Prerequisites
 
-- A namespace.
+- A writable namespace and a configured kubectl context for the workshop cluster.
+
+## Files used
+
+- \`example.yaml\` — the namespace-scoped example manifest used by this exercise.
 
 ## Guided task
 
-Run the example.
+Create the labelled example Pod, inspect its state, and compare its labels with the Service selector.
 
 [Spoiler: guided solutions](./01-example.solution.md#guided-solutions)
 
 ## Observe
 
-Observe the result.
+Observe the Pod phase, labels, and selected endpoint address before changing the mismatch.
 
 ## Challenge
 
@@ -137,6 +151,29 @@ test('rejects broad Kubernetes and host-wide destructive cleanup', () => {
   assert.ok(errors.some((error) => error.includes('host-wide destructive command')));
 });
 
+test('audits fenced destructive commands in the sibling solution', () => {
+  const unsafeSolution = `${validSolution}
+
+\`\`\`bash
+kubectl delete all --all
+rm -rf /
+\`\`\`
+`;
+  const errors = auditLab(fixture({ lab: validLab, solution: unsafeSolution }));
+
+  assert.ok(errors.some((error) => error.includes('.solution.md: line') && error.includes('broad kubectl delete')));
+  assert.ok(errors.some((error) => error.includes('.solution.md: line') && error.includes('host-wide destructive command')));
+
+  const scopedSolution = `${validSolution}
+
+\`\`\`bash
+kubectl delete pod example -n "$NS" --ignore-not-found
+rm -f example.yaml
+\`\`\`
+`;
+  assert.deepEqual(auditLab(fixture({ lab: validLab, solution: scopedSolution })), []);
+});
+
 test('rejects cleanup placed before challenge or verification', () => {
   const misplaced = validLab
     .replace('## Challenge', '## Cleanup / reset')
@@ -153,6 +190,44 @@ test('rejects a dangling challenge-solution anchor', () => {
   }));
 
   assert.ok(errors.some((error) => error.includes('dangling challenge solution link')));
+});
+
+test('requires the complete ordered participant lab skeleton and substantive metadata', () => {
+  const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+  const lab = readFileSync(resolve(repo, 'labs/day-1/05-pod.md'), 'utf8');
+  const solution = readFileSync(resolve(repo, 'labs/day-1/05-pod.solution.md'), 'utf8');
+  const cases = [
+    ['title', lab.replace(/^# Lab 05[^\n]*\n/, ''), 'missing lab title'],
+    ['metadata', lab.replace(/^\| \*\*(?:Section|Environment|Estimated time)\*\* \|[^\n]*\n/gm, ''), 'missing metadata field'],
+    ['objective', lab.replace(/^## Objective\n[\s\S]*?(?=^## Prerequisites)/m, ''), 'missing heading: Objective'],
+    ['files', lab.replace(/^## Files used\n[\s\S]*?(?=^## Guided task)/m, ''), 'missing heading: Files used'],
+    [
+      'order',
+      lab.replace('## Objective', '## TEMP').replace('## Prerequisites', '## Objective').replace('## TEMP', '## Prerequisites'),
+      'lab sections must follow prescribed order',
+    ],
+    [
+      'metadata order',
+      lab.replace(
+        '| **Section** | S05 — Pod *(red line 1/5)* |',
+        'moved below objective',
+      ).replace(
+        '## Prerequisites',
+        '| **Section** | S05 — Pod *(red line 1/5)* |\n\n## Prerequisites',
+      ),
+      'lab title, metadata, and sections must follow prescribed order',
+    ],
+    [
+      'shallow metadata',
+      lab.replace('| **Section** | S05 — Pod *(red line 1/5)* |', '| **Section** | x |'),
+      'metadata field is not substantive: Section',
+    ],
+  ];
+
+  for (const [name, mutated, expected] of cases) {
+    const errors = auditLab(fixture({ lab: mutated, solution, name: '05-pod' }));
+    assert.ok(errors.some((error) => error.includes(expected)), `${name}: missing ${expected}`);
+  }
 });
 
 test('rejects challenges without assessable metadata or transfer work', () => {

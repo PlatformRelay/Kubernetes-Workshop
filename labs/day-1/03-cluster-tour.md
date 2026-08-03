@@ -32,6 +32,11 @@ objects — this lab is **read-only** and safe to run anywhere you have access.
 export NS=<your-namespace>        # same value as Lab 00 (kind users: workshop)
 ```
 
+## Files used
+
+- None. This read-only lab queries live API resources with inline `kubectl` commands and creates
+  no local manifests.
+
 ---
 
 ## Guided task

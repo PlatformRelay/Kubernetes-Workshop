@@ -30,6 +30,11 @@ never `apply` it, so it's safe in any namespace.
 export NS=<your-namespace>        # same value as Lab 00 (kind users: workshop)
 ```
 
+## Files used
+
+- `web.yaml` — generated during the challenge for a non-mutating `kubectl diff`, then removed in
+  cleanup. The guided steps create no persistent files or cluster objects.
+
 ---
 
 ## Guided task

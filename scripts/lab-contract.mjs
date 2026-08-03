@@ -18,13 +18,17 @@ export const DAY_1_LABS = [
 ];
 
 const REQUIRED_LAB_HEADINGS = [
+  'Objective',
   'Prerequisites',
+  'Files used',
   'Guided task',
   'Observe',
   'Challenge',
   'Verify',
   'Cleanup / reset',
 ];
+
+const ORDERED_LAB_HEADINGS = [...REQUIRED_LAB_HEADINGS];
 
 const REQUIRED_SOLUTION_HEADINGS = [
   'Guided solutions',
@@ -135,6 +139,13 @@ function headings(markdown) {
   return result;
 }
 
+function metadataFields(markdown) {
+  const result = new Map();
+  const expression = /^\|\s*\*\*(Section|Environment|Estimated time)\*\*\s*\|\s*([^|\n]+?)\s*\|\s*$/gm;
+  for (const match of markdown.matchAll(expression)) result.set(match[1], match[2].trim());
+  return result;
+}
+
 function slugify(heading) {
   return heading
     .trim()
@@ -192,8 +203,51 @@ export function auditLab(labPath) {
 
   const markdown = readFileSync(absoluteLab, 'utf8');
   const labHeadings = headings(markdown);
+  if (!/^# Lab \d{2}\s+—\s+\S.+$/u.test(markdown.split('\n')[0])) {
+    errors.push(`${display}: missing lab title`);
+  }
   for (const heading of REQUIRED_LAB_HEADINGS) {
     if (!labHeadings.has(heading)) errors.push(`${display}: missing heading: ${heading}`);
+  }
+
+  const metadata = metadataFields(markdown);
+  for (const name of ['Section', 'Estimated time', 'Environment']) {
+    const value = metadata.get(name);
+    if (!value) {
+      errors.push(`${display}: missing metadata field: ${name}`);
+      continue;
+    }
+    const substantive = name === 'Estimated time'
+      ? /\b\d+\s*(?:min(?:ute)?s?|h(?:ou)?rs?)\b/i.test(value)
+      : words(value).length >= 2 && !/^(?:x|tbd|todo|n\/a)$/i.test(normalized(value));
+    if (!substantive) errors.push(`${display}: metadata field is not substantive: ${name}`);
+  }
+
+  const objectiveOffset = markdown.indexOf('\n## Objective');
+  const metadataOffsets = ['Section', 'Environment', 'Estimated time']
+    .map((name) => markdown.indexOf(`| **${name}** |`));
+  if (objectiveOffset >= 0 && metadataOffsets.every((offset) => offset >= 0) &&
+      metadataOffsets.some((offset) => offset > objectiveOffset)) {
+    errors.push(`${display}: lab title, metadata, and sections must follow prescribed order`);
+  }
+
+  const orderedLines = ORDERED_LAB_HEADINGS.map((heading) => labHeadings.get(heading));
+  if (orderedLines.every(Boolean) && orderedLines.some((line, index) => index > 0 && line <= orderedLines[index - 1])) {
+    errors.push(`${display}: lab sections must follow prescribed order`);
+  }
+
+  for (const [heading, minimum] of [
+    ['Objective', 10],
+    ['Prerequisites', 4],
+    ['Files used', 4],
+    ['Guided task', 12],
+    ['Observe', 8],
+    ['Verify', 5],
+    ['Cleanup / reset', 4],
+  ]) {
+    if (labHeadings.has(heading) && words(section(markdown, heading)).length < minimum) {
+      errors.push(`${display}: section is not substantive: ${heading}`);
+    }
   }
 
   if (!markdown.includes('<!-- lab-contract:v1 -->')) {
@@ -240,10 +294,12 @@ export function auditLab(labPath) {
   const solutionPath = absoluteLab.replace(/\.md$/, '.solution.md');
   const solutionName = solutionPath.split('/').at(-1);
   const links = solutionLinks(markdown, solutionName);
-  if (!links.includes('guided-solutions')) {
+  const guidedLinks = solutionLinks(section(markdown, 'Guided task'), solutionName);
+  const challengeLinks = solutionLinks(section(markdown, 'Challenge'), solutionName);
+  if (!links.includes('guided-solutions') || !guidedLinks.includes('guided-solutions')) {
     errors.push(`${display}: missing guided solution link to ./${solutionName}#guided-solutions`);
   }
-  if (!links.includes('challenge-solution')) {
+  if (!links.includes('challenge-solution') || !challengeLinks.includes('challenge-solution')) {
     errors.push(`${display}: missing challenge solution link to ./${solutionName}#challenge-solution`);
   }
 
@@ -253,6 +309,8 @@ export function auditLab(labPath) {
   }
 
   const solution = readFileSync(solutionPath, 'utf8');
+  errors.push(...unsafeCommands(solution).map((error) =>
+    `${relative(REPO_ROOT, solutionPath)}: ${error}`));
   const solutionHeadings = headings(solution);
   for (const heading of REQUIRED_SOLUTION_HEADINGS) {
     if (!solutionHeadings.has(heading)) {
