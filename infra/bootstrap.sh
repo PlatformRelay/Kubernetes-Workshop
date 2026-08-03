@@ -228,9 +228,27 @@ kind_provider_env() {
 # --- Tools (mise) ------------------------------------------------------------
 # Install mise if absent (documented installer), then install the pinned
 # toolchain from mise.toml, verified against mise.lock.
-ensure_mise() {
+find_mise() {
   if command -v mise >/dev/null 2>&1; then
-    ok "mise present: $(mise --version 2>/dev/null | head -1)"
+    command -v mise
+    return 0
+  fi
+  if [ -n "${HOME:-}" ] && [ -x "$HOME/.local/bin/mise" ]; then
+    printf '%s\n' "$HOME/.local/bin/mise"
+    return 0
+  fi
+  return 1
+}
+
+ensure_mise() {
+  local mise_path
+  mise_path="$(find_mise || true)"
+  if [ -n "$mise_path" ]; then
+    # The installer may already have created ~/.local/bin/mise while the parent
+    # login shell still has its old PATH. Make this process idempotently reuse
+    # that installation instead of attempting another install.
+    export PATH="${mise_path%/*}:$PATH"
+    ok "mise present: $($mise_path --version 2>/dev/null | head -1)"
     return 0
   fi
   warn "mise not found — installing it (https://mise.jdx.dev)."
@@ -266,6 +284,45 @@ install_tools() {
   ok "toolchain installed and verified against mise.lock"
 }
 
+# Run a command with the repository's mise-managed tools on PATH. `mise install`
+# downloads tools but intentionally does not mutate the current shell, so a
+# fresh machine must not depend on a shell restart or activation hook before it
+# can use kind/kubectl. Keep a direct fallback for `doctor` diagnostics on hosts
+# where mise has not been installed yet.
+run_in_toolchain() {
+  local mise_path
+  mise_path="$(find_mise || true)"
+  if [ -n "$mise_path" ]; then
+    ( cd "$REPO_ROOT" && "$mise_path" exec -- "$@" )
+  else
+    "$@"
+  fi
+}
+
+# A child process cannot permanently change its caller's PATH. The bootstrap
+# itself therefore uses run_in_toolchain, while this hint keeps the hand-off to
+# copy-pasted lab commands honest on a shell that has not activated mise yet.
+print_shell_activation_hint() {
+  command -v kubectl >/dev/null 2>&1 && return 0
+
+  local mise_path shell_name
+  mise_path="$(find_mise || true)"
+  [ -n "$mise_path" ] || return 0
+  shell_name="${SHELL:-bash}"
+  shell_name="${shell_name##*/}"
+  case "$shell_name" in
+    bash | zsh) : ;;
+    *) shell_name="bash" ;;
+  esac
+
+  say ""
+  warn "Pinned tools are available to ./workshop, but this parent shell has not activated mise."
+  say "Before running lab commands in this shell, run:"
+  # The command substitution is intentionally printed for the parent shell.
+  # shellcheck disable=SC2016
+  printf '  eval "$("%s" activate %s)"\n' "$mise_path" "$shell_name"
+}
+
 # --- Cluster (delegated to the Makefile) -------------------------------------
 # Pin kind to the engine our preflight selected (see WORKSHOP_ENGINE). We prefix
 # the env token via `env` so kind cannot silently re-detect a different, dead
@@ -275,7 +332,7 @@ cluster_up() {
   local provider
   provider="$(kind_provider_env)"
   spin "Creating the kind cluster (make kind-up)" \
-    env ${provider:+"$provider"} make -C "$REPO_ROOT" kind-up || {
+    run_in_toolchain env ${provider:+"$provider"} make -C "$REPO_ROOT" kind-up || {
     err "kind cluster creation failed — see output above."
     return 1
   }
@@ -284,7 +341,7 @@ cluster_up() {
 
 cluster_down() {
   spin "Deleting the kind cluster (make kind-down)" \
-    make -C "$REPO_ROOT" kind-down || {
+    run_in_toolchain make -C "$REPO_ROOT" kind-down || {
     err "kind cluster deletion failed — see output above."
     return 1
   }
@@ -293,7 +350,9 @@ cluster_down() {
 
 # --- doctor (delegated) ------------------------------------------------------
 run_doctor() {
-  WORKSHOP_NONINTERACTIVE="${WORKSHOP_NONINTERACTIVE:-1}" "$SCRIPT_DIR/doctor.sh"
+  run_in_toolchain env \
+    WORKSHOP_NONINTERACTIVE="${WORKSHOP_NONINTERACTIVE:-1}" \
+    "$SCRIPT_DIR/doctor.sh"
 }
 
 # --- Subcommands -------------------------------------------------------------
@@ -307,6 +366,7 @@ cmd_up() {
   if run_doctor; then
     say ""
     ok "environment is ready — start with labs/day-1/00-setup.md"
+    print_shell_activation_hint
     return 0
   else
     err "doctor found problems — see the report above."

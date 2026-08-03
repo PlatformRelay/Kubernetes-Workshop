@@ -10,6 +10,11 @@ set -eu
 
 echo "kubectl $*" >> "${MOCK_LOG:?stub requires MOCK_LOG}"
 
+if [ "${MOCK_REQUIRE_MISE_EXEC:-0}" = "1" ] && [ "${MOCK_INSIDE_MISE_EXEC:-0}" != "1" ]; then
+  echo "kubectl: command not found outside mise exec" >&2
+  exit 127
+fi
+
 # Strip global flags (--context <name>) so the verb lands in $1.
 args=()
 skip_next=0

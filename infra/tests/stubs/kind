@@ -15,6 +15,11 @@ set -eu
 
 echo "kind $*" >> "${MOCK_LOG:?stub requires MOCK_LOG}"
 
+if [ "${MOCK_REQUIRE_MISE_EXEC:-0}" = "1" ] && [ "${MOCK_INSIDE_MISE_EXEC:-0}" != "1" ]; then
+  echo "kind: command not found outside mise exec" >&2
+  exit 127
+fi
+
 # Record which provider kind was pinned to, so tests can assert the bootstrap
 # propagated the detected engine (KIND_EXPERIMENTAL_PROVIDER) instead of letting
 # kind re-detect. Only logged when the caller set it.

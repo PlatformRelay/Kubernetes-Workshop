@@ -69,6 +69,12 @@ cd kubernetes-workshop
 That's it. The first run downloads the pinned tools and the kind node image, so
 budget a few minutes on conference Wi-Fi. Subsequent runs are near-instant.
 
+The bootstrap invokes the freshly installed tools through mise immediately, so
+cluster creation does not require a shell restart. A process cannot update the
+shell that launched it, however. If `kubectl` was not already on your `PATH`,
+the successful bootstrap prints the one `eval "$(mise activate …)"` command to
+run before copying the lab commands into that same terminal.
+
 You do **not** need to install mise yourself — `./workshop up` installs it if it
 is missing (interactively). If you would rather install it up front, any of
 these work and are picked up automatically:
@@ -133,9 +139,10 @@ path CI runs, so the script you run locally is the script that is tested. Use
 | `no reachable container engine` | Start Docker Desktop / `colima start` / `podman machine start`. On Podman for Windows, make the machine rootful. |
 | `native Windows (PowerShell) is not supported` | You're not in WSL2. Open your WSL2 distro and re-run there (Step 3). |
 | `mise is required but not installed` (non-interactive) | Install mise first (`brew install mise` / `winget install jdx.mise` / `curl https://mise.run \| sh`), then re-run. |
+| `kubectl: command not found` after a green bootstrap | Run the `mise activate` command printed by `./workshop up` in the current shell. You do not need to recreate the cluster. |
 | kind cluster won't create / is unreachable | Panic reset: `./workshop down` then `./workshop up` (equivalently `make kind-down && make kind-up`). |
 | Slow / stalls on downloads | Conference Wi-Fi. The tool cache and node image are only fetched once; retry — mise resumes. |
-| `doctor` reports a version WARN | Your local kubectl/kind differs from the pin. It's a warning, not a failure; the pinned tools from `mise install` take precedence on `PATH`. |
+| `doctor` reports a version WARN | Your local kubectl/kind differs from the pin. It's a warning, not a failure; `./workshop` uses the pinned mise environment. Activate mise as described above for manual commands. |
 
 If `./workshop up` finishes green but a later lab misbehaves, run `./workshop
 doctor` first — it re-checks the cluster and prints a targeted hint per failure.

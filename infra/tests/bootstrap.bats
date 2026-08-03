@@ -68,6 +68,64 @@ setup() {
   grep -q -- "mise install --locked" "$MOCK_LOG"
 }
 
+@test "up uses the mise tool environment when managed tools are absent from the host PATH" {
+  # Reproduce a fresh Ubuntu install: mise itself is reachable and successfully
+  # installs the lockfile, but kind/kubectl are only exposed by `mise exec`.
+  # No shell restart or activation hook should be required before cluster-up or
+  # doctor can use those managed binaries.
+  local host_bin="$BATS_TEST_TMPDIR/host-bin"
+  local managed_bin="$BATS_TEST_TMPDIR/managed-bin"
+  mkdir -p "$host_bin" "$managed_bin"
+  ln -s "$ROOT/infra/tests/stubs/docker" "$host_bin/docker"
+  ln -s "$ROOT/infra/tests/stubs/podman" "$host_bin/podman"
+  ln -s "$ROOT/infra/tests/stubs/mise" "$host_bin/mise"
+  ln -s "$ROOT/infra/tests/stubs/kind" "$managed_bin/kind"
+  ln -s "$ROOT/infra/tests/stubs/kubectl" "$managed_bin/kubectl"
+
+  export PATH="$host_bin:/usr/bin:/bin:/usr/sbin:/sbin"
+  export MOCK_MISE_EXEC_PATH="$managed_bin"
+  export MOCK_REQUIRE_MISE_EXEC=1
+  export MOCK_CLUSTER_EXISTS=0
+  ! command -v kind
+  ! command -v kubectl
+
+  run "$ROOT/workshop" up
+
+  [ "$status" -eq 0 ]
+  grep -q -- "mise install --locked" "$MOCK_LOG"
+  grep -q -- "mise exec -- env make -C $ROOT kind-up" "$MOCK_LOG"
+  grep -q -- "mise exec -- env WORKSHOP_NONINTERACTIVE=1 $ROOT/infra/doctor.sh" "$MOCK_LOG"
+  grep -q -- "kind create cluster" "$MOCK_LOG"
+  echo "$output" | grep -q "environment is ready"
+  echo "$output" | grep -q "Before running lab commands in this shell"
+  echo "$output" | grep -q "activate"
+}
+
+@test "up reuses a default mise install that the parent shell has not added to PATH" {
+  local host_bin="$BATS_TEST_TMPDIR/host-bin"
+  local managed_bin="$BATS_TEST_TMPDIR/managed-bin"
+  mkdir -p "$host_bin" "$managed_bin" "$BATS_TEST_TMPDIR/home/.local/bin"
+  ln -s "$ROOT/infra/tests/stubs/docker" "$host_bin/docker"
+  ln -s "$ROOT/infra/tests/stubs/podman" "$host_bin/podman"
+  ln -s "$ROOT/infra/tests/stubs/mise" "$BATS_TEST_TMPDIR/home/.local/bin/mise"
+  ln -s "$ROOT/infra/tests/stubs/kind" "$managed_bin/kind"
+  ln -s "$ROOT/infra/tests/stubs/kubectl" "$managed_bin/kubectl"
+
+  export HOME="$BATS_TEST_TMPDIR/home"
+  export PATH="$host_bin:/usr/bin:/bin:/usr/sbin:/sbin"
+  export MOCK_MISE_EXEC_PATH="$managed_bin"
+  export MOCK_REQUIRE_MISE_EXEC=1
+  export MOCK_CLUSTER_EXISTS=0
+  ! command -v mise
+
+  run "$ROOT/workshop" up
+
+  [ "$status" -eq 0 ]
+  grep -q -- "mise install --locked" "$MOCK_LOG"
+  grep -q -- "mise exec -- env make -C $ROOT kind-up" "$MOCK_LOG"
+  echo "$output" | grep -q "environment is ready"
+}
+
 # --- engine probe: preference order Docker -> Podman -------------------------
 
 @test "engine probe prefers docker when it is reachable" {

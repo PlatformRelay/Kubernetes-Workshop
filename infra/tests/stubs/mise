@@ -4,6 +4,7 @@
 #   mise --version       -> a version line
 #   mise trust           -> success (no-op)
 #   mise install [--locked] -> exit MOCK_MISE_EXIT (default 0)
+#   mise exec -- COMMAND -> execute COMMAND with the managed-tool marker set
 set -eu
 
 echo "mise $*" >> "${MOCK_LOG:?stub requires MOCK_LOG}"
@@ -17,6 +18,18 @@ case "${1:-}" in
     ;;
   install)
     exit "${MOCK_MISE_EXIT:-0}"
+    ;;
+  exec)
+    shift
+    if [ "${1:-}" = "--" ]; then
+      shift
+    fi
+    if [ -n "${MOCK_MISE_EXEC_PATH:-}" ]; then
+      PATH="$MOCK_MISE_EXEC_PATH:$PATH"
+      export PATH
+    fi
+    export MOCK_INSIDE_MISE_EXEC=1
+    exec "$@"
     ;;
   *)
     exit 0

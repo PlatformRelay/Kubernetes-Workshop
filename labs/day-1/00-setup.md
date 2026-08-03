@@ -46,6 +46,8 @@ From the repo root, bring up (or re-check) your local cluster:
 
 `up` finishes by running `./workshop doctor`, which checks the engine, tool versions, the
 cluster, its nodes, and a throwaway smoke Pod. A green summary means you're ready.
+If mise was installed for the first time, follow the final `mise activate` hint before
+copying later `kubectl` commands into the same terminal; no shell restart is required.
 
 <details><summary>Solution / expected output — kind path</summary>
 
