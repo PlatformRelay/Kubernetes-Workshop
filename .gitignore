@@ -13,6 +13,7 @@ stuff
 .vite-inspect/
 .remote-assets/
 components.d.ts
+.deck-selection.md
 
 # Export artifacts
 *.pdf

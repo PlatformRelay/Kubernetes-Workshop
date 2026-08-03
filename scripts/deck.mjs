@@ -1,0 +1,103 @@
+#!/usr/bin/env node
+import { spawnSync } from 'node:child_process'
+import { existsSync, writeFileSync } from 'node:fs'
+import { resolve } from 'node:path'
+import { renderDeck, sections, validateManifest } from './deck-manifest.mjs'
+import { resolveSelection, selectSections } from './deck-selector.mjs'
+
+const repoRoot = resolve(import.meta.dirname, '..')
+const selectionFile = '.deck-selection.md'
+
+function commandExists(command) {
+  return spawnSync(command, ['--version'], { stdio: 'ignore' }).status === 0
+}
+
+function usage() {
+  return `Workshop deck launcher
+
+Usage:
+  pnpm deck -- --day 1 [--action dev|build|export]
+  pnpm deck -- --day optional
+  pnpm deck -- --section S05
+  pnpm deck -- --range S05-S09
+  pnpm deck -- --list
+
+With an interactive terminal and gum installed, running without a selector opens a menu.
+Without gum or a TTY, pass an explicit selector; the content superset is never selected by default.
+Use --dry-run to print the resolved section IDs without starting Slidev.`
+}
+
+function gumChoose() {
+  const choice = spawnSync('gum', [
+    'choose',
+    'Day 1', 'Day 2', 'Day 3', 'Optional / Appendix', 'One section…', 'Contiguous range…',
+    '--header', 'Choose workshop content',
+  ], { encoding: 'utf8', stdio: ['inherit', 'pipe', 'inherit'] })
+  if (choice.status !== 0)
+    throw new Error('Deck selection cancelled')
+  const value = choice.stdout.trim()
+  if (value.startsWith('Day ')) return { type: 'day', value: value.at(-1) }
+  if (value === 'Optional / Appendix') return { type: 'day', value: 'optional' }
+
+  const prompt = value === 'One section…' ? 'Section ID (for example S05)' : 'Range (for example S05-S09)'
+  const input = spawnSync('gum', ['input', '--prompt', `${prompt}: `], {
+    encoding: 'utf8', stdio: ['inherit', 'pipe', 'inherit'],
+  })
+  if (input.status !== 0)
+    throw new Error('Deck selection cancelled')
+  return value === 'One section…'
+    ? { type: 'section', value: input.stdout.trim().toUpperCase() }
+    : { type: 'range', value: input.stdout.trim() }
+}
+
+function printSections() {
+  for (const section of sections) {
+    const cut = section.canonical ? `Day ${section.day}` : 'Optional / Appendix'
+    console.log(`${section.id}  ${cut.padEnd(19)} ${section.title}`)
+  }
+}
+
+try {
+  validateManifest(sections, { repoRoot })
+  let selection = resolveSelection(process.argv.slice(2), {
+    isTTY: Boolean(process.stdin.isTTY && process.stdout.isTTY),
+    hasGum: commandExists('gum'),
+  })
+  if (selection.help) {
+    console.log(usage())
+    process.exit(0)
+  }
+  if (selection.list) {
+    printSections()
+    process.exit(0)
+  }
+  if (selection.type === 'interactive')
+    selection = { ...selection, ...gumChoose() }
+
+  const selected = selectSections(sections, selection)
+  const label = selection.type === 'day'
+    ? (selection.value === 'optional' ? 'Optional / Appendix' : `Day ${selection.value}`)
+    : selected.length === 1 ? `${selected[0].id} · ${selected[0].title}` : `${selected[0].id}–${selected.at(-1).id}`
+  writeFileSync(resolve(repoRoot, selectionFile), renderDeck(selected, {
+    title: label,
+    description: 'facilitator selection',
+    generated: false,
+  }))
+  console.log(`${label}: ${selected.map((section) => section.id).join(', ')}`)
+  if (selection.dryRun)
+    process.exit(0)
+
+  const slidev = resolve(repoRoot, 'node_modules', '.bin', 'slidev')
+  if (!existsSync(slidev))
+    throw new Error('Slidev is not installed; run `pnpm install` first')
+  const actionArgs = {
+    dev: [selectionFile, '--open'],
+    build: ['build', selectionFile, '--out', 'dist-selection'],
+    export: ['export', selectionFile, '--output', 'slides-selection-export'],
+  }[selection.action]
+  const result = spawnSync(slidev, actionArgs, { cwd: repoRoot, stdio: 'inherit' })
+  process.exit(result.status ?? 1)
+} catch (error) {
+  console.error(`deck: ${error.message}\n\n${usage()}`)
+  process.exit(2)
+}

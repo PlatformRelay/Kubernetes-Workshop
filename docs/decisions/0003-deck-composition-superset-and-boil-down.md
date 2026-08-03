@@ -42,9 +42,15 @@ We want to author each topic **once**, richly, and compose a schedule from those
   Slidev merges the import block's frontmatter into every imported slide, so `hide: true` (or
   `disabled: true`) drops the entire section at parse time. Page-range imports
   (`src: ./pages/S07-service/index.md#1,4-6`) are available for partial pulls.
-- **Multiple root decks, one library.** `slides.md` imports **every** section (the superset);
-  `slides-3day.md` imports only the canonical 3-day cut; `slides-templates.md` is the component
-  gallery. A new delivery is **one new `slides-<variant>.md`**, never a copied section.
+- **Generated root decks, one library.** `scripts/deck-manifest.mjs` is the single source of
+  section metadata. It generates four live-delivery entries (`slides-day-1.md`,
+  `slides-day-2.md`, `slides-day-3.md`, and `slides-optional.md`) plus the compatibility
+  `slides.md` superset and combined `slides-3day.md` cut. A new delivery changes the manifest
+  and generator, never copies section content.
+- **Selection launcher.** `scripts/deck.mjs` composes a complete day, one section, or a
+  contiguous range into an ignored local root. Explicit flags are deterministic; `gum` is
+  progressive enhancement. With neither flags nor an interactive Gum session, selection
+  fails rather than silently opening the oversized superset.
 - **Tiers drive the cut.** The 3-day cut = all `core` + selected `recommended`; `optional` is
   cut first. Keep the outline's section map, the tier tags, and the cover-image numbering in
   sync when sections move.

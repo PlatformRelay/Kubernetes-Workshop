@@ -7,8 +7,9 @@ It ships as a Slidev slide deck plus a separate set of hands-on labs in Markdown
 workshop is **50% presentation, 50% practice**.
 
 Content is authored as a **superset** and boiled down per delivery: every section is a
-self-contained, **toggleable** unit, and one or more **root decks** compose them (a full
-`slides.md` and a boiled-down `slides-3day.md`). See
+self-contained, **toggleable** unit, and generated **root decks** compose Day 1, Day 2,
+Day 3, and Optional / Appendix entries. `slides.md` and `slides-3day.md` remain
+compatibility entries, not the default live-delivery path. See
 [Deck architecture](#deck-architecture--compartmentalized-sections).
 
 ## Non-negotiable guardrails
@@ -38,7 +39,9 @@ filenames, and **commit messages**.
 | Path | Purpose | Tracked? |
 | --- | --- | --- |
 | `AGENT.md` | This file — contributor guidance. | yes |
-| *(root decks)* | `slides.md` (superset) + `slides-3day.md` (boil-down): headmatter + `src:` includes. | yes |
+| `scripts/deck-manifest.mjs` | Source of truth for section metadata and generated deck membership. | yes |
+| `slides-day-*.md`, `slides-optional.md` | Generated live-delivery entries; never edit by hand. | yes |
+| `slides.md`, `slides-3day.md` | Generated compatibility entries for the superset and legacy combined cut. | yes |
 | `pages/SNN-topic/` | One self-contained, toggleable **section** per folder (`index.md`). | yes |
 | `theme/` | **Local Slidev theme** (`slidev-theme-k8s-workshop`): master styles, layouts, UI components. Root decks use `theme: ./theme`. | yes |
 | `components/` | Deck-level Vue components (animated teaching diagrams). | yes |
@@ -47,8 +50,9 @@ filenames, and **commit messages**.
 | `references/` | Vendored reference theme/pattern gallery and CNCF artwork, for rehearsal. | no (gitignored) |
 | `.claude/` | Local tooling/skills. | no (gitignored) |
 
-> **Deck location note:** the deck lives at the repo root. `slides.md` (superset) and
-> `slides-3day.md` (canonical 3-day cut) compose the `pages/SNN-topic/` section library;
+> **Deck location note:** the deck lives at the repo root. `slides-day-1.md`,
+> `slides-day-2.md`, `slides-day-3.md`, and `slides-optional.md` compose the
+> `pages/SNN-topic/` section library for live delivery;
 > `slides-templates.md` is the design-system gallery (reusable layouts + the
 > animation-technology spike) — reference material, not workshop content. All sections
 > `S00`–`S27` exist as stubs; author content into them milestone by milestone (Day 1 first).
@@ -100,10 +104,17 @@ The deck is a **superset** of toggleable sections composed by one or more **root
   Slidev merges the import block's frontmatter into **every** imported slide, so `hide: true`
   (or `disabled: true`) on the block drops the entire section at parse time. Page-range imports
   work too: `src: ./pages/S07-service/index.md#1,4-6`.
-- **Multiple root decks over one section library:** `slides.md` imports every section (the
-  superset); `slides-3day.md` imports only the [canonical 3-day cut](agent-context/presentation-outline.md#appendix-c--canonical-3-day-cut).
-  Each builds independently with `slidev <file>.md`. Add a new cut by adding one
-  `slides-<variant>.md`, never by copying sections.
+- **Generated root decks over one section library:** `scripts/deck-manifest.mjs` assigns each
+  section to its canonical day or the Optional / Appendix entry. Run `pnpm decks:generate`
+  after changing the manifest and commit the generated roots. `pnpm decks:check` rejects
+  missing sources, duplicate IDs, omitted authored sections, and generated drift.
+- **Facilitator launcher:** `pnpm deck -- --day 1`, `--section S05`, or
+  `--range S05-S09` starts a deterministic selection. `pnpm deck -- --list` discovers
+  choices. With a TTY, `gum` adds a menu; without it, explicit flags work everywhere.
+  A noninteractive invocation with no selector fails instead of opening the superset.
+- **Compatibility only:** `slides.md` imports every section and `slides-3day.md` imports the
+  combined canonical cut. Use `dev:superset`/`build:superset`/`export:superset` only when
+  compatibility or whole-corpus inspection is intentional.
 - **Tiers:** every section is `core`, `recommended`, or `optional`. Keep the outline's Section
   map, the Tier tags, and the image-prompt numbering (`S00`–`S27`) in sync when adding or
   moving sections.

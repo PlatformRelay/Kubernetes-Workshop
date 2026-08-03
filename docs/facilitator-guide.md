@@ -43,6 +43,31 @@ you deliver; you compose a shorter room by toggling `recommended` / `optional` s
 off. Decide your cut **before** the environment work below — it determines which add-ons
 you must pre-install.
 
+### Choose the deck before the room
+
+Live delivery uses four small, independently buildable entries over the same section
+sources: **Day 1**, **Day 2**, **Day 3**, and **Optional / Appendix**. Start a complete day,
+one section, or a contiguous range with the launcher:
+
+```bash
+pnpm deck -- --list
+pnpm deck -- --day 1
+pnpm deck -- --section S05
+pnpm deck -- --range S05-S09
+```
+
+Add `--action build` or `--action export` to render a custom selection instead of serving
+it. `--dry-run` prints the resolved IDs without starting Slidev. If
+[`gum`](https://github.com/charmbracelet/gum) is installed and the command runs in a TTY,
+`pnpm deck` offers the same choices as an interactive menu. Gum is optional: flags and
+`--list` remain deterministic on CI, remote shells, and managed laptops.
+
+An invocation without a selector intentionally fails when no interactive menu is available;
+it never falls back to the oversized content superset. The four standard entries also have
+direct scripts: `pnpm dev:day1`, `dev:day2`, `dev:day3`, and `dev:optional`. The combined
+`slides.md` superset remains available through `pnpm dev:superset` for compatibility and
+whole-corpus inspection only.
+
 ## Timing & pacing
 
 Pace against the [per-section timings](./syllabus.md#per-section-outcomes-timings-and-labs)
