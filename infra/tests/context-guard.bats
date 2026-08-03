@@ -176,6 +176,16 @@ assert_guarded_apply_refused() {
   ! grep -q '^kubectl create ' "$MOCK_LOG"
 }
 
+@test "claim mode rejects compound Forbidden plus NotFound output without creating anything" {
+  export MOCK_OWNERSHIP_EXIT=1
+  export MOCK_OWNERSHIP_ERROR_KIND=compound
+  export MOCK_KUBECTL_NAMESPACE="default"
+  run "$ROOT/infra/context-guard.sh" --claim
+  [ "$status" -ne 0 ]
+  echo "$output" | grep -q "REFUSING"
+  ! grep -q '^kubectl create ' "$MOCK_LOG"
+}
+
 @test "claim mode fails closed on marker timeout without creating anything" {
   export MOCK_OWNERSHIP_EXIT=1
   export MOCK_OWNERSHIP_ERROR_KIND=timeout

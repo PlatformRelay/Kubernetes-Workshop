@@ -29,6 +29,11 @@ case "$*" in
       case "${MOCK_OWNERSHIP_ERROR_KIND:-notfound}" in
         notfound) printf '%s\n' "${MOCK_OWNERSHIP_ERROR-}" >&2 ;;
         forbidden) printf '%s\n' 'Error from server (Forbidden): configmaps is forbidden' >&2 ;;
+        compound)
+          printf '%s\n' \
+            'Error from server (Forbidden): configmaps is forbidden' \
+            'Error from server (NotFound): configmaps "platformrelay-workshop-ownership" not found' >&2
+          ;;
         timeout) printf '%s\n' 'Unable to connect to the server: context deadline exceeded' >&2 ;;
         tls) printf '%s\n' 'Unable to connect to the server: x509: certificate signed by unknown authority' >&2 ;;
       esac

@@ -172,10 +172,9 @@ if ownership_cluster="$(kubectl --namespace kube-system get configmap "$marker_n
   [ "$ownership_cluster" = "$expected_cluster" ] || \
     refuse "ownership marker belongs to '$ownership_cluster', not '$expected_cluster'"
 else
-  case "$ownership_cluster" in
-    *"Error from server (NotFound):"*"$marker_name"*" not found") ;;
-    *) refuse "ownership marker lookup failed without an explicit NotFound response" ;;
-  esac
+  expected_not_found="Error from server (NotFound): configmaps \"$marker_name\" not found"
+  [ "$ownership_cluster" = "$expected_not_found" ] || \
+    refuse "ownership marker lookup failed without the exact NotFound response"
   [ "$claim_marker" = true ] || \
     refuse "workshop ownership marker is missing; recreate the cluster or run this guard once with --claim"
   kubectl create configmap "$marker_name" \
