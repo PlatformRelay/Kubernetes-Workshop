@@ -85,3 +85,18 @@ for name, job in wf['jobs'].items():
   grep -q 'kubernetes-workshop-day-2-' "$WF"
   grep -q 'kubernetes-workshop-day-3-' "$WF"
 }
+
+@test "release build validates decks before export (ARCH-005)" {
+  grep -q 'pnpm decks:check' "$WF"
+  grep -q 'pnpm run test:deck' "$WF"
+}
+
+@test "release jobs have explicit timeouts (REL-005)" {
+  run python3 -c "
+import sys, yaml
+wf = yaml.safe_load(open(sys.argv[1]))
+assert wf['jobs']['build'].get('timeout-minutes') == 60
+assert wf['jobs']['publish'].get('timeout-minutes') == 15
+" "$WF"
+  [ "$status" -eq 0 ]
+}

@@ -390,9 +390,15 @@ lab_smoke_finish() {
 
   if [ "$lab_rc" -ne 0 ]; then
     lab_smoke_err "lab-smoke ${selection} failed — diagnostics kept"
-    lab_smoke_teardown || true
+    if ! lab_smoke_teardown; then
+      lab_smoke_err "teardown also failed after lab failure — cluster may still be running; run: ./workshop down --yes"
+      # Prefer the original lab failure code; surface teardown via logs (REL-002).
+    fi
   else
-    lab_smoke_teardown
+    if ! lab_smoke_teardown; then
+      lab_smoke_err "teardown failed — cluster may still be running; run: ./workshop down --yes"
+      return 1
+    fi
     if [ "$exit_rc" -eq 0 ] && [ "$status" = "passed" ]; then
       lab_smoke_ok "lab-smoke ${selection} complete"
     elif [ "$status" = "scaffold" ]; then

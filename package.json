@@ -53,7 +53,7 @@
   },
   "dependencies": {
     "@slidev/cli": "^52.19.0",
-    "@slidev/theme-default": "latest",
+    "@slidev/theme-default": "0.25.0",
     "vue": "^3.5.33"
   },
   "devDependencies": {

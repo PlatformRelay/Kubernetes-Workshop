@@ -14,6 +14,33 @@ lab_smoke_wait_ready() {
   kubectl wait --for=condition=Ready "${kind}/${name}" -n "$LAB_SMOKE_NS" --timeout="$timeout"
 }
 
+# HTTP check via kind's localhost:80 port-map (mirrors Lab 08 kind curls). REL-001.
+lab_smoke_assert_http_host() {
+  local host="$1"
+  local attempt=1
+  local max_attempts="${LAB_SMOKE_HTTP_ATTEMPTS:-20}"
+  local sleep_s="${LAB_SMOKE_HTTP_SLEEP_S:-3}"
+  local body=""
+
+  command -v curl >/dev/null 2>&1 || {
+    lab_smoke_err "curl required for ingress HTTP assertion (REL-001)"
+    return 1
+  }
+
+  while [ "$attempt" -le "$max_attempts" ]; do
+    if body="$(curl --noproxy '*' -fsS -H "Host: ${host}" "http://127.0.0.1/" 2>/dev/null)"; then
+      if [ -n "$body" ]; then
+        lab_smoke_ok "ingress HTTP Host:${host} (attempt ${attempt})"
+        return 0
+      fi
+    fi
+    sleep "$sleep_s"
+    attempt=$((attempt + 1))
+  done
+  lab_smoke_err "ingress HTTP Host:${host} failed after ${max_attempts} attempts"
+  return 1
+}
+
 # --- Day 1 ------------------------------------------------------------------
 
 lab_smoke_driver_day_1_00_setup() {
@@ -293,6 +320,14 @@ EOF
   kubectl apply -f "$LAB_SMOKE_ARTIFACTS/ingress.yaml" -n "$LAB_SMOKE_NS"
   kubectl get ingress web -n "$LAB_SMOKE_NS" >/dev/null
   kubectl get ingressclass "$ingress_class" >/dev/null
+  # Contour Envoy must be Ready before Host-header curls are meaningful (REL-001).
+  if kubectl get daemonset envoy -n projectcontour >/dev/null 2>&1; then
+    kubectl -n projectcontour rollout status daemonset/envoy --timeout=180s
+  elif kubectl get deployment envoy -n projectcontour >/dev/null 2>&1; then
+    kubectl -n projectcontour rollout status deployment/envoy --timeout=180s
+  fi
+  lab_smoke_assert_http_host "web.example.com"
+  lab_smoke_assert_http_host "web2.example.com"
   export NS="${NS:-$LAB_SMOKE_NS}"
   # shellcheck disable=SC2016
   lab_smoke_apply_cleanup 'kubectl delete -f '"$LAB_SMOKE_ARTIFACTS"'/ingress.yaml -f '"$LAB_SMOKE_ARTIFACTS"'/backends.yaml -n "$NS" --ignore-not-found --wait=true'

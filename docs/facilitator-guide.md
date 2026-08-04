@@ -261,8 +261,10 @@ pass**. Be aware of the following, consistent with the honesty callouts already 
   clean environment. Dry-run the remaining **add-on-heavy labs** (S09, S16, S18, S21, S22,
   S23) on a clean kind cluster before delivery so you know install quirks on *your*
   network.
-- **The environment automation (`infra/`, `make kind-up` / `make ns-provision`) is
-  planned, not built** (roadmap M8 / US-ENV-1). Provision manually as above.
+- **Local kind automation is shipped** (`./workshop up` / `make kind-up` →
+  `infra/kind/cluster.sh`). **Shared-cluster namespace provisioning**
+  (`make ns-provision` / `infra/shared-cluster/`) is still planned — provision
+  attendee namespaces by hand as above until that lands.
 - **The de-nginx effort (roadmap M8 / US-NGX) has landed.** The retired ingress-nginx
   controller was replaced by **Contour** (S08), NGINX Gateway Fabric by **Envoy Gateway**
   (S09), and every demo web image by the purpose-built
@@ -274,9 +276,9 @@ pass**. Be aware of the following, consistent with the honesty callouts already 
 
 ## Stable release posture (from v0.4.0)
 
-The front-door **controlled-beta** banner was removed at **`v0.4.0`** by maintainer
-decision. Remaining items below are a **quality backlog**, not a reason to re-paste a
-beta warning on the README or docs landing.
+The front-door **controlled-beta** banner is removed on the `v0.4.0` line by maintainer
+decision (this branch / tip). Remaining items below are a **quality backlog**, not a
+reason to re-paste a beta warning on the README or docs landing.
 
 | Status | Item | Story / note |
 | --- | --- | --- |

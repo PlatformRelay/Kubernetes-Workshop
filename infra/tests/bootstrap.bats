@@ -148,12 +148,40 @@ EOF
 
   [ "$status" -eq 0 ]
   grep -q -- "mise install --locked" "$MOCK_LOG"
-  grep -q -- "mise exec -- env make -C $ROOT kind-up" "$MOCK_LOG"
+  grep -q -- "mise exec -- env $ROOT/infra/kind/cluster.sh up" "$MOCK_LOG"
   grep -q -- "mise exec -- env WORKSHOP_NONINTERACTIVE=1 $ROOT/infra/doctor.sh" "$MOCK_LOG"
   grep -q -- "kind create cluster" "$MOCK_LOG"
   echo "$output" | grep -q "environment is ready"
   echo "$output" | grep -q "Before running lab commands in this shell"
   echo "$output" | grep -q "activate"
+}
+
+@test "up creates the cluster without GNU Make on PATH (ARCH-002)" {
+  local host_bin="$BATS_TEST_TMPDIR/host-bin"
+  local managed_bin="$BATS_TEST_TMPDIR/managed-bin"
+  mkdir -p "$host_bin" "$managed_bin"
+  ln -s "$ROOT/infra/tests/stubs/docker" "$host_bin/docker"
+  ln -s "$ROOT/infra/tests/stubs/podman" "$host_bin/podman"
+  ln -s "$ROOT/infra/tests/stubs/mise" "$host_bin/mise"
+  ln -s "$ROOT/infra/tests/stubs/kind" "$managed_bin/kind"
+  ln -s "$ROOT/infra/tests/stubs/kubectl" "$managed_bin/kubectl"
+
+  # Intentionally omit `make` from the host tools list.
+  create_isolated_host_path "$host_bin" \
+    bash env sh dirname head uname grep nproc awk rm
+  export PATH="$host_bin"
+  export MOCK_MISE_EXEC_PATH="$managed_bin"
+  export MOCK_REQUIRE_MISE_EXEC=1
+  export MOCK_CLUSTER_EXISTS=0
+  [ -z "$(command -v make 2>/dev/null || true)" ]
+
+  run "$ROOT/workshop" up
+
+  [ "$status" -eq 0 ]
+  grep -q -- "mise exec -- env $ROOT/infra/kind/cluster.sh up" "$MOCK_LOG"
+  grep -q -- "kind create cluster" "$MOCK_LOG"
+  ! grep -q -- "make -C" "$MOCK_LOG"
+  echo "$output" | grep -q "environment is ready"
 }
 
 @test "up reuses a default mise install that the parent shell has not added to PATH" {
@@ -179,7 +207,7 @@ EOF
 
   [ "$status" -eq 0 ]
   grep -q -- "mise install --locked" "$MOCK_LOG"
-  grep -q -- "mise exec -- env make -C $ROOT kind-up" "$MOCK_LOG"
+  grep -q -- "mise exec -- env $ROOT/infra/kind/cluster.sh up" "$MOCK_LOG"
   echo "$output" | grep -q "environment is ready"
 }
 
@@ -403,8 +431,8 @@ EOF
   run_workshop_in_pty up
 
   [ "$status" -eq 0 ]
-  grep -q -- "gum spin --title Creating the kind cluster (make kind-up)" "$MOCK_LOG"
-  grep -q -- "mise exec -- env make -C $ROOT kind-up" "$MOCK_LOG"
+  grep -q -- "gum spin --title Creating the kind cluster" "$MOCK_LOG"
+  grep -q -- "mise exec -- env $ROOT/infra/kind/cluster.sh up" "$MOCK_LOG"
   grep -q -- "gum spin --title Waiting for all kind nodes to become Ready" "$MOCK_LOG"
   grep -q -- "mise exec -- kubectl --context kind-workshop wait" "$MOCK_LOG"
 }
@@ -416,8 +444,8 @@ EOF
   run_workshop_in_pty down --yes
 
   [ "$status" -eq 0 ]
-  grep -q -- "gum spin --title Deleting the kind cluster (make kind-down)" "$MOCK_LOG"
-  grep -q -- "mise exec -- make -C $ROOT kind-down" "$MOCK_LOG"
+  grep -q -- "gum spin --title Deleting the kind cluster" "$MOCK_LOG"
+  grep -q -- "mise exec -- $ROOT/infra/kind/cluster.sh down" "$MOCK_LOG"
   grep -q -- "kind delete cluster" "$MOCK_LOG"
 }
 

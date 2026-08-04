@@ -3,13 +3,13 @@
 #
 # The ./workshop wrapper dispatches here. Subcommands:
 #   up      preflight → install/verify pinned tools (mise) → kind cluster → doctor
-#   down    tear the cluster down (confirmed)  → reuses `make kind-down`
+#   down    tear the cluster down (confirmed)  → `infra/kind/cluster.sh down`
 #   doctor  run infra/doctor.sh
 #   profile named add-on profiles (day-1|day-2|day-3|gateway-envoy|ingress-contour; opt-in)
 #
 # Design contract (proposal §3.1):
 #   * The heavy lifting is DELEGATED, not reimplemented: the cluster is created by
-#     `make kind-up` (which owns the pinned node image + config), health is
+#     `infra/kind/cluster.sh up` (pinned node image + config), health is
 #     `infra/doctor.sh`, and the pins live in infra/versions.env + mise.toml.
 #   * gum is PURE INTERACTIVE SUGAR (gum choose/spin/confirm). Every step also
 #     runs non-interactively: set WORKSHOP_NONINTERACTIVE=1, or run with no TTY,
@@ -395,16 +395,17 @@ print_shell_activation_hint() {
   printf '  eval "$("%s" activate %s)"\n' "$mise_path" "$shell_name"
 }
 
-# --- Cluster (delegated to the Makefile) -------------------------------------
+# --- Cluster (infra/kind/cluster.sh — no GNU Make required; ARCH-002) --------
 # Pin kind to the engine our preflight selected (see WORKSHOP_ENGINE). We prefix
 # the env token via `env` so kind cannot silently re-detect a different, dead
 # engine. `env FOO=bar` with an empty token list is a harmless no-op, so the
-# docker (default) path is unaffected.
+# docker (default) path is unaffected. `make kind-up`/`kind-down` remain thin
+# aliases for facilitators who prefer Make.
 cluster_up() {
   local provider timeout
   provider="$(kind_provider_env)"
-  spin_in_toolchain "Creating the kind cluster (make kind-up)" \
-    env ${provider:+"$provider"} make -C "$REPO_ROOT" kind-up || {
+  spin_in_toolchain "Creating the kind cluster" \
+    env ${provider:+"$provider"} "$SCRIPT_DIR/kind/cluster.sh" up || {
     err "kind cluster creation failed — see output above."
     return 1
   }
@@ -421,8 +422,8 @@ cluster_up() {
 }
 
 cluster_down() {
-  spin_in_toolchain "Deleting the kind cluster (make kind-down)" \
-    make -C "$REPO_ROOT" kind-down || {
+  spin_in_toolchain "Deleting the kind cluster" \
+    "$SCRIPT_DIR/kind/cluster.sh" down || {
     err "kind cluster deletion failed — see output above."
     return 1
   }

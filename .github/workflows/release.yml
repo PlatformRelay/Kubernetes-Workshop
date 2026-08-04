@@ -41,6 +41,7 @@ jobs:
   build:
     name: Export release artifacts
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     permissions:
       contents: read
     outputs:
@@ -54,6 +55,10 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+
+      - name: Validate decks before export
+        # ARCH-005 — tag push does not run ci.yml; refuse drifted generated decks.
+        run: pnpm decks:check && pnpm run test:deck
 
       - name: Install Chromium system dependencies
         # The browser binary itself is fetched by playwright-chromium's
@@ -128,6 +133,7 @@ jobs:
     name: Publish GitHub Release
     needs: build
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       contents: write # create the release and upload the validated assets
     steps:

@@ -147,3 +147,16 @@ EOF
   grep -Eq 'Architecture: `(x86_64|amd64|arm64|aarch64|unknown)`' "$LAB_SMOKE_ARTIFACTS/summary-pr-day1.md"
   grep -Eq 'Profile: `(day-1|bare|none|stub:day-1)`' "$LAB_SMOKE_ARTIFACTS/summary-pr-day1.md"
 }
+
+@test "day-1 ingress driver asserts HTTP Host curls (REL-001)" {
+  grep -q 'lab_smoke_assert_http_host' "$ROOT/infra/lab-smoke-drivers.sh"
+  grep -q 'web.example.com' "$ROOT/infra/lab-smoke-drivers.sh"
+  grep -q 'web2.example.com' "$ROOT/infra/lab-smoke-drivers.sh"
+  grep -q 'Host:' "$ROOT/infra/lab-smoke-drivers.sh"
+}
+
+@test "failed finish surfaces teardown failure instead of swallowing it (REL-002)" {
+  # Source-level: must not use teardown || true on the failure path.
+  ! grep -nE 'lab_smoke_teardown \|\| true' "$ROOT/infra/lab-smoke.sh"
+  grep -q 'teardown also failed after lab failure' "$ROOT/infra/lab-smoke.sh"
+}

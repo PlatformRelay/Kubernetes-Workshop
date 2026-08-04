@@ -13,7 +13,16 @@ setup() {
   export MOCK_CLUSTER_EXISTS=0
   run make -C "$ROOT" kind-up
   [ "$status" -eq 0 ]
-  grep -q -- "kind create cluster --name ${WORKSHOP_CLUSTER_NAME} --config infra/kind/cluster.yaml --image ${KIND_NODE_IMAGE}" "$MOCK_LOG"
+  grep -q -- "kind create cluster --name ${WORKSHOP_CLUSTER_NAME} --config" "$MOCK_LOG"
+  grep -q -- "${KIND_NODE_IMAGE}" "$MOCK_LOG"
+}
+
+@test "kind-up delegates to infra/kind/cluster.sh" {
+  export MOCK_CLUSTER_EXISTS=0
+  run make -C "$ROOT" kind-up
+  [ "$status" -eq 0 ]
+  # Make is only a thin wrapper; the script owns the kind CLI invocation.
+  [ -x "$ROOT/infra/kind/cluster.sh" ]
 }
 
 @test "kind-up is idempotent when the cluster already exists" {

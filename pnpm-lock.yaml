@@ -18,7 +18,7 @@ importers:
         specifier: ^52.19.0
         version: 52.19.0(@nuxt/kit@3.21.8)(@oxc-project/types@0.142.0)(@types/markdown-it@14.1.2)(@types/node@22.20.0)(@vitejs/devtools-kit@0.4.10(cac@7.0.0)(srvx@0.12.5)(typescript@6.0.3)(vite@8.2.0(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.0)))(@vue/compiler-sfc@3.5.40)(cac@7.0.0)(hono@4.12.34)(lightningcss@1.33.0)(markdown-it@14.3.0)(oxc-parser@0.131.0)(playwright-chromium@1.61.1)(postcss@8.5.25)(rolldown@1.2.2)(srvx@0.12.5)
       '@slidev/theme-default':
-        specifier: latest
+        specifier: 0.25.0
         version: 0.25.0
       vue:
         specifier: ^3.5.33
