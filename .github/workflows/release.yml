@@ -138,6 +138,11 @@ jobs:
       - name: Refuse moved release tags
         # US-RELEASE-1: same-commit retry is idempotent; a tag/release that
         # already points elsewhere must fail before softprops can rewrite it.
+        # GH_TOKEN is required: `gh api` in Actions does not inherit GITHUB_TOKEN
+        # automatically; without it the fail-closed guard treats the lookup as
+        # unknown and refuses a first publish (seen on v0.3.0-beta.1).
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: bash scripts/release-tag-guard.sh check "${{ github.ref_name }}" "${{ github.sha }}"
 
       - name: Download validated release artifacts

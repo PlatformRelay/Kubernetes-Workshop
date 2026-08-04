@@ -264,6 +264,17 @@ EOF
   [ "$guard_line" -lt "$publish_line" ]
 }
 
+@test "release.yml supplies GH_TOKEN for release-tag-guard check (gh api)" {
+  # Without GH_TOKEN, `gh api` fails in Actions and the fail-closed guard
+  # refuses a brand-new tag (v0.3.0-beta.1 publish incident 2026-08-04).
+  wf="$ROOT/.github/workflows/release.yml"
+  awk '
+    /Refuse moved release tags/ { in_step=1 }
+    in_step && /^[[:space:]]*- name:/ && !/Refuse moved release tags/ { in_step=0 }
+    in_step { print }
+  ' "$wf" | grep -q 'GH_TOKEN: \${{ github.token }}'
+}
+
 @test "ci.yml shellchecks release-tag-guard.sh" {
   wf="$ROOT/.github/workflows/ci.yml"
   grep -q 'scripts/release-tag-guard.sh' "$wf"
