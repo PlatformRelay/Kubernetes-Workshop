@@ -88,6 +88,11 @@ jobs:
           shellcheck ./scripts/release-tag-guard.sh
       - name: Run bats tests (mocked binaries — no cluster needed)
         run: bats infra/tests
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+      - name: Check lab inventory drift (US-ENV-4A)
+        run: node --test scripts/lab-inventory.test.mjs && node scripts/lab-inventory.mjs --check
 
   build:
     name: Build root decks
