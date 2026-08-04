@@ -19,7 +19,8 @@
 #   LAB_SMOKE_SKIP_IDEMPOTENCE=1 skip cheap bootstrap/profile re-run
 #   LAB_SMOKE_SKIP_DOCTOR=1      skip ./workshop doctor
 #   LAB_SMOKE_SKIP_PROFILE=1     skip profile install
-#   LAB_SMOKE_DRIVER_STUB=1      stub drivers (unit tests)
+#   LAB_SMOKE_DRIVER_STUB=1      stub drivers (unit tests; pr-day1 only —
+#                                refused on schedule-day2/3)
 #   LAB_SMOKE_FORCE_FAIL_LAB=id  force a lab failure (unit tests)
 #   LAB_SMOKE_ALLOW_SCAFFOLD=1   permit exit 0 for schedule shards that only
 #                                scaffolded — evidence Status stays `scaffold`,
@@ -65,6 +66,9 @@ Local-container labs (S01/S02) are never selected for kind smoke.
 Schedule shards never write Status:passed for scaffold-only drivers. Set
 LAB_SMOKE_ALLOW_SCAFFOLD=1 for an explicit local/dispatch probe that still
 records Status:scaffold (exit 0) without claiming a lab assertion pass.
+
+LAB_SMOKE_DRIVER_STUB=1 is allowed for pr-day1 unit tests only. Schedule
+shards refuse stub mode so it cannot paper-green with Status:passed.
 EOF
 }
 
@@ -398,12 +402,28 @@ lab_smoke_finish() {
   return "$exit_rc"
 }
 
+lab_smoke_refuse_stub_on_schedule() {
+  local selection="$1"
+  case "$selection" in
+    schedule-day2 | schedule-day3)
+      if [ "${LAB_SMOKE_DRIVER_STUB:-0}" = "1" ]; then
+        lab_smoke_err "LAB_SMOKE_DRIVER_STUB=1 is not allowed on ${selection} (refused — cannot paper-green schedule shards; stub is pr-day1 unit tests only)"
+        return 1
+      fi
+      ;;
+  esac
+  return 0
+}
+
 lab_smoke_run_selection() {
   local selection="$1"
   local id rc=0 labs_file t_all0 t_all1
   mkdir -p "$LAB_SMOKE_ARTIFACTS"
   export WORKSHOP_NONINTERACTIVE=1
   export WORKSHOP_ASSUME_YES=1
+
+  # Fail closed before any stub drivers / evidence Status:passed.
+  lab_smoke_refuse_stub_on_schedule "$selection" || return 1
 
   LAB_SMOKE_SCAFFOLD_COUNT=0
   LAB_SMOKE_SCAFFOLD_LABS=""

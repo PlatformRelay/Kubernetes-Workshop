@@ -81,6 +81,22 @@ EOF
   ! echo "$output" | grep -q 'day-3/'
 }
 
+@test "schedule-day2 refuses DRIVER_STUB (no Status passed)" {
+  export LAB_SMOKE_DRIVER_STUB=1
+  export LAB_SMOKE_SKIP_BOOTSTRAP=1
+  export LAB_SMOKE_SKIP_IDEMPOTENCE=1
+  export LAB_SMOKE_SKIP_TEARDOWN=1
+  export LAB_SMOKE_SKIP_DOCTOR=1
+  export LAB_SMOKE_SKIP_PROFILE=1
+  run "$ROOT/infra/lab-smoke.sh" schedule-day2
+  [ "$status" -ne 0 ]
+  echo "$output" | grep -qi 'DRIVER_STUB\|stub.*schedule\|refused\|not allowed\|cannot'
+  # Must not paper-green: no Status:passed evidence from a stubbed schedule shard.
+  if [ -f "$LAB_SMOKE_ARTIFACTS/summary-schedule-day2.md" ]; then
+    ! grep -q 'Status: `passed`' "$LAB_SMOKE_ARTIFACTS/summary-schedule-day2.md"
+  fi
+}
+
 @test "schedule-day2 scaffold refuses Status passed (fail closed)" {
   export LAB_SMOKE_DRIVER_STUB=0
   export LAB_SMOKE_SKIP_BOOTSTRAP=1
