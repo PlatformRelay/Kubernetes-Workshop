@@ -19,7 +19,9 @@ overrides:
   "js-yaml@>=5.0.0 <6.0.0": 5.2.3
   # monaco-editor / mermaid pull older DOMPurify; pin the patched line.
   dompurify: 3.4.13
-  # @modelcontextprotocol/node → @hono/node-server@1.19.x is below first fix 2.0.5.
+  # Dependabot/GHSA collapses @hono/node-server to "<2.0.5" even though
+  # 1.19.15+ is patched on the 1.x line; pin 2.1.0 so the alert clears.
+  # MCP only needs getRequestListener from this package.
   "@hono/node-server": 2.1.0
 
 # pnpm 11 minimumReleaseAge gate: allow this override pin through when fresh on the registry.
