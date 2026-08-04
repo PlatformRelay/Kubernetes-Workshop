@@ -493,8 +493,14 @@ async function checkRemoteInputs(root, exceptionById, errors) {
     const expandVariables = (value) => {
       let expanded = value
       for (let pass = 0; pass < 4; pass += 1) {
-        const next = expanded.replace(/\$\{?([A-Za-z_][A-Za-z0-9_]*)\}?/g, (match, name) => variables.get(name) ?? match)
+        // Require a closing brace when `{` is present so bash forms like
+        // ${NS:-$OTHER} are not partially rewritten into exponential growth.
+        const next = expanded.replace(
+          /\$\{([A-Za-z_][A-Za-z0-9_]*)\}|\$([A-Za-z_][A-Za-z0-9_]*)/g,
+          (match, braced, bare) => variables.get(braced ?? bare) ?? match,
+        )
         if (next === expanded) break
+        if (next.length > 1_048_576) break
         expanded = next
       }
       return expanded

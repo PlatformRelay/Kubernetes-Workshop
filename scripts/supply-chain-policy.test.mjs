@@ -445,3 +445,33 @@ test('setup truth distinguishes the unpinned mise installer from locked tool art
   assert.match(setup, /installer[\s\S]+not checksum-pinned[\s\S]+artifact checksums live in `mise\.lock`/i)
   assert.match(bootstrap, /installer[\s\S]+not checksum-pinned[\s\S]+verified against mise\.lock/i)
 })
+
+test('does not explode on repeated bash default-parameter exports', async () => {
+  // Regression for lab-smoke-drivers.sh: optional-brace $VAR matching turned
+  // export NS="${NS:-$OTHER}" into exponential string growth across repeats.
+  const script = `${Array.from({ length: 24 }, () => 'export NS="${NS:-$LAB_SMOKE_NS}"').join('\n')}
+lab_smoke_apply_cleanup 'kubectl delete deploy/web -n "$NS" --ignore-not-found --wait=true'
+`
+  const root = await fixture({ 'infra/drivers.sh': script })
+
+  const result = await Promise.race([
+    checkSupplyChainPolicy(root),
+    new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('policy check timed out — variable-expansion blowup')), 2000)
+    }),
+  ])
+
+  assert.ok(Array.isArray(result.errors))
+  assert.ok(process.memoryUsage().heapUsed < 256 * 1024 * 1024)
+})
+
+test('CI supply-chain job raises the Node heap for policy and audit steps', async () => {
+  const workflow = await readFile(
+    path.join(import.meta.dirname, '..', '.github/workflows/ci.yml'),
+    'utf8',
+  )
+  assert.match(
+    workflow,
+    /supply-chain:[\s\S]*?NODE_OPTIONS:\s*--max-old-space-size=\d+/,
+  )
+})
