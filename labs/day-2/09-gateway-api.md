@@ -376,14 +376,15 @@ kill %1 2>/dev/null
 kubectl delete -f route-header.yaml -f gateway.yaml -f backends.yaml --ignore-not-found
 kubectl delete gateway web-broken --ignore-not-found   # if Step 6 was left mid-way
 rm -f gateway-broken.yaml route.yaml route-canary.yaml # local files
-# full namespace reset:
-kubectl delete httproute,gateway,svc,deploy,rs,pod --all -n "$NS" --ignore-not-found
+
+# panic reset (namespace): also removes anything else left in your namespace
+# kubectl delete httproute,gateway,svc,deploy,rs,pod --all -n "$NS" --ignore-not-found
+# panic reset (kind): make kind-down && make kind-up   # or: kind delete cluster --name workshop
 
 # kind only — remove the GatewayClass, the controller, and the CRDs for a clean slate:
 # kubectl delete -f gatewayclass.yaml --ignore-not-found
 # kubectl delete -f https://github.com/envoyproxy/gateway/releases/download/v1.8.2/install.yaml
 # kubectl delete -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.5.1/standard-install.yaml
-# or just: kind delete cluster --name workshop
 ```
 
 ## Stretch (optional) — a weighted canary

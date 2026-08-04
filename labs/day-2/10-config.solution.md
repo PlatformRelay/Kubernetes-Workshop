@@ -463,9 +463,12 @@ status fields when a one-line phase is ambiguous.
 
 ## Troubleshooting and recovery
 
-Re-apply the lab's named manifests with `kubectl apply -f <file> -n "$NS"` after fixing the
-broken field, or delete only the labelled objects from Cleanup / reset and restart the guided
-task. Prefer `kubectl describe` Events over guessing. Do not run broad cluster deletes.
+If a rotated ConfigMap key still prints the old env value, confirm the freeze with
+`kubectl exec deploy/web -n "$NS" -- printenv`, restore the ConfigMap via
+`kubectl apply -f configmap.yaml -n "$NS"`, then force a recreate with
+`kubectl rollout restart deploy/web -n "$NS"` and wait on
+`kubectl rollout status deploy/web -n "$NS"`. Directory-mounted files without `subPath` can
+refresh without that restart; env and `subPath` mounts cannot.
 
 ## Challenge solution
 

@@ -571,9 +571,13 @@ status fields when a one-line phase is ambiguous.
 
 ## Troubleshooting and recovery
 
-Re-apply the lab's named manifests with `kubectl apply -f <file> -n "$NS"` after fixing the
-broken field, or delete only the labelled objects from Cleanup / reset and restart the guided
-task. Prefer `kubectl describe` Events over guessing. Do not run broad cluster deletes.
+If traffic stops while Pods stay Running, watch
+`kubectl get endpointslices -n "$NS" -l kubernetes.io/service-name=web` — a failed readiness
+probe removes the address without restarting. Climbing restart counts belong to liveness;
+read them with `kubectl describe pod -n "$NS" -l app=web`. Restore working probes via
+`kubectl apply -f deployment.yaml -n "$NS"` (or the lab's probe patch), then
+`kubectl rollout status deploy/web -n "$NS"`. Do not treat readiness failures as a reason to
+delete the Pod.
 
 ## Challenge solution
 

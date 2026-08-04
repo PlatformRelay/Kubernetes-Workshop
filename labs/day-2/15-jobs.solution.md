@@ -389,9 +389,12 @@ status fields when a one-line phase is ambiguous.
 
 ## Troubleshooting and recovery
 
-Re-apply the lab's named manifests with `kubectl apply -f <file> -n "$NS"` after fixing the
-broken field, or delete only the labelled objects from Cleanup / reset and restart the guided
-task. Prefer `kubectl describe` Events over guessing. Do not run broad cluster deletes.
+For a Job stuck in `BackoffLimitExceeded`, inspect `kubectl describe job -n "$NS"` and remove
+the failed run with `kubectl delete job <name> -n "$NS" --ignore-not-found` before re-applying
+a corrected Job manifest. When CronJob ticks overlap under `concurrencyPolicy: Forbid`, read
+`kubectl describe cronjob -n "$NS"` for skipped schedules; suspend leftovers with
+`kubectl patch cronjob <name> -n "$NS" --type=merge -p '{"spec":{"suspend":true}}'` so the
+namespace does not keep spawning work after the lab.
 
 ## Challenge solution
 

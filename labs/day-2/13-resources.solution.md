@@ -408,9 +408,11 @@ status fields when a one-line phase is ambiguous.
 
 ## Troubleshooting and recovery
 
-Re-apply the lab's named manifests with `kubectl apply -f <file> -n "$NS"` after fixing the
-broken field, or delete only the labelled objects from Cleanup / reset and restart the guided
-task. Prefer `kubectl describe` Events over guessing. Do not run broad cluster deletes.
+Distinguish OOMKilled (container exit 137 in `kubectl describe pod -n "$NS"`) from admission
+rejection (`kubectl describe resourcequota -n "$NS"` or create errors). Restore a runnable Pod
+by editing requests/limits so they fit the quota, then `kubectl apply -f pod.yaml -n "$NS"` —
+or `kubectl delete pod <name> -n "$NS" --ignore-not-found` before re-applying. Confirm the fixed
+Pod's QoS with `kubectl get pod <name> -n "$NS" -o jsonpath='{.status.qosClass}{"\n"}'`.
 
 ## Challenge solution
 

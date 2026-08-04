@@ -499,6 +499,55 @@ export function auditContractDocumentation(repoRoot = REPO_ROOT) {
 }
 
 /**
+ * Day 2 cleanup / panic-reset truth: namespaced `kubectl delete … --all` belongs only as a
+ * commented panic path (Labs 10–16 pattern), never as the default live Cleanup command.
+ * Also rejects bit-identical Troubleshooting blocks across Day 2 sibling solutions.
+ */
+export function auditDayTwoCleanupTruth(repoRoot = REPO_ROOT) {
+  const errors = [];
+  const troubleshootingNorms = new Map();
+
+  const paths = [
+    ...DAY_2_LABS,
+    ...DAY_2_LABS.map((path) => path.replace(/\.md$/, '.solution.md')),
+  ];
+  for (const path of paths) {
+    const absolute = resolve(repoRoot, path);
+    if (!existsSync(absolute)) continue;
+    const text = readFileSync(absolute, 'utf8');
+
+    for (const heading of ['Cleanup / reset', 'Cleanup / panic reset']) {
+      if (!headings(text).has(heading)) continue;
+      const cleanup = section(text, heading);
+      for (const line of cleanup.split('\n')) {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith('#')) continue;
+        if (/\bkubectl\s+delete\b/.test(trimmed) && /\s--all\b/.test(trimmed) &&
+            (/\s-n\b/.test(trimmed) || /\$NS/.test(trimmed))) {
+          errors.push(
+            `${path}: Cleanup must comment namespaced --all panic resets (not ship them live)`,
+          );
+        }
+      }
+    }
+
+    if (!path.endsWith('.solution.md')) continue;
+    const troubleshooting = section(text, 'Troubleshooting and recovery');
+    const key = normalized(troubleshooting);
+    if (!key) continue;
+    const prior = troubleshootingNorms.get(key);
+    if (prior) {
+      errors.push(
+        `${prior} and ${path}: Troubleshooting must not be bit-identical across Day 2 solutions`,
+      );
+    } else {
+      troubleshootingNorms.set(key, path);
+    }
+  }
+  return errors;
+}
+
+/**
  * Day 3 cleanup / panic-reset truth: no fake runnable prose, no unclosed backticks,
  * and no line-split `kubectl delete` + `namespace` that bypasses single-line unsafeCommands.
  */

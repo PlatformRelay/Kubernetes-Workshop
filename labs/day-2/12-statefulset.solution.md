@@ -481,9 +481,11 @@ status fields when a one-line phase is ambiguous.
 
 ## Troubleshooting and recovery
 
-Re-apply the lab's named manifests with `kubectl apply -f <file> -n "$NS"` after fixing the
-broken field, or delete only the labelled objects from Cleanup / reset and restart the guided
-task. Prefer `kubectl describe` Events over guessing. Do not run broad cluster deletes.
+If ordinal Pods never become Ready, compare `kubectl get statefulset -n "$NS" -o yaml` —
+especially `spec.serviceName` — with `kubectl get svc -n "$NS"`. Restore the headless Service
+with `kubectl apply -f headless-svc.yaml -n "$NS"` (or the lab's named Service manifest), then
+`kubectl apply -f statefulset.yaml -n "$NS"` so ordered Pods can attach. Prove identity with
+`kubectl get endpointslices -n "$NS"` or a DNS lookup against `web-0.<service>.$NS.svc`.
 
 ## Challenge solution
 

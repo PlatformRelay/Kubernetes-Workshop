@@ -14,6 +14,7 @@ import {
   auditContractDocumentation,
   auditDayOneCommandTruth,
   auditDayThreeCleanupTruth,
+  auditDayTwoCleanupTruth,
   auditLab,
   auditLabs,
 } from './lab-contract.mjs';
@@ -420,6 +421,45 @@ test('audits every Day 3 contracted lab against the sibling-solution contract', 
   const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
   const errors = auditLabs(DAY_3_LABS.map((path) => resolve(repo, path)));
   assert.deepEqual(errors, [], errors.join('\n'));
+});
+
+test('rejects Day 2 live namespaced --all cleanup and identical Troubleshooting', () => {
+  const root = mkdtempSync(join(tmpdir(), 'lab-day2-cleanup-'));
+  const day = join(root, 'labs', 'day-2');
+  mkdirSync(day, { recursive: true });
+  const sharedTroubleshoot = `## Troubleshooting and recovery
+
+Re-apply with \`kubectl apply -f broken.yaml -n "$NS"\` after fixing the field.
+`;
+  for (const [index, name] of DAY_2_LABS.map((path) => path.split('/').at(-1)).entries()) {
+    const cleanup = index === 0
+      ? `## Cleanup / reset
+
+\`\`\`bash
+kubectl delete httproute,gateway --all -n "$NS" --ignore-not-found
+\`\`\`
+`
+      : `## Cleanup / reset
+
+\`\`\`bash
+# kubectl delete deploy --all -n "$NS" --ignore-not-found
+\`\`\`
+`;
+    writeFileSync(join(day, name), `# Lab\n\n${cleanup}`);
+    writeFileSync(
+      join(day, name.replace(/\.md$/, '.solution.md')),
+      `# Solution\n\n${sharedTroubleshoot}`,
+    );
+  }
+
+  const errors = auditDayTwoCleanupTruth(root);
+  assert.ok(errors.some((error) => error.includes('namespaced --all panic resets')));
+  assert.ok(errors.some((error) => error.includes('Troubleshooting must not be bit-identical')));
+});
+
+test('guards Day 2 cleanup panic-reset and unique Troubleshooting on contracted labs', () => {
+  const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+  assert.deepEqual(auditDayTwoCleanupTruth(repo), [], auditDayTwoCleanupTruth(repo).join('\n'));
 });
 
 test('rejects Day 3 cleanup prose that fakes namespace deletes or splits them', () => {

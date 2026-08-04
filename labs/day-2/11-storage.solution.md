@@ -490,9 +490,11 @@ status fields when a one-line phase is ambiguous.
 
 ## Troubleshooting and recovery
 
-Re-apply the lab's named manifests with `kubectl apply -f <file> -n "$NS"` after fixing the
-broken field, or delete only the labelled objects from Cleanup / reset and restart the guided
-task. Prefer `kubectl describe` Events over guessing. Do not run broad cluster deletes.
+When a PVC stays Pending, run `kubectl describe pvc -n "$NS"` and compare Events to
+`kubectl get storageclass`. A missing StorageClass needs a corrected claim —
+`kubectl apply -f pvc.yaml -n "$NS"` after fixing `storageClassName` — while
+WaitForFirstConsumer is normal until a Pod mounts it. After a bad break→fix, remove only the
+named claim with `kubectl delete pvc <name> -n "$NS" --ignore-not-found` before re-applying.
 
 ## Challenge solution
 

@@ -431,9 +431,12 @@ status fields when a one-line phase is ambiguous.
 
 ## Troubleshooting and recovery
 
-Re-apply the lab's named manifests with `kubectl apply -f <file> -n "$NS"` after fixing the
-broken field, or delete only the labelled objects from Cleanup / reset and restart the guided
-task. Prefer `kubectl describe` Events over guessing. Do not run broad cluster deletes.
+When HPA `TARGETS` stay `<unknown>` under load, run `kubectl describe hpa -n "$NS"` and look
+for `failedGetResourceMetric`. Missing `resources.requests.cpu` is fixed by restoring the
+Deployment template — `kubectl apply -f deployment.yaml -n "$NS"` — then confirming
+`kubectl get hpa -n "$NS"` shows numeric CURRENT/TARGET. If metrics-server itself is down,
+check `kubectl -n kube-system get deploy metrics-server` before blaming the HPA; do not delete
+the HPA as the first recovery step.
 
 ## Challenge solution
 

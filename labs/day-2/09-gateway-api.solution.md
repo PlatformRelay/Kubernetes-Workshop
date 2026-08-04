@@ -522,9 +522,12 @@ status fields when a one-line phase is ambiguous.
 
 ## Troubleshooting and recovery
 
-Re-apply the lab's named manifests with `kubectl apply -f <file> -n "$NS"` after fixing the
-broken field, or delete only the labelled objects from Cleanup / reset and restart the guided
-task. Prefer `kubectl describe` Events over guessing. Do not run broad cluster deletes.
+If the Gateway stays unprogrammed or the HTTPRoute never Accepts, read
+`kubectl describe gateway -n "$NS"` and `kubectl describe httproute -n "$NS"` for the failing
+condition (Accepted, Programmed, or ResolvedRefs). Restore a known-good attachment with
+`kubectl apply -f route.yaml -n "$NS"` after correcting `parentRefs` / `gatewayClassName`, then
+retry `curl -fsS -H "Host: web.local" "http://${GATEWAY_IP:-127.0.0.1}/"`. Delete only named lab
+objects from Cleanup / reset — do not run live namespaced `--all` deletes.
 
 ## Challenge solution
 
