@@ -108,24 +108,37 @@ to BUILD an operator, not just consume one.
 
 # The CKAD/CKA domains are really a **design checklist**
 
-<div class="text-xs mt-2">
+<div class="kw-slide-dense text-[0.7rem] leading-snug mt-1 grid grid-cols-2 gap-x-6 gap-y-1.5">
 
-| Exam domain | Where it lives in this workshop |
-| --- | --- |
-| **CKAD** · Application design & build | Containers & images, Pod lifecycle, Jobs/CronJobs |
-| **CKAD** · Application deployment | Deployments & rollouts, Helm, GitOps |
-| **CKAD** · Observability & maintenance | Probes, resources, Prometheus Operator |
-| **CKAD/CKA** · Config & security | ConfigMap/Secret, Pod security & PSS, RBAC, image hygiene |
-| **CKAD/CKA** · Services & networking | Service, Ingress, Gateway API, NetworkPolicy |
-| **CKA** · Cluster architecture | Control plane & reconciliation, kubectl, RBAC |
-| **CKA** · Storage | PV/PVC/StorageClass, StatefulSet volumes |
-| **CKA** · Troubleshooting | Every lab's deliberate **break → fix** step |
+<div>
+  <div class="font-semibold opacity-80 mb-0.5">CKAD</div>
+  <div><strong>Design & build</strong> — containers, Pod lifecycle, Jobs</div>
+  <div><strong>Deployment</strong> — Deployments, Helm, GitOps</div>
+  <div><strong>Observability</strong> — probes, resources, Prometheus</div>
+</div>
+
+<div>
+  <div class="font-semibold opacity-80 mb-0.5">CKAD + CKA</div>
+  <div><strong>Config & security</strong> — CM/Secret, PSS, RBAC, digests</div>
+  <div><strong>Services & net</strong> — Service, Ingress, Gateway, NetPol</div>
+</div>
+
+<div>
+  <div class="font-semibold opacity-80 mb-0.5">CKA</div>
+  <div><strong>Architecture</strong> — control plane, kubectl, RBAC</div>
+  <div><strong>Storage</strong> — PV/PVC/StorageClass, StatefulSet</div>
+</div>
+
+<div>
+  <div class="font-semibold opacity-80 mb-0.5">CKA · Troubleshooting</div>
+  <div>Every lab's deliberate <strong>break → fix</strong> step</div>
+</div>
 
 </div>
 
 <div class="mt-2 kw-muted text-xs" v-click>
 
-Read it top-down as *"can my workload answer each of these?"* — not as a syllabus to cram.
+Read it as *"can my workload answer each of these?"* — not a syllabus to cram.
 
 </div>
 

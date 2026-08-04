@@ -183,7 +183,7 @@ compact: true
 lab: labs/day-3/22-operator-concept.md
 ---
 
-```yaml {none|3-6|7-9|10-16|all}
+```yaml {none|3-6|7-10|11-19|all}
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -191,15 +191,18 @@ metadata:
 spec:
   group: example.com
   names:
-    kind: Backup                      # the new kind you can `kubectl get`
+    kind: Backup                 # new kind for `kubectl get`
     plural: backups
   scope: Namespaced
   versions:
     - name: v1
       served: true
       storage: true
-      schema:                         # OpenAPI v3 — validates every Backup you apply
-        openAPIV3Schema: { type: object, properties: { spec: { type: object } } }
+      schema:                    # OpenAPI v3 validation
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec: { type: object }
 ```
 
 ::notes::

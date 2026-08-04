@@ -244,24 +244,25 @@ compact: true
 lab: labs/day-3/26-capstone.md
 ---
 
-```yaml {none|8|9-11|12-14|15|all}
+```yaml {none|13-14|16|16-17|7|all}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: web
-  labels: { app: web }                 # ① only the ad-hoc label
+  labels: { app: web }            # ① only the ad-hoc label
 spec:
-  replicas: 1                          # ② no HA — one Pod is one outage
+  replicas: 1                     # ② no HA — one Pod = outage
   # ③ no strategy / revisionHistoryLimit
   template:
     spec:
       containers:
         - name: web
-          image: ghcr.io/platformrelay/workshop-web:v1   # ④ mutable tag — no digest
+          # ④ mutable tag — no digest
+          image: ghcr.io/platformrelay/workshop-web:v1
           ports: [{ containerPort: 8080 }]
           # ⑤ no resources  ⑥ no probes  ⑦ no securityContext
       # ⑧ no graceful shutdown  ⑨ no anti-affinity/spread
-# ⑩ no PodDisruptionBudget, ⑪ no NetworkPolicy — separate objects, also missing
+# ⑩ no PDB, ⑪ no NetworkPolicy — sibling objects also missing
 ```
 
 ::notes::

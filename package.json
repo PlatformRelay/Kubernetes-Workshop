@@ -35,7 +35,7 @@
     "render:clicks": "slidev export slides.md --format png --per-slide --with-clicks --output dist-render",
     "render:3day": "slidev export slides-3day.md --format png --per-slide --output dist-render-3day",
     "showcase:gif": "node scripts/make-showcase-gif.mjs",
-    "test:deck": "node --test scripts/deck.test.mjs",
+    "test:deck": "node --test scripts/deck.test.mjs scripts/slide-overflow.test.mjs",
     "test:labs": "node --test scripts/lab-contract.test.mjs && node scripts/lab-contract.mjs",
     "test:inventory": "node --test scripts/lab-inventory.test.mjs && node scripts/lab-inventory.mjs --check",
     "inventory:write": "node scripts/lab-inventory.mjs --write",
