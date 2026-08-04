@@ -1083,6 +1083,7 @@ EOF
   # shellcheck disable=SC2016
   lab_smoke_apply_cleanup 'kubectl delete sa,role,rolebinding -l app=s19 -n "$NS" --ignore-not-found'
   kubectl delete deploy reader-target -n "$LAB_SMOKE_NS" --ignore-not-found --wait=true >/dev/null 2>&1 || true
+  lab_smoke_wait_pods_gone 120s
   kubectl label namespace "$LAB_SMOKE_NS" \
     pod-security.kubernetes.io/enforce- \
     pod-security.kubernetes.io/warn- \
@@ -1155,6 +1156,7 @@ EOF
   helm list -n "$LAB_SMOKE_NS" | grep -q '^web[[:space:]]'
   helm uninstall web -n "$LAB_SMOKE_NS" >/dev/null 2>&1 || true
   kubectl delete deploy,svc web -n "$LAB_SMOKE_NS" --ignore-not-found --wait=true >/dev/null 2>&1 || true
+  lab_smoke_wait_pods_gone 120s
   kubectl label namespace "$LAB_SMOKE_NS" \
     pod-security.kubernetes.io/enforce- \
     pod-security.kubernetes.io/warn- \
@@ -1312,7 +1314,7 @@ EOF
   kubectl -n monitoring port-forward "pod/${prom_pod}" 9090:9090 >/tmp/lab-smoke-prom-pf.log 2>&1 &
   local pf_pid=$!
   sleep 3
-  curl -sf 'http://localhost:9090/api/v1/query' --data-urlencode 'query=up{job=~".*sample-app.*"}' \
+  curl --noproxy '*' -sf 'http://127.0.0.1:9090/api/v1/query' --data-urlencode 'query=up{job=~".*sample-app.*"}' \
     | grep -q '"value":\[.*,"1"\]'
   kill "$pf_pid" 2>/dev/null || true
   kubectl delete namespace demo --ignore-not-found --wait=true >/dev/null 2>&1 || true
