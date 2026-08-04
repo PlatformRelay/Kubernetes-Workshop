@@ -1,0 +1,23 @@
+# Dependabot version updates — workshop-web Go module patches only.
+# Dependabot alerts + security updates are enabled at the repo level (GitHub
+# Settings → Code security); this file configures scheduled version-update PRs.
+# npm and github-actions bumps are owned by Renovate (see renovate.json) to
+# avoid duplicate PRs.
+version: 2
+updates:
+  - package-ecosystem: gomod
+    directory: /infra/images/workshop-web
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 10
+    groups:
+      go-minor-patch:
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
+    commit-message:
+      prefix: ":arrow_up:"
+      include: scope

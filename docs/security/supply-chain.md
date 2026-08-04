@@ -20,6 +20,15 @@ node scripts/dependency-audit.mjs
 `pnpm-lock.yaml`. High and critical advisories fail. Lower severities remain
 visible in the count and are reviewed during routine dependency updates.
 
+## Dependency update tooling
+
+Dependabot **security alerts** and **security updates** stay enabled in GitHub
+Settings. **Renovate** (`renovate.json`) owns scheduled npm and GitHub Actions
+version bumps. **Dependabot version updates** (`.github/dependabot.yml`) cover
+only the nested Go module at `infra/images/workshop-web`, where Renovate does
+not manage `gomod`. This split avoids duplicate PRs while keeping both
+ecosystems on a weekly Monday cadence.
+
 Before the live registry scan, the same command checks every locked version
 against the GitHub advisory ranges captured in
 `supply-chain/dependency-advisories.json`. This checked-in evidence keeps known
