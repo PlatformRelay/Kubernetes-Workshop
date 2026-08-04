@@ -171,7 +171,8 @@ EOF
 @test "lab-smoke workflow expects passed status for schedule shards" {
   grep -q 'Status: `passed`' "$ROOT/.github/workflows/lab-smoke.yml"
   ! grep -q 'allow_scaffold' "$ROOT/.github/workflows/lab-smoke.yml"
-  ! grep -q 'Status: `scaffold`' "$ROOT/.github/workflows/lab-smoke.yml"
+  ! grep -q 'LAB_SMOKE_ALLOW_SCAFFOLD' "$ROOT/.github/workflows/lab-smoke.yml"
+  ! grep -qE 'day2-day3-pending|scaffold-probe' "$ROOT/.github/workflows/lab-smoke.yml"
 }
 
 @test "pr-day1 evidence records architecture and profile" {

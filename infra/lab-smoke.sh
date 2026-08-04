@@ -22,9 +22,9 @@
 #   LAB_SMOKE_DRIVER_STUB=1      stub drivers (unit tests; pr-day1 only —
 #                                refused on schedule-day2/3)
 #   LAB_SMOKE_FORCE_FAIL_LAB=id  force a lab failure (unit tests)
-#   LAB_SMOKE_ALLOW_SCAFFOLD=1   permit exit 0 for schedule shards that only
-#                                scaffolded — evidence Status stays `scaffold`,
-#                                never `passed`
+#   LAB_SMOKE_ALLOW_SCAFFOLD=1   unit-test / manual probe only — permit exit 0 when
+#                                the selection still contains scaffold-only labs
+#                                (evidence Status stays `scaffold`, never `passed`)
 
 set -euo pipefail
 
@@ -63,9 +63,11 @@ Usage: infra/lab-smoke.sh <mode>
 Inventory: infra/lab-inventory.json (generated from docs/validation-matrix.md).
 Local-container labs (S01/S02) are never selected for kind smoke.
 
-Schedule shards run real per-lab drivers and write Status:passed when all
-assertions succeed. Deferred labs (S24 kubebuilder) still record
-Status:scaffold; set LAB_SMOKE_ALLOW_SCAFFOLD=1 only for that explicit probe.
+Schedule shards (schedule-day2/3) run real per-lab drivers and write
+Status:passed when all assertions succeed. schedule-day2/3 refuse exit 0 if any
+selected lab is still scaffold-only (exit 78). Deferred lab S24 kubebuilder is
+not in those shards. LAB_SMOKE_ALLOW_SCAFFOLD=1 is for explicit manual/unit
+probes only — not CI schedule shards.
 
 LAB_SMOKE_DRIVER_STUB=1 is allowed for pr-day1 unit tests only. Schedule
 shards refuse stub mode so it cannot paper-green with Status:passed.
