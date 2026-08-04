@@ -17,6 +17,8 @@ const ALLOWED_JOB_WRITES = new Map([
   ['pages.yml:deploy', new Set(['pages', 'id-token'])],
   ['release.yml:publish', new Set(['contents'])],
   ['workshop-web.yml:build', new Set(['packages', 'id-token'])],
+  // CodeQL uploads SARIF to the code-scanning dashboard (US-CI-CODEQL).
+  ['codeql.yml:analyze', new Set(['security-events'])],
 ])
 
 function isIsoDate(value) {

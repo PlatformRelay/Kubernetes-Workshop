@@ -380,6 +380,30 @@ test('rejects unnecessary job-level write permissions', async () => {
   assert.ok(result.errors.some((error) => error.includes('job-level write permission issues:write is not allowed')))
 })
 
+test('allows CodeQL analyze job to write security-events', async () => {
+  const root = await fixture({
+    '.github/workflows/codeql.yml': `permissions:
+  contents: read
+jobs:
+  analyze:
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@${'a'.repeat(40)} # v4
+`,
+  })
+
+  const result = await checkSupplyChainPolicy(root)
+
+  assert.deepEqual(
+    result.errors.filter((error) => error.includes('security-events')),
+    [],
+  )
+  assert.deepEqual(result.errors, [])
+})
+
 test('requires every mise lock download to carry a sha256 checksum', async () => {
   const root = await fixture({
     'mise.lock': '[[tools.kind]]\nurl = "https://example.com/kind"\n',

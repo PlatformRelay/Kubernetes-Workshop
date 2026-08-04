@@ -121,7 +121,10 @@ The `workshop-web` image workflow already scans images at HIGH/CRITICAL, signs
 image digests, and attests an SPDX SBOM. This change pins that workflow's
 actions but does not claim a new image run occurred.
 
-CodeQL default setup is repository configuration owned by US-CI-CODEQL. Its
-first scan and triage cannot be proven by a local change, so this gate does not
-fabricate that evidence. Dependency SBOM retention for published deck release
-artifacts likewise remains release-workflow scope.
+CodeQL is owned by US-CI-CODEQL via an explicit `.github/workflows/codeql.yml`
+(default-setup API PUT returned 404). The workflow covers Actions, Go
+(`infra/images/workshop-web`), and JS/TS; `security-events: write` on the
+`analyze` job is allowlisted in `scripts/supply-chain-policy.mjs`. First-scan
+triage cannot be proven by a local change, so this gate does not fabricate that
+evidence. Dependency SBOM retention for published deck release artifacts
+likewise remains release-workflow scope.
