@@ -5,15 +5,18 @@
 #   make kind-up    # create the local kind cluster (idempotent)
 #   make kind-down  # delete it (idempotent) — panic reset: kind-down && kind-up
 #   make doctor     # check the environment is lab-ready
+#   make profile-day-1 / profile-day-2 / profile-day-3  # opt-in day composers
 #   make profile-gateway-envoy / profile-ingress-contour  # mutually exclusive
 
 include infra/versions.env
 
 .DEFAULT_GOAL := help
 .PHONY: help kind-up kind-down doctor \
+	profile-day-1 profile-day-2 profile-day-3 \
+	profile-day-1-down profile-day-2-down profile-day-3-down \
 	profile-gateway-envoy profile-ingress-contour \
 	profile-gateway-envoy-down profile-ingress-contour-down \
-	profile-transition
+	profile-transition profile-status
 
 help: ## Show this help
 	@echo "Workshop environment — usage: make <verb>"
@@ -37,6 +40,24 @@ kind-down: ## Delete the local kind cluster (idempotent)
 doctor: ## Check the environment is lab-ready (engine, cluster, nodes, smoke Pod)
 	@infra/doctor.sh
 
+profile-day-1: ## Install day-1 profile (Contour for S08; opt-in)
+	@infra/addons/profile.sh day-1
+
+profile-day-2: ## Install day-2 profile (Envoy Gateway + metrics-server; opt-in)
+	@infra/addons/profile.sh day-2
+
+profile-day-3: ## Install day-3 profile (Argo CD + cert-manager + kube-prometheus; heavyweight)
+	@infra/addons/profile.sh day-3
+
+profile-day-1-down: ## Tear down day-1 composed components
+	@infra/addons/profile.sh day-1 --teardown
+
+profile-day-2-down: ## Tear down day-2 composed components
+	@infra/addons/profile.sh day-2 --teardown
+
+profile-day-3-down: ## Tear down day-3 composed components
+	@infra/addons/profile.sh day-3 --teardown
+
 profile-gateway-envoy: ## Install Envoy Gateway profile (S09; exclusive vs Contour)
 	@infra/addons/gateway-envoy.sh install
 
@@ -53,3 +74,6 @@ profile-ingress-contour-down: ## Tear down workshop-owned Contour only
 profile-transition: ## Transition routing profiles (TO=gateway-envoy|ingress-contour)
 	@test -n "$(TO)" || (echo "usage: make profile-transition TO=gateway-envoy|ingress-contour" >&2; exit 2)
 	@infra/addons/routing-profile.sh transition "$(TO)"
+
+profile-status: ## Show active routing profile and installed add-ons
+	@infra/addons/profile.sh status

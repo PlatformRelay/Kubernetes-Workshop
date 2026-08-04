@@ -49,6 +49,7 @@ ensure_state() {
       ROUTING_IC="${MOCK_ROUTING_INGRESSCLASSES:-${ROUTING_IC:-}}"
       ROUTING_PORTS="${MOCK_ROUTING_HOSTPORTS:-${ROUTING_PORTS:-}}"
       ROUTING_CRDS="${MOCK_ROUTING_CRDS:-${ROUTING_CRDS:-}}"
+      ADDON_MARKERS="${MOCK_ADDON_MARKERS:-${ADDON_MARKERS:-}}"
       write_state
       : >"${state_file}.seeded"
     fi
@@ -60,6 +61,7 @@ ensure_state() {
   ROUTING_IC="${MOCK_ROUTING_INGRESSCLASSES:-}"
   ROUTING_PORTS="${MOCK_ROUTING_HOSTPORTS:-}"
   ROUTING_CRDS="${MOCK_ROUTING_CRDS:-}"
+  ADDON_MARKERS="${MOCK_ADDON_MARKERS:-}"
 }
 
 write_state() {
@@ -71,16 +73,75 @@ ROUTING_GWC='${ROUTING_GWC:-}'
 ROUTING_IC='${ROUTING_IC:-}'
 ROUTING_PORTS='${ROUTING_PORTS:-}'
 ROUTING_CRDS='${ROUTING_CRDS:-}'
+ADDON_MARKERS='${ADDON_MARKERS:-}'
 EOF
 }
 
 ns_exists() {
-  local want="$1" ns
+  local want="$1" ns entry
+  # kube-system / default always exist on a real cluster.
+  case "$want" in
+    kube-system | default) return 0 ;;
+  esac
   ensure_state
   for ns in ${ROUTING_NS:-}; do
     [ "$ns" = "$want" ] && return 0
   done
+  for entry in ${ADDON_MARKERS:-}; do
+    ns="${entry%%:*}"
+    [ "$ns" = "$want" ] && return 0
+  done
   return 1
+}
+
+addon_marker_for() {
+  local want_ns="$1" want_addon="$2" entry ns addon
+  ensure_state
+  for entry in ${ADDON_MARKERS:-}; do
+    ns="${entry%%:*}"
+    addon="${entry#*:}"
+    if [ "$ns" = "$want_ns" ] && [ "$addon" = "$want_addon" ]; then
+      printf '%s\n' "$addon"
+      return 0
+    fi
+  done
+  return 1
+}
+
+set_addon_marker() {
+  local ns="$1" addon="$2" entry out=""
+  ensure_state
+  for entry in ${ADDON_MARKERS:-}; do
+    case "$entry" in
+      "${ns}:${addon}") continue ;;
+      "${ns}:"*) continue ;;
+    esac
+    out="${out:+$out }$entry"
+  done
+  ADDON_MARKERS="${out:+$out }${ns}:${addon}"
+  case " ${ROUTING_NS:-} " in
+    *" ${ns} "*) ;;
+    *)
+      case "$ns" in
+        kube-system | default) ;;
+        *) ROUTING_NS="${ROUTING_NS:+$ROUTING_NS }$ns" ;;
+      esac
+      ;;
+  esac
+  write_state
+}
+
+clear_addon_marker() {
+  local ns="$1" addon="$2" entry out=""
+  ensure_state
+  for entry in ${ADDON_MARKERS:-}; do
+    if [ "$entry" = "${ns}:${addon}" ]; then
+      continue
+    fi
+    out="${out:+$out }$entry"
+  done
+  ADDON_MARKERS="$out"
+  write_state
 }
 
 marker_for_ns() {
@@ -237,6 +298,17 @@ case "${args[0]:-}" in
         echo "Error from server (NotFound): configmaps \"workshop-routing-profile\" not found" >&2
         exit 1
       fi
+      case "$cm_name" in
+        workshop-addon-*)
+          addon="${cm_name#workshop-addon-}"
+          if [ -n "$ns" ] && addon_marker_for "$ns" "$addon" >/dev/null; then
+            echo "$addon"
+            exit 0
+          fi
+          echo "Error from server (NotFound): configmaps \"${cm_name}\" not found" >&2
+          exit 1
+          ;;
+      esac
       exit 0
     fi
 
@@ -309,6 +381,31 @@ case "${args[0]:-}" in
       fi
       write_state
     fi
+    # Non-routing addon ownership markers (US-ADDONS-1).
+    if [[ "$blob" == *workshop-addon-metrics-server* ]] || [[ "$blob" == *"addon: metrics-server"* ]]; then
+      set_addon_marker kube-system metrics-server
+    fi
+    if [[ "$blob" == *workshop-addon-argocd* ]] || [[ "$blob" == *"addon: argocd"* ]]; then
+      set_addon_marker argocd argocd
+    fi
+    if [[ "$blob" == *workshop-addon-cert-manager* ]] || [[ "$blob" == *"addon: cert-manager"* ]]; then
+      set_addon_marker cert-manager cert-manager
+    fi
+    if [[ "$blob" == *workshop-addon-kube-prometheus* ]] || [[ "$blob" == *"addon: kube-prometheus"* ]]; then
+      set_addon_marker monitoring kube-prometheus
+    fi
+    if [[ "$blob" == *"kind: Namespace"* ]]; then
+      ensure_state
+      for cand in envoy-gateway-system projectcontour argocd cert-manager monitoring; do
+        if [[ "$blob" == *"${cand}"* ]]; then
+          case " ${ROUTING_NS:-} " in
+            *" ${cand} "*) ;;
+            *) ROUTING_NS="${ROUTING_NS:+$ROUTING_NS }${cand}" ;;
+          esac
+        fi
+      done
+      write_state
+    fi
     if [[ "$blob" == *GatewayClass* ]] || [[ "$blob" == *gatewayclass* ]]; then
       ensure_state
       ROUTING_GWC="eg:gateway.envoyproxy.io/gatewayclass-controller"
@@ -318,23 +415,6 @@ case "${args[0]:-}" in
       ensure_state
       ROUTING_IC="contour:projectcontour.io/ingress-controller"
       write_state
-    fi
-    if [[ "$blob" == *"kind: Namespace"* ]]; then
-      ensure_state
-      if [[ "$blob" == *envoy-gateway-system* ]]; then
-        case " ${ROUTING_NS:-} " in
-          *" envoy-gateway-system "*) ;;
-          *) ROUTING_NS="${ROUTING_NS:+$ROUTING_NS }envoy-gateway-system" ;;
-        esac
-        write_state
-      fi
-      if [[ "$blob" == *projectcontour* ]]; then
-        case " ${ROUTING_NS:-} " in
-          *" projectcontour "*) ;;
-          *) ROUTING_NS="${ROUTING_NS:+$ROUTING_NS }projectcontour" ;;
-        esac
-        write_state
-      fi
     fi
     exit 0
     ;;
@@ -358,6 +438,18 @@ case "${args[0]:-}" in
       ensure_state
       ROUTING_GWC=""
       write_state
+    fi
+    if [[ "$*" == *workshop-addon-metrics-server* ]]; then
+      clear_addon_marker kube-system metrics-server
+    fi
+    if [[ "$*" == *workshop-addon-argocd* ]] || [[ "$*" == *"namespace argocd"* ]] || [[ "$*" == *"ns argocd"* ]]; then
+      clear_addon_marker argocd argocd
+    fi
+    if [[ "$*" == *workshop-addon-cert-manager* ]] || [[ "$*" == *"namespace cert-manager"* ]]; then
+      clear_addon_marker cert-manager cert-manager
+    fi
+    if [[ "$*" == *workshop-addon-kube-prometheus* ]] || [[ "$*" == *"namespace monitoring"* ]]; then
+      clear_addon_marker monitoring kube-prometheus
     fi
     exit 0
     ;;

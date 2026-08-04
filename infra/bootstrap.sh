@@ -5,7 +5,7 @@
 #   up      preflight → install/verify pinned tools (mise) → kind cluster → doctor
 #   down    tear the cluster down (confirmed)  → reuses `make kind-down`
 #   doctor  run infra/doctor.sh
-#   profile routing profiles (gateway-envoy | ingress-contour; mutually exclusive)
+#   profile named add-on profiles (day-1|day-2|day-3|gateway-envoy|ingress-contour; opt-in)
 #
 # Design contract (proposal §3.1):
 #   * The heavy lifting is DELEGATED, not reimplemented: the cluster is created by
@@ -468,8 +468,8 @@ cmd_doctor() {
 }
 
 cmd_profile() {
-  # Delegate to the routing-profile CLI (US-GATEWAY-1). Preserve flags/args.
-  run_in_toolchain "$SCRIPT_DIR/addons/routing-profile.sh" "$@"
+  # Unified profile CLI (US-ADDONS-1): day composers + routing profiles.
+  run_in_toolchain "$SCRIPT_DIR/addons/profile.sh" "$@"
 }
 
 usage() {
@@ -480,7 +480,7 @@ Commands:
   up        preflight, install pinned tools, create the kind cluster, run doctor
   down      delete the kind cluster (asks for confirmation)
   doctor    check the environment is lab-ready
-  profile   mutually exclusive routing profiles (gateway-envoy | ingress-contour)
+  profile   named add-on profiles (day-1|day-2|day-3|gateway-envoy|ingress-contour; opt-in)
 
 Flags:
   -y, --yes            assume "yes" to confirmations (for 'down')
@@ -496,7 +496,7 @@ main() {
   local cmd="${1:-}"
   shift || true
 
-  # profile --help must reach the profile CLI (lists gateway-envoy / Contour mutex).
+  # profile --help must reach the profile CLI (lists day + routing profiles).
   if [ "$cmd" = "profile" ]; then
     case "${1:-}" in
       -h | --help) cmd_profile --help; return 0 ;;

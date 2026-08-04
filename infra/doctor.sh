@@ -183,4 +183,14 @@ else
 fi
 cleanup_smoke
 
+# 8. optional add-on profile status (US-ADDONS-1) — informational, never fails doctor
+if [ -x "$script_dir/addons/profile.sh" ]; then
+  profile_out="$("$script_dir/addons/profile.sh" status 2>/dev/null || true)"
+  if printf '%s\n' "$profile_out" | grep -Eq 'routing=(gateway-envoy|ingress-contour)|addon=.+: installed'; then
+    pass "workshop add-on profiles detected (see ./workshop profile status)"
+  else
+    pass "no opt-in add-on profiles installed (./workshop up does not install them)"
+  fi
+fi
+
 summary_and_exit

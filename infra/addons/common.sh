@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Shared helpers for workshop routing add-on profiles (US-GATEWAY-1).
+# Shared helpers for workshop add-on profiles (US-GATEWAY-1 + US-ADDONS-1).
 # shellcheck shell=bash
 
 set -euo pipefail
@@ -14,6 +14,7 @@ WORKSHOP_PART_OF="${WORKSHOP_PART_OF:-k8s-workshop}"
 WORKSHOP_MANAGED_BY="${WORKSHOP_MANAGED_BY:-workshop-infra}"
 WORKSHOP_LABEL_PREFIX="${WORKSHOP_LABEL_PREFIX:-workshop.k8s-labs.dev}"
 ROUTING_MARKER_CM="${ROUTING_MARKER_CM:-workshop-routing-profile}"
+ADDON_MARKER_PREFIX="${ADDON_MARKER_PREFIX:-workshop-addon}"
 
 ENVOY_NS="${ENVOY_NS:-envoy-gateway-system}"
 CONTOUR_NS="${CONTOUR_NS:-projectcontour}"
@@ -22,9 +23,17 @@ ENVOY_CONTROLLER_NAME="${ENVOY_CONTROLLER_NAME:-gateway.envoyproxy.io/gatewaycla
 CONTOUR_INGRESS_CONTROLLER="${CONTOUR_INGRESS_CONTROLLER:-projectcontour.io/ingress-controller}"
 CONTOUR_INGRESSCLASS_NAME="${CONTOUR_INGRESSCLASS_NAME:-contour}"
 
+METRICS_SERVER_NS="${METRICS_SERVER_NS:-kube-system}"
+ARGOCD_NS="${ARGOCD_NS:-argocd}"
+CERT_MANAGER_NS="${CERT_MANAGER_NS:-cert-manager}"
+MONITORING_NS="${MONITORING_NS:-monitoring}"
+
+READY_TIMEOUT_DEFAULT="${WORKSHOP_ADDON_READY_TIMEOUT:-300s}"
+
 addons_say() { printf '%s\n' "$*"; }
 addons_ok() { printf '[OK] %s\n' "$*"; }
 addons_err() { printf '[FAIL] %s\n' "$*" >&2; }
+addons_warn() { printf '[WARN] %s\n' "$*" >&2; }
 
 kubectl_bin() {
   command -v kubectl
@@ -33,6 +42,11 @@ kubectl_bin() {
 ns_exists() {
   local name="$1"
   [ -n "$(kubectl get ns "$name" --ignore-not-found -o name 2>/dev/null || true)" ]
+}
+
+addon_marker_name() {
+  local addon="$1"
+  printf '%s-%s\n' "$ADDON_MARKER_PREFIX" "$addon"
 }
 
 read_profile_marker() {
@@ -66,6 +80,57 @@ delete_profile_marker() {
   kubectl -n "$ns" delete configmap "$ROUTING_MARKER_CM" --ignore-not-found >/dev/null 2>&1 || true
 }
 
+read_addon_marker() {
+  local ns="$1" addon="$2"
+  kubectl -n "$ns" get configmap "$(addon_marker_name "$addon")" \
+    -o jsonpath='{.data.addon}' 2>/dev/null || true
+}
+
+addon_is_installed() {
+  local ns="$1" addon="$2"
+  local marker
+  marker="$(read_addon_marker "$ns" "$addon")"
+  [ "$marker" = "$addon" ]
+}
+
+apply_addon_marker() {
+  local ns="$1" addon="$2" section="$3"
+  local cm
+  cm="$(addon_marker_name "$addon")"
+  kubectl apply -f - <<EOF
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ${cm}
+  namespace: ${ns}
+  labels:
+    app.kubernetes.io/name: ${addon}
+    app.kubernetes.io/part-of: ${WORKSHOP_PART_OF}
+    app.kubernetes.io/managed-by: ${WORKSHOP_MANAGED_BY}
+    ${WORKSHOP_LABEL_PREFIX}/addon: ${addon}
+    ${WORKSHOP_LABEL_PREFIX}/section: ${section}
+    ${WORKSHOP_LABEL_PREFIX}/lane: kind
+data:
+  addon: ${addon}
+EOF
+}
+
+delete_addon_marker() {
+  local ns="$1" addon="$2"
+  kubectl -n "$ns" delete configmap "$(addon_marker_name "$addon")" --ignore-not-found >/dev/null 2>&1 || true
+}
+
+ensure_namespace() {
+  local ns="$1"
+  kubectl create namespace "$ns" --dry-run=client -o yaml | kubectl apply -f -
+}
+
+wait_deploy_available() {
+  local ns="$1" deploy="$2"
+  local timeout="${3:-$READY_TIMEOUT_DEFAULT}"
+  kubectl -n "$ns" wait --timeout="$timeout" --for=condition=Available "deployment/${deploy}"
+}
+
 apply_remote_or_skip() {
   local url="$1"
   shift
@@ -86,4 +151,12 @@ EOF
     return 0
   fi
   kubectl apply "$@" -f "$url"
+}
+
+# Interactive gum choose is progressive enhancement; flags/non-TTY identical.
+addons_use_gum() {
+  [ "${WORKSHOP_NONINTERACTIVE:-0}" = "1" ] && return 1
+  [ "${CI:-}" = "true" ] && return 1
+  [ -t 0 ] || return 1
+  command -v gum >/dev/null 2>&1
 }

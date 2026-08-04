@@ -8,7 +8,7 @@
 #   ./workshop up        # preflight → pinned tools → kind cluster → doctor
 #   ./workshop down       # delete the cluster (confirmed)
 #   ./workshop doctor     # is my machine lab-ready?
-#   ./workshop profile …  # mutually exclusive gateway-envoy / ingress-contour
+#   ./workshop profile …  # opt-in day/routing profiles (not installed by up)
 #
 # See docs/setup.md for engine choice, the WSL2 path, and troubleshooting.
 
