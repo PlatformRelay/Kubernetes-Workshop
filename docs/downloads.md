@@ -40,10 +40,12 @@ Typical artifact names (tag substituted for `<tag>`):
 | `kubernetes-workshop-3day-<tag>.pdf` | Compatibility three-day cut |
 | `kubernetes-workshop-site-<tag>.zip` | Offline HTML bundle |
 
-Example pins from the current controlled-beta line:
+Example pins from **`v0.3.0-beta.1`** (controlled beta):
 
-- [v0.2.0-beta.1 full PDF](https://github.com/PlatformRelay/Kubernetes-Workshop/releases/download/v0.2.0-beta.1/kubernetes-workshop-full-v0.2.0-beta.1.pdf)
-- [v0.2.0-beta.1 3-day PDF](https://github.com/PlatformRelay/Kubernetes-Workshop/releases/download/v0.2.0-beta.1/kubernetes-workshop-3day-v0.2.0-beta.1.pdf)
+- [Day 1 PDF](https://github.com/PlatformRelay/Kubernetes-Workshop/releases/download/v0.3.0-beta.1/kubernetes-workshop-day-1-v0.3.0-beta.1.pdf)
+- [Day 2 PDF](https://github.com/PlatformRelay/Kubernetes-Workshop/releases/download/v0.3.0-beta.1/kubernetes-workshop-day-2-v0.3.0-beta.1.pdf)
+- [Day 3 PDF](https://github.com/PlatformRelay/Kubernetes-Workshop/releases/download/v0.3.0-beta.1/kubernetes-workshop-day-3-v0.3.0-beta.1.pdf)
+- [Full / 3-day PDFs and site zip](https://github.com/PlatformRelay/Kubernetes-Workshop/releases/tag/v0.3.0-beta.1)
 
 Pre-release notes always prepend [beta limitations](./beta-limitations.md). How tags are
 cut: [release.md](./release.md).
