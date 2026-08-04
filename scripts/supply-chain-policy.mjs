@@ -328,6 +328,10 @@ function shellCommandNames(value) {
     let index = 0
     while (/^(?:if|then|do|while|until|!)$/.test(words[index] ?? '')) index += 1
     while (/^[A-Za-z_]\w*=/.test(words[index] ?? '')) index += 1
+    // `command -v curl` probes PATH; curl/wget is not invoked as a download client.
+    if (words[index] === 'command' && words.slice(index + 1).some((word) => word === '-v' || word === '--version')) {
+      continue
+    }
     while (/^(?:env|sudo|command|exec)$/.test(words[index] ?? '')) {
       index += 1
       while (/^-|^[A-Za-z_]\w*=/.test(words[index] ?? '')) index += 1

