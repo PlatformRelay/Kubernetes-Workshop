@@ -14,6 +14,7 @@ stuff
 .remote-assets/
 components.d.ts
 .deck-selection.md
+.tmp-pages-nav/
 
 # Export artifacts
 *.pdf
