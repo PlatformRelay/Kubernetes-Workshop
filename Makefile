@@ -5,16 +5,20 @@
 #   make kind-up    # create the local kind cluster (idempotent)
 #   make kind-down  # delete it (idempotent) — panic reset: kind-down && kind-up
 #   make doctor     # check the environment is lab-ready
+#   make profile-gateway-envoy / profile-ingress-contour  # mutually exclusive
 
 include infra/versions.env
 
 .DEFAULT_GOAL := help
-.PHONY: help kind-up kind-down doctor
+.PHONY: help kind-up kind-down doctor \
+	profile-gateway-envoy profile-ingress-contour \
+	profile-gateway-envoy-down profile-ingress-contour-down \
+	profile-transition
 
 help: ## Show this help
 	@echo "Workshop environment — usage: make <verb>"
 	@echo ""
-	@awk 'BEGIN {FS = ":.*## "} /^[a-zA-Z0-9_-]+:.*## / {printf "  %-12s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
+	@awk 'BEGIN {FS = ":.*## "} /^[a-zA-Z0-9_-]+:.*## / {printf "  %-28s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
 kind-up: ## Create the local kind cluster from infra/kind/cluster.yaml (idempotent)
 	@if kind get clusters 2>/dev/null | grep -qx '$(WORKSHOP_CLUSTER_NAME)'; then \
@@ -32,3 +36,20 @@ kind-down: ## Delete the local kind cluster (idempotent)
 
 doctor: ## Check the environment is lab-ready (engine, cluster, nodes, smoke Pod)
 	@infra/doctor.sh
+
+profile-gateway-envoy: ## Install Envoy Gateway profile (S09; exclusive vs Contour)
+	@infra/addons/gateway-envoy.sh install
+
+profile-ingress-contour: ## Install Contour profile (S08 optional; exclusive vs Envoy)
+	@infra/addons/ingress-contour.sh install
+
+profile-gateway-envoy-down: ## Tear down workshop-owned Envoy Gateway only
+	@infra/addons/gateway-envoy.sh uninstall
+
+profile-ingress-contour-down: ## Tear down workshop-owned Contour only
+	@infra/addons/ingress-contour.sh uninstall
+
+# TO=gateway-envoy|ingress-contour — explicit Envoy↔Contour transition
+profile-transition: ## Transition routing profiles (TO=gateway-envoy|ingress-contour)
+	@test -n "$(TO)" || (echo "usage: make profile-transition TO=gateway-envoy|ingress-contour" >&2; exit 2)
+	@infra/addons/routing-profile.sh transition "$(TO)"

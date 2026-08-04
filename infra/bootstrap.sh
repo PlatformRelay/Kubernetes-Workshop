@@ -5,6 +5,7 @@
 #   up      preflight → install/verify pinned tools (mise) → kind cluster → doctor
 #   down    tear the cluster down (confirmed)  → reuses `make kind-down`
 #   doctor  run infra/doctor.sh
+#   profile routing profiles (gateway-envoy | ingress-contour; mutually exclusive)
 #
 # Design contract (proposal §3.1):
 #   * The heavy lifting is DELEGATED, not reimplemented: the cluster is created by
@@ -466,6 +467,11 @@ cmd_doctor() {
   run_doctor
 }
 
+cmd_profile() {
+  # Delegate to the routing-profile CLI (US-GATEWAY-1). Preserve flags/args.
+  run_in_toolchain "$SCRIPT_DIR/addons/routing-profile.sh" "$@"
+}
+
 usage() {
   cat <<EOF
 Usage: ./workshop <command> [flags]
@@ -474,6 +480,7 @@ Commands:
   up        preflight, install pinned tools, create the kind cluster, run doctor
   down      delete the kind cluster (asks for confirmation)
   doctor    check the environment is lab-ready
+  profile   mutually exclusive routing profiles (gateway-envoy | ingress-contour)
 
 Flags:
   -y, --yes            assume "yes" to confirmations (for 'down')
@@ -488,6 +495,13 @@ EOF
 main() {
   local cmd="${1:-}"
   shift || true
+
+  # profile --help must reach the profile CLI (lists gateway-envoy / Contour mutex).
+  if [ "$cmd" = "profile" ]; then
+    case "${1:-}" in
+      -h | --help) cmd_profile --help; return 0 ;;
+    esac
+  fi
 
   # Parse global flags (order-independent after the subcommand).
   local args=()
@@ -505,6 +519,7 @@ main() {
     up) cmd_up ;;
     down) cmd_down ;;
     doctor) cmd_doctor ;;
+    profile) cmd_profile "$@" ;;
     -h | --help | help | "") usage ;;
     *)
       err "unknown command: ${cmd}"

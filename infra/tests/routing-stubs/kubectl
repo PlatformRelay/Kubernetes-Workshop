@@ -1,0 +1,368 @@
+#!/usr/bin/env bash
+# Mock kubectl for US-GATEWAY-1 routing profile tests.
+# State is driven by MOCK_ROUTING_* env vars and an optional mutable state file
+# (MOCK_ROUTING_STATE) so transition/uninstall flows can clear markers.
+set -eu
+
+echo "kubectl $*" >> "${MOCK_LOG:?stub requires MOCK_LOG}"
+
+state_file="${MOCK_ROUTING_STATE:-}"
+
+# Strip global flags so the verb lands in args[0].
+args=()
+skip_next=0
+for a in "$@"; do
+  if [ "$skip_next" = "1" ]; then skip_next=0; continue; fi
+  case "$a" in
+    -n | --namespace) skip_next=1 ;;
+    -n=* | --namespace=*) ;;
+    -o | --output) skip_next=1 ;;
+    -o=* | --output=* | --ignore-not-found | --wait=*) ;;
+    --dry-run=* | --server-side | --force-conflicts) ;;
+    *) args+=("$a") ;;
+  esac
+done
+
+# Capture -n value for marker lookups (separate pass).
+NS_FLAG=""
+prev=""
+for a in "$@"; do
+  if [ "$prev" = "-n" ] || [ "$prev" = "--namespace" ]; then
+    NS_FLAG="$a"
+  fi
+  case "$a" in
+    -n=* | --namespace=*) NS_FLAG="${a#*=}" ;;
+  esac
+  prev="$a"
+done
+
+ensure_state() {
+  if [ -n "$state_file" ] && [ -f "$state_file" ]; then
+    # shellcheck disable=SC1090
+    . "$state_file"
+    # Seed once from MOCK_ROUTING_* so tests can export fixtures without rewriting
+    # the state file; later mutations (uninstall/transition) own the file alone.
+    if [ ! -f "${state_file}.seeded" ]; then
+      ROUTING_NS="${MOCK_ROUTING_NAMESPACES:-${ROUTING_NS:-}}"
+      ROUTING_MARKERS="${MOCK_ROUTING_PROFILE_MARKERS:-${ROUTING_MARKERS:-}}"
+      ROUTING_GWC="${MOCK_ROUTING_GATEWAYCLASSES:-${ROUTING_GWC:-}}"
+      ROUTING_IC="${MOCK_ROUTING_INGRESSCLASSES:-${ROUTING_IC:-}}"
+      ROUTING_PORTS="${MOCK_ROUTING_HOSTPORTS:-${ROUTING_PORTS:-}}"
+      ROUTING_CRDS="${MOCK_ROUTING_CRDS:-${ROUTING_CRDS:-}}"
+      write_state
+      : >"${state_file}.seeded"
+    fi
+    return 0
+  fi
+  ROUTING_NS="${MOCK_ROUTING_NAMESPACES:-}"
+  ROUTING_MARKERS="${MOCK_ROUTING_PROFILE_MARKERS:-}"
+  ROUTING_GWC="${MOCK_ROUTING_GATEWAYCLASSES:-}"
+  ROUTING_IC="${MOCK_ROUTING_INGRESSCLASSES:-}"
+  ROUTING_PORTS="${MOCK_ROUTING_HOSTPORTS:-}"
+  ROUTING_CRDS="${MOCK_ROUTING_CRDS:-}"
+}
+
+write_state() {
+  [ -n "$state_file" ] || return 0
+  cat >"$state_file" <<EOF
+ROUTING_NS='${ROUTING_NS:-}'
+ROUTING_MARKERS='${ROUTING_MARKERS:-}'
+ROUTING_GWC='${ROUTING_GWC:-}'
+ROUTING_IC='${ROUTING_IC:-}'
+ROUTING_PORTS='${ROUTING_PORTS:-}'
+ROUTING_CRDS='${ROUTING_CRDS:-}'
+EOF
+}
+
+ns_exists() {
+  local want="$1" ns
+  ensure_state
+  for ns in ${ROUTING_NS:-}; do
+    [ "$ns" = "$want" ] && return 0
+  done
+  return 1
+}
+
+marker_for_ns() {
+  local want_ns="$1" entry ns profile
+  ensure_state
+  for entry in ${ROUTING_MARKERS:-}; do
+    ns="${entry%%:*}"
+    profile="${entry#*:}"
+    if [ "$ns" = "$want_ns" ]; then
+      printf '%s\n' "$profile"
+      return 0
+    fi
+  done
+  return 1
+}
+
+clear_contour() {
+  ensure_state
+  local ns out_ns="" out_markers="" entry
+  for ns in ${ROUTING_NS:-}; do
+    [ "$ns" = "projectcontour" ] && continue
+    out_ns="${out_ns:+$out_ns }$ns"
+  done
+  for entry in ${ROUTING_MARKERS:-}; do
+    case "$entry" in
+      projectcontour:*) continue ;;
+    esac
+    out_markers="${out_markers:+$out_markers }$entry"
+  done
+  ROUTING_NS="$out_ns"
+  ROUTING_MARKERS="$out_markers"
+  ROUTING_IC=""
+  case "${ROUTING_PORTS:-}" in
+    *contour*) ROUTING_PORTS="" ;;
+  esac
+  write_state
+}
+
+clear_envoy() {
+  ensure_state
+  local ns out_ns="" out_markers="" entry
+  for ns in ${ROUTING_NS:-}; do
+    [ "$ns" = "envoy-gateway-system" ] && continue
+    out_ns="${out_ns:+$out_ns }$ns"
+  done
+  for entry in ${ROUTING_MARKERS:-}; do
+    case "$entry" in
+      envoy-gateway-system:*) continue ;;
+    esac
+    out_markers="${out_markers:+$out_markers }$entry"
+  done
+  ROUTING_NS="$out_ns"
+  ROUTING_MARKERS="$out_markers"
+  ROUTING_GWC=""
+  case "${ROUTING_PORTS:-}" in
+    *envoy*) ROUTING_PORTS="" ;;
+  esac
+  write_state
+}
+
+record_apply() {
+  if [ -n "${MOCK_ROUTING_APPLY_LOG:-}" ]; then
+    echo "$*" >>"$MOCK_ROUTING_APPLY_LOG"
+  fi
+}
+
+# Strip global flags we do not care about for matching.
+# (args already normalized above)
+
+case "${args[0]:-}" in
+  get)
+    # kubectl get ns <name> --ignore-not-found -o name
+    if [ "${args[1]:-}" = "ns" ] || [ "${args[1]:-}" = "namespace" ] || [ "${args[1]:-}" = "namespaces" ]; then
+      name="${args[2]:-}"
+      if [ -n "$name" ] && [ "$name" != "-o" ] && [ "$name" != "--ignore-not-found" ]; then
+        if ns_exists "$name"; then
+          echo "namespace/$name"
+          exit 0
+        fi
+        exit 0
+      fi
+      ensure_state
+      for ns in ${ROUTING_NS:-}; do
+        echo "$ns"
+      done
+      exit 0
+    fi
+
+    if [ "${args[1]:-}" = "gatewayclass" ] || [ "${args[1]:-}" = "gatewayclasses" ] || \
+       [ "${args[1]:-}" = "gatewayclass.gateway.networking.k8s.io" ]; then
+      ensure_state
+      name="${args[2]:-}"
+      if [ -n "$name" ] && [[ "$name" != -* ]]; then
+        for entry in ${ROUTING_GWC:-}; do
+          if [ "${entry%%:*}" = "$name" ]; then
+            echo "${entry#*:}"
+            exit 0
+          fi
+        done
+        exit 1
+      fi
+      for entry in ${ROUTING_GWC:-}; do
+        echo "${entry%%:*} ${entry#*:}"
+      done
+      exit 0
+    fi
+
+    if [ "${args[1]:-}" = "ingressclass" ] || [ "${args[1]:-}" = "ingressclasses" ]; then
+      ensure_state
+      name="${args[2]:-}"
+      if [ -n "$name" ] && [[ "$name" != -* ]]; then
+        for entry in ${ROUTING_IC:-}; do
+          if [ "${entry%%:*}" = "$name" ]; then
+            echo "${entry#*:}"
+            exit 0
+          fi
+        done
+        exit 1
+      fi
+      for entry in ${ROUTING_IC:-}; do
+        echo "${entry%%:*} ${entry#*:}"
+      done
+      exit 0
+    fi
+
+    if [ "${args[1]:-}" = "crd" ] || [ "${args[1]:-}" = "crds" ] || \
+       [ "${args[1]:-}" = "customresourcedefinition" ] || \
+       [ "${args[1]:-}" = "customresourcedefinitions" ]; then
+      ensure_state
+      name="${args[2]:-}"
+      if [ -n "$name" ] && [[ "$name" != -* ]]; then
+        for crd in ${ROUTING_CRDS:-}; do
+          if [ "$crd" = "$name" ]; then
+            echo "customresourcedefinition.apiextensions.k8s.io/$name"
+            exit 0
+          fi
+        done
+        exit 0
+      fi
+      for crd in ${ROUTING_CRDS:-}; do
+        echo "$crd"
+      done
+      exit 0
+    fi
+
+    if [ "${args[1]:-}" = "configmap" ] || [ "${args[1]:-}" = "cm" ] || [ "${args[1]:-}" = "configmaps" ]; then
+      cm_name="${args[2]:-}"
+      ns="$NS_FLAG"
+      if [ "$cm_name" = "workshop-routing-profile" ] && [ -n "$ns" ]; then
+        if profile="$(marker_for_ns "$ns")"; then
+          echo "$profile"
+          exit 0
+        fi
+        echo "Error from server (NotFound): configmaps \"workshop-routing-profile\" not found" >&2
+        exit 1
+      fi
+      exit 0
+    fi
+
+    if [ "${args[1]:-}" = "svc" ] || [ "${args[1]:-}" = "service" ] || [ "${args[1]:-}" = "services" ]; then
+      ensure_state
+      if [ -n "${ROUTING_PORTS:-}" ]; then
+        echo "ROUTING_HOSTPORTS ${ROUTING_PORTS}"
+      fi
+      exit 0
+    fi
+
+    if [ "${args[1]:-}" = "ds" ] || [ "${args[1]:-}" = "daemonset" ] || [ "${args[1]:-}" = "daemonsets" ] || \
+       [ "${args[1]:-}" = "deploy" ] || [ "${args[1]:-}" = "deployment" ] || [ "${args[1]:-}" = "deployments" ]; then
+      ensure_state
+      if ns_exists projectcontour && [[ "$*" == *projectcontour* ]]; then
+        echo "contour"
+        exit 0
+      fi
+      if ns_exists envoy-gateway-system && [[ "$*" == *envoy-gateway* ]]; then
+        echo "envoy-gateway"
+        exit 0
+      fi
+      exit 0
+    fi
+    exit 0
+    ;;
+
+  wait | rollout)
+    exit 0
+    ;;
+
+  apply | create | replace | patch | label | annotate)
+    record_apply "$*"
+    body=""
+    # Heredoc applies (`kubectl apply -f -`) put the object on stdin — parse it.
+    if [[ " $* " == *" -f - "* ]] || [[ "$*" == *"-f-"* ]]; then
+      body="$(cat || true)"
+    fi
+    blob="$* ${body}"
+    # Ownership marker create/apply updates state for subsequent detects.
+    if [[ "$blob" == *workshop-routing-profile* ]]; then
+      ensure_state
+      if [[ "$blob" == *envoy-gateway-system* ]] || [[ "$blob" == *gateway-envoy* ]]; then
+        case " ${ROUTING_NS:-} " in
+          *" envoy-gateway-system "*) ;;
+          *) ROUTING_NS="${ROUTING_NS:+$ROUTING_NS }envoy-gateway-system" ;;
+        esac
+        case " ${ROUTING_MARKERS:-} " in
+          *" envoy-gateway-system:gateway-envoy "*) ;;
+          *) ROUTING_MARKERS="${ROUTING_MARKERS:+$ROUTING_MARKERS }envoy-gateway-system:gateway-envoy" ;;
+        esac
+        ROUTING_GWC="eg:gateway.envoyproxy.io/gatewayclass-controller"
+        ROUTING_PORTS="80,443:envoy-gateway"
+        case " ${ROUTING_CRDS:-} " in
+          *" gateways.gateway.networking.k8s.io "*) ;;
+          *) ROUTING_CRDS="${ROUTING_CRDS:+$ROUTING_CRDS }gateways.gateway.networking.k8s.io" ;;
+        esac
+      fi
+      if [[ "$blob" == *projectcontour* ]] || [[ "$blob" == *ingress-contour* ]]; then
+        case " ${ROUTING_NS:-} " in
+          *" projectcontour "*) ;;
+          *) ROUTING_NS="${ROUTING_NS:+$ROUTING_NS }projectcontour" ;;
+        esac
+        case " ${ROUTING_MARKERS:-} " in
+          *" projectcontour:ingress-contour "*) ;;
+          *) ROUTING_MARKERS="${ROUTING_MARKERS:+$ROUTING_MARKERS }projectcontour:ingress-contour" ;;
+        esac
+        ROUTING_IC="contour:projectcontour.io/ingress-controller"
+        ROUTING_PORTS="80,443:contour"
+      fi
+      write_state
+    fi
+    if [[ "$blob" == *GatewayClass* ]] || [[ "$blob" == *gatewayclass* ]]; then
+      ensure_state
+      ROUTING_GWC="eg:gateway.envoyproxy.io/gatewayclass-controller"
+      write_state
+    fi
+    if [[ "$blob" == *IngressClass* ]]; then
+      ensure_state
+      ROUTING_IC="contour:projectcontour.io/ingress-controller"
+      write_state
+    fi
+    if [[ "$blob" == *"kind: Namespace"* ]]; then
+      ensure_state
+      if [[ "$blob" == *envoy-gateway-system* ]]; then
+        case " ${ROUTING_NS:-} " in
+          *" envoy-gateway-system "*) ;;
+          *) ROUTING_NS="${ROUTING_NS:+$ROUTING_NS }envoy-gateway-system" ;;
+        esac
+        write_state
+      fi
+      if [[ "$blob" == *projectcontour* ]]; then
+        case " ${ROUTING_NS:-} " in
+          *" projectcontour "*) ;;
+          *) ROUTING_NS="${ROUTING_NS:+$ROUTING_NS }projectcontour" ;;
+        esac
+        write_state
+      fi
+    fi
+    exit 0
+    ;;
+
+  delete)
+    record_apply "$*"
+    if [[ "$*" == *projectcontour* ]] || [[ "$*" == *ingress-contour* ]]; then
+      clear_contour
+    fi
+    if [[ "$*" == *envoy-gateway-system* ]] || [[ "$*" == *gateway-envoy* ]] || \
+       [[ "$*" == *GatewayClass/eg* ]] || [[ "$*" == *"gatewayclass eg"* ]] || \
+       [[ "$*" == *"gatewayclass eg "* ]]; then
+      # gatewayclass delete alone should not clear the whole envoy profile unless NS also goes;
+      # clear_envoy is correct for teardown of the profile.
+      :
+    fi
+    if [[ "$*" == *envoy-gateway-system* ]] || [[ "$*" == *gateway-envoy* ]]; then
+      clear_envoy
+    fi
+    if [[ "$*" == *"gatewayclass eg"* ]] || [[ "$*" == "delete gatewayclass eg"* ]]; then
+      ensure_state
+      ROUTING_GWC=""
+      write_state
+    fi
+    exit 0
+    ;;
+
+  *)
+    exit 0
+    ;;
+esac

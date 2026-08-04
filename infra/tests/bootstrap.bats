@@ -63,6 +63,7 @@ EOF
   echo "$output" | grep -q "up"
   echo "$output" | grep -q "down"
   echo "$output" | grep -q "doctor"
+  echo "$output" | grep -q "profile"
 }
 
 @test "--help prints usage" {
