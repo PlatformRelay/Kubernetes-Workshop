@@ -410,9 +410,11 @@ status fields when a one-line phase is ambiguous.
 
 Distinguish OOMKilled (container exit 137 in `kubectl describe pod -n "$NS"`) from admission
 rejection (`kubectl describe resourcequota -n "$NS"` or create errors). Restore a runnable Pod
-by editing requests/limits so they fit the quota, then `kubectl apply -f pod.yaml -n "$NS"` —
-or `kubectl delete pod <name> -n "$NS" --ignore-not-found` before re-applying. Confirm the fixed
-Pod's QoS with `kubectl get pod <name> -n "$NS" -o jsonpath='{.status.qosClass}{"\n"}'`.
+by editing requests/limits so they fit the quota, then re-apply the matching manifest —
+`oom-demo-fixed.yaml` after an OOM demo, or a trimmed `quota-buster.yaml` after a quota
+denial — via `kubectl apply -f <manifest> -n "$NS"`. Or `kubectl delete pod <name> -n "$NS"
+--ignore-not-found` before re-applying. Confirm the fixed Pod's QoS with
+`kubectl get pod <name> -n "$NS" -o jsonpath='{.status.qosClass}{"\n"}'`.
 
 ## Challenge solution
 

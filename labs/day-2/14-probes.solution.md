@@ -574,8 +574,8 @@ status fields when a one-line phase is ambiguous.
 If traffic stops while Pods stay Running, watch
 `kubectl get endpointslices -n "$NS" -l kubernetes.io/service-name=web` — a failed readiness
 probe removes the address without restarting. Climbing restart counts belong to liveness;
-read them with `kubectl describe pod -n "$NS" -l app=web`. Restore working probes via
-`kubectl apply -f deployment.yaml -n "$NS"` (or the lab's probe patch), then
+read them with `kubectl describe pod -n "$NS" -l app=s14`. Restore working probes via
+`kubectl apply -f deployment-probes.yaml -n "$NS"` (or the lab's probe patch), then
 `kubectl rollout status deploy/web -n "$NS"`. Do not treat readiness failures as a reason to
 delete the Pod.
 

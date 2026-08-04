@@ -457,6 +457,40 @@ kubectl delete httproute,gateway --all -n "$NS" --ignore-not-found
   assert.ok(errors.some((error) => error.includes('Troubleshooting must not be bit-identical')));
 });
 
+test('rejects Day 2 Troubleshooting that cites Day-1 generic manifests absent from the lab', () => {
+  const root = mkdtempSync(join(tmpdir(), 'lab-day2-manifest-'));
+  const day = join(root, 'labs', 'day-2');
+  mkdirSync(day, { recursive: true });
+  for (const name of DAY_2_LABS.map((path) => path.split('/').at(-1))) {
+    const stem = name.replace(/\.md$/, '');
+    const labManifest = stem === '13-resources'
+      ? 'oom-demo-fixed.yaml'
+      : stem === '14-probes'
+        ? 'deployment-probes.yaml'
+        : stem === '16-hpa'
+          ? 'web.yaml'
+          : 'lab.yaml';
+    writeFileSync(
+      join(day, name),
+      `# Lab\n\n## Files used\n\n- \`${labManifest}\`\n\n\`\`\`bash\ncat > ${labManifest} <<'EOF'\napiVersion: v1\nkind: Pod\nEOF\n\`\`\`\n`,
+    );
+    const wrongCite = stem === '13-resources'
+      ? 'pod.yaml'
+      : stem === '14-probes' || stem === '16-hpa'
+        ? 'deployment.yaml'
+        : labManifest;
+    writeFileSync(
+      join(day, name.replace(/\.md$/, '.solution.md')),
+      `# Solution\n\n## Troubleshooting and recovery\n\nRestore with \`kubectl apply -f ${wrongCite} -n "$NS"\`.\n`,
+    );
+  }
+
+  const errors = auditDayTwoCleanupTruth(root);
+  assert.ok(errors.some((error) => error.includes('13-resources.solution.md') && error.includes('pod.yaml')));
+  assert.ok(errors.some((error) => error.includes('14-probes.solution.md') && error.includes('deployment.yaml')));
+  assert.ok(errors.some((error) => error.includes('16-hpa.solution.md') && error.includes('deployment.yaml')));
+});
+
 test('guards Day 2 cleanup panic-reset and unique Troubleshooting on contracted labs', () => {
   const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
   assert.deepEqual(auditDayTwoCleanupTruth(repo), [], auditDayTwoCleanupTruth(repo).join('\n'));

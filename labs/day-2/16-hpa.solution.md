@@ -433,7 +433,7 @@ status fields when a one-line phase is ambiguous.
 
 When HPA `TARGETS` stay `<unknown>` under load, run `kubectl describe hpa -n "$NS"` and look
 for `failedGetResourceMetric`. Missing `resources.requests.cpu` is fixed by restoring the
-Deployment template — `kubectl apply -f deployment.yaml -n "$NS"` — then confirming
+Deployment template — `kubectl apply -f web.yaml -n "$NS"` — then confirming
 `kubectl get hpa -n "$NS"` shows numeric CURRENT/TARGET. If metrics-server itself is down,
 check `kubectl -n kube-system get deploy metrics-server` before blaming the HPA; do not delete
 the HPA as the first recovery step.

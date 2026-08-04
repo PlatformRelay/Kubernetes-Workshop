@@ -498,10 +498,22 @@ export function auditContractDocumentation(repoRoot = REPO_ROOT) {
   return errors;
 }
 
+/** Day-1 through-line names that Day-2 Troubleshooting must not invent when the lab never creates them. */
+const DAY_TWO_GENERIC_MANIFEST_ALIASES = ['pod.yaml', 'deployment.yaml'];
+
+function yamlBasenamesCited(text) {
+  const names = new Set();
+  for (const match of text.matchAll(/(?:^|\s|[`'"])((?:[\w.-]+\/)*[\w.-]+\.ya?ml)\b/g)) {
+    names.add(match[1].split('/').at(-1));
+  }
+  return names;
+}
+
 /**
  * Day 2 cleanup / panic-reset truth: namespaced `kubectl delete … --all` belongs only as a
  * commented panic path (Labs 10–16 pattern), never as the default live Cleanup command.
- * Also rejects bit-identical Troubleshooting blocks across Day 2 sibling solutions.
+ * Also rejects bit-identical Troubleshooting blocks across Day 2 sibling solutions, and
+ * Day-1 generic manifest names (`pod.yaml` / `deployment.yaml`) absent from the sibling lab.
  */
 export function auditDayTwoCleanupTruth(repoRoot = REPO_ROOT) {
   const errors = [];
@@ -542,6 +554,19 @@ export function auditDayTwoCleanupTruth(repoRoot = REPO_ROOT) {
       );
     } else {
       troubleshootingNorms.set(key, path);
+    }
+
+    const labPath = path.replace(/\.solution\.md$/, '.md');
+    const labAbsolute = resolve(repoRoot, labPath);
+    if (!existsSync(labAbsolute)) continue;
+    const labFiles = yamlBasenamesCited(readFileSync(labAbsolute, 'utf8'));
+    const cited = yamlBasenamesCited(troubleshooting);
+    for (const alias of DAY_TWO_GENERIC_MANIFEST_ALIASES) {
+      if (cited.has(alias) && !labFiles.has(alias)) {
+        errors.push(
+          `${path}: Troubleshooting cites ${alias}, but that file is not in ${labPath}`,
+        );
+      }
     }
   }
   return errors;
