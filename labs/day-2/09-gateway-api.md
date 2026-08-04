@@ -21,7 +21,10 @@ point a Gateway at a `gatewayClassName` nobody owns to watch its status stay at
 > **Environment honesty.** Gateway API is **CRDs + a controller**, exactly like Ingress.
 >
 > - **kind:** you install both yourself (admin) — this path is **kind-only** for the
->   install step.
+>   install step. Preferred facilitator path: `./workshop profile gateway-envoy` (canonical
+>   S09 profile; mutually exclusive with Contour / `ingress-contour`). Always set
+>   `gatewayClassName: eg` explicitly — do not rely on whichever GatewayClass happens to
+>   be default.
 > - **Shared cluster:** the CRDs and a controller are **pre-provided**; your facilitator
 >   gives you the `GatewayClass` name (examples below use `eg`). You install **nothing**
 >   — skip Step 1 and use the shared class name everywhere.

@@ -156,6 +156,24 @@ under `CI=true`, or with no TTY) and sane defaults are taken — this is the exa
 path CI runs, so the script you run locally is the script that is tested. Use
 `./workshop down --yes` (or `-y`) to skip the teardown confirmation in scripts.
 
+## Routing profiles (Envoy vs Contour)
+
+Ingress (S08) and Gateway API (S09) need **different** controllers that both want host
+ports 80/443. The workshop therefore exposes two **mutually exclusive** profiles:
+
+| Profile | Command | Lab | Notes |
+| --- | --- | --- | --- |
+| `gateway-envoy` (canonical) | `./workshop profile gateway-envoy` | S09 | Gateway API CRDs + Envoy Gateway; GatewayClass `eg` |
+| `ingress-contour` (optional) | `./workshop profile ingress-contour` | S08 | Contour Ingress controller; IngressClass `contour` |
+
+Preflight refuses to install one while the other (or a foreign controller) is present,
+and prints a remediation. To switch: `./workshop profile transition gateway-envoy`
+(or `make profile-transition TO=gateway-envoy`). Teardown removes only workshop-owned
+resources and **preserves** shared Gateway API CRDs.
+
+Manifests must name the class explicitly (`gatewayClassName: eg` /
+`ingressClassName: …`) — never rely on an accidental cluster default.
+
 ## Troubleshooting
 
 | Symptom | Fix |

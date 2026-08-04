@@ -23,7 +23,9 @@ March 2026, so the controller behind the API is now a choice you make — here, 
 >
 > - **kind:** you install one yourself (admin) — Contour, from a pinned quickstart. Your
 >   Lab 00 cluster already publishes ports 80/443 to `localhost`, so no cluster rebuild is
->   needed.
+>   needed. Preferred facilitator path: `./workshop profile ingress-contour` (mutually
+>   exclusive with `gateway-envoy` — never run both). Set `ingressClassName` explicitly;
+>   do not rely on a default class.
 > - **Shared cluster:** the controller already exists; your facilitator gives you
 >   **hostnames** that route to it. You do **not** install anything.
 >
