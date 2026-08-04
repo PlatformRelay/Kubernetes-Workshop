@@ -90,11 +90,23 @@ EOF
   export LAB_SMOKE_SKIP_PROFILE=1
   run "$ROOT/infra/lab-smoke.sh" schedule-day2
   [ "$status" -ne 0 ]
-  echo "$output" | grep -qi 'DRIVER_STUB\|stub.*schedule\|refused\|not allowed\|cannot'
-  # Must not paper-green: no Status:passed evidence from a stubbed schedule shard.
-  if [ -f "$LAB_SMOKE_ARTIFACTS/summary-schedule-day2.md" ]; then
-    ! grep -q 'Status: `passed`' "$LAB_SMOKE_ARTIFACTS/summary-schedule-day2.md"
-  fi
+  echo "$output" | grep -qi 'DRIVER_STUB\|not allowed\|refused'
+  # Early refuse must not write evidence (vacuous !passed if file missing).
+  [ ! -f "$LAB_SMOKE_ARTIFACTS/summary-schedule-day2.md" ]
+}
+
+@test "schedule-day3 refuses DRIVER_STUB (no Status passed)" {
+  export LAB_SMOKE_DRIVER_STUB=1
+  export LAB_SMOKE_SKIP_BOOTSTRAP=1
+  export LAB_SMOKE_SKIP_IDEMPOTENCE=1
+  export LAB_SMOKE_SKIP_TEARDOWN=1
+  export LAB_SMOKE_SKIP_DOCTOR=1
+  export LAB_SMOKE_SKIP_PROFILE=1
+  run "$ROOT/infra/lab-smoke.sh" schedule-day3
+  [ "$status" -ne 0 ]
+  echo "$output" | grep -qi 'DRIVER_STUB\|not allowed\|refused'
+  # Early refuse must not write evidence (vacuous !passed if file missing).
+  [ ! -f "$LAB_SMOKE_ARTIFACTS/summary-schedule-day3.md" ]
 }
 
 @test "schedule-day2 scaffold refuses Status passed (fail closed)" {
