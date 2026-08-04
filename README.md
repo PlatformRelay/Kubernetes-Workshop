@@ -60,14 +60,21 @@ GitOps; and read an operator in the wild — mapped to CKA/CKAD domains as a des
 
 ## Curriculum at a glance
 
-| Day | Theme | Focus |
-| --- | --- | --- |
-| **Day 1** | Foundations + red line | Welcome through Ingress |
-| **Day 2** | Running workloads well | Gateway API through probes (+ optional Jobs/HPA) |
-| **Day 3** | Security, delivery, operators | PSA through best practices (+ deferred S24 stub) |
+The workshop is a **superset of 28 sections** (`S00`–`S27`), boiled down per delivery into a
+**canonical 3-day cut**. Spine: **Pod → Deployment → Service → Ingress → Gateway API**
+(`S05`–`S09`).
 
-**26 of 28 sections are fully authored.** `S27` is slides-only wrap-up; `S24` (kubebuilder)
-is a deferred stub. Full map: [`docs/syllabus.md`](./docs/syllabus.md).
+| Day | Theme | Sections |
+| --- | --- | --- |
+| **Day 1** | Foundations + red line | `S00`, `S03`–`S08` |
+| **Day 2** | Running workloads well | `S09`–`S14` |
+| **Day 3** | Security, delivery, operators | `S17`, `S20`–`S23`, `S25`–`S27` |
+
+Authored on-ramp / add-back sections (`S01`, `S02`, `S15`, `S16`, `S18`, `S19`) live in
+**Optional / Appendix**; `S24` is a deferred stub (not schedulable).
+**26 of 28 sections are fully authored** (`S27` slides-only wrap-up). Full map:
+[`docs/syllabus.md`](./docs/syllabus.md) — contract-checked against
+`scripts/deck-manifest.mjs`.
 
 ## Choose your path
 

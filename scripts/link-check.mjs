@@ -29,6 +29,7 @@ export const DOCS = [
   'docs/beta-limitations.md',
   'docs/validation-matrix.md',
   'docs/setup.md',
+  'docs/windows-wsl2.md',
   'docs/release.md',
   'labs/README.md',
   'quiz/README.md',
