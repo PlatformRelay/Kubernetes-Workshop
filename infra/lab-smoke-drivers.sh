@@ -450,6 +450,18 @@ EOF
     lab_smoke_err "Envoy Gateway Service for Gateway web not ready after ${max_attempts} attempts"
     return 1
   }
+  attempt=1
+  while [ "$attempt" -le "$max_attempts" ]; do
+    if kubectl get endpoints "$envoy_svc" -n envoy-gateway-system \
+      -o jsonpath='{.subsets[0].addresses[0].ip}' 2>/dev/null | grep -q .; then
+      break
+    fi
+    sleep "$sleep_s"
+    attempt=$((attempt + 1))
+  done
+  kubectl get endpoints "$envoy_svc" -n envoy-gateway-system \
+    -o jsonpath='{.subsets[0].addresses[0].ip}' 2>/dev/null | grep -q . \
+    || { lab_smoke_err "Envoy dataplane endpoints for ${envoy_svc} not ready"; return 1; }
   kubectl -n envoy-gateway-system port-forward "service/${envoy_svc}" 8888:80 >/tmp/lab-smoke-gw-pf.log 2>&1 &
   gw_pf_pid=$!
   sleep 3
