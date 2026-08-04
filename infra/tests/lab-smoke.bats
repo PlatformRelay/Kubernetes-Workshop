@@ -80,3 +80,42 @@ EOF
   ! echo "$output" | grep -q 'day-1/'
   ! echo "$output" | grep -q 'day-3/'
 }
+
+@test "schedule-day2 scaffold refuses Status passed (fail closed)" {
+  export LAB_SMOKE_DRIVER_STUB=0
+  export LAB_SMOKE_SKIP_BOOTSTRAP=1
+  export LAB_SMOKE_SKIP_IDEMPOTENCE=1
+  export LAB_SMOKE_SKIP_TEARDOWN=1
+  export LAB_SMOKE_SKIP_DOCTOR=1
+  export LAB_SMOKE_SKIP_PROFILE=1
+  # Force scaffold path for schedule shards (real drivers are still stubs).
+  unset LAB_SMOKE_ALLOW_SCAFFOLD
+  run "$ROOT/infra/lab-smoke.sh" schedule-day2
+  [ "$status" -ne 0 ]
+  [ -f "$LAB_SMOKE_ARTIFACTS/summary-schedule-day2.md" ]
+  grep -q 'Status: `scaffold`' "$LAB_SMOKE_ARTIFACTS/summary-schedule-day2.md"
+  ! grep -q 'Status: `passed`' "$LAB_SMOKE_ARTIFACTS/summary-schedule-day2.md"
+}
+
+@test "schedule-day2 allow-scaffold still never writes passed" {
+  export LAB_SMOKE_SKIP_BOOTSTRAP=1
+  export LAB_SMOKE_SKIP_IDEMPOTENCE=1
+  export LAB_SMOKE_SKIP_TEARDOWN=1
+  export LAB_SMOKE_SKIP_DOCTOR=1
+  export LAB_SMOKE_SKIP_PROFILE=1
+  export LAB_SMOKE_ALLOW_SCAFFOLD=1
+  run "$ROOT/infra/lab-smoke.sh" schedule-day2
+  [ "$status" -eq 0 ]
+  grep -q 'Status: `scaffold`' "$LAB_SMOKE_ARTIFACTS/summary-schedule-day2.md"
+  ! grep -q 'Status: `passed`' "$LAB_SMOKE_ARTIFACTS/summary-schedule-day2.md"
+}
+
+@test "pr-day1 evidence records architecture and profile" {
+  export LAB_SMOKE_DRIVER_STUB=1
+  export LAB_SMOKE_SKIP_TEARDOWN=1
+  run "$ROOT/infra/lab-smoke.sh" pr-day1
+  [ "$status" -eq 0 ]
+  [ -f "$LAB_SMOKE_ARTIFACTS/summary-pr-day1.md" ]
+  grep -Eq 'Architecture: `(x86_64|amd64|arm64|aarch64|unknown)`' "$LAB_SMOKE_ARTIFACTS/summary-pr-day1.md"
+  grep -Eq 'Profile: `(day-1|bare|none|stub:day-1)`' "$LAB_SMOKE_ARTIFACTS/summary-pr-day1.md"
+}

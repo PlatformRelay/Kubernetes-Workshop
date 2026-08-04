@@ -67,11 +67,45 @@ EOF
   [ "$phase" = "Running" ]
   ready="$(kubectl get pod web -n "$LAB_SMOKE_NS" -o jsonpath='{.status.containerStatuses[0].ready}')"
   [ "$ready" = "true" ]
+
+  # Deterministic Challenge (solution companion): bare Pod restart keeps UID;
+  # delete does not recreate.
+  cat >"$LAB_SMOKE_ARTIFACTS/crash.yaml" <<'EOF'
+apiVersion: v1
+kind: Pod
+metadata:
+  name: crash
+spec:
+  restartPolicy: Always
+  containers:
+    - name: crash
+      image: busybox:1.37
+      command: ["sh", "-c", "sleep 2; exit 1"]
+EOF
+  kubectl apply -f "$LAB_SMOKE_ARTIFACTS/crash.yaml" -n "$LAB_SMOKE_NS"
+  uid_before="$(kubectl get pod crash -n "$LAB_SMOKE_NS" -o jsonpath='{.metadata.uid}')"
+  # Wait for at least one container restart while UID stays stable.
+  i=0
+  rc_count=0
+  while [ "$i" -lt 60 ]; do
+    rc_count="$(kubectl get pod crash -n "$LAB_SMOKE_NS" -o jsonpath='{.status.containerStatuses[0].restartCount}' 2>/dev/null || echo 0)"
+    if [ "${rc_count:-0}" -ge 1 ]; then
+      break
+    fi
+    sleep 2
+    i=$((i + 1))
+  done
+  [ "${rc_count:-0}" -ge 1 ]
+  uid_after="$(kubectl get pod crash -n "$LAB_SMOKE_NS" -o jsonpath='{.metadata.uid}')"
+  [ "$uid_before" = "$uid_after" ]
+  kubectl delete pod crash -n "$LAB_SMOKE_NS" --ignore-not-found --wait=true
+  # After delete, bare Pod must stay gone (no controller).
+  ! kubectl get pod crash -n "$LAB_SMOKE_NS" >/dev/null 2>&1
+
   export NS="${NS:-$LAB_SMOKE_NS}"
   # shellcheck disable=SC2016 # $NS expanded by eval inside lab_smoke_apply_cleanup
   lab_smoke_apply_cleanup 'kubectl delete pod web web-typo crash -n "$NS" --ignore-not-found'
 }
-
 lab_smoke_driver_day_1_06_deployment() {
   # From labs/day-1/06-deployment.solution.md Step 1
   cat >"$LAB_SMOKE_ARTIFACTS/deployment.yaml" <<'EOF'
@@ -272,11 +306,12 @@ EOF
 
 lab_smoke_driver_scaffold() {
   local lab_id="$1"
-  lab_smoke_info "scaffolded skip for ${lab_id} (schedule shard — profile already verified)"
+  lab_smoke_mark_scaffold "$lab_id"
+  lab_smoke_info "scaffolded skip for ${lab_id} (no per-lab assertion yet)"
   return 0
 }
 
-# Provide thin wrappers so schedule selections do not fail closed missing drivers.
+# Wrappers kept for discoverability; orchestrator routes day-2/3 via scaffold-only.
 lab_smoke_driver_day_2_09_gateway_api() { lab_smoke_driver_scaffold "day-2/09-gateway-api"; }
 lab_smoke_driver_day_2_10_config() { lab_smoke_driver_scaffold "day-2/10-config"; }
 lab_smoke_driver_day_2_11_storage() { lab_smoke_driver_scaffold "day-2/11-storage"; }
