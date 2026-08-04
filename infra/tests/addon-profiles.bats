@@ -16,7 +16,7 @@ setup() {
   export WORKSHOP_ADDON_SKIP_REMOTE=1
   unset MOCK_ROUTING_NAMESPACES MOCK_ROUTING_GATEWAYCLASSES MOCK_ROUTING_INGRESSCLASSES
   unset MOCK_ROUTING_PROFILE_MARKERS MOCK_ROUTING_HOSTPORTS MOCK_ROUTING_CRDS
-  unset MOCK_ROUTING_TRANSITION MOCK_ADDON_MARKERS
+  unset MOCK_ROUTING_TRANSITION MOCK_ADDON_MARKERS MOCK_ADDON_DEPLOYS
   : >"$BATS_TEST_TMPDIR/apply.log"
   export MOCK_ROUTING_APPLY_LOG="$BATS_TEST_TMPDIR/apply.log"
   export MOCK_ROUTING_STATE="$BATS_TEST_TMPDIR/routing.state"
@@ -28,6 +28,7 @@ ROUTING_IC=''
 ROUTING_PORTS=''
 ROUTING_CRDS=''
 ADDON_MARKERS=''
+ADDON_DEPLOYS=''
 EOF
 }
 
@@ -79,7 +80,7 @@ EOF
 
   run "$ROOT/infra/addons/profile.sh" day-1
   [ "$status" -eq 0 ]
-  echo "$output" | grep -qi "already\|idempotent\|nothing to do\|ok"
+  echo "$output" | grep -qi "already\|idempotent\|workshop-owned"
 }
 
 @test "day-2 install refuses while Contour routing profile is active (mutex)" {
@@ -102,7 +103,7 @@ EOF
 
   run "$ROOT/infra/addons/profile.sh" day-2
   [ "$status" -eq 0 ]
-  echo "$output" | grep -qi "already\|idempotent\|nothing to do\|ok"
+  echo "$output" | grep -qi "already\|idempotent\|workshop-owned"
 }
 
 @test "day-1 teardown removes Contour without touching foreign markers" {
@@ -114,6 +115,141 @@ EOF
   [ "$status" -eq 0 ]
   echo "$output" | grep -qi "ingress-contour\|teardown\|removed\|uninstall"
 }
+
+@test "day-3 install succeeds (skip-remote) and reports composed components" {
+  run "$ROOT/infra/addons/profile.sh" day-3
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -qi "argocd\|argo"
+  echo "$output" | grep -qi "cert-manager"
+  echo "$output" | grep -qi "kube-prometheus\|prometheus"
+  echo "$output" | grep -qi "profile day-3 ready\|day-3 ready"
+
+  run "$ROOT/infra/addons/profile.sh" status
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -qi "addon=argocd: installed"
+  echo "$output" | grep -qi "addon=cert-manager: installed"
+  echo "$output" | grep -qi "addon=kube-prometheus: installed"
+}
+
+@test "day-3 re-run is idempotent (workshop-owned, not bare OK)" {
+  run "$ROOT/infra/addons/profile.sh" day-3
+  [ "$status" -eq 0 ]
+  : >"$MOCK_ROUTING_APPLY_LOG"
+
+  run "$ROOT/infra/addons/profile.sh" day-3
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -qi "already\|idempotent\|workshop-owned"
+  # Re-run must not re-apply remote/skip-remote markers via a second install path that
+  # mutates when already owned — apply log stays empty (idempotent early return).
+  [ ! -s "$MOCK_ROUTING_APPLY_LOG" ]
+}
+
+@test "day-3 teardown removes workshop-owned day-3 markers, keeps foreign metrics-server" {
+  run "$ROOT/infra/addons/profile.sh" day-3
+  [ "$status" -eq 0 ]
+
+  # Append a non-day-3 workshop marker that teardown must preserve.
+  # shellcheck disable=SC1090
+  . "$MOCK_ROUTING_STATE"
+  ADDON_MARKERS="${ADDON_MARKERS:+$ADDON_MARKERS }kube-system:metrics-server"
+  cat >"$MOCK_ROUTING_STATE" <<EOF
+ROUTING_NS='${ROUTING_NS:-}'
+ROUTING_MARKERS='${ROUTING_MARKERS:-}'
+ROUTING_GWC='${ROUTING_GWC:-}'
+ROUTING_IC='${ROUTING_IC:-}'
+ROUTING_PORTS='${ROUTING_PORTS:-}'
+ROUTING_CRDS='${ROUTING_CRDS:-}'
+ADDON_MARKERS='${ADDON_MARKERS:-}'
+ADDON_DEPLOYS='${ADDON_DEPLOYS:-}'
+EOF
+
+  run "$ROOT/infra/addons/profile.sh" day-3 --teardown
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -qi "argocd\|cert-manager\|kube-prometheus\|torn down\|removed"
+
+  # shellcheck disable=SC1090
+  . "$MOCK_ROUTING_STATE"
+  echo "$ADDON_MARKERS" | grep -q "kube-system:metrics-server"
+  ! echo "$ADDON_MARKERS" | grep -q "argocd:argocd"
+  ! echo "$ADDON_MARKERS" | grep -q "cert-manager:cert-manager"
+  ! echo "$ADDON_MARKERS" | grep -q "monitoring:kube-prometheus"
+}
+
+@test "argocd install refuses foreign Deployment without workshop marker" {
+  export MOCK_ROUTING_NAMESPACES="argocd"
+  export MOCK_ADDON_DEPLOYS="argocd:argocd-server"
+
+  run "$ROOT/infra/addons/argocd.sh" install
+  [ "$status" -ne 0 ]
+  echo "$output" | grep -qi "foreign\|unowned\|refusing"
+  echo "$output" | grep -qi "remediat"
+}
+
+@test "argocd install (skip-remote) succeeds when absent" {
+  run "$ROOT/infra/addons/argocd.sh" install
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -qi "argocd"
+  echo "$output" | grep -qi "skip-remote\|installed\|workshop-owned\|idempotent\|ready"
+}
+
+@test "argocd teardown refuses foreign namespace" {
+  export MOCK_ROUTING_NAMESPACES="argocd"
+  export MOCK_ADDON_DEPLOYS="argocd:argocd-server"
+  # No workshop marker.
+
+  run "$ROOT/infra/addons/argocd.sh" uninstall
+  [ "$status" -ne 0 ]
+  echo "$output" | grep -qi "foreign\|unowned\|refusing"
+}
+
+@test "cert-manager install refuses foreign Deployment without workshop marker" {
+  export MOCK_ROUTING_NAMESPACES="cert-manager"
+  export MOCK_ADDON_DEPLOYS="cert-manager:cert-manager"
+
+  run "$ROOT/infra/addons/cert-manager.sh" install
+  [ "$status" -ne 0 ]
+  echo "$output" | grep -qi "foreign\|unowned\|refusing"
+  echo "$output" | grep -qi "remediat"
+}
+
+@test "cert-manager install (skip-remote) succeeds when absent" {
+  run "$ROOT/infra/addons/cert-manager.sh" install
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -qi "cert-manager"
+}
+
+@test "cert-manager teardown refuses foreign namespace" {
+  export MOCK_ROUTING_NAMESPACES="cert-manager"
+
+  run "$ROOT/infra/addons/cert-manager.sh" uninstall
+  [ "$status" -ne 0 ]
+  echo "$output" | grep -qi "foreign\|unowned\|refusing"
+}
+
+@test "kube-prometheus install refuses foreign namespace without workshop marker" {
+  export MOCK_ROUTING_NAMESPACES="monitoring"
+
+  run "$ROOT/infra/addons/kube-prometheus.sh" install
+  [ "$status" -ne 0 ]
+  echo "$output" | grep -qi "foreign\|unowned\|refusing\|without workshop"
+  echo "$output" | grep -qi "remediat"
+}
+
+@test "kube-prometheus install (skip-remote) succeeds when absent" {
+  run "$ROOT/infra/addons/kube-prometheus.sh" install
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -qi "kube-prometheus\|prometheus"
+}
+
+@test "kube-prometheus teardown refuses foreign namespace" {
+  export MOCK_ROUTING_NAMESPACES="monitoring"
+
+  run "$ROOT/infra/addons/kube-prometheus.sh" uninstall
+  [ "$status" -ne 0 ]
+  echo "$output" | grep -qi "foreign\|unowned\|refusing"
+}
+
+
 
 @test "quiz-live is deferred (US-QUIZ-1 adopted none)" {
   run "$ROOT/infra/addons/profile.sh" quiz-live
