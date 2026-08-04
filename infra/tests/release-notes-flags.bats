@@ -58,6 +58,7 @@ setup() {
 
 @test "docs/beta-limitations.md exists for body_path" {
   [ -f "$ROOT/docs/beta-limitations.md" ]
-  grep -qi 'controlled beta' "$ROOT/docs/beta-limitations.md"
+  grep -qi 'known limitations' "$ROOT/docs/beta-limitations.md"
   grep -qi 's24' "$ROOT/docs/beta-limitations.md"
+  grep -qi 'deferred stub' "$ROOT/docs/beta-limitations.md"
 }

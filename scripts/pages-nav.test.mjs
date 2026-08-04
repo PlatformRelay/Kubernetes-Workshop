@@ -5,7 +5,7 @@ import assert from 'node:assert/strict'
 import { spawn } from 'node:child_process'
 import { createServer } from 'node:http'
 import { mkdirSync, readFileSync, existsSync, writeFileSync, rmSync, statSync } from 'node:fs'
-import { dirname, extname, join, resolve } from 'node:path'
+import { dirname, extname, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import test from 'node:test'
 
@@ -46,7 +46,13 @@ function run(cmd, args, opts = {}) {
   })
 }
 
+function isPathUnderRoot(rootDir, candidate) {
+  const rel = relative(rootDir, candidate)
+  return rel === '' || (!rel.startsWith('..') && !resolve(rel).startsWith('..'))
+}
+
 function serveStatic(root, basePrefix) {
+  const rootDir = resolve(root)
   const mime = {
     '.html': 'text/html',
     '.js': 'text/javascript',
@@ -59,15 +65,25 @@ function serveStatic(root, basePrefix) {
     let url = req.url.split('?')[0]
     if (url.startsWith(basePrefix))
       url = url.slice(basePrefix.length) || '/'
-    let file = join(root, decodeURIComponent(url))
+    let file = resolve(rootDir, `.${decodeURIComponent(url)}`)
+    if (!isPathUnderRoot(rootDir, file)) {
+      res.writeHead(403)
+      res.end('forbidden')
+      return
+    }
     if (url.endsWith('/') || !extname(file)) {
       if (url === '/' || url === '')
-        file = join(root, 'index.html')
+        file = join(rootDir, 'index.html')
       else {
         res.writeHead(404, { 'content-type': 'text/html' })
-        res.end(readFileSync(join(root, '404.html')))
+        res.end(readFileSync(join(rootDir, '404.html')))
         return
       }
+    }
+    if (!isPathUnderRoot(rootDir, file)) {
+      res.writeHead(403)
+      res.end('forbidden')
+      return
     }
     if (!existsSync(file) || statSync(file).isDirectory()) {
       res.writeHead(404)

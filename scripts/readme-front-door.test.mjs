@@ -9,6 +9,10 @@ import test from 'node:test'
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const PAGES = 'https://platformrelay.github.io/Kubernetes-Workshop'
 
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
 test('README has no controlled-beta warning', () => {
   const readme = readFileSync(resolve(ROOT, 'README.md'), 'utf8')
   assert.doesNotMatch(
@@ -29,7 +33,7 @@ test('README links live Day 1/2/3 decks on Pages', () => {
   for (const day of ['day-1', 'day-2', 'day-3']) {
     assert.match(
       readme,
-      new RegExp(`${PAGES.replace(/\./g, '\\.')}/deck/${day}/`),
+      new RegExp(`${escapeRegExp(PAGES)}/deck/${escapeRegExp(day)}/`),
       `README must link the live ${day} deck`,
     )
   }
