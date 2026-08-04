@@ -1009,6 +1009,7 @@ EOF
   lab_smoke_apply_cleanup 'kubectl delete networkpolicy -l app=s18 -n "$NS" --ignore-not-found'
   kubectl delete pod frontend other scanner -n "$LAB_SMOKE_NS" --ignore-not-found --wait=true >/dev/null 2>&1 || true
   kubectl delete deploy/backend svc/backend -n "$LAB_SMOKE_NS" --ignore-not-found --wait=true >/dev/null 2>&1 || true
+  lab_smoke_wait_pods_gone 120s
   kubectl label namespace "$LAB_SMOKE_NS" \
     pod-security.kubernetes.io/enforce- \
     pod-security.kubernetes.io/warn- \
