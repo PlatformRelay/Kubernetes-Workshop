@@ -17,3 +17,12 @@ overrides:
   # markdownlint 5.x line patched without forcing its unrelated 3.x/4.x users
   # across a major-version boundary.
   "js-yaml@>=5.0.0 <6.0.0": 5.2.3
+  # monaco-editor / mermaid pull older DOMPurify; pin the patched line.
+  dompurify: 3.4.13
+  # @modelcontextprotocol/node → @hono/node-server@1.19.x is below first fix 2.0.5.
+  "@hono/node-server": 2.1.0
+
+# pnpm 11 minimumReleaseAge gate: allow this override pin through when fresh on the registry.
+minimumReleaseAgeExclude:
+  - '@hono/node-server@2.1.0'
+
