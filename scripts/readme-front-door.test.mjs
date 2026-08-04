@@ -34,3 +34,19 @@ test('README links live Day 1/2/3 decks on Pages', () => {
     )
   }
 })
+
+test('LICENSE is 0BSD (no attribution required)', () => {
+  const license = readFileSync(resolve(ROOT, 'LICENSE'), 'utf8')
+  assert.match(license, /BSD Zero Clause License|0BSD/i)
+  assert.doesNotMatch(
+    license,
+    /The above copyright notice and this permission notice shall be included/,
+  )
+})
+
+test('README describes 0BSD without MIT attribution requirement', () => {
+  const readme = readFileSync(resolve(ROOT, 'README.md'), 'utf8')
+  assert.match(readme, /0BSD/)
+  assert.doesNotMatch(readme, /Keep the copyright notice with substantial copies/)
+  assert.doesNotMatch(readme, /\[MIT License\]|\*\*\[MIT\]|License: MIT/)
+})

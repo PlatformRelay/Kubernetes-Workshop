@@ -3,7 +3,7 @@ site_description: Free, open-source Kubernetes workshop — Slidev decks, labs, 
 site_url: https://platformrelay.github.io/Kubernetes-Workshop/
 repo_url: https://github.com/PlatformRelay/Kubernetes-Workshop
 repo_name: PlatformRelay/Kubernetes-Workshop
-copyright: Copyright &copy; 2026 Platform Relay — MIT License
+copyright: Copyright &copy; 2026 Platform Relay — 0BSD License
 
 docs_dir: docs
 site_dir: site

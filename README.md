@@ -5,16 +5,16 @@
 [![CodeQL](https://github.com/PlatformRelay/Kubernetes-Workshop/actions/workflows/codeql.yml/badge.svg)](https://github.com/PlatformRelay/Kubernetes-Workshop/actions/workflows/codeql.yml)
 [![Documentation](https://img.shields.io/badge/documentation-GitHub%20Pages-2ea44f?logo=readthedocs&logoColor=white)](https://platformrelay.github.io/Kubernetes-Workshop/)
 [![Release](https://img.shields.io/github/v/release/PlatformRelay/Kubernetes-Workshop)](https://github.com/PlatformRelay/Kubernetes-Workshop/releases)
-[![License: MIT](https://img.shields.io/github/license/PlatformRelay/Kubernetes-Workshop)](./LICENSE)
+[![License: 0BSD](https://img.shields.io/github/license/PlatformRelay/Kubernetes-Workshop)](./LICENSE)
 
 **Free. Open source. No paywall.** A vendor-neutral Kubernetes workshop you can run for
 yourself, for colleagues, or as a full multi-day delivery — with interactive slides,
 ready-to-run labs, a portable quiz prototype, and downloadable PDFs.
 
 Use it to **learn**, to **explain Kubernetes concepts to your team**, or to **facilitate**
-a room. Restyle it, reorder it, fork it, redistribute it under the
-[MIT License](./LICENSE). Keep the copyright notice with substantial copies; otherwise
-there are no royalties, no accounts, and no telemetry.
+a room. Restyle it, reorder it, fork it, redistribute it, or sell it under the
+[0BSD License](./LICENSE) — no attribution required. No royalties, no accounts, and no
+telemetry.
 
 **Live decks** (always-current GitHub Pages builds):
 
@@ -150,4 +150,5 @@ Release policy (immutable tags, day-deck artifacts): [`docs/release.md`](./docs/
 
 ## License
 
-[MIT](./LICENSE) — Copyright (c) 2026 Platform Relay.
+**[0BSD](./LICENSE)** — use, copy, modify, redistribute, and sell freely. No attribution
+required. Copyright (C) 2026 Platform Relay.

@@ -10,7 +10,8 @@ hide:
 **A free, open-source, vendor-neutral Kubernetes workshop** — Slidev presentations,
 ready-to-run labs, and a portable quiz prototype. Use it to learn yourself, to teach
 colleagues, or to run a full multi-day delivery. Adapt it, restyle it, redistribute it
-under the [MIT License](https://github.com/PlatformRelay/Kubernetes-Workshop/blob/main/LICENSE).
+under the [0BSD License](https://github.com/PlatformRelay/Kubernetes-Workshop/blob/main/LICENSE)
+(no attribution required).
 
 <p markdown="1">
 
@@ -18,7 +19,7 @@ under the [MIT License](https://github.com/PlatformRelay/Kubernetes-Workshop/blo
 [![Pages](https://github.com/PlatformRelay/Kubernetes-Workshop/actions/workflows/pages.yml/badge.svg)](https://github.com/PlatformRelay/Kubernetes-Workshop/actions/workflows/pages.yml)
 [![CodeQL](https://github.com/PlatformRelay/Kubernetes-Workshop/actions/workflows/codeql.yml/badge.svg)](https://github.com/PlatformRelay/Kubernetes-Workshop/actions/workflows/codeql.yml)
 [![Release](https://img.shields.io/github/v/release/PlatformRelay/Kubernetes-Workshop)](https://github.com/PlatformRelay/Kubernetes-Workshop/releases)
-[![License: MIT](https://img.shields.io/github/license/PlatformRelay/Kubernetes-Workshop)](https://github.com/PlatformRelay/Kubernetes-Workshop/blob/main/LICENSE)
+[![License: 0BSD](https://img.shields.io/github/license/PlatformRelay/Kubernetes-Workshop)](https://github.com/PlatformRelay/Kubernetes-Workshop/blob/main/LICENSE)
 
 </p>
 
@@ -41,7 +42,7 @@ under the [MIT License](https://github.com/PlatformRelay/Kubernetes-Workshop/blo
 | **Hands-on** | Standalone Markdown labs (about half the time) with copy-pasteable commands. |
 | **Flexible delivery** | Solo learning, a single afternoon, or a canonical three-day cut. |
 | **Many formats** | Live Slidev in the browser, local Node.js preview, and downloadable PDFs. |
-| **Yours to adapt** | Restyle the theme, reorder sections, fork freely under MIT. |
+| **Yours to adapt** | Restyle the theme, reorder sections, fork or sell freely under 0BSD. |
 
 ## Start here
 
