@@ -40,12 +40,12 @@ Typical artifact names (tag substituted for `<tag>`):
 | `kubernetes-workshop-3day-<tag>.pdf` | Compatibility three-day cut |
 | `kubernetes-workshop-site-<tag>.zip` | Offline HTML bundle |
 
-Example pins from **`v0.3.0-beta.1`** (controlled beta):
+Example pins from **`v0.3.0-beta.2`** (controlled beta):
 
-- [Day 1 PDF](https://github.com/PlatformRelay/Kubernetes-Workshop/releases/download/v0.3.0-beta.1/kubernetes-workshop-day-1-v0.3.0-beta.1.pdf)
-- [Day 2 PDF](https://github.com/PlatformRelay/Kubernetes-Workshop/releases/download/v0.3.0-beta.1/kubernetes-workshop-day-2-v0.3.0-beta.1.pdf)
-- [Day 3 PDF](https://github.com/PlatformRelay/Kubernetes-Workshop/releases/download/v0.3.0-beta.1/kubernetes-workshop-day-3-v0.3.0-beta.1.pdf)
-- [Full / 3-day PDFs and site zip](https://github.com/PlatformRelay/Kubernetes-Workshop/releases/tag/v0.3.0-beta.1)
+- [Day 1 PDF](https://github.com/PlatformRelay/Kubernetes-Workshop/releases/download/v0.3.0-beta.2/kubernetes-workshop-day-1-v0.3.0-beta.2.pdf)
+- [Day 2 PDF](https://github.com/PlatformRelay/Kubernetes-Workshop/releases/download/v0.3.0-beta.2/kubernetes-workshop-day-2-v0.3.0-beta.2.pdf)
+- [Day 3 PDF](https://github.com/PlatformRelay/Kubernetes-Workshop/releases/download/v0.3.0-beta.2/kubernetes-workshop-day-3-v0.3.0-beta.2.pdf)
+- [Full / 3-day PDFs and site zip](https://github.com/PlatformRelay/Kubernetes-Workshop/releases/tag/v0.3.0-beta.2)
 
 Pre-release notes always prepend [beta limitations](./beta-limitations.md). How tags are
 cut: [release.md](./release.md).
