@@ -46,6 +46,13 @@ cmd_install() {
     return 0
   fi
 
+  # kube-system always exists; refuse a pre-existing Deployment we do not own.
+  if kubectl -n "$METRICS_SERVER_NS" get deployment metrics-server >/dev/null 2>&1; then
+    addons_err "refusing install: metrics-server Deployment exists in ${METRICS_SERVER_NS} but is not workshop-owned"
+    addons_err "Remediation: remove the foreign metrics-server or recreate the kind cluster"
+    return 1
+  fi
+
   addons_say "installing addon ${ADDON} (${METRICS_SERVER_VERSION})"
 
   if [ "${WORKSHOP_ADDON_SKIP_REMOTE:-0}" = "1" ]; then

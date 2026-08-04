@@ -249,7 +249,28 @@ EOF
   echo "$output" | grep -qi "foreign\|unowned\|refusing"
 }
 
+@test "metrics-server install refuses foreign Deployment without workshop marker" {
+  export MOCK_ADDON_DEPLOYS="kube-system:metrics-server"
+  # kube-system always exists; no workshop-addon-metrics-server marker.
 
+  run "$ROOT/infra/addons/metrics-server.sh" install
+  [ "$status" -ne 0 ]
+  echo "$output" | grep -qi "foreign\|unowned\|refusing\|not workshop"
+  echo "$output" | grep -qi "remediat"
+  # Must not claim ownership.
+  # shellcheck disable=SC1090
+  if [ -f "$MOCK_ROUTING_STATE" ]; then
+    . "$MOCK_ROUTING_STATE"
+    ! echo "${ADDON_MARKERS:-}" | grep -q "kube-system:metrics-server"
+  fi
+}
+
+@test "metrics-server install (skip-remote) succeeds when Deployment absent" {
+  run "$ROOT/infra/addons/metrics-server.sh" install
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -qi "metrics-server"
+  echo "$output" | grep -qi "skip-remote\|installed\|ready"
+}
 
 @test "quiz-live is deferred (US-QUIZ-1 adopted none)" {
   run "$ROOT/infra/addons/profile.sh" quiz-live
