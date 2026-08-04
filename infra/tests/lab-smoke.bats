@@ -109,33 +109,55 @@ EOF
   [ ! -f "$LAB_SMOKE_ARTIFACTS/summary-schedule-day3.md" ]
 }
 
-@test "schedule-day2 scaffold refuses Status passed (fail closed)" {
-  export LAB_SMOKE_DRIVER_STUB=0
-  export LAB_SMOKE_SKIP_BOOTSTRAP=1
-  export LAB_SMOKE_SKIP_IDEMPOTENCE=1
-  export LAB_SMOKE_SKIP_TEARDOWN=1
-  export LAB_SMOKE_SKIP_DOCTOR=1
-  export LAB_SMOKE_SKIP_PROFILE=1
-  # Force scaffold path for schedule shards (real drivers are still stubs).
-  unset LAB_SMOKE_ALLOW_SCAFFOLD
-  run "$ROOT/infra/lab-smoke.sh" schedule-day2
-  [ "$status" -ne 0 ]
-  [ -f "$LAB_SMOKE_ARTIFACTS/summary-schedule-day2.md" ]
-  grep -q 'Status: `scaffold`' "$LAB_SMOKE_ARTIFACTS/summary-schedule-day2.md"
-  ! grep -q 'Status: `passed`' "$LAB_SMOKE_ARTIFACTS/summary-schedule-day2.md"
+@test "lab_smoke_lab_is_scaffold_only marks only deferred kubebuilder" {
+  run bash -c '
+    # shellcheck source=/dev/null
+    . "$ROOT/infra/lab-smoke.sh"
+    lab_smoke_lab_is_scaffold_only day-3/24-kubebuilder
+  '
+  [ "$status" -eq 0 ]
+
+  run bash -c '
+    # shellcheck source=/dev/null
+    . "$ROOT/infra/lab-smoke.sh"
+    lab_smoke_lab_is_scaffold_only day-2/09-gateway-api
+  '
+  [ "$status" -eq 1 ]
+
+  run bash -c '
+    # shellcheck source=/dev/null
+    . "$ROOT/infra/lab-smoke.sh"
+    lab_smoke_lab_is_scaffold_only day-3/21-gitops
+  '
+  [ "$status" -eq 1 ]
 }
 
-@test "schedule-day2 allow-scaffold still never writes passed" {
-  export LAB_SMOKE_SKIP_BOOTSTRAP=1
-  export LAB_SMOKE_SKIP_IDEMPOTENCE=1
-  export LAB_SMOKE_SKIP_TEARDOWN=1
-  export LAB_SMOKE_SKIP_DOCTOR=1
-  export LAB_SMOKE_SKIP_PROFILE=1
-  export LAB_SMOKE_ALLOW_SCAFFOLD=1
-  run "$ROOT/infra/lab-smoke.sh" schedule-day2
+@test "schedule-day2 inventory labs are not scaffold-only" {
+  run "$ROOT/infra/lab-smoke.sh" --list schedule-day2
   [ "$status" -eq 0 ]
-  grep -q 'Status: `scaffold`' "$LAB_SMOKE_ARTIFACTS/summary-schedule-day2.md"
-  ! grep -q 'Status: `passed`' "$LAB_SMOKE_ARTIFACTS/summary-schedule-day2.md"
+  while IFS= read -r id; do
+    [ -n "$id" ] || continue
+    run bash -c '
+      # shellcheck source=/dev/null
+      . "$ROOT/infra/lab-smoke.sh"
+      lab_smoke_lab_is_scaffold_only "$1"
+    ' _ "$id"
+    [ "$status" -eq 1 ]
+  done <<<"$output"
+}
+
+@test "schedule-day3 inventory labs are not scaffold-only" {
+  run "$ROOT/infra/lab-smoke.sh" --list schedule-day3
+  [ "$status" -eq 0 ]
+  while IFS= read -r id; do
+    [ -n "$id" ] || continue
+    run bash -c '
+      # shellcheck source=/dev/null
+      . "$ROOT/infra/lab-smoke.sh"
+      lab_smoke_lab_is_scaffold_only "$1"
+    ' _ "$id"
+    [ "$status" -eq 1 ]
+  done <<<"$output"
 }
 
 @test "pr-day1 evidence records architecture and profile" {

@@ -7,8 +7,8 @@
 #
 # Modes:
 #   pr-day1         Day-1 kind PR smoke (skips local-container labs)
-#   schedule-day2   Day-2 kind labs — fail-closed while drivers are scaffold-only
-#   schedule-day3   Day-3 kind labs — fail-closed while drivers are scaffold-only
+#   schedule-day2   Day-2 kind labs (asserted drivers; fail-closed on deferred only)
+#   schedule-day3   Day-3 kind labs (asserted drivers; fail-closed on deferred only)
 #   lab <id>        single lab id (e.g. day-1/05-pod); cluster must already exist
 #
 # Env knobs:
@@ -56,8 +56,8 @@ lab_smoke_usage() {
 Usage: infra/lab-smoke.sh <mode>
 
   pr-day1         bootstrap + doctor + Day-1 kind PR smoke + teardown
-  schedule-day2   Day-2 shard (fail-closed while lab drivers are scaffold-only)
-  schedule-day3   Day-3 shard (fail-closed while lab drivers are scaffold-only)
+  schedule-day2   Day-2 shard (asserted per-lab drivers)
+  schedule-day3   Day-3 shard (asserted per-lab drivers)
   lab <id>        run one inventory lab id against an existing cluster
 
 Inventory: infra/lab-inventory.json (generated from docs/validation-matrix.md).
@@ -82,10 +82,10 @@ lab_smoke_mark_scaffold() {
   fi
 }
 
-# Day-2/3 deep drivers are not implemented yet — treat as scaffold-only.
+# Fail-closed only for explicitly deferred labs (not on schedule shards).
 lab_smoke_lab_is_scaffold_only() {
   case "$1" in
-    day-2/* | day-3/*) return 0 ;;
+    day-3/24-kubebuilder) return 0 ;;
     *) return 1 ;;
   esac
 }
@@ -163,6 +163,17 @@ lab_smoke_selection_or_die() {
 }
 
 lab_smoke_ensure_ns() {
+  local phase=""
+  if kubectl get ns "$LAB_SMOKE_NS" >/dev/null 2>&1; then
+    phase="$(kubectl get ns "$LAB_SMOKE_NS" -o jsonpath='{.status.phase}' 2>/dev/null || true)"
+    if [ "$phase" = "Terminating" ]; then
+      lab_smoke_info "waiting for ${LAB_SMOKE_NS} to finish terminating"
+      if ! kubectl wait --for=delete "namespace/${LAB_SMOKE_NS}" --timeout=180s >/dev/null 2>&1; then
+        kubectl delete namespace "$LAB_SMOKE_NS" --force --grace-period=0 >/dev/null 2>&1 || true
+        kubectl wait --for=delete "namespace/${LAB_SMOKE_NS}" --timeout=120s >/dev/null 2>&1 || true
+      fi
+    fi
+  fi
   kubectl get ns "$LAB_SMOKE_NS" >/dev/null 2>&1 \
     || kubectl create namespace "$LAB_SMOKE_NS"
   export NS="$LAB_SMOKE_NS"
