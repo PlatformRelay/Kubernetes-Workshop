@@ -2,15 +2,16 @@ name: Lab smoke
 
 # US-ENV-4A disposable-cluster smoke — kept separate from the fast ci.yml gate.
 # PR/push: Day-1 kind smoke within a bounded budget.
-# Day-2/3 deep drivers are scaffold-only: never paper-green on schedule.
-# workflow_dispatch may probe schedule shards with allow_scaffold=true
-# (Status:scaffold only — never Status:passed).
+# workflow_dispatch: Day-2/3 schedule shards with real per-lab drivers (Status:passed).
+# schedule: inventory drift only — full Day-2/3 kind smoke is dispatch-only (long).
 
 on:
   pull_request:
     branches: [main]
     paths:
       - 'labs/day-1/**'
+      - 'labs/day-2/**'
+      - 'labs/day-3/**'
       - 'infra/**'
       - 'scripts/lab-inventory.mjs'
       - 'scripts/lab-inventory.test.mjs'
@@ -23,6 +24,8 @@ on:
     branches: [main]
     paths:
       - 'labs/day-1/**'
+      - 'labs/day-2/**'
+      - 'labs/day-3/**'
       - 'infra/**'
       - 'scripts/lab-inventory.mjs'
       - 'scripts/lab-inventory.test.mjs'
@@ -32,8 +35,7 @@ on:
       - 'mise.toml'
       - 'mise.lock'
   schedule:
-    # Weekly inventory drift only — Day-2/3 lab drivers are still scaffold-only
-    # and must not claim a green smoke on cron.
+    # Weekly inventory drift — Day-2/3 asserted drivers are dispatch-only (kind budget).
     - cron: '0 4 * * 0'
   workflow_dispatch:
     inputs:
@@ -46,11 +48,6 @@ on:
           - pr-day1
           - schedule-day2
           - schedule-day3
-      allow_scaffold:
-        description: 'Permit schedule-day2/3 scaffold probe (Status:scaffold, never passed)'
-        required: false
-        default: false
-        type: boolean
 
 concurrency:
   group: lab-smoke-${{ github.workflow }}-${{ github.ref }}-${{ inputs.shard || 'pr-day1' }}
@@ -78,17 +75,6 @@ jobs:
         run: node --test scripts/lab-inventory.test.mjs
       - name: Check committed inventory matches matrix
         run: node scripts/lab-inventory.mjs --check
-
-  day2-day3-pending:
-    name: Day-2/3 drivers pending (no paper-green)
-    if: github.event_name == 'schedule'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Refuse scheduled greenwash while drivers are scaffold-only
-        run: |
-          echo "::notice::Day-2/3 lab drivers remain scaffold-only (US-ENV-4A)."
-          echo "Cron does not run schedule-day2/3 smoke until real drivers exist."
-          echo "Use workflow_dispatch with allow_scaffold=true for an explicit scaffold probe."
 
   day1-smoke:
     name: Day-1 disposable kind smoke
@@ -119,32 +105,25 @@ jobs:
           if-no-files-found: ignore
 
   day2-smoke:
-    name: Day-2 scaffold probe (dispatch only)
+    name: Day-2 asserted lab smoke (dispatch only)
     if: github.event_name == 'workflow_dispatch' && inputs.shard == 'schedule-day2'
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: jdx/mise-action@7e36c90d9ab29c415a2384db3006f3ec8a8cc654 # v4.2.4
         with:
           install: true
           cache: true
-      - name: Require explicit allow_scaffold for Day-2 probe
-        if: ${{ inputs.allow_scaffold != true }}
-        run: |
-          echo "::error::Day-2 drivers are scaffold-only. Re-run with allow_scaffold=true,"
-          echo "or wait until real drivers exist. Refusing to paper-green."
-          exit 1
-      - name: Run Day-2 scaffold probe
-        env:
-          LAB_SMOKE_ALLOW_SCAFFOLD: '1'
+      - name: Shellcheck lab-smoke scripts
+        run: shellcheck infra/lab-smoke.sh infra/lab-smoke-drivers.sh
+      - name: Run Day-2 schedule smoke (real drivers)
         run: infra/lab-smoke.sh schedule-day2
-      - name: Evidence must be scaffold, never passed
+      - name: Evidence must record Status passed
         run: |
           test -f docs/validation-evidence/ci-artifacts/summary-schedule-day2.md
-          grep -q 'Status: `scaffold`' docs/validation-evidence/ci-artifacts/summary-schedule-day2.md
-          ! grep -q 'Status: `passed`' docs/validation-evidence/ci-artifacts/summary-schedule-day2.md
-          echo "::warning::Day-2 finished as scaffold only — not a lab assertion pass"
+          grep -q 'Status: `passed`' docs/validation-evidence/ci-artifacts/summary-schedule-day2.md
+          ! grep -q 'Status: `scaffold`' docs/validation-evidence/ci-artifacts/summary-schedule-day2.md
       - name: Upload diagnostics / evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -154,32 +133,25 @@ jobs:
           if-no-files-found: ignore
 
   day3-smoke:
-    name: Day-3 scaffold probe (dispatch only)
+    name: Day-3 asserted lab smoke (dispatch only)
     if: github.event_name == 'workflow_dispatch' && inputs.shard == 'schedule-day3'
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: jdx/mise-action@7e36c90d9ab29c415a2384db3006f3ec8a8cc654 # v4.2.4
         with:
           install: true
           cache: true
-      - name: Require explicit allow_scaffold for Day-3 probe
-        if: ${{ inputs.allow_scaffold != true }}
-        run: |
-          echo "::error::Day-3 drivers are scaffold-only. Re-run with allow_scaffold=true,"
-          echo "or wait until real drivers exist. Refusing to paper-green."
-          exit 1
-      - name: Run Day-3 scaffold probe
-        env:
-          LAB_SMOKE_ALLOW_SCAFFOLD: '1'
+      - name: Shellcheck lab-smoke scripts
+        run: shellcheck infra/lab-smoke.sh infra/lab-smoke-drivers.sh
+      - name: Run Day-3 schedule smoke (real drivers)
         run: infra/lab-smoke.sh schedule-day3
-      - name: Evidence must be scaffold, never passed
+      - name: Evidence must record Status passed
         run: |
           test -f docs/validation-evidence/ci-artifacts/summary-schedule-day3.md
-          grep -q 'Status: `scaffold`' docs/validation-evidence/ci-artifacts/summary-schedule-day3.md
-          ! grep -q 'Status: `passed`' docs/validation-evidence/ci-artifacts/summary-schedule-day3.md
-          echo "::warning::Day-3 finished as scaffold only — not a lab assertion pass"
+          grep -q 'Status: `passed`' docs/validation-evidence/ci-artifacts/summary-schedule-day3.md
+          ! grep -q 'Status: `scaffold`' docs/validation-evidence/ci-artifacts/summary-schedule-day3.md
       - name: Upload diagnostics / evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

@@ -7,8 +7,8 @@
 #
 # Modes:
 #   pr-day1         Day-1 kind PR smoke (skips local-container labs)
-#   schedule-day2   Day-2 kind labs (asserted drivers; fail-closed on deferred only)
-#   schedule-day3   Day-3 kind labs (asserted drivers; fail-closed on deferred only)
+#   schedule-day2   Day-2 kind labs (asserted per-lab drivers)
+#   schedule-day3   Day-3 kind labs (asserted per-lab drivers)
 #   lab <id>        single lab id (e.g. day-1/05-pod); cluster must already exist
 #
 # Env knobs:
@@ -63,9 +63,9 @@ Usage: infra/lab-smoke.sh <mode>
 Inventory: infra/lab-inventory.json (generated from docs/validation-matrix.md).
 Local-container labs (S01/S02) are never selected for kind smoke.
 
-Schedule shards never write Status:passed for scaffold-only drivers. Set
-LAB_SMOKE_ALLOW_SCAFFOLD=1 for an explicit local/dispatch probe that still
-records Status:scaffold (exit 0) without claiming a lab assertion pass.
+Schedule shards run real per-lab drivers and write Status:passed when all
+assertions succeed. Deferred labs (S24 kubebuilder) still record
+Status:scaffold; set LAB_SMOKE_ALLOW_SCAFFOLD=1 only for that explicit probe.
 
 LAB_SMOKE_DRIVER_STUB=1 is allowed for pr-day1 unit tests only. Schedule
 shards refuse stub mode so it cannot paper-green with Status:passed.

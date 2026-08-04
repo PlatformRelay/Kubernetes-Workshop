@@ -160,6 +160,20 @@ EOF
   done <<<"$output"
 }
 
+@test "schedule-day2 help documents asserted drivers" {
+  run "$ROOT/infra/lab-smoke.sh" --help
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q 'schedule-day2'
+  echo "$output" | grep -q 'Status:passed'
+  ! echo "$output" | grep -q 'scaffold-only drivers'
+}
+
+@test "lab-smoke workflow expects passed status for schedule shards" {
+  grep -q 'Status: `passed`' "$ROOT/.github/workflows/lab-smoke.yml"
+  ! grep -q 'allow_scaffold' "$ROOT/.github/workflows/lab-smoke.yml"
+  ! grep -q 'Status: `scaffold`' "$ROOT/.github/workflows/lab-smoke.yml"
+}
+
 @test "pr-day1 evidence records architecture and profile" {
   export LAB_SMOKE_DRIVER_STUB=1
   export LAB_SMOKE_SKIP_TEARDOWN=1

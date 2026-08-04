@@ -133,7 +133,10 @@ EOF
   [ "$uid_before" = "$uid_after" ]
   kubectl delete pod crash -n "$LAB_SMOKE_NS" --ignore-not-found --wait=true
   # After delete, bare Pod must stay gone (no controller).
-  ! kubectl get pod crash -n "$LAB_SMOKE_NS" >/dev/null 2>&1
+  if kubectl get pod crash -n "$LAB_SMOKE_NS" >/dev/null 2>&1; then
+    lab_smoke_err "crash pod should not exist after delete"
+    return 1
+  fi
 
   export NS="${NS:-$LAB_SMOKE_NS}"
   # shellcheck disable=SC2016 # $NS expanded by eval inside lab_smoke_apply_cleanup
@@ -419,13 +422,30 @@ spec:
       backendRefs:
         - { name: web, port: 80 }
 EOF
-  kubectl get gatewayclass "$ingress_class" >/dev/null
+  kubectl get gatewayclass "$ingress_class" >/dev/null \
+    || { lab_smoke_err "GatewayClass ${ingress_class} missing — install profile day-2 first"; return 1; }
   kubectl apply -f "$LAB_SMOKE_ARTIFACTS/backends.yaml" -n "$LAB_SMOKE_NS"
   kubectl rollout status deployment/web -n "$LAB_SMOKE_NS" --timeout=180s
   kubectl rollout status deployment/web2 -n "$LAB_SMOKE_NS" --timeout=180s
-  kubectl apply -f "$LAB_SMOKE_ARTIFACTS/gateway.yaml" -f "$LAB_SMOKE_ARTIFACTS/route.yaml" -n "$LAB_SMOKE_NS"
-  kubectl get httproute web -n "$LAB_SMOKE_NS" -o jsonpath='{range .status.parents[0].conditions[*]}{.type}={.status}{"\n"}{end}' \
-    | grep -q 'Accepted=True'
+  kubectl apply -f "$LAB_SMOKE_ARTIFACTS/gateway.yaml" -f "$LAB_SMOKE_ARTIFACTS/route.yaml" -n "$LAB_SMOKE_NS" \
+    || { lab_smoke_err "Gateway/HTTPRoute apply failed"; return 1; }
+  route_conditions=""
+  route_conditions="$(kubectl get httproute web -n "$LAB_SMOKE_NS" -o jsonpath='{range .status.parents[0].conditions[*]}{.type}={.status}{"\n"}{end}')" \
+    || { lab_smoke_err "HTTPRoute status unavailable"; return 1; }
+  echo "$route_conditions" | grep -q 'Accepted=True'
+  echo "$route_conditions" | grep -q 'ResolvedRefs=True'
+  envoy_svc=""
+  envoy_svc="$(kubectl get svc -n envoy-gateway-system \
+    --selector=gateway.envoyproxy.io/owning-gateway-namespace="${LAB_SMOKE_NS}",gateway.envoyproxy.io/owning-gateway-name=web \
+    -o jsonpath='{.items[0].metadata.name}')" \
+    || { lab_smoke_err "Envoy Gateway Service for Gateway web not found"; return 1; }
+  [ -n "$envoy_svc" ] || { lab_smoke_err "Envoy Gateway Service name empty"; return 1; }
+  kubectl -n envoy-gateway-system port-forward "service/${envoy_svc}" 8888:80 >/tmp/lab-smoke-gw-pf.log 2>&1 &
+  gw_pf_pid=$!
+  sleep 3
+  gw_body="$(curl --noproxy '*' -fsS -H 'Host: web.example.com' 'http://127.0.0.1:8888/' 2>/dev/null || true)"
+  kill "$gw_pf_pid" 2>/dev/null || true
+  echo "$gw_body" | grep -q 'workshop-web'
   export NS="${NS:-$LAB_SMOKE_NS}"
   # shellcheck disable=SC2016
   lab_smoke_apply_cleanup 'kubectl delete httproute,gateway web -n "$NS" --ignore-not-found --wait=true'
@@ -611,7 +631,7 @@ spec:
 EOF
   kubectl apply -f "$LAB_SMOKE_ARTIFACTS/headless-svc.yaml" -f "$LAB_SMOKE_ARTIFACTS/statefulset.yaml" -n "$LAB_SMOKE_NS"
   kubectl rollout status statefulset/web -n "$LAB_SMOKE_NS" --timeout=300s
-  kubectl exec web-1 -n "$LAB_SMOKE_NS" -c toolbox -- sh -c 'echo "written by $(hostname)" > /data/data.txt'
+  kubectl exec web-1 -n "$LAB_SMOKE_NS" -c toolbox -- sh -c "echo \"written by \$(hostname)\" > /data/data.txt"
   kubectl delete pod web-1 -n "$LAB_SMOKE_NS" --wait=true
   lab_smoke_wait_ready pod web-1 180s
   data="$(kubectl exec web-1 -n "$LAB_SMOKE_NS" -c toolbox -- cat /data/data.txt)"
@@ -931,6 +951,27 @@ EOF
   curl_rc=$?
   set -e
   [ "$curl_rc" -eq 28 ]
+  cat >"$LAB_SMOKE_ARTIFACTS/allow-frontend-to-backend.yaml" <<'EOF'
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-frontend-to-backend
+  labels: { app: s18 }
+spec:
+  podSelector:
+    matchLabels: { app: backend }
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels: { app: frontend }
+      ports:
+        - { protocol: TCP, port: 8080 }
+EOF
+  kubectl apply -f "$LAB_SMOKE_ARTIFACTS/allow-frontend-to-backend.yaml" -n "$LAB_SMOKE_NS"
+  sleep 2
+  allow_code="$(kubectl exec frontend -n "$LAB_SMOKE_NS" -- curl -s -o /dev/null -w '%{http_code}' --max-time 5 http://backend 2>/dev/null || echo 000)"
+  [ "$allow_code" = "200" ]
   export NS="${NS:-$LAB_SMOKE_NS}"
   # shellcheck disable=SC2016
   lab_smoke_apply_cleanup 'kubectl delete networkpolicy -l app=s18 -n "$NS" --ignore-not-found'
