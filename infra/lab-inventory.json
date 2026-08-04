@@ -493,7 +493,7 @@
       "profile": null,
       "privilege": "cluster-admin",
       "estimatedDurationMin": 30,
-      "automationTier": "kind-addon",
+      "automationTier": "kind-cluster",
       "cleanupCommand": "./context-check.sh || { echo \"guard failed — stopping\"; exit 1; }",
       "prSmoke": false,
       "scheduleSmoke": true

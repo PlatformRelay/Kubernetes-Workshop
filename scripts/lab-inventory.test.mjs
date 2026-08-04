@@ -163,6 +163,15 @@ test('classifyAutomationTier cover local, cluster, addon, and deferred', () => {
     }),
     'deferred',
   );
+  assert.equal(
+    classifyAutomationTier({
+      environment: '**kind-only · strictly defensive** (no shared path)',
+      addons: '**None** — throwaway kind cluster + `context-check.sh` guard',
+      validationState: 'unrun',
+      labPath: 'labs/day-3/25-pod-escape.md',
+    }),
+    'kind-cluster',
+  );
 });
 
 test('buildInventory derives profile, privilege, duration, cleanup, and PR flags', () => {
