@@ -50,6 +50,7 @@ ensure_state() {
       ROUTING_PORTS="${MOCK_ROUTING_HOSTPORTS:-${ROUTING_PORTS:-}}"
       ROUTING_CRDS="${MOCK_ROUTING_CRDS:-${ROUTING_CRDS:-}}"
       ADDON_MARKERS="${MOCK_ADDON_MARKERS:-${ADDON_MARKERS:-}}"
+      ADDON_DEPLOYS="${MOCK_ADDON_DEPLOYS:-${ADDON_DEPLOYS:-}}"
       write_state
       : >"${state_file}.seeded"
     fi
@@ -62,6 +63,7 @@ ensure_state() {
   ROUTING_PORTS="${MOCK_ROUTING_HOSTPORTS:-}"
   ROUTING_CRDS="${MOCK_ROUTING_CRDS:-}"
   ADDON_MARKERS="${MOCK_ADDON_MARKERS:-}"
+  ADDON_DEPLOYS="${MOCK_ADDON_DEPLOYS:-}"
 }
 
 write_state() {
@@ -74,6 +76,7 @@ ROUTING_IC='${ROUTING_IC:-}'
 ROUTING_PORTS='${ROUTING_PORTS:-}'
 ROUTING_CRDS='${ROUTING_CRDS:-}'
 ADDON_MARKERS='${ADDON_MARKERS:-}'
+ADDON_DEPLOYS='${ADDON_DEPLOYS:-}'
 EOF
 }
 
@@ -141,6 +144,79 @@ clear_addon_marker() {
     out="${out:+$out }$entry"
   done
   ADDON_MARKERS="$out"
+  write_state
+}
+
+deploy_exists() {
+  local want_ns="$1" want_deploy="$2" entry ns deploy
+  ensure_state
+  for entry in ${ADDON_DEPLOYS:-}; do
+    ns="${entry%%:*}"
+    deploy="${entry#*:}"
+    if [ "$ns" = "$want_ns" ] && [ "$deploy" = "$want_deploy" ]; then
+      return 0
+    fi
+  done
+  return 1
+}
+
+set_addon_deploy() {
+  local ns="$1" deploy="$2" entry out=""
+  ensure_state
+  for entry in ${ADDON_DEPLOYS:-}; do
+    case "$entry" in
+      "${ns}:${deploy}") continue ;;
+    esac
+    out="${out:+$out }$entry"
+  done
+  ADDON_DEPLOYS="${out:+$out }${ns}:${deploy}"
+  case " ${ROUTING_NS:-} " in
+    *" ${ns} "*) ;;
+    *)
+      case "$ns" in
+        kube-system | default) ;;
+        *) ROUTING_NS="${ROUTING_NS:+$ROUTING_NS }$ns" ;;
+      esac
+      ;;
+  esac
+  write_state
+}
+
+clear_addon_deploy() {
+  local ns="$1" deploy="$2" entry out=""
+  ensure_state
+  for entry in ${ADDON_DEPLOYS:-}; do
+    if [ "$entry" = "${ns}:${deploy}" ]; then
+      continue
+    fi
+    out="${out:+$out }$entry"
+  done
+  ADDON_DEPLOYS="$out"
+  write_state
+}
+
+clear_namespace() {
+  local want="$1" ns entry out_ns="" out_markers="" out_deploys=""
+  ensure_state
+  for ns in ${ROUTING_NS:-}; do
+    [ "$ns" = "$want" ] && continue
+    out_ns="${out_ns:+$out_ns }$ns"
+  done
+  for entry in ${ADDON_MARKERS:-}; do
+    case "$entry" in
+      "${want}:"*) continue ;;
+    esac
+    out_markers="${out_markers:+$out_markers }$entry"
+  done
+  for entry in ${ADDON_DEPLOYS:-}; do
+    case "$entry" in
+      "${want}:"*) continue ;;
+    esac
+    out_deploys="${out_deploys:+$out_deploys }$entry"
+  done
+  ROUTING_NS="$out_ns"
+  ADDON_MARKERS="$out_markers"
+  ADDON_DEPLOYS="$out_deploys"
   write_state
 }
 
@@ -320,8 +396,7 @@ case "${args[0]:-}" in
       exit 0
     fi
 
-    if [ "${args[1]:-}" = "ds" ] || [ "${args[1]:-}" = "daemonset" ] || [ "${args[1]:-}" = "daemonsets" ] || \
-       [ "${args[1]:-}" = "deploy" ] || [ "${args[1]:-}" = "deployment" ] || [ "${args[1]:-}" = "deployments" ]; then
+    if [ "${args[1]:-}" = "ds" ] || [ "${args[1]:-}" = "daemonset" ] || [ "${args[1]:-}" = "daemonsets" ]; then
       ensure_state
       if ns_exists projectcontour && [[ "$*" == *projectcontour* ]]; then
         echo "contour"
@@ -331,7 +406,33 @@ case "${args[0]:-}" in
         echo "envoy-gateway"
         exit 0
       fi
-      exit 0
+      exit 1
+    fi
+
+    if [ "${args[1]:-}" = "deploy" ] || [ "${args[1]:-}" = "deployment" ] || [ "${args[1]:-}" = "deployments" ]; then
+      ensure_state
+      deploy_name="${args[2]:-}"
+      if [ -n "$deploy_name" ] && [[ "$deploy_name" != -* ]]; then
+        ns="$NS_FLAG"
+        if [ -z "$ns" ]; then
+          exit 1
+        fi
+        if deploy_exists "$ns" "$deploy_name"; then
+          echo "deployment.apps/${deploy_name}"
+          exit 0
+        fi
+        echo "Error from server (NotFound): deployments.apps \"${deploy_name}\" not found" >&2
+        exit 1
+      fi
+      if ns_exists projectcontour && [[ "$*" == *projectcontour* ]]; then
+        echo "contour"
+        exit 0
+      fi
+      if ns_exists envoy-gateway-system && [[ "$*" == *envoy-gateway* ]]; then
+        echo "envoy-gateway"
+        exit 0
+      fi
+      exit 1
     fi
     exit 0
     ;;
@@ -441,15 +542,30 @@ case "${args[0]:-}" in
     fi
     if [[ "$*" == *workshop-addon-metrics-server* ]]; then
       clear_addon_marker kube-system metrics-server
+      clear_addon_deploy kube-system metrics-server
     fi
-    if [[ "$*" == *workshop-addon-argocd* ]] || [[ "$*" == *"namespace argocd"* ]] || [[ "$*" == *"ns argocd"* ]]; then
+    if [[ "$*" == *"deployment metrics-server"* ]] || [[ "$*" == *"deploy metrics-server"* ]]; then
+      clear_addon_deploy kube-system metrics-server
+    fi
+    if [[ "$*" == *workshop-addon-argocd* ]]; then
       clear_addon_marker argocd argocd
+      clear_addon_deploy argocd argocd-server
     fi
-    if [[ "$*" == *workshop-addon-cert-manager* ]] || [[ "$*" == *"namespace cert-manager"* ]]; then
+    if [[ "$*" == *"namespace argocd"* ]] || [[ "$*" == *"ns argocd"* ]]; then
+      clear_namespace argocd
+    fi
+    if [[ "$*" == *workshop-addon-cert-manager* ]]; then
       clear_addon_marker cert-manager cert-manager
+      clear_addon_deploy cert-manager cert-manager
     fi
-    if [[ "$*" == *workshop-addon-kube-prometheus* ]] || [[ "$*" == *"namespace monitoring"* ]]; then
+    if [[ "$*" == *"namespace cert-manager"* ]] || [[ "$*" == *"ns cert-manager"* ]]; then
+      clear_namespace cert-manager
+    fi
+    if [[ "$*" == *workshop-addon-kube-prometheus* ]]; then
       clear_addon_marker monitoring kube-prometheus
+    fi
+    if [[ "$*" == *"namespace monitoring"* ]] || [[ "$*" == *"ns monitoring"* ]]; then
+      clear_namespace monitoring
     fi
     exit 0
     ;;
