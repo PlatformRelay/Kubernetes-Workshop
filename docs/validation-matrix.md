@@ -2,11 +2,12 @@
 
 A single, tracked table mapping **every** lab (`labs/day-{1,2,3}/NN-*.md`) to the
 environment(s) it supports, the cluster-wide add-ons it needs, the tool/image versions it
-pins, and its **honest current validation state**. It is the human-readable counterpart to
-the future automated nightly lab smoke (**US-ENV-4**) and doubles as rehearsal tracking for
-the manual clean-environment rehearsal (**US-BETA-6**). It exists *before* the automation
-lands so there is a documented validation procedure and a live tracker of what still owes a
-rehearsal.
+pins, and its **honest current validation state**. It is the **human source of truth** for
+lab validation metadata; [`infra/lab-inventory.json`](../infra/lab-inventory.json) is the
+generated machine-readable view (US-ENV-4A — regenerate with
+`node scripts/lab-inventory.mjs --write`, CI `--check` rejects drift). Disposable-cluster
+smoke lives in `infra/lab-smoke.sh` + `.github/workflows/lab-smoke.yml`. This matrix also
+doubles as rehearsal tracking for the manual clean-environment rehearsal (**US-BETA-6**).
 
 Source of truth for this matrix: the labs themselves, [`infra/versions.env`](../infra/versions.env)
 (the canonical pin file, ADR 0007), [`docs/syllabus.md`](./syllabus.md) (section map), and
@@ -33,7 +34,7 @@ here is invented — every version/URL is cited from the repo as it ships today.
 | State | Meaning |
 | --- | --- |
 | `server-dry-run` | The lab's apply-able manifests are documented as **server-dry-run-clean** against a live cluster per the repo's status notes (roadmap M4/M5 progress + AR-05). **Not** re-verified in a clean rehearsal here, and **no** add-on install or behaviour/timing was executed. |
-| `kind-smoke` | Reserved for the future automated nightly smoke (**US-ENV-4**): the lab ran end-to-end on a clean kind cluster. **No lab is in this state yet.** |
+| `kind-smoke` | The lab ran end-to-end on a clean kind cluster and a maintainer recorded that result. Automated smoke (US-ENV-4A) may produce evidence under [`docs/validation-evidence/`](./validation-evidence/) but **must not** auto-promote rows here. **No lab is in this state yet.** |
 | `unrun` | No dry-run applies (local/read-only labs with no apply step), **or** the apply-able part exists but the cluster-wide add-on install / full behaviour has not been executed end-to-end in a clean environment. |
 | `deferred` | The section is not schedulable because its paired slides and lab have not met the authoring contract. |
 
@@ -168,8 +169,10 @@ US-ENV-4 smoke re-runs them against the new stack.
 
 ## What this matrix feeds
 
-- **US-ENV-4** — the CI test infra whose **nightly chainsaw lab smoke** will move labs from
-  `unrun` / `server-dry-run` to `kind-smoke` automatically (Days 1–2 first).
+- **US-ENV-4A** — disposable kind smoke (`infra/lab-smoke.sh`) + inventory JSON. PR path covers
+  Day-1 kind labs; Days 2–3 are schedule/`workflow_dispatch` shards. Automation writes evidence
+  under `docs/validation-evidence/`; matrix row promotion to `kind-smoke` stays a deliberate
+  maintainer edit after a recorded real run.
 - **US-BETA-6** — the manual full clean-environment rehearsal that measures real timings and
-  behaviour. This matrix is its checklist; filling the `kind-smoke`/rehearsed states is that
-  human rehearsal pass, not a code lane.
+  behaviour. This matrix is its checklist; filling pedagogical/`kind-smoke` states is that
+  human rehearsal pass, not claimed by automation.
