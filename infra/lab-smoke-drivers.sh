@@ -430,22 +430,42 @@ EOF
   kubectl apply -f "$LAB_SMOKE_ARTIFACTS/gateway.yaml" -f "$LAB_SMOKE_ARTIFACTS/route.yaml" -n "$LAB_SMOKE_NS" \
     || { lab_smoke_err "Gateway/HTTPRoute apply failed"; return 1; }
   route_conditions=""
-  route_conditions="$(kubectl get httproute web -n "$LAB_SMOKE_NS" -o jsonpath='{range .status.parents[0].conditions[*]}{.type}={.status}{"\n"}{end}')" \
-    || { lab_smoke_err "HTTPRoute status unavailable"; return 1; }
-  echo "$route_conditions" | grep -q 'Accepted=True'
-  echo "$route_conditions" | grep -q 'ResolvedRefs=True'
   envoy_svc=""
-  envoy_svc="$(kubectl get svc -n envoy-gateway-system \
-    --selector=gateway.envoyproxy.io/owning-gateway-namespace="${LAB_SMOKE_NS}",gateway.envoyproxy.io/owning-gateway-name=web \
-    -o jsonpath='{.items[0].metadata.name}')" \
-    || { lab_smoke_err "Envoy Gateway Service for Gateway web not found"; return 1; }
-  [ -n "$envoy_svc" ] || { lab_smoke_err "Envoy Gateway Service name empty"; return 1; }
+  local attempt=1 max_attempts=40 sleep_s=3
+  while [ "$attempt" -le "$max_attempts" ]; do
+    route_conditions="$(kubectl get httproute web -n "$LAB_SMOKE_NS" \
+      -o jsonpath='{range .status.parents[0].conditions[*]}{.type}={.status}{"\n"}{end}' 2>/dev/null || true)"
+    if echo "$route_conditions" | grep -q 'Accepted=True' \
+      && echo "$route_conditions" | grep -q 'ResolvedRefs=True'; then
+      if envoy_svc="$(kubectl get svc -n envoy-gateway-system \
+        --selector=gateway.envoyproxy.io/owning-gateway-namespace="${LAB_SMOKE_NS}",gateway.envoyproxy.io/owning-gateway-name=web \
+        -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)" && [ -n "$envoy_svc" ]; then
+        break
+      fi
+    fi
+    sleep "$sleep_s"
+    attempt=$((attempt + 1))
+  done
+  [ -n "$envoy_svc" ] || {
+    lab_smoke_err "Envoy Gateway Service for Gateway web not ready after ${max_attempts} attempts"
+    return 1
+  }
   kubectl -n envoy-gateway-system port-forward "service/${envoy_svc}" 8888:80 >/tmp/lab-smoke-gw-pf.log 2>&1 &
   gw_pf_pid=$!
   sleep 3
-  gw_body="$(curl --noproxy '*' -fsS -H 'Host: web.example.com' 'http://127.0.0.1:8888/' 2>/dev/null || true)"
+  gw_body=""
+  attempt=1
+  while [ "$attempt" -le 20 ]; do
+    if gw_body="$(curl --noproxy '*' -fsS -H 'Host: web.example.com' 'http://127.0.0.1:8888/' 2>/dev/null)" \
+      && echo "$gw_body" | grep -q 'workshop-web'; then
+      break
+    fi
+    sleep 3
+    attempt=$((attempt + 1))
+  done
   kill "$gw_pf_pid" 2>/dev/null || true
-  echo "$gw_body" | grep -q 'workshop-web'
+  echo "$gw_body" | grep -q 'workshop-web' \
+    || { lab_smoke_err "Gateway HTTPRoute curl via port-forward failed"; return 1; }
   export NS="${NS:-$LAB_SMOKE_NS}"
   # shellcheck disable=SC2016
   lab_smoke_apply_cleanup 'kubectl delete httproute,gateway web -n "$NS" --ignore-not-found --wait=true'
