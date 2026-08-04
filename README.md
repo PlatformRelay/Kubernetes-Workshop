@@ -4,7 +4,7 @@
 [![Pages](https://github.com/PlatformRelay/Kubernetes-Workshop/actions/workflows/pages.yml/badge.svg)](https://github.com/PlatformRelay/Kubernetes-Workshop/actions/workflows/pages.yml)
 [![CodeQL](https://github.com/PlatformRelay/Kubernetes-Workshop/actions/workflows/codeql.yml/badge.svg)](https://github.com/PlatformRelay/Kubernetes-Workshop/actions/workflows/codeql.yml)
 [![Documentation](https://img.shields.io/badge/documentation-GitHub%20Pages-2ea44f?logo=readthedocs&logoColor=white)](https://platformrelay.github.io/Kubernetes-Workshop/)
-[![Release](https://img.shields.io/github/v/release/PlatformRelay/Kubernetes-Workshop?include_prereleases)](https://github.com/PlatformRelay/Kubernetes-Workshop/releases)
+[![Release](https://img.shields.io/github/v/release/PlatformRelay/Kubernetes-Workshop)](https://github.com/PlatformRelay/Kubernetes-Workshop/releases)
 [![License: MIT](https://img.shields.io/github/license/PlatformRelay/Kubernetes-Workshop)](./LICENSE)
 
 **Free. Open source. No paywall.** A vendor-neutral Kubernetes workshop you can run for
@@ -16,20 +16,26 @@ a room. Restyle it, reorder it, fork it, redistribute it under the
 [MIT License](./LICENSE). Keep the copyright notice with substantial copies; otherwise
 there are no royalties, no accounts, and no telemetry.
 
-> [!WARNING]
-> **Controlled beta.** A full clean-environment rehearsal has not finished yet. Read
-> [`docs/beta-limitations.md`](./docs/beta-limitations.md) before you schedule a delivery.
+**Live decks** (always-current GitHub Pages builds):
+
+- [Day 1 — Foundations](https://platformrelay.github.io/Kubernetes-Workshop/deck/day-1/)
+- [Day 2 — Running workloads](https://platformrelay.github.io/Kubernetes-Workshop/deck/day-2/)
+- [Day 3 — Security, delivery, operators](https://platformrelay.github.io/Kubernetes-Workshop/deck/day-3/)
+- [Canonical 3-day cut](https://platformrelay.github.io/Kubernetes-Workshop/deck/3day/) ·
+  [Full content (superset)](https://platformrelay.github.io/Kubernetes-Workshop/deck/) ·
+  [Docs home](https://platformrelay.github.io/Kubernetes-Workshop/)
 
 ## Try it in sixty seconds
 
 | | |
 | --- | --- |
 | **Docs home** | <https://platformrelay.github.io/Kubernetes-Workshop/> |
-| **Interactive decks** | [Superset](https://platformrelay.github.io/Kubernetes-Workshop/deck/) · [3-day cut](https://platformrelay.github.io/Kubernetes-Workshop/deck/3day/) · [Day 1](https://platformrelay.github.io/Kubernetes-Workshop/deck/day-1/) · [Day 2](https://platformrelay.github.io/Kubernetes-Workshop/deck/day-2/) · [Day 3](https://platformrelay.github.io/Kubernetes-Workshop/deck/day-3/) |
+| **Live decks** | [Day 1](https://platformrelay.github.io/Kubernetes-Workshop/deck/day-1/) · [Day 2](https://platformrelay.github.io/Kubernetes-Workshop/deck/day-2/) · [Day 3](https://platformrelay.github.io/Kubernetes-Workshop/deck/day-3/) · [3-day cut](https://platformrelay.github.io/Kubernetes-Workshop/deck/3day/) · [Superset](https://platformrelay.github.io/Kubernetes-Workshop/deck/) |
 | **PDF handouts** | [GitHub Releases](https://github.com/PlatformRelay/Kubernetes-Workshop/releases) (day + full + 3-day PDFs on each `v*` tag) |
 | **Labs** | [`labs/README.md`](./labs/README.md) · start at [`labs/day-1/00-setup.md`](./labs/day-1/00-setup.md) |
 | **Quizzes** | [`quiz/README.md`](./quiz/README.md) (portable prototype; FOSS live host still open) |
 | **Run slides locally** | [`docs/run-slides.md`](./docs/run-slides.md) (Node.js + pnpm) |
+| **Known limitations** | [`docs/beta-limitations.md`](./docs/beta-limitations.md) (S24 stub; add-on smoke backlog) |
 
 ![Animated tour of the workshop deck — real slides stepping through their click animations](docs/images/deck-showcase.gif)
 

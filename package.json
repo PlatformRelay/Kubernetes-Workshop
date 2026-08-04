@@ -47,7 +47,7 @@
     "lint": "markdownlint-cli2",
     "lint:fix": "markdownlint-cli2 --fix",
     "link-check": "node scripts/link-check.mjs",
-    "test:pages": "node --test scripts/pages-site.test.mjs scripts/pages-nav.test.mjs",
+    "test:pages": "node --test scripts/pages-site.test.mjs scripts/pages-nav.test.mjs scripts/readme-front-door.test.mjs",
     "pages:build": "bash scripts/pages-build.sh",
     "pages:preview": "pnpm dlx serve site -p 4173"
   },

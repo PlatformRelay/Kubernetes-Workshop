@@ -83,7 +83,7 @@ nav:
   - Curriculum:
       - Syllabus: syllabus.md
       - Facilitator guide: facilitator-guide.md
-      - Beta limitations: beta-limitations.md
+      - Known limitations: beta-limitations.md
   - Downloads & previews:
       - Live decks & PDFs: downloads.md
   - Project:

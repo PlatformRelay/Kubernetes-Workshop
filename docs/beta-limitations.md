@@ -1,23 +1,20 @@
-## Beta limitations
+## Known limitations
 
-**Controlled beta.** This workshop has **not yet completed a full 3-day
-clean-environment rehearsal**. Specifically:
+Honest leftovers for facilitators — not a release blocker, and **not** a pacing
+contract. Room tempo depends on the presenter, the audience, and which optional
+sections you keep.
 
-- **Timings are unrehearsed planning estimates, not measured facts.** The per-section
-  slide/lab minutes and the ~390 min/day day totals are targets to pace against, not
-  observations from a delivered run.
-- **The add-on-heavy labs have not all been smoke-tested end-to-end on a clean `kind`
-  cluster** (S08, S09, S16, S18, S21, S22, S23). Their manifests are dry-run validated
-  and the commands are correct, but exact install timings and a few verbatim
-  `describe`/error strings may differ.
-- **S24 (Operator dev / kubebuilder) is a deferred stub** — it needs a Go + kubebuilder
-  toolchain and is scheduled for a later milestone. Do not schedule it as a full
-  hands-on lab until it is authored.
+- **S24 (Operator dev / kubebuilder) is a deferred stub** — it needs a Go +
+  kubebuilder toolchain and is not scheduled as a full hands-on lab until authored.
+- **Some add-on-heavy labs** (notably Contour, Envoy Gateway, metrics-server,
+  cert-manager, Argo CD, kube-prometheus paths) have stronger paper/CI coverage than
+  end-to-end clean-`kind` smoke on every combination. Dry-runs and authored commands
+  are in tree; expect occasional install-order or `describe` string drift on a fresh
+  cluster and budget a dry-run of the add-ons *your* cut needs.
+- **Syllabus minute marks** are planning aids for facilitators, not measured delivery
+  facts. Adjust on the day.
 
-These limitations are stated plainly rather than hidden. Confirming the cut and the
-add-on installs against a live environment is explicit, still-open pre-delivery work.
-
-> **Source of truth.** This file is the single tracked copy of the controlled-beta
-> honesty statement. The README banner and facilitator-guide exit criteria point here;
-> `release.yml` prepends it to auto-generated notes on every pre-release tag
-> (semver with a `-`, e.g. `v0.2.0-beta.1`). Edit here — do not fork the wording.
+> **Source of truth.** This file is the single tracked copy of the known-limitations
+> statement. Pre-release tags (semver with a `-`, e.g. `v0.5.0-beta.1`) still prepend
+> this file to auto-generated GitHub Release notes via `release.yml`. Edit here —
+> do not fork the wording.

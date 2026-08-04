@@ -17,14 +17,16 @@ under the [MIT License](https://github.com/PlatformRelay/Kubernetes-Workshop/blo
 [![CI](https://github.com/PlatformRelay/Kubernetes-Workshop/actions/workflows/ci.yml/badge.svg)](https://github.com/PlatformRelay/Kubernetes-Workshop/actions/workflows/ci.yml)
 [![Pages](https://github.com/PlatformRelay/Kubernetes-Workshop/actions/workflows/pages.yml/badge.svg)](https://github.com/PlatformRelay/Kubernetes-Workshop/actions/workflows/pages.yml)
 [![CodeQL](https://github.com/PlatformRelay/Kubernetes-Workshop/actions/workflows/codeql.yml/badge.svg)](https://github.com/PlatformRelay/Kubernetes-Workshop/actions/workflows/codeql.yml)
-[![Release](https://img.shields.io/github/v/release/PlatformRelay/Kubernetes-Workshop?include_prereleases)](https://github.com/PlatformRelay/Kubernetes-Workshop/releases)
+[![Release](https://img.shields.io/github/v/release/PlatformRelay/Kubernetes-Workshop)](https://github.com/PlatformRelay/Kubernetes-Workshop/releases)
 [![License: MIT](https://img.shields.io/github/license/PlatformRelay/Kubernetes-Workshop)](https://github.com/PlatformRelay/Kubernetes-Workshop/blob/main/LICENSE)
 
 </p>
 
-!!! warning "Controlled beta"
-    The workshop has **not** completed a full clean-environment rehearsal yet. Read
-    [beta limitations](beta-limitations.md) before scheduling a delivery.
+**Live decks:** [Day 1](https://platformrelay.github.io/Kubernetes-Workshop/deck/day-1/) ·
+[Day 2](https://platformrelay.github.io/Kubernetes-Workshop/deck/day-2/) ·
+[Day 3](https://platformrelay.github.io/Kubernetes-Workshop/deck/day-3/) ·
+[3-day cut](https://platformrelay.github.io/Kubernetes-Workshop/deck/3day/) ·
+[Superset](https://platformrelay.github.io/Kubernetes-Workshop/deck/)
 
 [Interactive decks :octicons-arrow-right-24:](downloads.md#interactive-slidev-decks){ .md-button .md-button--primary }
 [PDF downloads :octicons-download-24:](downloads.md#pdf-downloads){ .md-button }
@@ -61,4 +63,4 @@ The red line grows one app step by step:
 **Pod → Deployment → Service → Ingress → Gateway API**
 
 Later topics (config, storage, probes, security, Helm, GitOps, operators) hang off that
-same workload. Details and timings: [syllabus](syllabus.md).
+same workload. Full map: [syllabus](syllabus.md).

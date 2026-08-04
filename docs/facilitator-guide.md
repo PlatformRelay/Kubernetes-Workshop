@@ -7,8 +7,8 @@ and how to provision a shared cluster so every attendee has a namespace they own
 This is the facilitator entry point. It is a companion to the participant-facing and
 project-overview documents — know where each one takes you:
 
-- [`../README.md`](../README.md) — **project front door**: what the workshop is, the live
-  deck/PDF previews, audience & prerequisites, and the beta status. Send newcomers here.
+- [`../README.md`](../README.md) — **project front door**: what the workshop is, live
+  decks, PDF downloads, audience & prerequisites. Send newcomers here.
 - [`syllabus.md`](./syllabus.md) — the **public schedule**: section map (S00–S27), tiers,
   per-section timings (each linked to its lab), the canonical 3-day cut, and CKA/CKAD
   alignment.
@@ -21,7 +21,7 @@ project-overview documents — know where each one takes you:
 > **Quick wayfinding.** *Just previewing?* → [README](../README.md) → the live decks.
 > *Doing the labs?* → [labs README](../labs/README.md) → [`00-setup`](../labs/day-1/00-setup.md).
 > *Running the room?* → you're in the right place; pair this with the
-> [syllabus](./syllabus.md) for timings. *Contributing content?* → [`../AGENT.md`](../AGENT.md).
+> [syllabus](./syllabus.md). *Contributing content?* → [`../AGENT.md`](../AGENT.md).
 
 > **Honesty up front.** The environment automation described in ADR 0006 — an `infra/`
 > tree with `make kind-up` / `make ns-provision` verbs — is **planned, not yet built**.
@@ -70,32 +70,26 @@ whole-corpus inspection only.
 
 ## Timing and pacing
 
-Pace against the [per-section timings](./syllabus.md#per-section-outcomes-timings-and-labs)
-in the syllabus. The primitive is **slides + lab per section**; the day totals are the
-planning target.
+Syllabus [per-section minute marks](./syllabus.md#per-section-outcomes-timings-and-labs)
+are **planning aids**, not a delivery contract. Pace to the room: the presenter, the
+audience, and which optional sections you keep matter more than hitting a spreadsheet.
 
-- **Target: ~390 min of content per day at ~50/50 slides:lab.** That is roughly a
-  6.5-hour teaching day before breaks — budget a real timetable (arrival, two coffee
-  breaks, lunch, wrap) on top.
-- **Planned:** the canonical cut lands **Day 1 ≈ 365 min**, **Day 2 ≈ 345 min**,
-  and **Day 3 ≈ 420 min planned**. Days 1–2 sit under target (headroom for the S01/S02 container on-ramp and
-  the S15/S16 add-backs); **Day 3 is over target**. Note the listed 420 is already
-  computed *without* S18/S19/S24 (they are excluded from the cut), so dropping those does
-  not help — to run to time, **trim the S26 capstone lab** (or defer S24 if you had added
-  it back), per the syllabus's Day-3 note.
+Rough shape for a full day: about half slides / half labs, with breaks and lunch on top.
+The canonical cut is a bit light on Days 1–2 (headroom for on-ramps) and heavy on Day 3 —
+trim the S26 capstone lab if you need wall-clock room.
 
-> **These totals are unrehearsed planning estimates, not measured facts.** Confirming the
-> cut lands near ~390 min/day at ~50/50 is an open pre-delivery task (see
-> [Rehearsal debt](#rehearsal-debt-read-before-you-teach)). Treat the numbers as targets to
-> pace against and keep your own running clock the first time you deliver.
+> Confirm add-ons for *your* cut with a short dry-run (see
+> [Rehearsal debt](#rehearsal-debt-read-before-you-teach) and
+> [known limitations](./beta-limitations.md)). Do not treat unrehearsed minute totals as a
+> release or teaching blocker.
 
 **Pacing tactics that hold the 50/50 balance:**
 
-- **Timebox the labs, not the discussion.** Announce the lab's estimated time up front and
-  keep a visible timer. Day 1 Labs 01–08, Day 2 Labs 09–16, and Day 3 Labs 17–23, 25–26
-  are fully copy-pasteable and link to their `NN-topic.solution.md` companion (S24 remains
-  a deferred stub), so a stuck learner is one click from exact commands, expected state,
-  and recovery guidance — you rarely need to stop the room.
+- **Timebox the labs, not the discussion.** Announce a lab window up front and keep a
+  visible timer if it helps the room. Day 1 Labs 01–08, Day 2 Labs 09–16, and Day 3 Labs
+  17–23, 25–26 are fully copy-pasteable and link to their `NN-topic.solution.md` companion
+  (S24 remains a deferred stub), so a stuck learner is one click from exact commands,
+  expected state, and recovery guidance — you rarely need to stop the room.
 - **Use the break→fix step as the natural catch-up point.** Fast finishers dig into the
   stretch goal; you circulate while slower learners reach the deliberate break.
 - **Protect the red line.** Sections S05–S09 (`Pod → Deployment → Service → Ingress →
@@ -255,19 +249,17 @@ pass**. Be aware of the following, consistent with the honesty callouts already 
 [syllabus](./syllabus.md#superset-vs-the-canonical-3-day-cut) and
 [labs README](../labs/README.md#how-to-start):
 
-- **Timings are unrehearsed planning estimates.** Confirming the 3-day cut lands near ~390
-  min/day at ~50/50 is an open pre-delivery task — keep your own clock the first time.
+- **Syllabus minute marks are planning aids.** Room tempo is presenter- and
+  audience-dependent — adjust on the day rather than chasing a fixed minute total.
 - **S08 has fresh live evidence.** On 2026-08-03, its complete kind path passed on an
   Ubuntu 26.04 x86_64 laptop with Docker 29.6.2, kind v0.32.0 / Kubernetes v1.36.1,
   and Contour v1.33.5: controller and Envoy readiness, both host routes,
   required-`pathType` rejection, wrong-class routing loss, TLS/SNI, optional Extension 2
-  (`ingress2gateway` preview), and cleanup. This validates behaviour, not the 25-minute
-  classroom estimate.
+  (`ingress2gateway` preview), and cleanup. This validates behaviour, not classroom pacing.
   The created cluster and validation namespace were removed.
 - **The remaining `kind`-only add-on installs have not all been run end-to-end** in a
-  clean environment. Exact controller/CRD timings and representative solution output may
-  differ slightly. Dry-run the remaining **add-on-heavy labs** (S09, S16, S18, S21, S22,
-  S23) on a clean kind cluster before delivery so you know the real install times for your
+  clean environment. Dry-run the remaining **add-on-heavy labs** (S09, S16, S18, S21, S22,
+  S23) on a clean kind cluster before delivery so you know install quirks on *your*
   network.
 - **The environment automation (`infra/`, `make kind-up` / `make ns-provision`) is
   planned, not built** (roadmap M8 / US-ENV-1). Provision manually as above.
@@ -280,52 +272,25 @@ pass**. Be aware of the following, consistent with the honesty callouts already 
 - **S24 (kubebuilder) is a stub** and **S25 (pod escape) is strictly kind-only** — plan
   those two accordingly.
 
-## Beta-exit criteria — removing the beta label
+## Stable release posture (from v0.4.0)
 
-The workshop currently ships under a **controlled-beta** banner (see
-[`docs/beta-limitations.md`](./beta-limitations.md) and the README's short
-[warning](../README.md#kubernetes-practitioner-workshop)). This section defines when that
-banner may come off. It is the mirror image of the [beta-limitations](./beta-limitations.md)
-list: each limitation stated there is resolved by a gate below, so the documents cannot
-drift — when every gate here is met, those limitations no longer hold.
+The front-door **controlled-beta** banner was removed at **`v0.4.0`** by maintainer
+decision. Remaining items below are a **quality backlog**, not a reason to re-paste a
+beta warning on the README or docs landing.
 
-> **The discipline.** Every gate below is an **objective yes/no against a named artifact**,
-> and every gate **maps to a story ID**. **No gate is "we feel ready."** Removing the beta
-> label is an evidence-based transition, not a judgement call — if you cannot point at the
-> named evidence and say "yes", the gate is unmet and the label stays.
+| Status | Item | Story / note |
+| --- | --- | --- |
+| Backlog | Full clean-environment rehearsal | **US-BETA-6** — useful for facilitators who want a recorded run; syllabus minutes stay planning aids, not a contract |
+| Backlog | Validation matrix → `kind-smoke` | **US-ENV-4** Day-2/3 drivers + recorded evidence |
+| Accepted deferred | S24 kubebuilder | **US-S24** — see [known limitations](./beta-limitations.md) |
+| Done | Repo description + topics | **US-BETA-2** |
 
-### The gates
+Do **not** treat unrehearsed minute marks as a release blocker — pacing is presenter- and
+audience-dependent. Prefer a short dry-run of the add-ons *your* cut needs over chasing a
+perfect timing spreadsheet.
 
-All gates must be **met** to drop the beta label. As of this writing **none is met** — the
-[validation matrix](./validation-matrix.md) is entirely `unrun` / `server-dry-run` and the
-[full rehearsal](#rehearsal-debt-read-before-you-teach) has not been run — so this is an
-unchecked list, honestly reflecting today's state.
-
-| ✓ | Gate | Story ID | Objective check (named evidence) |
-| --- | --- | --- | --- |
-| [ ] | **Full clean-environment rehearsal passed** | **US-BETA-6** | A completed copy of the [timing-results template](./timing-results-template.md) for a real run **and** maintainer sign-off that, following the [rehearsal checklist](./rehearsal-checklist.md), every canonical lab reached its expected observations and cleanup returned a clean state. US-BETA-6 is the human release gate; a passing build/dry-run is explicitly **not** sufficient. |
-| [ ] | **Validation matrix all-green** | **US-BETA-3 + US-ENV-4** | Every row in the [validation matrix](./validation-matrix.md) is at `kind-smoke` — **no** `unrun` or `server-dry-run` state remains. US-ENV-4's nightly chainsaw smoke is what moves the rows; US-BETA-3 is the tracker it fills. |
-| [ ] | **Beta feedback triaged** | **US-BETA-5** | Every issue filed via the [beta-feedback template](../.github/ISSUE_TEMPLATE/beta-feedback.yml) during the beta is **closed or explicitly accepted-deferred** — none left open and unassessed. |
-| [ ] | **S24 finished or accepted-deferred** | **US-S24** | The S24 (kubebuilder) authoring contract passes (stub removed) **or** there is a recorded maintainer decision to exit beta with S24 deferred. Either resolves the gate; an unaddressed stub does not. |
-| [ ] | **Repo description + discovery topics set** | **US-BETA-2** | `gh repo view --json description,repositoryTopics` matches the exact description and ten topics recorded under **One-time repository setup** in the [README](../README.md) (re-apply with `gh repo edit` after a repo re-create). |
-
-### Promotion is gated behind the rehearsal
-
-**Broad promotion — a public Reddit post, paid or sponsored promotion, any wide launch — is
-explicitly gated behind US-BETA-6 (a successful end-to-end rehearsal).** Sharing the repo
-privately with a beta cohort is fine before then; broad promotion is not. The workshop may
-be *usable* before it is *promotable*: promotion waits on the rehearsal specifically, not on
-a general sense of polish.
-
-### If the rehearsal has not passed (blocked action)
-
-**If the US-BETA-6 clean-environment rehearsal has not passed, then a proposal to remove the
-beta label is a BLOCKED action.** Do not remove the banner, and do not begin broad
-promotion. The blocking response must **name the unmet gate** — e.g. *"Blocked: US-BETA-6
-(full clean-environment rehearsal) has not passed — the [validation matrix](./validation-matrix.md)
-still shows `unrun` rows and no completed [timing-results](./timing-results-template.md)
-exists."* Naming the specific gate is required so the block is actionable, not a vague "not
-yet".
+Pre-release tags (`v*-beta.*`, `v*-rc.*`) still prepend
+[known limitations](./beta-limitations.md) to GitHub Release notes; stable tags do not.
 
 ## Quick pre-delivery checklist
 
@@ -336,8 +301,9 @@ yet".
    quota/LimitRange + `restricted` PSA labels); **pre-install** every add-on your cut needs
    from the [add-on table](#add-ons-what-to-pre-install-per-lab).
 4. **kind:** verify laptop prerequisites (container engine, `kind`, RAM, registry pull
-   access); do a dry run of the add-on-heavy labs to learn the install timings.
+   access); dry-run the add-on installs your cut actually uses.
 5. **Distribute** kubeconfigs (shared) and the [`../labs/README.md`](../labs/README.md)
    prerequisites (both) ahead of time.
 6. **Verify** by running the [setup lab](../labs/day-1/00-setup.md) as a sample attendee.
-7. **Keep a running clock** on Day 1 and adjust the [pacing](#timing-and-pacing) for Days 2–3.
+7. **Adjust pacing on the day** — use Day 1 feedback for Days 2–3 rather than the syllabus
+   minute marks as gospel.

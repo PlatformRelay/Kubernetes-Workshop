@@ -37,7 +37,8 @@ pushes never release — only an annotated or lightweight `v*` tag does.
 | `kubernetes-workshop-site-<tag>.zip` | Offline HTML bundle of the release-time deck export (compatibility layout; see release notes). Live docs+decks on Pages use `/` + `/deck/…` instead. |
 
 Pre-release tags (name contains `-`, e.g. `v0.2.0-beta.1`) set
-`prerelease: true` and prepend [`beta-limitations.md`](./beta-limitations.md).
+`prerelease: true` and prepend [`beta-limitations.md`](./beta-limitations.md)
+(known limitations). Stable tags such as `v0.4.0` publish a normal Release.
 
 ## How to cut
 
