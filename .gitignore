@@ -42,5 +42,11 @@ agent-context/
 # Local demo/reference clones (nested git repos) — facilitator rehearsal only.
 references/
 
+# Lab-smoke run artifacts (US-ENV-4A) — keep README only
+docs/validation-evidence/last-smoke/
+docs/validation-evidence/ci-artifacts/
+docs/validation-evidence/summary-*.md
+
 # Keep deck docs even if ignored globally
 !AGENTS.md
+!docs/validation-evidence/README.md
