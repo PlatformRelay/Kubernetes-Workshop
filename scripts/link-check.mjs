@@ -21,11 +21,17 @@ const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
 export const DOCS = [
   'README.md',
+  'docs/index.md',
+  'docs/run-slides.md',
+  'docs/downloads.md',
   'docs/syllabus.md',
   'docs/facilitator-guide.md',
   'docs/beta-limitations.md',
   'docs/validation-matrix.md',
+  'docs/setup.md',
+  'docs/release.md',
   'labs/README.md',
+  'quiz/README.md',
 ];
 
 // --- GitHub heading-slug algorithm --------------------------------------------

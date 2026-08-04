@@ -46,7 +46,10 @@
     "quiz:export": "node scripts/quiz/export.mjs --out dist-quiz",
     "lint": "markdownlint-cli2",
     "lint:fix": "markdownlint-cli2 --fix",
-    "link-check": "node scripts/link-check.mjs"
+    "link-check": "node scripts/link-check.mjs",
+    "test:pages": "node --test scripts/pages-site.test.mjs",
+    "pages:build": "bash scripts/pages-build.sh",
+    "pages:preview": "pnpm dlx serve site -p 4173"
   },
   "dependencies": {
     "@slidev/cli": "^52.16.0",

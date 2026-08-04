@@ -1,248 +1,140 @@
 # Kubernetes Practitioner Workshop
 
-An open source, vendor-neutral, 3-day, beginner-to-intermediate Kubernetes workshop:
-a [Slidev](https://sli.dev) slide deck plus standalone hands-on labs in Markdown,
-roughly **50% presentation and 50% practice**. It takes a learner from "what is a
-container" through "what is a cluster" to confidently authoring, running, and operating
-core Kubernetes workloads.
+[![CI](https://github.com/PlatformRelay/Kubernetes-Workshop/actions/workflows/ci.yml/badge.svg)](https://github.com/PlatformRelay/Kubernetes-Workshop/actions/workflows/ci.yml)
+[![Pages](https://github.com/PlatformRelay/Kubernetes-Workshop/actions/workflows/pages.yml/badge.svg)](https://github.com/PlatformRelay/Kubernetes-Workshop/actions/workflows/pages.yml)
+[![CodeQL](https://github.com/PlatformRelay/Kubernetes-Workshop/actions/workflows/codeql.yml/badge.svg)](https://github.com/PlatformRelay/Kubernetes-Workshop/actions/workflows/codeql.yml)
+[![Documentation](https://img.shields.io/badge/documentation-GitHub%20Pages-2ea44f?logo=readthedocs&logoColor=white)](https://platformrelay.github.io/Kubernetes-Workshop/)
+[![Release](https://img.shields.io/github/v/release/PlatformRelay/Kubernetes-Workshop?include_prereleases)](https://github.com/PlatformRelay/Kubernetes-Workshop/releases)
+[![License: MIT](https://img.shields.io/github/license/PlatformRelay/Kubernetes-Workshop)](./LICENSE)
 
-**Preview it now:** the decks are live on GitHub Pages and PDFs ship with each release.
+**Free. Open source. No paywall.** A vendor-neutral Kubernetes workshop you can run for
+yourself, for colleagues, or as a full multi-day delivery — with interactive slides,
+ready-to-run labs, a portable quiz prototype, and downloadable PDFs.
 
-- **Live deck (full superset):** <https://platformrelay.github.io/Kubernetes-Workshop/>
-- **Live deck (canonical 3-day cut):** <https://platformrelay.github.io/Kubernetes-Workshop/3day/>
-- **Template gallery:** <https://platformrelay.github.io/Kubernetes-Workshop/templates/>
-- **PDF exports:** [latest release](https://github.com/PlatformRelay/Kubernetes-Workshop/releases)
-  — [full deck PDF](https://github.com/PlatformRelay/Kubernetes-Workshop/releases/download/v0.1.0/kubernetes-workshop-full-v0.1.0.pdf)
-  · [3-day cut PDF](https://github.com/PlatformRelay/Kubernetes-Workshop/releases/download/v0.1.0/kubernetes-workshop-3day-v0.1.0.pdf)
+Use it to **learn**, to **explain Kubernetes concepts to your team**, or to **facilitate**
+a room. Restyle it, reorder it, fork it, redistribute it under the
+[MIT License](./LICENSE). Keep the copyright notice with substantial copies; otherwise
+there are no royalties, no accounts, and no telemetry.
+
+> [!WARNING]
+> **Controlled beta.** A full clean-environment rehearsal has not finished yet. Read
+> [`docs/beta-limitations.md`](./docs/beta-limitations.md) before you schedule a delivery.
+
+## Try it in sixty seconds
+
+| | |
+| --- | --- |
+| **Docs home** | <https://platformrelay.github.io/Kubernetes-Workshop/> |
+| **Interactive decks** | [Superset](https://platformrelay.github.io/Kubernetes-Workshop/deck/) · [3-day cut](https://platformrelay.github.io/Kubernetes-Workshop/deck/3day/) · [Day 1](https://platformrelay.github.io/Kubernetes-Workshop/deck/day-1/) · [Day 2](https://platformrelay.github.io/Kubernetes-Workshop/deck/day-2/) · [Day 3](https://platformrelay.github.io/Kubernetes-Workshop/deck/day-3/) |
+| **PDF handouts** | [GitHub Releases](https://github.com/PlatformRelay/Kubernetes-Workshop/releases) (day + full + 3-day PDFs on each `v*` tag) |
+| **Labs** | [`labs/README.md`](./labs/README.md) · start at [`labs/day-1/00-setup.md`](./labs/day-1/00-setup.md) |
+| **Quizzes** | [`quiz/README.md`](./quiz/README.md) (portable prototype; FOSS live host still open) |
+| **Run slides locally** | [`docs/run-slides.md`](./docs/run-slides.md) (Node.js + pnpm) |
 
 ![Animated tour of the workshop deck — real slides stepping through their click animations](docs/images/deck-showcase.gif)
 
-<sub>Real deck, no hand-taken screenshots: every CI run re-renders this tour from the slide
-sources to prove it stays reproducible; the committed copy is refreshed with the same
-command (`pnpm showcase:gif`). A static preview frame lives at
-[`docs/images/deck-preview.png`](docs/images/deck-preview.png).</sub>
+<sub>Real deck, no hand-taken screenshots: CI re-renders this tour from the slide sources
+(`pnpm showcase:gif`). Static frame: [`docs/images/deck-preview.png`](docs/images/deck-preview.png).</sub>
 
-> [!WARNING]
-> **Controlled beta.** This workshop has **not yet completed a full 3-day
-> clean-environment rehearsal**. Unrehearsed timing estimates, add-on-heavy labs not yet
-> kind-smoked, and the deferred S24 stub are listed in full in
-> [`docs/beta-limitations.md`](./docs/beta-limitations.md) — the same block is prepended
-> to every beta GitHub Release. Confirming the cut against a live environment is
-> still-open pre-delivery work.
+## What you get
 
-## Audience & prerequisites
+- **~50% slides / ~50% practice** — Slidev decks paired with standalone Markdown labs.
+- **A clear red line** — one app grown **Pod → Deployment → Service → Ingress → Gateway API**,
+  then config, storage, probes, security, Helm, GitOps, and operators on the same workload.
+- **Two lab environments** — assigned namespace on a shared cluster, or a local **kind**
+  cluster via [`./workshop up`](./docs/setup.md).
+- **Facilitator support** — syllabus, pacing notes, and add-on checklists in
+  [`docs/facilitator-guide.md`](./docs/facilitator-guide.md).
+- **Offline PDFs** — every release exports day decks plus full/3-day compatibility PDFs.
 
-**Level: beginner-to-intermediate** — not pure beginner. The arc runs from container
-foundations up through operators, GitOps, and pod-escape hardening. Assumed prerequisites,
-stated up front and reinforced in the labs:
+## Audience
 
-- A shell you are comfortable in, and basic **Git**.
-- Basic **YAML**, basic **HTTP**, and basic **container** vocabulary.
-- One of two lab environments: an **assigned namespace** on a shared cluster, **or** a
-  local **kind** cluster. See [`labs/README.md`](./labs/README.md) for the exact tools.
+**Beginner-to-intermediate.** Comfortable in a shell, with basic Git, YAML, HTTP, and
+container vocabulary. Container on-ramp labs (S01/S02) need no cluster.
 
-The two container sections (S01/S02) run entirely locally with no cluster and are offered
-as an **on-ramp** for anyone new to containers.
+**By the end, a learner can** build and secure an image; explain the control plane;
+author and operate core workloads through Gateway API; inject config and storage; set
+resources and probes; harden with PSA, NetworkPolicy, and RBAC; deliver with Helm and
+GitOps; and read an operator in the wild — mapped to CKA/CKAD domains as a design check
+(cert prep is not the organizing principle).
 
-**By the end, a learner can:** build and secure a container image; explain the control
-plane and reconciliation; author and operate the core workload resources (Pod →
-Deployment → Service → Ingress → Gateway API); inject config and storage; set resource
-limits and health probes; harden Pods and isolate them with NetworkPolicy and RBAC;
-deliver apps with Helm and GitOps; and read the operator pattern in the wild — mapped to
-CKA/CKAD domains as a design check (certification prep is not the organizing principle).
+## Curriculum at a glance
 
-## Curriculum overview
-
-The workshop is authored as a **content superset of 28 sections** (`S00`–`S27`) and
-**boiled down per delivery** into a **canonical 3-day cut** by toggling sections on or off.
-The spine is a **red line of core resources** — one app grown step by step:
-
-> **Pod → Deployment → Service → Ingress → Gateway API** (`S05`–`S09`)
-
-Every later topic (config, storage, health, security, delivery, observability) hangs off
-that same running app. Roughly by day:
-
-| Day | Theme | Sections |
+| Day | Theme | Focus |
 | --- | --- | --- |
-| **Day 1** | Foundations and the core red line | `S00`, `S03`–`S08` |
-| **Day 2** | Modern routing and running workloads well | `S09`–`S14` |
-| **Day 3** | Security, delivery, operators, best practices | `S17`, `S20`–`S23`, `S25`–`S27` |
+| **Day 1** | Foundations + red line | Welcome through Ingress |
+| **Day 2** | Running workloads well | Gateway API through probes (+ optional Jobs/HPA) |
+| **Day 3** | Security, delivery, operators | PSA through best practices (+ deferred S24 stub) |
 
-The day entries above are the default delivery. Authored on-ramp and add-back sections
-(`S01`, `S02`, `S15`, `S16`, `S18`, `S19`) live in **Optional / Appendix**; `S24` is
-listed there only as a deferred stub and is not schedulable.
-
-The full section map — tiers (`core` / `recommended` / `optional`), authored/deferred
-status, per-section timings, the exact 3-day cut, and CKA/CKAD alignment — lives in the
-syllabus. These facts are contract-checked against `scripts/deck-manifest.mjs`; this
-overview only summarizes them.
-
-**→ [Full syllabus & section map](docs/syllabus.md)**
-
-> [!NOTE]
-> **Superset vs. 3-day cut.** The **superset** deck contains more material than fits in
-> three days, on purpose — so a delivery can be composed from authored sections rather
-> than cut live. The **3-day cut** is the default a facilitator delivers. Preview whichever
-> matches your need: the [full deck](https://platformrelay.github.io/Kubernetes-Workshop/)
-> or the [3-day cut](https://platformrelay.github.io/Kubernetes-Workshop/3day/).
-
-## Status
-
-**26 of 28 sections are fully authored** — complete concept slides paired with a
-standalone, copy-pasteable lab (`S00`–`S23`, `S25`, `S26`). Two sections differ, both by
-design and both flagged consistently in the syllabus and facilitator guide:
-
-- **`S27` (Wrap-up & next steps)** is **slides-only** — it is an open Q&A / next-steps
-  block with no hands-on lab.
-- **`S24` (Operator dev / kubebuilder)** is a **deferred stub** — outlined but not yet
-  fully authored; it needs a Go + kubebuilder toolchain and lands in a later milestone.
-
-The deck's design system — a local Slidev theme with layouts, components, and
-code-annotation patterns — lives in `theme/` and is showcased slide by slide in the
-[template gallery](https://platformrelay.github.io/Kubernetes-Workshop/templates/).
-
-See [`docs/beta-limitations.md`](./docs/beta-limitations.md) for what has and has not been
-rehearsed.
+**26 of 28 sections are fully authored.** `S27` is slides-only wrap-up; `S24` (kubebuilder)
+is a deferred stub. Full map: [`docs/syllabus.md`](./docs/syllabus.md).
 
 ## Choose your path
 
-Four ways in, depending on why you are here:
-
-- **Preview** — read the decks without setting anything up: the
-  [full deck](https://platformrelay.github.io/Kubernetes-Workshop/) · the
-  [3-day cut](https://platformrelay.github.io/Kubernetes-Workshop/3day/) · the
+- **Preview** — [documentation site](https://platformrelay.github.io/Kubernetes-Workshop/) and
+  [live decks](https://platformrelay.github.io/Kubernetes-Workshop/deck/) ·
   [PDF releases](https://github.com/PlatformRelay/Kubernetes-Workshop/releases).
-- **Participate** — do the hands-on labs: start at the
-  [participant guide](./labs/README.md), then run
-  [`labs/day-1/00-setup.md`](./labs/day-1/00-setup.md) end to end. On a local
-  cluster, [`docs/setup.md`](./docs/setup.md) gets you from a fresh laptop to a
-  lab-ready kind cluster with one command (`./workshop up`).
-- **Facilitate** — run the workshop for a room: the
-  [facilitator guide](./docs/facilitator-guide.md) covers environment setup, pacing, and
-  the per-lab add-on checklist.
-- **Contribute** — author or extend content: the guardrails and authoring rules are in
-  [`AGENT.md`](./AGENT.md).
+- **Participate** — [`labs/README.md`](./labs/README.md), then Lab 00. For kind:
+  [`docs/setup.md`](./docs/setup.md).
+- **Facilitate** — [`docs/facilitator-guide.md`](./docs/facilitator-guide.md).
+- **Contribute** — authoring rules in [`AGENT.md`](./AGENT.md).
 
-> [!TIP]
-> Doing the labs? **Start with [`labs/day-1/00-setup.md`](./labs/day-1/00-setup.md).** It
-> verifies your tooling, context, and namespace before any real content — and teaches the
-> panic reset you reuse everywhere.
+## Run the slides on your machine
 
-## Develop
+Complete copy-paste path (Node 22 + pnpm — this repo does not ship an npm lockfile):
+
+```bash
+git clone https://github.com/PlatformRelay/Kubernetes-Workshop.git
+cd Kubernetes-Workshop
+
+corepack enable
+corepack prepare pnpm@11.9.0 --activate
+pnpm install --frozen-lockfile
+
+pnpm dev:day1          # http://localhost:3030/ — or pnpm dev / dev:3day / dev:superset
+```
+
+More detail (build, preview, Pages tree): [`docs/run-slides.md`](./docs/run-slides.md).
+
+## Develop (maintainers)
 
 ```bash
 pnpm install
-pnpm dev                # choose a day, section, or range (Gum menu when available)
-pnpm deck -- --list     # deterministic choices for any shell or CI
-pnpm deck -- --day 1    # full day; also supports --section S05 / --range S05-S09
-pnpm dev:superset       # compatibility-only full content superset
-pnpm dev:templates      # template gallery & animation spike
-pnpm build              # build four live entries to dist-day-{1,2,3}/ + dist-optional/
-pnpm export             # export four live-entry PDFs (needs playwright-chromium)
-pnpm render             # export per-slide PNGs to dist-render/ (needs playwright-chromium)
-pnpm showcase:gif       # re-render the README's animated deck tour (docs/images/deck-showcase.gif)
-pnpm lint               # markdownlint the labs (lint:fix to auto-correct)
-pnpm link-check         # verify internal doc links & anchors (no <pages-url> placeholders)
+pnpm dev                # gum menu when available
+pnpm deck -- --list
+pnpm build              # live day entries
+pnpm export             # PDFs (playwright-chromium)
+pnpm lint && pnpm link-check
+pnpm test:pages         # Pages wiring contract
+pnpm pages:build        # MkDocs + hash-routed decks → ./site (needs MkDocs)
 ```
 
 ## Layout
 
 | Path | Purpose |
 | --- | --- |
-| `scripts/deck-manifest.mjs` | Source of truth for section metadata and generated deck membership |
-| `slides-day-{1,2,3}.md` | Generated live-delivery entries for the three canonical days |
-| `slides-optional.md` | Generated Optional / Appendix entry for on-ramp, add-back, and advanced sections |
-| `slides.md` | Generated compatibility superset — imports every section `S00`–`S27` |
-| `slides-3day.md` | Generated compatibility entry containing all three canonical days |
-| `slides-templates.md` | Template gallery & animation-technology spike |
-| `pages/SNN-topic/` | One self-contained, toggleable section per folder (`index.md`) |
-| `labs/day-*/` | Standalone Markdown labs, one per authored section |
-| `theme/` | **Local Slidev theme** — master styles, layouts, and UI components |
-| `components/` | Deck-level Vue components (animated teaching diagrams) |
-| `global-bottom.vue` | Global chrome: footer, page number, progress bar |
-| `public/icons/` | Curated official Kubernetes/CNCF artwork (see its README) |
-| `docs/decisions/` | Decision records |
-
-Do not hand-edit generated root decks or toggle their `hide:` fields. Change section
-membership once in `scripts/deck-manifest.mjs`, run `pnpm decks:generate`, and commit the
-result. `pnpm decks:check` rejects missing or duplicate sections and generated drift.
-For a one-off delivery, use `pnpm deck` to compose a complete day, one section, or a
-contiguous range into the ignored `.deck-selection.md`; no section content is copied.
+| `docs/` | MkDocs documentation (GitHub Pages landing) |
+| `scripts/deck-manifest.mjs` | Section metadata + generated deck membership |
+| `slides-day-{1,2,3}.md` | Live day entries |
+| `slides.md` / `slides-3day.md` | Compatibility superset / three-day cut |
+| `pages/SNN-topic/` | Section sources |
+| `labs/day-*/` | Standalone labs |
+| `quiz/` | Portable quiz prototype |
+| `theme/` | Local Slidev theme |
+| `docs/decisions/` | ADRs |
 
 ## Continuous integration & publishing
 
-Three GitHub Actions workflows (`.github/workflows/`):
-
-| Workflow | Trigger | What it does |
+| Workflow | Trigger | Role |
 | --- | --- | --- |
-| `ci.yml` | PR + push to `main` | Lint the labs, build the four live entries plus compatibility/gallery entries, and link-check the front-door docs — a broken deck, malformed lab, or dead internal link fails the check. A separate job re-renders the README showcase GIF from the deck sources (`pnpm showcase:gif`) and uploads it as an artifact, keeping the animated preview reproducible. |
-| `pages.yml` | push to `main` (+ manual) | Build the decks as a static site and deploy to GitHub Pages under the `/Kubernetes-Workshop/` base path. |
-| `release.yml` | tag `v*` | Export Day 1/2/3 + compatibility full/3-day PDFs and the offline site zip to an immutable GitHub Release (build-then-publish). |
+| `ci.yml` | PR + `main` | Labs lint, deck builds, link-check, Pages contract tests, showcase GIF |
+| `pages.yml` | `main` (+ manual) | MkDocs + Slidev → GitHub Pages |
+| `release.yml` | `v*` tags | PDF + offline zip GitHub Release |
+| `lab-smoke.yml` | schedule / dispatch / PR subset | Disposable kind Day-1 smoke |
+| `codeql.yml` | `main` / schedule | Code scanning |
 
-**Cut a release** (PDFs only ever come from a version tag). Tags are **immutable** —
-never move a published `v*` tag; same-commit retries are idempotent, a different
-commit is refused. CI cannot stop a force-pushed tag already at `github.sha` —
-protect `v*` with a ruleset. Full policy: [`docs/release.md`](./docs/release.md).
+Release policy (immutable tags, day-deck artifacts): [`docs/release.md`](./docs/release.md).
 
-```bash
-git tag v1.0.0
-git push origin v1.0.0   # → build validates artifacts, then publish creates the Release
-```
+## License
 
-**Live site** — every push to `main` publishes:
-
-- <https://platformrelay.github.io/Kubernetes-Workshop/> — full superset deck
-- <https://platformrelay.github.io/Kubernetes-Workshop/3day/> — canonical 3-day cut
-- <https://platformrelay.github.io/Kubernetes-Workshop/templates/> — template gallery
-
-The Pages base path carries the exact repo-name case (`Kubernetes-Workshop`); a lowercased
-base path is a defect (see [`.github/workflows/pages.yml`](./.github/workflows/pages.yml)).
-
-> **One-time repository setup** (manual steps no workflow can perform — re-apply
-> after a repo re-create so discovery metadata survives):
->
-> 1. **Settings → Pages → Build and deployment → Source = "GitHub Actions".**
-> 2. The workflows integrate on **`main`** (CI, Pages, and the release tag are
->    all cut from it). Make `main` the repository default branch (Settings →
->    Branches) so PR checks target it and the `github-pages` environment is
->    allowed to deploy — its branch protection defaults to the default branch
->    only. (Alternatively, add `main` to that environment's allowed branches.)
-> 3. **Repository description + discovery topics** (US-BETA-2). Exact strings:
->
->    - Description:
->      `Free, vendor-neutral, hands-on Kubernetes workshop with 28 modules, a three-day curriculum, standalone labs, Slidev decks and PDF releases.`
->    - Topics (order does not matter):
->      `kubernetes`, `kubernetes-training`, `workshop`, `devops`, `cloud-native`,
->      `containers`, `gitops`, `kubernetes-security`, `slidev`, `education`
->
->    Apply and validate:
->
->    ```bash
->    gh repo edit \
->      --description "Free, vendor-neutral, hands-on Kubernetes workshop with 28 modules, a three-day curriculum, standalone labs, Slidev decks and PDF releases." \
->      --add-topic kubernetes \
->      --add-topic kubernetes-training \
->      --add-topic workshop \
->      --add-topic devops \
->      --add-topic cloud-native \
->      --add-topic containers \
->      --add-topic gitops \
->      --add-topic kubernetes-security \
->      --add-topic slidev \
->      --add-topic education
->
->    gh repo view --json description,repositoryTopics
->    ```
-
-Markdown linting (`pnpm lint`, `markdownlint-cli2`) covers the standalone
-`labs/` only. The Slidev deck sources are excluded: markdownlint parses just the
-first frontmatter block, so it mis-reads every per-slide `---` separator — there
-is no rule toggle that fixes it. See `.markdownlint-cli2.jsonc`.
-
-The link check (`pnpm link-check`) is a small zero-dependency Node script
-([`scripts/link-check.mjs`](./scripts/link-check.mjs)) that validates the four front-door
-docs (this README, the syllabus, the facilitator guide, and the labs README) offline: it
-fails on any missing internal target file, broken relative anchor, or unresolved live-site
-URL placeholder. External URLs are reported informationally and never gate CI.
-
-Contributor guardrails and authoring rules: [`AGENT.md`](./AGENT.md).
+[MIT](./LICENSE) — Copyright (c) 2026 Platform Relay.

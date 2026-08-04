@@ -1,0 +1,64 @@
+---
+hide:
+  - navigation
+  - toc
+  - title
+---
+
+# Kubernetes Practitioner Workshop
+
+**A free, open-source, vendor-neutral Kubernetes workshop** — Slidev presentations,
+ready-to-run labs, and a portable quiz prototype. Use it to learn yourself, to teach
+colleagues, or to run a full multi-day delivery. Adapt it, restyle it, redistribute it
+under the [MIT License](https://github.com/PlatformRelay/Kubernetes-Workshop/blob/main/LICENSE).
+
+<p markdown="1">
+
+[![CI](https://github.com/PlatformRelay/Kubernetes-Workshop/actions/workflows/ci.yml/badge.svg)](https://github.com/PlatformRelay/Kubernetes-Workshop/actions/workflows/ci.yml)
+[![Pages](https://github.com/PlatformRelay/Kubernetes-Workshop/actions/workflows/pages.yml/badge.svg)](https://github.com/PlatformRelay/Kubernetes-Workshop/actions/workflows/pages.yml)
+[![CodeQL](https://github.com/PlatformRelay/Kubernetes-Workshop/actions/workflows/codeql.yml/badge.svg)](https://github.com/PlatformRelay/Kubernetes-Workshop/actions/workflows/codeql.yml)
+[![Release](https://img.shields.io/github/v/release/PlatformRelay/Kubernetes-Workshop?include_prereleases)](https://github.com/PlatformRelay/Kubernetes-Workshop/releases)
+[![License: MIT](https://img.shields.io/github/license/PlatformRelay/Kubernetes-Workshop)](https://github.com/PlatformRelay/Kubernetes-Workshop/blob/main/LICENSE)
+
+</p>
+
+!!! warning "Controlled beta"
+    The workshop has **not** completed a full clean-environment rehearsal yet. Read
+    [beta limitations](beta-limitations.md) before scheduling a delivery.
+
+[Interactive decks :octicons-arrow-right-24:](downloads.md#interactive-slidev-decks){ .md-button .md-button--primary }
+[PDF downloads :octicons-download-24:](downloads.md#pdf-downloads){ .md-button }
+[Run locally :octicons-terminal-24:](run-slides.md){ .md-button }
+
+## Why this workshop
+
+| | |
+| --- | --- |
+| **Free** | No paywall, no account, no telemetry. Clone it and go. |
+| **Teach-ready** | Decks + labs + facilitator notes so you can explain Kubernetes to colleagues. |
+| **Hands-on** | Standalone Markdown labs (about half the time) with copy-pasteable commands. |
+| **Flexible delivery** | Solo learning, a single afternoon, or a canonical three-day cut. |
+| **Many formats** | Live Slidev in the browser, local Node.js preview, and downloadable PDFs. |
+| **Yours to adapt** | Restyle the theme, reorder sections, fork freely under MIT. |
+
+## Start here
+
+| Goal | Go to |
+| --- | --- |
+| Preview the slides in the browser | [Live decks](downloads.md#interactive-slidev-decks) |
+| Download PDF handouts | [PDF downloads](downloads.md#pdf-downloads) / [GitHub Releases](https://github.com/PlatformRelay/Kubernetes-Workshop/releases) |
+| Run Slidev on your laptop | [Run the slides locally](run-slides.md) |
+| Do the labs | [Labs guide](https://github.com/PlatformRelay/Kubernetes-Workshop/tree/main/labs#readme) · [Lab 00 setup](https://github.com/PlatformRelay/Kubernetes-Workshop/blob/main/labs/day-1/00-setup.md) |
+| Stand up a local kind cluster | [Local kind setup](setup.md) |
+| Try the quiz prototype | [Quiz README](https://github.com/PlatformRelay/Kubernetes-Workshop/tree/main/quiz#readme) |
+| See the full section map | [Syllabus](syllabus.md) |
+| Facilitate a room | [Facilitator guide](facilitator-guide.md) |
+
+## Curriculum spine
+
+The red line grows one app step by step:
+
+**Pod → Deployment → Service → Ingress → Gateway API**
+
+Later topics (config, storage, probes, security, Helm, GitOps, operators) hang off that
+same workload. Details and timings: [syllabus](syllabus.md).

@@ -227,7 +227,7 @@ knobs to reach for.
 > listed sums to **420** — over target — so a facilitator running to time should drop one
 > of the Day-3 add-backs (S18/S19 are already excluded, and deferred S24 is not
 > schedulable); trim the S26 capstone lab or move a recommended section. These are unrehearsed
-> planning estimates; the [facilitator guide](./facilitator-guide.md#timing--pacing)
+> planning estimates; the [facilitator guide](./facilitator-guide.md#timing-and-pacing)
 > covers how to pace against them.
 
 ## CKAD / CKA alignment

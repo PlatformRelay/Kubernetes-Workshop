@@ -50,3 +50,4 @@ docs/validation-evidence/summary-*.md
 # Keep deck docs even if ignored globally
 !AGENTS.md
 !docs/validation-evidence/README.md
+.venv/

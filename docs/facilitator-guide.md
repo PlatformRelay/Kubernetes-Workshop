@@ -68,7 +68,7 @@ direct scripts: `pnpm dev:day1`, `dev:day2`, `dev:day3`, and `dev:optional`. The
 `slides.md` superset remains available through `pnpm dev:superset` for compatibility and
 whole-corpus inspection only.
 
-## Timing & pacing
+## Timing and pacing
 
 Pace against the [per-section timings](./syllabus.md#per-section-outcomes-timings-and-labs)
 in the syllabus. The primitive is **slides + lab per section**; the day totals are the
@@ -340,4 +340,4 @@ yet".
 5. **Distribute** kubeconfigs (shared) and the [`../labs/README.md`](../labs/README.md)
    prerequisites (both) ahead of time.
 6. **Verify** by running the [setup lab](../labs/day-1/00-setup.md) as a sample attendee.
-7. **Keep a running clock** on Day 1 and adjust the [pacing](#timing--pacing) for Days 2–3.
+7. **Keep a running clock** on Day 1 and adjust the [pacing](#timing-and-pacing) for Days 2–3.

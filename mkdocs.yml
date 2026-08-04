@@ -1,0 +1,92 @@
+site_name: Kubernetes Practitioner Workshop
+site_description: Free, open-source Kubernetes workshop — Slidev decks, labs, quizzes, and PDFs.
+site_url: https://platformrelay.github.io/Kubernetes-Workshop/
+repo_url: https://github.com/PlatformRelay/Kubernetes-Workshop
+repo_name: PlatformRelay/Kubernetes-Workshop
+copyright: Copyright &copy; 2026 Platform Relay — MIT License
+
+docs_dir: docs
+site_dir: site
+strict: true
+
+validation:
+  # Labs / infra live outside docs_dir; repo-relative ../labs links are intentional.
+  links:
+    not_found: ignore
+    absolute_links: ignore
+    unrecognized_links: ignore
+
+# Keep agent/coordination and pin files out of the published site.
+exclude_docs: |
+  decisions/**
+  validation-evidence/**
+  requirements-docs.in
+  requirements-docs.txt
+  security/**
+  timing-results-template.md
+
+theme:
+  name: material
+  palette:
+    - scheme: slate
+      primary: indigo
+      accent: cyan
+      toggle:
+        icon: material/brightness-7
+        name: Switch to light mode
+    - scheme: default
+      primary: indigo
+      accent: cyan
+      toggle:
+        icon: material/brightness-4
+        name: Switch to dark mode
+  features:
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.top
+    - navigation.path
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - toc.follow
+
+plugins:
+  - search
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/PlatformRelay/Kubernetes-Workshop
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - tables
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - Get started:
+      - Run the slides locally: run-slides.md
+      - Local kind cluster: setup.md
+      - Windows / WSL2: windows-wsl2.md
+  - Curriculum:
+      - Syllabus: syllabus.md
+      - Facilitator guide: facilitator-guide.md
+      - Beta limitations: beta-limitations.md
+  - Downloads & previews:
+      - Live decks & PDFs: downloads.md
+  - Project:
+      - Release process: release.md
+      - Validation matrix: validation-matrix.md
+      - Rehearsal checklist: rehearsal-checklist.md

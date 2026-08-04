@@ -68,6 +68,7 @@ jobs:
       # Zero-dependency Node script — no pnpm install needed. Fails on a missing
       # internal target, a broken relative anchor, or an unresolved <pages-url>.
       - run: node scripts/link-check.mjs
+      - run: node --test scripts/pages-site.test.mjs
 
   infra:
     name: Infra scripts (shellcheck + bats)

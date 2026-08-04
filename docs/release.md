@@ -34,7 +34,7 @@ pushes never release — only an annotated or lightweight `v*` tag does.
 | `kubernetes-workshop-day-{1,2,3}-<tag>.pdf` | Live Day 1/2/3 entry decks |
 | `kubernetes-workshop-full-<tag>.pdf` | Compatibility superset (`slides.md`) |
 | `kubernetes-workshop-3day-<tag>.pdf` | Compatibility combined cut |
-| `kubernetes-workshop-site-<tag>.zip` | Offline HTML: full at `/`, days under `/day-N/`, plus `/3day/` and `/templates/` |
+| `kubernetes-workshop-site-<tag>.zip` | Offline HTML bundle of the release-time deck export (compatibility layout; see release notes). Live docs+decks on Pages use `/` + `/deck/…` instead. |
 
 Pre-release tags (name contains `-`, e.g. `v0.2.0-beta.1`) set
 `prerelease: true` and prepend [`beta-limitations.md`](./beta-limitations.md).
