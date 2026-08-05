@@ -82,6 +82,28 @@ Authored on-ramp / add-back sections (`S01`, `S02`, `S15`, `S16`, `S18`, `S19`) 
 [`docs/syllabus.md`](./docs/syllabus.md) — contract-checked against
 `scripts/deck-manifest.mjs`.
 
+## Why this, not X?
+
+- **vs. paid platforms** (KodeKloud, A Cloud Guru, Linux Foundation courses) — this is
+  **free forever**, 0BSD, no account, no subscription, no paywalled labs. `git clone` (or
+  the live Pages site) gets you everything: slides, labs, and PDFs.
+- **vs. Kubernetes the Hard Way** — KTHW teaches you to bootstrap a control plane from
+  scratch by hand; deep, but narrow, and it stops before you ever run a workload. This
+  workshop assumes a cluster exists (`kind` or shared) and teaches the **practitioner
+  path**: workloads, config, storage, probes, security, delivery, and operators — where a
+  working engineer actually spends their time.
+- **vs. single-video courses** (YouTube walkthroughs, one-off Udemy/paid videos) — great
+  as an intro, but usually one linear recording with no standalone labs to run yourself,
+  no multi-day structure, and no facilitator materials. This is slides **plus** separate
+  hands-on labs, a syllabus, and a [facilitator guide](./docs/facilitator-guide.md) —
+  built to run as a real room, not just watched.
+- **vs. the official Kubernetes docs/tutorials** — an excellent reference, but a
+  reference isn't a curriculum. There's no red line, no pacing, no lab progression that
+  grows one app end to end.
+- **Ownership** — 0BSD means you can restyle it, cut your own agenda from the 28-section
+  superset, teach it inside your company, or resell it. No attribution required, no
+  royalties, ever.
+
 ## Choose your path
 
 - **Preview** — [documentation site](https://platformrelay.github.io/Kubernetes-Workshop/) and
