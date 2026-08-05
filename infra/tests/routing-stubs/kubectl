@@ -489,6 +489,9 @@ case "${args[0]:-}" in
     if [[ "$blob" == *workshop-addon-argocd* ]] || [[ "$blob" == *"addon: argocd"* ]]; then
       set_addon_marker argocd argocd
     fi
+    if [[ "$blob" == *workshop-addon-flux* ]] || [[ "$blob" == *"addon: flux"* ]]; then
+      set_addon_marker flux-system flux
+    fi
     if [[ "$blob" == *workshop-addon-cert-manager* ]] || [[ "$blob" == *"addon: cert-manager"* ]]; then
       set_addon_marker cert-manager cert-manager
     fi
@@ -497,7 +500,7 @@ case "${args[0]:-}" in
     fi
     if [[ "$blob" == *"kind: Namespace"* ]]; then
       ensure_state
-      for cand in envoy-gateway-system projectcontour argocd cert-manager monitoring; do
+      for cand in envoy-gateway-system projectcontour argocd flux-system cert-manager monitoring; do
         if [[ "$blob" == *"${cand}"* ]]; then
           case " ${ROUTING_NS:-} " in
             *" ${cand} "*) ;;
@@ -553,6 +556,13 @@ case "${args[0]:-}" in
     fi
     if [[ "$*" == *"namespace argocd"* ]] || [[ "$*" == *"ns argocd"* ]]; then
       clear_namespace argocd
+    fi
+    if [[ "$*" == *workshop-addon-flux* ]]; then
+      clear_addon_marker flux-system flux
+      clear_addon_deploy flux-system source-controller
+    fi
+    if [[ "$*" == *"namespace flux-system"* ]] || [[ "$*" == *"ns flux-system"* ]]; then
+      clear_namespace flux-system
     fi
     if [[ "$*" == *workshop-addon-cert-manager* ]]; then
       clear_addon_marker cert-manager cert-manager

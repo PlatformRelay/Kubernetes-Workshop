@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
-# Unified workshop profile CLI (US-ADDONS-1).
+# Unified workshop profile CLI (US-ADDONS-1 + US-GITOPS-CHOICE-D).
 #
 # Composes routing profiles (US-GATEWAY-1) and day/lab add-on installers without
 # duplicating their logic. Default `./workshop up` does NOT install these —
 # day profiles are opt-in.
 #
 #   profile.sh day-1|day-2|day-3|gateway-envoy|ingress-contour [--teardown]
+#   profile.sh day-3 --gitops argocd|flux   # S21 tool choice (default: argocd)
 #   profile.sh quiz-live          # deferred stub (US-QUIZ-1 adopted none)
-#   profile.sh transition <routing-profile>
+#   profile.sh transition <routing-or-gitops>
 #   profile.sh check <profile>
 #   profile.sh status|list|detect
 #   profile.sh --help
@@ -19,11 +20,14 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$SCRIPT_DIR/common.sh"
 # shellcheck source=routing-preflight.sh disable=SC1091
 . "$SCRIPT_DIR/routing-preflight.sh"
+# shellcheck source=gitops-preflight.sh disable=SC1091
+. "$SCRIPT_DIR/gitops-preflight.sh"
 
 # Day profile compositions (names only — installers live in sibling scripts).
 DAY1_COMPONENTS=(ingress-contour)
 DAY2_COMPONENTS=(gateway-envoy metrics-server)
-DAY3_COMPONENTS=(argocd cert-manager kube-prometheus)
+# day-3 GitOps component is selected via --gitops (default argocd).
+DAY3_SHARED=(cert-manager kube-prometheus)
 
 usage() {
   cat <<EOF
@@ -34,8 +38,9 @@ Named profiles (opt-in — not installed by ./workshop up):
   day-1                      Contour Ingress (S08) — composes: ingress-contour
   day-2                      Gateway API + metrics-server (S09/S16) — composes:
                              gateway-envoy, metrics-server
-  day-3                      GitOps/operators/observability (S21–S23) — composes:
-                             argocd, cert-manager, kube-prometheus (heavyweight)
+  day-3 [--gitops TOOL]      GitOps/operators/observability (S21–S23) — composes:
+                             <argocd|flux>, cert-manager, kube-prometheus (heavyweight)
+                             TOOL defaults to argocd (same spelling as deck --gitops)
   gateway-envoy              Envoy Gateway + Gateway API CRDs (canonical for S09)
   ingress-contour            Contour (optional for S08 / comparison)
   quiz-live                  DEFERRED — US-QUIZ-1 adopted no FOSS candidate
@@ -45,14 +50,31 @@ Routing (mutually exclusive — never install Contour and Envoy together):
   gateway-envoy --teardown   remove workshop-owned Envoy Gateway only
   ingress-contour --teardown remove workshop-owned Contour only
   day-N --teardown           tear down that day's composed components (scoped)
-  transition <profile>       tear down the other workshop routing profile, then
-                             install <gateway-envoy|ingress-contour>
+  transition <profile>       tear down the other workshop profile, then install
+                             <gateway-envoy|ingress-contour|argocd|flux>
   check <profile>            preflight / composition listing without mutating
   status | detect | list     show active routing profile and installed add-ons
+
+GitOps tools (mutually exclusive — never install Argo CD and Flux together):
+
+  day-3 --gitops argocd      default S21 path (Argo CD)
+  day-3 --gitops flux        Flux variant for S21
+  transition argocd|flux     safe Argo ↔ Flux switch (refuses silent dual install)
 
 Interactive gum choose is progressive enhancement; flags/non-TTY behave identically.
 Versions come from infra/versions.env.
 EOF
+}
+
+parse_gitops_tool() {
+  local tool="${1:-}"
+  case "$tool" in
+    argocd | flux) printf '%s\n' "$tool" ;;
+    *)
+      addons_err "unknown --gitops value '${tool}' (want argocd or flux)"
+      return 2
+      ;;
+  esac
 }
 
 run_component() {
@@ -67,6 +89,9 @@ run_component() {
     argocd)
       "$SCRIPT_DIR/argocd.sh" "$action"
       ;;
+    flux)
+      "$SCRIPT_DIR/flux.sh" "$action"
+      ;;
     cert-manager)
       "$SCRIPT_DIR/cert-manager.sh" "$action"
       ;;
@@ -80,12 +105,18 @@ run_component() {
   esac
 }
 
+day3_components() {
+  local tool="${GITOPS_TOOL:-argocd}"
+  printf '%s\n' "$tool"
+  printf '%s\n' "${DAY3_SHARED[@]}"
+}
+
 components_for_profile() {
   local profile="$1"
   case "$profile" in
     day-1) printf '%s\n' "${DAY1_COMPONENTS[@]}" ;;
     day-2) printf '%s\n' "${DAY2_COMPONENTS[@]}" ;;
-    day-3) printf '%s\n' "${DAY3_COMPONENTS[@]}" ;;
+    day-3) day3_components ;;
     gateway-envoy | ingress-contour) printf '%s\n' "$profile" ;;
     *) return 1 ;;
   esac
@@ -113,15 +144,19 @@ cmd_check_profile() {
 
   case "$profile" in
     day-3)
-      addons_warn "day-3 is heavyweight (Argo CD + cert-manager + kube-prometheus-stack)"
+      addons_warn "day-3 is heavyweight (${GITOPS_TOOL} + cert-manager + kube-prometheus-stack)"
       ;;
   esac
 
-  # Routing preflight when the composition includes a routing profile.
+  # Routing / GitOps preflight when the composition includes those components.
   while IFS= read -r comp; do
     case "$comp" in
       gateway-envoy | ingress-contour)
         routing_preflight_check "$comp" || return 1
+        ;;
+      argocd | flux)
+        gitops_preflight_check "$comp" || return 1
+        run_component "$comp" check || return 1
         ;;
       *)
         run_component "$comp" check || return 1
@@ -193,11 +228,13 @@ cmd_teardown_profile() {
 }
 
 cmd_status() {
-  local active addon
+  local active addon gitops
   active="$(routing_detect)"
+  gitops="$(gitops_detect)"
   addons_say "routing=${active}"
+  addons_say "gitops=${gitops}"
 
-  for addon in metrics-server argocd cert-manager kube-prometheus; do
+  for addon in metrics-server argocd flux cert-manager kube-prometheus; do
     case "$addon" in
       metrics-server)
         if addon_is_installed "$METRICS_SERVER_NS" "$addon"; then
@@ -208,6 +245,13 @@ cmd_status() {
         ;;
       argocd)
         if addon_is_installed "$ARGOCD_NS" "$addon"; then
+          addons_say "addon=${addon}: installed"
+        else
+          addons_say "addon=${addon}: absent"
+        fi
+        ;;
+      flux)
+        if addon_is_installed "$FLUX_NS" "$addon"; then
           addons_say "addon=${addon}: installed"
         else
           addons_say "addon=${addon}: absent"
@@ -247,6 +291,7 @@ cmd_status() {
 cmd_list() {
   addons_say "available profiles:"
   addons_say "  day-1 day-2 day-3 gateway-envoy ingress-contour quiz-live(deferred)"
+  addons_say "  day-3 --gitops argocd|flux  (default: argocd)"
   cmd_status
 }
 
@@ -266,8 +311,19 @@ cmd_interactive_choose() {
 }
 
 cmd_transition() {
-  # Delegate mutex transition to the routing-profile CLI (no duplication).
-  "$SCRIPT_DIR/routing-profile.sh" transition "$@"
+  local target="${1:-}"
+  case "$target" in
+    gateway-envoy | ingress-contour)
+      "$SCRIPT_DIR/routing-profile.sh" transition "$target"
+      ;;
+    argocd | flux)
+      gitops_transition "$target"
+      ;;
+    *)
+      addons_err "transition requires gateway-envoy|ingress-contour|argocd|flux"
+      return 2
+      ;;
+  esac
 }
 
 main() {
@@ -278,6 +334,15 @@ main() {
   while [ "$#" -gt 0 ]; do
     case "$1" in
       --teardown | --uninstall | --down) teardown=1 ;;
+      --gitops)
+        shift || true
+        GITOPS_TOOL="$(parse_gitops_tool "${1:-}")" || return 2
+        export GITOPS_TOOL
+        ;;
+      --gitops=*)
+        GITOPS_TOOL="$(parse_gitops_tool "${1#--gitops=}")" || return 2
+        export GITOPS_TOOL
+        ;;
       -h | --help) usage; return 0 ;;
       *) args+=("$1") ;;
     esac
