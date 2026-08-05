@@ -1,3 +1,5 @@
+import { DEFAULT_GITOPS, GITOPS_TOOLS, normalizeGitops } from './deck-manifest.mjs'
+
 const DAY_VALUES = new Set(['1', '2', '3', 'optional'])
 
 export function parseSelection(args) {
@@ -6,6 +8,8 @@ export function parseSelection(args) {
   let list = false
   let dryRun = false
   let help = false
+  let gitops
+  let gitopsSet = false
 
   for (let i = 0; i < args.length; i += 1) {
     const arg = args[i]
@@ -19,6 +23,14 @@ export function parseSelection(args) {
       selection = setOnce(selection, { type: 'section', value: normalizeId(args[++i]) })
     } else if (arg === '--range') {
       selection = setOnce(selection, { type: 'range', value: args[++i] ?? '' })
+    } else if (arg === '--gitops') {
+      if (gitopsSet)
+        throw new Error('Pass --gitops at most once; choose exactly one of: argocd, flux')
+      gitopsSet = true
+      const value = args[++i]
+      if (value === undefined || value.startsWith('--'))
+        throw new Error('Missing --gitops value; use exactly one of: argocd, flux')
+      gitops = normalizeGitops(value)
     } else if (arg === '--action') {
       action = args[++i]
       if (!['dev', 'build', 'export'].includes(action))
@@ -28,17 +40,34 @@ export function parseSelection(args) {
     else if (arg === '--help' || arg === '-h') help = true
     else throw new Error(`Unknown option ${arg}`)
   }
-  return { ...selection, action, list, dryRun, help }
+  return {
+    ...selection,
+    action,
+    list,
+    dryRun,
+    help,
+    gitops: gitopsSet ? gitops : DEFAULT_GITOPS,
+    gitopsExplicit: gitopsSet,
+  }
 }
 
 export function resolveSelection(args, { isTTY = Boolean(process.stdin.isTTY), hasGum = false } = {}) {
   const parsed = parseSelection(args)
   if (parsed.list || parsed.help || parsed.type)
     return parsed
-  if (isTTY && hasGum)
-    return { type: 'interactive', action: parsed.action, dryRun: parsed.dryRun }
+  if (isTTY && hasGum) {
+    return {
+      type: 'interactive',
+      action: parsed.action,
+      dryRun: parsed.dryRun,
+      gitops: parsed.gitops,
+      gitopsExplicit: parsed.gitopsExplicit,
+    }
+  }
   throw new Error('Choose a deck with --day, --section, or --range (use --list to inspect choices).')
 }
+
+export { DEFAULT_GITOPS, GITOPS_TOOLS }
 
 export function selectSections(sections, selection) {
   if (selection.type === 'day') {

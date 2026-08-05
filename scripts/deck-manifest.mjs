@@ -56,6 +56,56 @@ export const generatedDecks = [
   { file: 'slides.md', title: 'Content superset', description: 'Compatibility deck containing every section source', select: () => true },
 ]
 
+/** S21 GitOps tool switch — Argo CD | Flux only (US-GITOPS-CHOICE). Not a plugin API. */
+export const GITOPS_TOOLS = Object.freeze(['argocd', 'flux'])
+export const DEFAULT_GITOPS = 'argocd'
+
+const S21_GITOPS_VARIANTS = Object.freeze({
+  argocd: { slug: 'gitops', title: 'GitOps with Argo CD' },
+  flux: { slug: 'gitops-flux', title: 'GitOps with Flux' },
+})
+
+const S21_GITOPS_SRC = Object.freeze({
+  argocd: './pages/S21-gitops/index.md',
+  flux: './pages/S21-gitops-flux/index.md',
+})
+
+export function normalizeGitops(value = DEFAULT_GITOPS) {
+  if (value === undefined || value === null)
+    return DEFAULT_GITOPS
+  if (typeof value !== 'string' || !value.trim())
+    throw new Error('GitOps tool required; use exactly one of: argocd, flux')
+  const tool = value.trim().toLowerCase()
+  if (tool === 'both' || tool.includes(','))
+    throw new Error('Choose exactly one GitOps tool (argocd or flux); both is not allowed')
+  if (!GITOPS_TOOLS.includes(tool))
+    throw new Error(`Unknown GitOps tool ${value}; use exactly one of: argocd, flux`)
+  return tool
+}
+
+export function applyGitopsVariant(manifest = sections, gitops = DEFAULT_GITOPS) {
+  const tool = normalizeGitops(gitops)
+  const variant = S21_GITOPS_VARIANTS[tool]
+  return manifest.map((section) => {
+    if (section.id !== 'S21')
+      return section
+    return { ...section, slug: variant.slug, title: variant.title, gitops: tool }
+  })
+}
+
+export function assertExactlyOneGitopsVariant(markdown) {
+  const hasArgocd = markdown.includes(`src: ${S21_GITOPS_SRC.argocd}`)
+  const hasFlux = markdown.includes(`src: ${S21_GITOPS_SRC.flux}`)
+  const claimsS21 = /(?:^|\n)#\s*S21\b/.test(markdown) || hasArgocd || hasFlux
+  if (!claimsS21)
+    return true
+  if (hasArgocd && hasFlux)
+    throw new Error('Deck includes both GitOps variants; choose exactly one (argocd or flux)')
+  if (!hasArgocd && !hasFlux)
+    throw new Error('Deck claims S21 but includes neither GitOps variant source')
+  return true
+}
+
 export function sectionPath(section) {
   return `./pages/${section.id}-${section.slug}/index.md`
 }
@@ -518,11 +568,13 @@ export function renderDeck(selected, { title, description, generated = true } = 
   return `---\ntheme: ./theme\ntitle: Kubernetes Practitioner Workshop — ${title}\ninfo: |\n  Open source, vendor-neutral Kubernetes workshop.\n  ${description}. Sections are imported from the shared section library.\nlayout: cover\n---\n${marker}\n# Kubernetes Practitioner Workshop\n\n${title} — ${description}.\n${statusNotice}\n${imports}\n`
 }
 
-export function renderGeneratedDecks(manifest = sections) {
-  return new Map(generatedDecks.map((deck) => [
-    deck.file,
-    renderDeck(manifest.filter(deck.select), deck),
-  ]))
+export function renderGeneratedDecks(manifest = sections, { gitops = DEFAULT_GITOPS } = {}) {
+  const resolved = applyGitopsVariant(manifest, gitops)
+  return new Map(generatedDecks.map((deck) => {
+    const content = renderDeck(resolved.filter(deck.select), deck)
+    assertExactlyOneGitopsVariant(content)
+    return [deck.file, content]
+  }))
 }
 
 export function findGeneratedDrift(expected, { repoRoot = resolve(import.meta.dirname, '..') } = {}) {

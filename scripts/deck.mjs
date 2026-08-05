@@ -2,7 +2,13 @@
 import { spawnSync } from 'node:child_process'
 import { existsSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
-import { renderDeck, sections, validateManifest } from './deck-manifest.mjs'
+import {
+  DEFAULT_GITOPS,
+  applyGitopsVariant,
+  renderDeck,
+  sections,
+  validateManifest,
+} from './deck-manifest.mjs'
 import { resolveSelection, selectSections } from './deck-selector.mjs'
 
 const repoRoot = resolve(import.meta.dirname, '..')
@@ -17,10 +23,15 @@ function usage() {
 
 Usage:
   pnpm deck -- --day 1 [--action dev|build|export]
+  pnpm deck -- --day 3 [--gitops argocd|flux]
   pnpm deck -- --day optional
   pnpm deck -- --section S05
   pnpm deck -- --range S05-S09
   pnpm deck -- --list
+
+--gitops selects the S21 GitOps tool (argocd default, or flux). Exactly one tool per
+delivery; there is no "both" mode. Without an interactive terminal, pass --gitops
+explicitly when you want flux (default remains argocd).
 
 With an interactive terminal and gum installed, running without a selector opens a menu.
 Without gum or a TTY, pass an explicit selector; the content superset is never selected by default.
@@ -50,15 +61,30 @@ function gumChoose() {
     : { type: 'range', value: input.stdout.trim() }
 }
 
-function printSections() {
-  for (const section of sections) {
+function gumChooseGitops() {
+  const choice = spawnSync('gum', [
+    'choose',
+    'Argo CD (default)',
+    'Flux',
+    '--header', 'S21 GitOps tool (exactly one)',
+  ], { encoding: 'utf8', stdio: ['inherit', 'pipe', 'inherit'] })
+  if (choice.status !== 0)
+    throw new Error('Deck selection cancelled')
+  return choice.stdout.trim().startsWith('Flux') ? 'flux' : 'argocd'
+}
+
+function selectionIncludesS21(selected) {
+  return selected.some((section) => section.id === 'S21')
+}
+
+function printSections(resolvedSections) {
+  for (const section of resolvedSections) {
     const cut = section.canonical ? `Day ${section.day}` : 'Optional / Appendix'
     console.log(`${section.id}  ${cut.padEnd(19)} ${section.title}`)
   }
 }
 
 try {
-  validateManifest(sections, { repoRoot })
   let selection = resolveSelection(process.argv.slice(2), {
     isTTY: Boolean(process.stdin.isTTY && process.stdout.isTTY),
     hasGum: commandExists('gum'),
@@ -67,14 +93,32 @@ try {
     console.log(usage())
     process.exit(0)
   }
+
+  let gitops = selection.gitops ?? DEFAULT_GITOPS
+  let resolvedSections = applyGitopsVariant(sections, gitops)
+  validateManifest(resolvedSections, { repoRoot })
+
   if (selection.list) {
-    printSections()
+    printSections(resolvedSections)
     process.exit(0)
   }
   if (selection.type === 'interactive')
     selection = { ...selection, ...gumChoose() }
 
-  const selected = selectSections(sections, selection)
+  let selected = selectSections(resolvedSections, selection)
+  if (
+    selectionIncludesS21(selected)
+    && !selection.gitopsExplicit
+    && selection.type !== undefined
+    && Boolean(process.stdin.isTTY && process.stdout.isTTY)
+    && commandExists('gum')
+  ) {
+    gitops = gumChooseGitops()
+    resolvedSections = applyGitopsVariant(sections, gitops)
+    validateManifest(resolvedSections, { repoRoot })
+    selected = selectSections(resolvedSections, selection)
+  }
+
   const label = selection.type === 'day'
     ? (selection.value === 'optional' ? 'Optional / Appendix' : `Day ${selection.value}`)
     : selected.length === 1 ? `${selected[0].id} · ${selected[0].title}` : `${selected[0].id}–${selected.at(-1).id}`
@@ -83,7 +127,8 @@ try {
     description: 'facilitator selection',
     generated: false,
   }))
-  console.log(`${label}: ${selected.map((section) => section.id).join(', ')}`)
+  const gitopsNote = selectionIncludesS21(selected) ? ` [gitops=${gitops}]` : ''
+  console.log(`${label}: ${selected.map((section) => section.id).join(', ')}${gitopsNote}`)
   if (selection.dryRun)
     process.exit(0)
 

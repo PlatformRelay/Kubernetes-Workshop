@@ -205,6 +205,26 @@ export function selectLabs(inventory, selection) {
   }
 }
 
+/**
+ * Delivery-facing inventory: keep exactly one S21 GitOps lab variant.
+ * Argo CD → labs/day-3/21-gitops.md; Flux → labs/day-3/21-gitops-flux.md (slice C).
+ */
+export function mapDeliveryLabs(labs, { gitops = 'argocd' } = {}) {
+  const tool = String(gitops ?? 'argocd').trim().toLowerCase();
+  if (tool !== 'argocd' && tool !== 'flux') {
+    throw new Error(`Unknown GitOps tool ${gitops}; use exactly one of: argocd, flux`);
+  }
+  return labs.filter((lab) => {
+    const path = lab.labPath ?? '';
+    const isGitopsLab = /\/21-gitops(?:-flux)?\.md$/.test(path);
+    if (!isGitopsLab)
+      return true;
+    if (tool === 'flux')
+      return path.endsWith('/21-gitops-flux.md');
+    return path.endsWith('/21-gitops.md');
+  });
+}
+
 export function main(argv = process.argv.slice(2)) {
   const write = argv.includes('--write');
   const check = argv.includes('--check');
