@@ -9,6 +9,17 @@ Curated copies of official project artwork, used unmodified.
   [Linux Foundation trademark usage guidelines](https://www.linuxfoundation.org/legal/trademark-usage).
 - `cncf-*` — Cloud Native Computing Foundation logo, © The Linux Foundation, same
   source and terms.
+- `argo-*` — logo of the **Argo** project (the CNCF-graduated umbrella covering Argo CD,
+  Workflows, Rollouts, Events), © The Linux Foundation / Argo authors, same source and
+  terms. The mark is the umbrella "Argo" icon — pair it with a text caption when a slide
+  means the Argo CD product specifically.
+- `flux-*` — logo of the **Flux** project (CNCF graduated), © The Linux Foundation /
+  Flux authors, same source and terms. Copied from `projects/flux/icon/` only — never
+  the `flagger/` subtree.
+
+Brand logos are trademarks of their respective owners and are **not** covered by this
+repository's 0BSD license; they are used unmodified, per the trademark guidelines above,
+solely to refer to the projects. No CNCF/LF sponsorship or endorsement is implied.
 
 Reference via `<K8sIcon name="kubernetes-icon-color" />`.
 

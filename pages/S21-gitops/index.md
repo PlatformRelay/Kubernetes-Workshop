@@ -55,6 +55,17 @@ ACCURACY LOCKS (verified against Argo CD stable / v3.x docs, 2026-07-10):
   deliberately broken here: pushing a Git change requires a writable repo we don't host,
   so the required "change Git → re-sync" beat is a fork-based stretch, while the marquee
   self-heal drift break→fix needs no Git write. Noted honestly in the lab.
+
+ACCURACY LOCKS — tool landscape callout (verified 2026-08-06, slow-moving facts only):
+- CNCF graduation: **Argo** (the umbrella project — Argo CD, Workflows, Rollouts, Events;
+  graduated 2022) and **Flux** (graduated 2022) are both CNCF-graduated. Argo CD alone is
+  NOT the graduated entity — never claim "Argo CD is CNCF-graduated" on-slide.
+- Flux (v2.x) core CRDs: GitRepository (source.toolkit.fluxcd.io), Kustomization
+  (kustomize.toolkit.fluxcd.io), HelmRelease (helm.toolkit.fluxcd.io).
+- Positioning axes (UI vs composability, multi-tenancy, scale) are deliberately KEPT OFF
+  the slide — contestable and fast-rotting; speaker notes carry the mechanical
+  difference only. The vendored logo is the umbrella "Argo" mark, so the slide pairs the
+  icon variant with an explicit "Argo CD" text caption (see public/icons/README.md).
 CKx tie-in: GitOps is ecosystem/adjacent — not a hard CKA/CKAD domain, but the
 reconcile-loop mental model is squarely CKA cluster-architecture. Landed on the recap.
 -->
@@ -439,12 +450,22 @@ make this a discipline, not just a tool.
   </v-click>
 </div>
 
-<div v-click="5" class="mt-4 text-sm kw-muted">
-
-Argo CD is **one implementation** (Flux is another). The principles — not the tool — are
-what CNCF's <strong>OpenGitOps</strong> project standardised. Everything in this section is
-principle 4 (continuous reconciliation) applied to principles 1–3.
-
+<div v-click="5" class="mt-4 text-sm">
+  <div class="kw-cols-2">
+    <div class="flex items-center gap-2">
+      <K8sIcon name="argo-icon-white" size="1.5rem" alt="Argo project logo" />
+      <span><strong>Argo CD</strong> — the <code>Application</code> CRD you just read</span>
+    </div>
+    <div class="flex items-center gap-2">
+      <K8sIcon name="flux-icon-white" size="1.5rem" alt="Flux logo" />
+      <span><strong>Flux</strong> — <code>GitRepository</code> + <code>Kustomization</code> / <code>HelmRelease</code> CRDs</span>
+    </div>
+  </div>
+  <div class="mt-2 kw-muted">
+  Two implementations of the same pull-based loop, both under CNCF-graduated projects. The
+  principles — not the tool — are what CNCF's <strong>OpenGitOps</strong> project standardised;
+  this whole section is principle 4 applied to principles 1–3.
+  </div>
 </div>
 
 </div>
@@ -454,10 +475,22 @@ Speaker: name the discipline so learners don't reduce GitOps to "Argo CD." CNCF'
 OpenGitOps working group pinned four principles: (1) DECLARATIVE — desired state as data;
 (2) VERSIONED & IMMUTABLE — that data lives in Git with full history and easy revert; (3)
 PULLED AUTOMATICALLY — agents pull it (vs a CI job pushing with cluster creds); (4)
-CONTINUOUSLY RECONCILED — agents keep converging actual toward desired. Argo CD and Flux
-are two implementations; the principles are tool-agnostic. Tie the bow: this entire
-section is principle #4 (the reconcile loop) enforcing #1–3. Next: recap and hand to
-the lab.
+CONTINUOUSLY RECONCILED — agents keep converging actual toward desired. Tie the bow: this
+entire section is principle #4 (the reconcile loop) enforcing #1–3.
+
+The tool callout — keep it to ~30 seconds, it replaces the old one-liner, not new
+material. Argo CD and Flux are the two implementations learners will actually meet.
+Careful naming: the CNCF-GRADUATED project is **Argo**, the umbrella (Argo CD, Workflows,
+Rollouts, Events) — Argo CD is the continuous-delivery component; Flux is itself a
+graduated project. Mechanical difference, if asked: Argo CD is app-centric — one
+`Application` CRD binds source→destination, plus a Web UI showing sync/drift state; Flux
+is a toolkit of controllers — `GitRepository` points at the repo, `Kustomization` /
+`HelmRelease` reconcile from it; day-to-day state lives in kubectl/CLI, not a bundled UI.
+Both are pull-based, both reconcile continuously — skills transfer. If someone asks "which
+should we run?": genuinely fine either way; teams pick on operational fit, not capability
+gaps — don't relitigate their platform team's choice from this stage. The lab uses Argo CD
+because the UI makes sync/drift state VISIBLE while learners are still forming the mental
+model. Next: recap and hand to the lab.
 -->
 
 ---
