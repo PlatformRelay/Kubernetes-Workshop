@@ -5,7 +5,7 @@ import assert from 'node:assert/strict'
 import { spawn } from 'node:child_process'
 import { createServer } from 'node:http'
 import { mkdirSync, readFileSync, existsSync, writeFileSync, rmSync, statSync } from 'node:fs'
-import { dirname, extname, join, relative, resolve } from 'node:path'
+import { dirname, extname, join, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import test from 'node:test'
 
@@ -46,13 +46,11 @@ function run(cmd, args, opts = {}) {
   })
 }
 
-function isPathUnderRoot(rootDir, candidate) {
-  const rel = relative(rootDir, candidate)
-  return rel === '' || (!rel.startsWith('..') && !resolve(rel).startsWith('..'))
-}
-
 function serveStatic(root, basePrefix) {
   const rootDir = resolve(root)
+  // Trailing separator so `startsWith` can't be fooled by a sibling dir that
+  // merely shares rootDir as a string prefix (e.g. `${rootDir}-evil`).
+  const rootWithSep = rootDir + sep
   const mime = {
     '.html': 'text/html',
     '.js': 'text/javascript',
@@ -65,8 +63,10 @@ function serveStatic(root, basePrefix) {
     let url = req.url.split('?')[0]
     if (url.startsWith(basePrefix))
       url = url.slice(basePrefix.length) || '/'
+    // GOOD: resolve then verify containment before any fs access — CodeQL
+    // js/path-injection recognized sanitizer shape (resolve + startsWith(ROOT)).
     let file = resolve(rootDir, `.${decodeURIComponent(url)}`)
-    if (!isPathUnderRoot(rootDir, file)) {
+    if (file !== rootDir && !file.startsWith(rootWithSep)) {
       res.writeHead(403)
       res.end('forbidden')
       return
@@ -80,7 +80,7 @@ function serveStatic(root, basePrefix) {
         return
       }
     }
-    if (!isPathUnderRoot(rootDir, file)) {
+    if (file !== rootDir && !file.startsWith(rootWithSep)) {
       res.writeHead(403)
       res.end('forbidden')
       return
