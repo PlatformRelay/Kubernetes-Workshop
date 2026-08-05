@@ -48,6 +48,28 @@ pnpm dev:optional    # Optional / Appendix
 pnpm dev:templates   # Theme / template gallery
 ```
 
+### Facilitator launcher and S21 GitOps tool
+
+For a one-off facilitator selection (day, section, or range), use `pnpm deck` with an
+explicit selector. Non-interactive shells must pass the selector on the command line;
+the gum menu is progressive enhancement when a TTY and gum are available.
+
+S21 ships as a two-way switch — **Argo CD** (default) or **Flux**. Exactly one tool per
+delivery; there is no "both" mode and no third-tool plug-in surface.
+
+```bash
+# Default GitOps tool is Argo CD (byte-identical to the committed day decks)
+pnpm deck -- --day 3 --dry-run
+
+# Select the Flux variant for S21 (requires pages/S21-gitops-flux/ — US-GITOPS-CHOICE-B)
+pnpm deck -- --day 3 --gitops flux --dry-run
+
+# Regenerate / check committed decks for a chosen tool (default: argocd)
+pnpm decks:generate
+pnpm decks:check
+pnpm decks:generate -- --gitops flux   # fails clearly until the Flux section exists
+```
+
 Slidev prints a local URL — typically:
 
 ```text
