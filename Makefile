@@ -38,8 +38,8 @@ profile-day-1: ## Install day-1 profile (Contour for S08; opt-in)
 profile-day-2: ## Install day-2 profile (Envoy Gateway + metrics-server; opt-in)
 	@infra/addons/profile.sh day-2
 
-profile-day-3: ## Install day-3 profile (Argo CD + cert-manager + kube-prometheus; heavyweight)
-	@infra/addons/profile.sh day-3
+profile-day-3: ## Install day-3 profile (Argo CD default + cert-manager + kube-prometheus; GITOPS=flux for Flux)
+	@infra/addons/profile.sh day-3 $(if $(GITOPS),--gitops $(GITOPS),)
 
 profile-day-1-down: ## Tear down day-1 composed components
 	@infra/addons/profile.sh day-1 --teardown
@@ -47,8 +47,8 @@ profile-day-1-down: ## Tear down day-1 composed components
 profile-day-2-down: ## Tear down day-2 composed components
 	@infra/addons/profile.sh day-2 --teardown
 
-profile-day-3-down: ## Tear down day-3 composed components
-	@infra/addons/profile.sh day-3 --teardown
+profile-day-3-down: ## Tear down day-3 composed components (GITOPS=flux to match install)
+	@infra/addons/profile.sh day-3 $(if $(GITOPS),--gitops $(GITOPS),) --teardown
 
 profile-gateway-envoy: ## Install Envoy Gateway profile (S09; exclusive vs Contour)
 	@infra/addons/gateway-envoy.sh install
@@ -62,10 +62,10 @@ profile-gateway-envoy-down: ## Tear down workshop-owned Envoy Gateway only
 profile-ingress-contour-down: ## Tear down workshop-owned Contour only
 	@infra/addons/ingress-contour.sh uninstall
 
-# TO=gateway-envoy|ingress-contour — explicit Envoy↔Contour transition
-profile-transition: ## Transition routing profiles (TO=gateway-envoy|ingress-contour)
-	@test -n "$(TO)" || (echo "usage: make profile-transition TO=gateway-envoy|ingress-contour" >&2; exit 2)
-	@infra/addons/routing-profile.sh transition "$(TO)"
+# TO=gateway-envoy|ingress-contour|argocd|flux — explicit mutual-exclusion transition
+profile-transition: ## Transition routing or GitOps tools (TO=gateway-envoy|ingress-contour|argocd|flux)
+	@test -n "$(TO)" || (echo "usage: make profile-transition TO=gateway-envoy|ingress-contour|argocd|flux" >&2; exit 2)
+	@infra/addons/profile.sh transition "$(TO)"
 
 profile-status: ## Show active routing profile and installed add-ons
 	@infra/addons/profile.sh status

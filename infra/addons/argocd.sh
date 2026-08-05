@@ -8,6 +8,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=common.sh disable=SC1091
 . "$SCRIPT_DIR/common.sh"
+# shellcheck source=gitops-preflight.sh disable=SC1091
+. "$SCRIPT_DIR/gitops-preflight.sh"
 
 ADDON="argocd"
 SECTION="s21"
@@ -21,6 +23,7 @@ cmd_check() {
   else
     addons_say "${ADDON} not installed — install will apply ${ARGOCD_URL}"
   fi
+  gitops_preflight_check "$ADDON" || return 1
   return 0
 }
 
@@ -38,6 +41,8 @@ cmd_install() {
     addons_ok "already installed — addon ${ADDON} is workshop-owned (idempotent)"
     return 0
   fi
+
+  gitops_preflight_check "$ADDON" || return 1
 
   if ns_exists "$ARGOCD_NS" && [ -z "$(read_addon_marker "$ARGOCD_NS" "$ADDON")" ]; then
     # Namespace exists without our marker — likely foreign.
@@ -95,6 +100,7 @@ usage() {
 Usage: argocd.sh <install|uninstall|status|check>
 
 S21 add-on: Argo CD ${ARGOCD_VERSION} into namespace ${ARGOCD_NS}.
+Mutually exclusive with Flux — use: ./workshop profile transition argocd
 EOF
 }
 
