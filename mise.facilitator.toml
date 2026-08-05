@@ -1,0 +1,38 @@
+# mise.facilitator.toml — the FACILITATOR toolchain, pinned and checksummed.
+#
+# Deliberately separate from `mise.toml`. That file is the participant
+# toolchain: `./workshop up` runs `mise install --locked` from the repo root
+# with no MISE_ENV set, so participants get kubectl / kind / helm / k9s / jq /
+# yq / gum and nothing else. Nobody attending the workshop needs Node to run a
+# lab, and installing it on 100 laptops to build a slide deck would be absurd.
+#
+# mise loads this file ONLY when MISE_ENV=facilitator, and it keeps a SEPARATE
+# lockfile (`mise.facilitator.lock`), so the two toolchains cannot leak into
+# each other:
+#
+#     mise install --locked                    # participant tools  (mise.lock)
+#     MISE_ENV=facilitator mise install --locked   # + these        (mise.facilitator.lock)
+#
+# Refresh checksums after a version bump, from the same environment:
+#
+#     MISE_ENV=facilitator mise lock
+#
+# This is what builds, serves, and exports the deck — see docs/run-slides.md.
+#
+# Version format is aqua's / mise's: bare semver, no leading "v".
+
+[settings]
+# Write/refresh mise.facilitator.lock on install so checksums stay pinned
+# across platforms, exactly as the participant lane does.
+lockfile = true
+
+[tools]
+# --- Deck toolchain -----------------------------------------------------------
+# node: CI pins the major (`node-version: 22` in .github/workflows/*.yml); this
+# pins the exact patch so a facilitator's local build matches CI's byte for
+# byte. Bump both together.
+node = "22.23.2"
+# pnpm: MUST match the `packageManager` field in package.json exactly — pnpm
+# enforces that field itself, so a drift here is an immediate hard failure.
+# Change both in the same commit, then re-lock.
+pnpm = "11.9.0"

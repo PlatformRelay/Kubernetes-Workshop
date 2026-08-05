@@ -20,6 +20,24 @@ node -v    # expect v22.x
 corepack -v
 ```
 
+### Or: let mise pin the toolchain for you
+
+The deck toolchain is pinned and checksummed in `mise.facilitator.toml`, kept
+**separate from the participant toolchain** in `mise.toml`. `./workshop up` installs the
+participant tools only — nobody attending the workshop needs Node to run a lab — so the
+deck tools live behind a config environment and their own `mise.facilitator.lock`:
+
+```bash
+MISE_ENV=facilitator mise install --locked
+```
+
+Set `MISE_ENV=facilitator` in your shell (or an untracked `.envrc`) to keep it active
+while you work on the deck. After a version bump, re-lock from the same environment with
+`MISE_ENV=facilitator mise lock`.
+
+> **Apple Silicon and Intel:** pnpm 11 publishes no Intel-Mac (`darwin-x64`) build, so
+> `--locked` cannot resolve pnpm on an Intel Mac. Use the corepack path below there.
+
 ## Install dependencies
 
 From the repository root:

@@ -434,6 +434,18 @@ test('requires every mise lock download to carry a sha256 checksum', async () =>
   assert.ok(result.errors.some((error) => error.includes('mise.lock URL without adjacent sha256 checksum')))
 })
 
+test('checks every mise config environment lockfile, not only the participant one', async () => {
+  const root = await fixture({
+    'mise.lock': '[[tools.kind]]\nchecksum = "sha256:0000000000000000000000000000000000000000000000000000000000000000"\nurl = "https://example.com/kind"\n',
+    'mise.facilitator.lock': '[[tools.node]]\nurl = "https://example.com/node"\n',
+  })
+
+  const result = await checkSupplyChainPolicy(root)
+
+  assert.ok(result.errors.some((error) => error.startsWith('mise.facilitator.lock:')))
+  assert.ok(!result.errors.some((error) => error.startsWith('mise.lock:')))
+})
+
 test('setup truth distinguishes the unpinned mise installer from locked tool artifacts', async () => {
   const repositoryRoot = path.resolve(import.meta.dirname, '..')
   const [setup, bootstrap] = await Promise.all([
