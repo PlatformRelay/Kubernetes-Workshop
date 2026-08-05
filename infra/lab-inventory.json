@@ -423,6 +423,25 @@
       "scheduleSmoke": true
     },
     {
+      "id": "day-3/21-gitops-flux",
+      "labPath": "labs/day-3/21-gitops-flux.md",
+      "solutionPath": "labs/day-3/21-gitops-flux.solution.md",
+      "section": "S21",
+      "sectionTitle": "S21 GitOps (Flux)",
+      "day": 3,
+      "environment": "kind ✓ (installs Flux) / shared NS: read-only",
+      "addons": "**Flux**",
+      "pinned": "Flux [`install.yaml` — **unpinned (`latest` release)**](https://github.com/fluxcd/flux2/releases/latest/download/install.yaml) (live smoke saw **v2.9.3**); app repo [`argoproj/argocd-example-apps` guestbook](https://github.com/argoproj/argocd-example-apps.git) — same hostless source as Argo variant; evidence [`us-gitops-choice-c-flux-live-smoke.md`](./validation-evidence/us-gitops-choice-c-flux-live-smoke.md)",
+      "validationState": "kind-smoke",
+      "profile": "day-3",
+      "privilege": "cluster-admin",
+      "estimatedDurationMin": 25,
+      "automationTier": "kind-addon",
+      "cleanupCommand": "kubectl -n flux-system delete kustomization guestbook",
+      "prSmoke": false,
+      "scheduleSmoke": true
+    },
+    {
       "id": "day-3/22-operator-concept",
       "labPath": "labs/day-3/22-operator-concept.md",
       "solutionPath": "labs/day-3/22-operator-concept.solution.md",
