@@ -27,6 +27,7 @@ export const DOCS = [
   'docs/syllabus.md',
   'docs/facilitator-guide.md',
   'docs/beta-limitations.md',
+  'docs/roadmap.md',
   'docs/validation-matrix.md',
   'docs/setup.md',
   'docs/windows-wsl2.md',

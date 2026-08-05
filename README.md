@@ -36,6 +36,7 @@ telemetry.
 | **Quizzes** | [`quiz/README.md`](./quiz/README.md) (portable prototype; FOSS live host still open) |
 | **Run slides locally** | [`docs/run-slides.md`](./docs/run-slides.md) (Node.js + pnpm) |
 | **Known limitations** | [`docs/beta-limitations.md`](./docs/beta-limitations.md) (S24 stub; add-on smoke backlog) |
+| **Roadmap** | [`docs/roadmap.md`](./docs/roadmap.md) (quizzes, GitOps choice, OpenTelemetry — no dates) |
 
 ![Animated tour of the workshop deck — real slides stepping through their click animations](docs/images/deck-showcase.gif)
 

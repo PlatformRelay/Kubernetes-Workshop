@@ -87,6 +87,7 @@ nav:
   - Downloads & previews:
       - Live decks & PDFs: downloads.md
   - Project:
+      - Roadmap: roadmap.md
       - Release process: release.md
       - Validation matrix: validation-matrix.md
       - Rehearsal checklist: rehearsal-checklist.md
