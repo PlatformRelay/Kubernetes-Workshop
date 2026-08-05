@@ -38,6 +38,10 @@ const props = withDefaults(
       | 'kubernetes-horizontal-white-text'
       | 'cncf-icon-white'
       | 'cncf-white'
+      | 'argo-icon-white'
+      | 'argo-icon-color'
+      | 'flux-icon-white'
+      | 'flux-icon-color'
     /** Official Kubernetes resource glyph. Takes precedence over `name`. */
     kind?: K8sKind
     /** Resource glyph style: with type-label text or bare hexagon. */
