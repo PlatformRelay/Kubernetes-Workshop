@@ -32,3 +32,7 @@ test('docs landing and run-slides exist', () => {
   assert.ok(existsSync(resolve(ROOT, 'docs/run-slides.md')))
   assert.ok(existsSync(resolve(ROOT, 'docs/downloads.md')))
 })
+
+test('public roadmap page exists for MkDocs', () => {
+  assert.ok(existsSync(resolve(ROOT, 'docs/roadmap.md')))
+})

@@ -42,6 +42,15 @@ Pre-release tags (name contains `-`, e.g. `v0.2.0-beta.1`) set
 
 ## How to cut
 
+### Before you tag (checklist)
+
+- [ ] `main` tip is the commit you intend, and CI is green for that tip.
+- [ ] Re-verify statuses on the public [`roadmap.md`](./roadmap.md) page
+      (`in progress` / `planned` / `exploring`) against what is actually on
+      `main` — no dates, no commitment language, nothing listed as shipped that
+      is not merged. Update the page in the same release window if anything
+      drifted.
+
 ```bash
 # Confirm main is the commit you intend (and CI is green for that tip).
 git checkout main && git pull --ff-only
