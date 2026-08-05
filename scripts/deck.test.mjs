@@ -5,9 +5,15 @@ import { join } from 'node:path'
 import { describe, it } from 'node:test'
 
 import {
+  DEFAULT_GITOPS,
+  applyGitopsVariant,
+  assertExactlyOneGitopsVariant,
   canonicalDayTotals,
   findGeneratedDrift,
+  normalizeGitops,
   renderDeck,
+  renderGeneratedDecks,
+  sectionPath,
   sections as workshopSections,
   validateCanonicalScheduleTables,
   validateFrontDoorFacts,
@@ -495,7 +501,41 @@ describe('deck selection', () => {
   it('accepts pnpm argument separators without changing the selection', () => {
     assert.deepEqual(
       parseSelection(['--', '--day', '2']),
-      { type: 'day', value: '2', action: 'dev', list: false, dryRun: false, help: false },
+      {
+        type: 'day',
+        value: '2',
+        action: 'dev',
+        list: false,
+        dryRun: false,
+        help: false,
+        gitops: DEFAULT_GITOPS,
+        gitopsExplicit: false,
+      },
+    )
+  })
+
+  it('accepts an explicit --gitops flux flag alongside --day', () => {
+    assert.deepEqual(
+      parseSelection(['--day', '3', '--gitops', 'flux']),
+      {
+        type: 'day',
+        value: '3',
+        action: 'dev',
+        list: false,
+        dryRun: false,
+        help: false,
+        gitops: 'flux',
+        gitopsExplicit: true,
+      },
+    )
+  })
+
+  it('rejects unknown or duplicate --gitops values', () => {
+    assert.throws(() => parseSelection(['--day', '3', '--gitops', 'both']), /gitops/i)
+    assert.throws(() => parseSelection(['--day', '3', '--gitops']), /gitops/i)
+    assert.throws(
+      () => parseSelection(['--day', '3', '--gitops', 'argocd', '--gitops', 'flux']),
+      /gitops/i,
     )
   })
 
@@ -535,5 +575,99 @@ describe('deck CI contract', () => {
     ]) {
       assert.match(workflow, new RegExp(`^\\s*${command}$`, 'm'))
     }
+  })
+})
+
+describe('S21 GitOps section variant (US-GITOPS-CHOICE-A)', () => {
+  it('defaults to argocd and keeps the existing S21 source path', () => {
+    assert.equal(normalizeGitops(), 'argocd')
+    assert.equal(normalizeGitops(undefined), 'argocd')
+    assert.equal(DEFAULT_GITOPS, 'argocd')
+
+    const resolved = applyGitopsVariant(workshopSections)
+    const s21 = resolved.find((section) => section.id === 'S21')
+    assert.equal(s21.slug, 'gitops')
+    assert.equal(s21.title, 'GitOps with Argo CD')
+    assert.equal(sectionPath(s21), './pages/S21-gitops/index.md')
+  })
+
+  it('keeps default regenerated decks byte-identical to the committed files', () => {
+    const expected = renderGeneratedDecks(workshopSections)
+    const root = join(import.meta.dirname, '..')
+    for (const [file, content] of expected) {
+      assert.equal(
+        readFileSync(join(root, file), 'utf8'),
+        content,
+        `${file} drifted from default (argocd) render`,
+      )
+    }
+    assert.deepEqual(findGeneratedDrift(expected, { repoRoot: root }), [])
+  })
+
+  it('selects the flux variant path when gitops=flux', () => {
+    const resolved = applyGitopsVariant(workshopSections, 'flux')
+    const s21 = resolved.find((section) => section.id === 'S21')
+    assert.equal(s21.slug, 'gitops-flux')
+    assert.equal(s21.title, 'GitOps with Flux')
+    assert.equal(sectionPath(s21), './pages/S21-gitops-flux/index.md')
+
+    const day3 = renderGeneratedDecks(workshopSections, { gitops: 'flux' }).get('slides-day-3.md')
+    assert.match(day3, /src: \.\/pages\/S21-gitops-flux\/index\.md/)
+    assert.doesNotMatch(day3, /src: \.\/pages\/S21-gitops\/index\.md/)
+  })
+
+  it('rejects both or neither GitOps variants in a deck that includes S21', () => {
+    const both = `
+# S21 · GitOps with Argo CD · recommended · Day 3 · authored
+src: ./pages/S21-gitops/index.md
+---
+# S21 · GitOps with Flux · recommended · Day 3 · authored
+src: ./pages/S21-gitops-flux/index.md
+`
+    assert.throws(() => assertExactlyOneGitopsVariant(both), /both.*gitops|gitops.*both/i)
+
+    const neither = `
+# S21 · GitOps · recommended · Day 3 · authored
+src: ./pages/S21-missing/index.md
+`
+    assert.throws(() => assertExactlyOneGitopsVariant(neither), /neither.*gitops|gitops.*neither/i)
+
+    const argocdOnly = `
+# S21 · GitOps with Argo CD · recommended · Day 3 · authored
+src: ./pages/S21-gitops/index.md
+`
+    assert.equal(assertExactlyOneGitopsVariant(argocdOnly), true)
+
+    const noS21 = `
+# S05 · Pod · core · Day 1 · authored
+src: ./pages/S05-pod/index.md
+`
+    assert.equal(assertExactlyOneGitopsVariant(noS21), true)
+  })
+
+  it('rejects invalid gitops tool values (two tools only)', () => {
+    assert.throws(() => normalizeGitops('both'), /argocd|flux/i)
+    assert.throws(() => normalizeGitops(''), /argocd|flux/i)
+    assert.throws(() => normalizeGitops('tekton'), /argocd|flux/i)
+  })
+
+  it('fails clearly when the flux variant source is missing', () => {
+    const root = mkdtempSync(join(tmpdir(), 'workshop-gitops-'))
+    mkdirSync(join(root, 'pages', 'S21-gitops'), { recursive: true })
+    writeFileSync(join(root, 'pages', 'S21-gitops', 'index.md'), '# argocd\n')
+
+    const fluxManifest = applyGitopsVariant([
+      section('S21', {
+        slug: 'gitops',
+        title: 'GitOps with Argo CD',
+        day: 3,
+        tier: 'recommended',
+      }),
+    ], 'flux')
+
+    assert.throws(
+      () => validateManifest(fluxManifest, { repoRoot: root }),
+      /S21-gitops-flux|flux variant|missing section source.*S21/i,
+    )
   })
 })

@@ -10,6 +10,7 @@ import {
   INVENTORY_PATH,
   buildInventory,
   classifyAutomationTier,
+  mapDeliveryLabs,
   parseMatrixRows,
   renderInventory,
   selectLabs,
@@ -224,6 +225,24 @@ test('selectLabs filters pr-day1 and schedule shards', () => {
     day2.map((lab) => lab.id),
     ['day-2/09-gateway-api'],
   );
+});
+
+test('mapDeliveryLabs keeps exactly one S21 GitOps lab variant', () => {
+  const labs = [
+    { labPath: 'labs/day-3/20-helm.md', section: 'S20' },
+    { labPath: 'labs/day-3/21-gitops.md', section: 'S21' },
+    { labPath: 'labs/day-3/21-gitops-flux.md', section: 'S21' },
+    { labPath: 'labs/day-3/22-operator-concept.md', section: 'S22' },
+  ];
+  assert.deepEqual(
+    mapDeliveryLabs(labs).map((lab) => lab.labPath),
+    ['labs/day-3/20-helm.md', 'labs/day-3/21-gitops.md', 'labs/day-3/22-operator-concept.md'],
+  );
+  assert.deepEqual(
+    mapDeliveryLabs(labs, { gitops: 'flux' }).map((lab) => lab.labPath),
+    ['labs/day-3/20-helm.md', 'labs/day-3/21-gitops-flux.md', 'labs/day-3/22-operator-concept.md'],
+  );
+  assert.throws(() => mapDeliveryLabs(labs, { gitops: 'both' }), /argocd|flux/i);
 });
 
 test('renderInventory is stable JSON and real repo inventory covers all matrix labs', () => {
