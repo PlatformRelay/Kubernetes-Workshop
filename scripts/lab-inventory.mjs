@@ -31,7 +31,7 @@ export const AUTOMATION_TIERS = Object.freeze([
 const PROFILE_HINTS = [
   { re: /contour|ingress controller/i, profile: 'day-1' },
   { re: /gateway api|envoy gateway|metrics-server/i, profile: 'day-2' },
-  { re: /argo\s*cd|cert-manager|kube-prometheus|prometheus operator/i, profile: 'day-3' },
+  { re: /argo\s*cd|flux|cert-manager|kube-prometheus|prometheus operator/i, profile: 'day-3' },
 ];
 
 function stripTicks(value) {
