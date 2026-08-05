@@ -23,11 +23,14 @@ project-overview documents — know where each one takes you:
 > *Running the room?* → you're in the right place; pair this with the
 > [syllabus](./syllabus.md). *Contributing content?* → [`../AGENT.md`](../AGENT.md).
 
-> **Honesty up front.** The environment automation described in ADR 0006 — an `infra/`
-> tree with `make kind-up` / `make ns-provision` verbs — is **planned, not yet built**.
-> This guide documents the **manual path that works today** (the `kubectl apply` / `helm
-> install` commands the labs already ship) and marks every future convenience explicitly
-> as *planned*. Do not expect a one-command setup at delivery time; provision by hand.
+> **Honesty up front.** Of the environment automation described in ADR 0006, **local kind
+> automation is shipped** — `./workshop up` / `make kind-up` (`infra/kind/cluster.sh`).
+> **Shared-cluster namespace provisioning is still planned** — `make ns-provision` /
+> `infra/shared-cluster/` does not exist yet, so this guide documents the **manual path
+> that works today** (the `kubectl` / `helm` commands in
+> [Shared-cluster provisioning](#shared-cluster-provisioning-manual-today)) and marks that
+> future convenience explicitly as *planned*. Do not expect a one-command shared-cluster
+> setup at delivery time; provision attendee namespaces by hand.
 
 ## Who runs this, and what you commit to
 
