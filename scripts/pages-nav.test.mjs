@@ -5,7 +5,7 @@ import assert from 'node:assert/strict'
 import { spawn } from 'node:child_process'
 import { createServer } from 'node:http'
 import { mkdirSync, readFileSync, existsSync, writeFileSync, rmSync, statSync } from 'node:fs'
-import { dirname, extname, join, resolve, sep } from 'node:path'
+import { dirname, extname, join, resolve, sep, relative, isAbsolute } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import test from 'node:test'
 
@@ -46,6 +46,15 @@ function run(cmd, args, opts = {}) {
   })
 }
 
+
+function resolveContained(rootDir, candidate) {
+  const resolved = resolve(candidate)
+  const rel = relative(rootDir, resolved)
+  if (rel.startsWith('..') || isAbsolute(rel))
+    return null
+  return resolved
+}
+
 function serveStatic(root, basePrefix) {
   const rootDir = resolve(root)
   // Trailing separator so `startsWith` can't be fooled by a sibling dir that
@@ -63,9 +72,13 @@ function serveStatic(root, basePrefix) {
     let url = req.url.split('?')[0]
     if (url.startsWith(basePrefix))
       url = url.slice(basePrefix.length) || '/'
-    // GOOD: resolve then verify containment before any fs access — CodeQL
-    // js/path-injection recognized sanitizer shape (resolve + startsWith(ROOT)).
-    let file = resolve(rootDir, `.${decodeURIComponent(url)}`)
+    let file = resolveContained(rootDir, resolve(rootDir, `.${decodeURIComponent(url)}`))
+    if (file === null) {
+      res.writeHead(403)
+      res.end('forbidden')
+      return
+    }
+    // Sibling-prefix guard (e.g. `${rootDir}-evil`); resolveContained covers traversal.
     if (file !== rootDir && !file.startsWith(rootWithSep)) {
       res.writeHead(403)
       res.end('forbidden')
@@ -80,18 +93,24 @@ function serveStatic(root, basePrefix) {
         return
       }
     }
-    if (file !== rootDir && !file.startsWith(rootWithSep)) {
+    const safePath = resolveContained(rootDir, file)
+    if (safePath === null) {
       res.writeHead(403)
       res.end('forbidden')
       return
     }
-    if (!existsSync(file) || statSync(file).isDirectory()) {
+    if (safePath !== rootDir && !safePath.startsWith(rootWithSep)) {
+      res.writeHead(403)
+      res.end('forbidden')
+      return
+    }
+    if (!existsSync(safePath) || statSync(safePath).isDirectory()) {
       res.writeHead(404)
       res.end('missing')
       return
     }
-    res.writeHead(200, { 'content-type': mime[extname(file)] || 'application/octet-stream' })
-    res.end(readFileSync(file))
+    res.writeHead(200, { 'content-type': mime[extname(safePath)] || 'application/octet-stream' })
+    res.end(readFileSync(safePath))
   })
   return new Promise((resolveP) => {
     server.listen(0, '127.0.0.1', () => {
