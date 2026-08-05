@@ -34,19 +34,19 @@ here is invented — every version/URL is cited from the repo as it ships today.
 | State | Meaning |
 | --- | --- |
 | `server-dry-run` | The lab's apply-able manifests are documented as **server-dry-run-clean** against a live cluster per the repo's status notes (roadmap M4/M5 progress + AR-05). **Not** re-verified in a clean rehearsal here, and **no** add-on install or behaviour/timing was executed. |
-| `kind-smoke` | The lab ran end-to-end on a clean kind cluster and a maintainer recorded that result. Automated smoke (US-ENV-4A) may produce evidence under [`docs/validation-evidence/`](./validation-evidence/) but **must not** auto-promote rows here. **No lab is in this state yet.** |
+| `kind-smoke` | The lab ran end-to-end on a clean kind cluster and a maintainer recorded that result. Automated smoke (US-ENV-4A) may produce evidence under [`docs/validation-evidence/`](./validation-evidence/) but **must not** auto-promote rows here. First row: Flux S21 variant ([receipt](./validation-evidence/us-gitops-choice-c-flux-live-smoke.md)). |
 | `unrun` | No dry-run applies (local/read-only labs with no apply step), **or** the apply-able part exists but the cluster-wide add-on install / full behaviour has not been executed end-to-end in a clean environment. |
 | `deferred` | The section is not schedulable because its paired slides and lab have not met the authoring contract. |
 
-> **Honesty rule (US-BETA-3 / AR-05).** No lab is marked `validated`, and none is
-> `kind-smoke`. Builds and dry-runs prove **syntax**, not behaviour. Per roadmap
+> **Honesty rule (US-BETA-3 / AR-05).** No lab is marked `validated`. Nearly all
+> authored labs remain `server-dry-run` or `unrun` — builds and dry-runs prove
+> **syntax**, not behaviour. The Flux S21 variant is the exception with a
+> maintainer-recorded disposable-cluster pass (`kind-smoke`; see
+> [`us-gitops-choice-c-flux-live-smoke.md`](./validation-evidence/us-gitops-choice-c-flux-live-smoke.md)).
+> Per roadmap
 > [M7 rehearsal debt](./facilitator-guide.md#rehearsal-debt-read-before-you-teach),
-> the workshop has **not** had a full clean-environment rehearsal: the `kind` add-on
-> installs, controller/CRD timings, and the verbatim `describe`/error strings in spoilers
-> have **not** been run end-to-end. Timings and behaviour are **not** claimed here until
-> rehearsed under US-BETA-6. Authored labs are therefore `server-dry-run` or `unrun`;
-> the unauthored S24 stub is `deferred`, which
-> reconciles with M7.
+> the workshop has **not** had a full clean-environment pedagogical rehearsal
+> (US-BETA-6). The unauthored S24 stub is `deferred`.
 
 **Traceability (N1).** Every row's validation-state assignment is auditable against a
 named source: `server-dry-run` rows trace to the roadmap M4/M5 per-section progress notes
@@ -108,6 +108,7 @@ labs**, not here.
 | [`day-3/19-rbac.md`](../labs/day-3/19-rbac.md) | S19 RBAC | namespace ✓ / kind ✓ | None | image `ghcr.io/platformrelay/workshop-web:v1` (reader-target workload) | `unrun` |
 | [`day-3/20-helm.md`](../labs/day-3/20-helm.md) | S20 Helm | namespace ✓ / kind ✓ | None (Helm CLI v3.8+ on laptop) | Helm CLI ≥ v3.8 (laptop tool); chart renders the Day-1 `web` app | `server-dry-run` |
 | [`day-3/21-gitops.md`](../labs/day-3/21-gitops.md) | S21 GitOps (Argo CD) | kind ✓ (installs Argo CD) / shared NS: read-only | **Argo CD** | Argo CD [`install.yaml` — **unpinned (`stable` branch)**](https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml); app repo [`argoproj/argocd-example-apps` guestbook](https://github.com/argoproj/argocd-example-apps.git) — **see defect D3** | `unrun` |
+| [`day-3/21-gitops-flux.md`](../labs/day-3/21-gitops-flux.md) | S21 GitOps (Flux) | kind ✓ (installs Flux) / shared NS: read-only | **Flux** | Flux [`install.yaml` — **unpinned (`latest` release)**](https://github.com/fluxcd/flux2/releases/latest/download/install.yaml) (live smoke saw **v2.9.3**); app repo [`argoproj/argocd-example-apps` guestbook](https://github.com/argoproj/argocd-example-apps.git) — same hostless source as Argo variant; evidence [`us-gitops-choice-c-flux-live-smoke.md`](./validation-evidence/us-gitops-choice-c-flux-live-smoke.md) | `kind-smoke` |
 | [`day-3/22-operator-concept.md`](../labs/day-3/22-operator-concept.md) | S22 Operator pattern | kind ✓ (self-install) / namespace: read-only | **cert-manager** | cert-manager [`cert-manager.yaml` v1.21.0](https://github.com/cert-manager/cert-manager/releases/download/v1.21.0/cert-manager.yaml); images `quay.io/jetstack/*` | `unrun` |
 | [`day-3/23-prometheus.md`](../labs/day-3/23-prometheus.md) | S23 Prometheus Operator | kind ✓ (self-install stack) / namespace: read-only | **kube-prometheus-stack** (Prometheus Operator + Prometheus + Grafana) | [`prometheus-community` Helm repo](https://prometheus-community.github.io/helm-charts); **chart version unpinned** (`helm install`, no `--version`); app image `quay.io/brancz/prometheus-example-app:v0.6.0` — **see defect D4** | `unrun` |
 | [`day-3/24-kubebuilder.md`](../labs/day-3/24-kubebuilder.md) | S24 Operator dev (kubebuilder) † | kind-only · advanced | **kubebuilder toolchain** (Go + kubebuilder) — *aspirational* | none pinned (**deferred stub**, unauthored) | `deferred` |
@@ -131,6 +132,7 @@ same shape.
 | **S16** Autoscaling (HPA) | `kubectl apply -f` metrics-server `components.yaml` **+ kind `--kubelet-insecure-tls` patch** (kind's kubelet serves a self-signed cert). | Remove the Pod's `requests.cpu` → HPA `TARGETS` goes **`<unknown>`** and replicas freeze. Distinguish this from **metrics-server-down** (also `<unknown>`, different root cause). |
 | **S18** NetworkPolicy | On kind, current **kindnet** enforces (kube-network-policies); **Step 2 is an enforcement self-test** with a **Calico v3.28.2 fallback** if the CNI doesn't enforce. | A `default-deny` ingress makes traffic **hang and time out** (`curl` exit **28**), *not* "connection refused" — and DNS/egress stay up (exit 28 ≠ exit 6), proving ingress-only scope. |
 | **S21** GitOps (Argo CD) | `kubectl create namespace argocd` then `kubectl apply -n argocd --server-side -f` Argo CD `stable` `install.yaml`; apply the public `guestbook` `Application`. | Hand-scale a managed resource (drift) → Argo CD **self-heals** it back to Git. Set `selfHeal: false` → the app stays **OutOfSync**, proving detection ≠ correction. |
+| **S21** GitOps (Flux) | `kubectl apply --server-side -f` Flux `latest` `install.yaml`; apply public guestbook `GitRepository` + `Kustomization`. | Hand-scale a managed resource (drift) → Flux **reconciles** it back to Git. Set `spec.suspend: true` → drift **stays** (`selfHeal: false` analog). |
 | **S22** Operator pattern | `kubectl apply -f` cert-manager `cert-manager.yaml` **v1.21.0** (CRDs + controller + webhook). | Declare a `Certificate` → controller reconciles it into a `Secret`; **delete that Secret** → the controller **puts it back** (the reconcile loop over a CRD it invented). |
 | **S23** Prometheus Operator | `helm repo add prometheus-community …` then `helm install monitoring prometheus-community/kube-prometheus-stack` into a `monitoring` namespace. | Break the `ServiceMonitor` with a **mismatched label selector** → the target never appears on Prometheus `/targets`; fix the selector → target goes **UP**; finish with one PromQL query. |
 | **S25** Security & pod escape | **No cluster add-on.** Canonical path = a throwaway **kind** cluster the learner owns; every offensive step is gated by **`context-check.sh`** (exits non-zero unless the context is `kind-…`). | A privileged/hostPath Pod performs a single **benign read** (`cat /host/etc/os-release`) to prove host filesystem access — the "escape" — then the lab hardens the Pod so the same read fails. |
