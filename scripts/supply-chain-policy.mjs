@@ -448,6 +448,7 @@ async function checkRemoteInputs(root, exceptionById, errors) {
     path.join(root, 'Makefile'),
     path.join(root, 'package.json'),
     path.join(root, 'mise.toml'),
+    path.join(root, 'mise.facilitator.toml'),
   ].filter((file) => {
     if (/\.test\.(?:mjs|js|ts|py)$/.test(file)) return false
     if (path.basename(file) === 'supply-chain-policy.mjs') return false
@@ -578,22 +579,35 @@ async function checkRemoteInputs(root, exceptionById, errors) {
   }
 }
 
+// Every mise lockfile at the repo root, not just the participant one: config
+// environments (MISE_ENV=facilitator → mise.facilitator.toml) keep their own
+// lockfile, and an unchecked lockfile is an unchecked download path.
+async function miseLockNames(root) {
+  const entries = await readdir(root, { withFileTypes: true })
+  return entries
+    .filter((entry) => entry.isFile() && /^mise(?:\.[^.]+)?\.lock$/.test(entry.name))
+    .map((entry) => entry.name)
+    .sort()
+}
+
 async function checkMiseLock(root, errors) {
-  let contents
-  try {
-    contents = await readFile(path.join(root, 'mise.lock'), 'utf8')
-  } catch (error) {
-    if (error.code === 'ENOENT') return
-    throw error
-  }
-  let hasChecksum = false
-  contents.split(/\r?\n/).forEach((line, index) => {
-    if (line.startsWith('[')) hasChecksum = false
-    if (/^checksum\s*=\s*"sha256:[0-9a-f]{64}"$/i.test(line)) hasChecksum = true
-    if (/^url\s*=\s*"https?:\/\//.test(line) && !hasChecksum) {
-      errors.push(`mise.lock:${index + 1}: mise.lock URL without adjacent sha256 checksum`)
+  for (const name of await miseLockNames(root)) {
+    let contents
+    try {
+      contents = await readFile(path.join(root, name), 'utf8')
+    } catch (error) {
+      if (error.code === 'ENOENT') continue
+      throw error
     }
-  })
+    let hasChecksum = false
+    contents.split(/\r?\n/).forEach((line, index) => {
+      if (line.startsWith('[')) hasChecksum = false
+      if (/^checksum\s*=\s*"sha256:[0-9a-f]{64}"$/i.test(line)) hasChecksum = true
+      if (/^url\s*=\s*"https?:\/\//.test(line) && !hasChecksum) {
+        errors.push(`${name}:${index + 1}: mise.lock URL without adjacent sha256 checksum`)
+      }
+    })
+  }
 }
 
 export async function checkSupplyChainPolicy(root = process.cwd(), options = {}) {

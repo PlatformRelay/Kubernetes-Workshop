@@ -17,6 +17,11 @@
 # The lockfile is authoritative: `mise install --locked` (used in CI and by
 # ./workshop under WORKSHOP_NONINTERACTIVE=1) fails if a tool has no pre-resolved
 # entry for the current platform, so drift is caught, not silently installed.
+#
+# PARTICIPANT TOOLCHAIN ONLY. The tools that build and serve the slide deck
+# (Node, pnpm) are the facilitator's, and live in `mise.facilitator.toml` behind
+# MISE_ENV=facilitator with its own `mise.facilitator.lock`. This file is what
+# `./workshop up` installs, so keep it to what a participant needs for a lab.
 
 [settings]
 # Write/refresh mise.lock on install so checksums stay pinned across platforms.
