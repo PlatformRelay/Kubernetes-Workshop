@@ -35,11 +35,18 @@ export const DAY_3_LABS = [
   'labs/day-3/19-rbac.md',
   'labs/day-3/20-helm.md',
   'labs/day-3/21-gitops.md',
+  'labs/day-3/21-gitops-flux.md',
   'labs/day-3/22-operator-concept.md',
   'labs/day-3/23-prometheus.md',
   'labs/day-3/25-pod-escape.md',
   'labs/day-3/26-capstone.md',
 ];
+
+/** S21 GitOps tool variants — both stay contracted; delivery inventory picks one (slice A). */
+export const GITOPS_VARIANT_LABS = Object.freeze({
+  argocd: 'labs/day-3/21-gitops.md',
+  flux: 'labs/day-3/21-gitops-flux.md',
+});
 
 /**
  * Reviewed exceptions: paths present under labs/ but excluded from CONTRACTED_LABS.
@@ -609,6 +616,82 @@ export function auditDayThreeCleanupTruth(repoRoot = REPO_ROOT) {
       errors.push(`${path}: namespace deletion must not be line-split to bypass unsafeCommands`);
     }
   }
+  return errors;
+}
+
+/**
+ * Both S21 GitOps variants must keep mirrored teaching beats under lab-contract:v1.
+ * Delivery maps exactly one via mapDeliveryLabs; contract audits always cover both.
+ */
+export function auditGitopsVariantStructure(repoRoot = REPO_ROOT) {
+  const errors = [];
+  const argocdPath = GITOPS_VARIANT_LABS.argocd;
+  const fluxPath = GITOPS_VARIANT_LABS.flux;
+
+  for (const path of [argocdPath, fluxPath]) {
+    if (!DAY_3_LABS.includes(path)) {
+      errors.push(`${path}: GitOps variant must remain in DAY_3_LABS`);
+    }
+    if (!CONTRACTED_LABS.includes(path)) {
+      errors.push(`${path}: GitOps variant must remain in CONTRACTED_LABS`);
+    }
+    const absolute = resolve(repoRoot, path);
+    if (!existsSync(absolute)) {
+      errors.push(`${path}: missing participant lab`);
+      continue;
+    }
+    const solution = path.replace(/\.md$/, '.solution.md');
+    if (!existsSync(resolve(repoRoot, solution))) {
+      errors.push(`${path}: missing sibling solution ${solution}`);
+    }
+    const text = readFileSync(absolute, 'utf8');
+    if (!text.includes('<!-- lab-contract:v1 -->')) {
+      errors.push(`${path}: missing contract marker: <!-- lab-contract:v1 -->`);
+    }
+    if (!/kind\s*✓/i.test(text) || !/read-only/i.test(text)) {
+      errors.push(`${path}: Environment must state kind ✓ and a read-only shared-namespace path`);
+    }
+    if (!/argoproj\/argocd-example-apps|guestbook/i.test(text)) {
+      errors.push(`${path}: must use the hostless public guestbook example repo`);
+    }
+    if (!/## Stretch \(optional\)/i.test(text) || !/fork/i.test(text)) {
+      errors.push(`${path}: must include an optional fork-and-push Stretch`);
+    }
+  }
+
+  const argocdAbs = resolve(repoRoot, argocdPath);
+  if (existsSync(argocdAbs)) {
+    const text = readFileSync(argocdAbs, 'utf8');
+    for (const token of ['kind: Application', 'selfHeal', 'syncPolicy']) {
+      if (!text.includes(token)) {
+        errors.push(`${argocdPath}: missing Argo CD beat token: ${token}`);
+      }
+    }
+    if (!/selfHeal:\s*false|selfHeal.*off|selfHeal.*\*\*off\*\*/i.test(text)) {
+      errors.push(`${argocdPath}: must prove selfHeal off ⇒ drift stays`);
+    }
+  }
+
+  const fluxAbs = resolve(repoRoot, fluxPath);
+  if (existsSync(fluxAbs)) {
+    const text = readFileSync(fluxAbs, 'utf8');
+    for (const token of [
+      'kind: GitRepository',
+      'kind: Kustomization',
+      'source.toolkit.fluxcd.io',
+      'kustomize.toolkit.fluxcd.io',
+      'suspend',
+      'flux2/releases',
+    ]) {
+      if (!text.includes(token)) {
+        errors.push(`${fluxPath}: missing Flux beat token: ${token}`);
+      }
+    }
+    if (!/suspend.*drift|drift.*suspend|suspend.*stay|stays? at 5/i.test(text)) {
+      errors.push(`${fluxPath}: must prove suspend ⇒ drift stays (selfHeal:false analog)`);
+    }
+  }
+
   return errors;
 }
 
