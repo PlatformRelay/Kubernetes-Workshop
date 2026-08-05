@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { mkdtempSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, it } from 'node:test'
@@ -669,5 +669,53 @@ src: ./pages/S05-pod/index.md
       () => validateManifest(fluxManifest, { repoRoot: root }),
       /S21-gitops-flux|flux variant|missing section source.*S21/i,
     )
+  })
+})
+
+describe('S21 GitOps Flux section variant (US-GITOPS-CHOICE-B)', () => {
+  const root = join(import.meta.dirname, '..')
+  const argocdPath = join(root, 'pages', 'S21-gitops', 'index.md')
+  const fluxPath = join(root, 'pages', 'S21-gitops-flux', 'index.md')
+
+  function slideSeparatorCount(markdown) {
+    return markdown.split(/^---\s*$/m).length - 1
+  }
+
+  it('authors the flux section source and validates the flux manifest path', () => {
+    assert.equal(existsSync(fluxPath), true, 'pages/S21-gitops-flux/index.md must exist')
+    const resolved = applyGitopsVariant(workshopSections, 'flux')
+    assert.equal(validateManifest(resolved, { repoRoot: root }), true)
+    assert.equal(
+      validateSectionFrontmatter(
+        resolved.find((section) => section.id === 'S21'),
+        readFileSync(fluxPath, 'utf8'),
+      ),
+      true,
+    )
+  })
+
+  it('keeps slide-separator count within ±1 of the Argo CD variant', () => {
+    const argocd = slideSeparatorCount(readFileSync(argocdPath, 'utf8'))
+    const flux = slideSeparatorCount(readFileSync(fluxPath, 'utf8'))
+    assert.ok(
+      Math.abs(flux - argocd) <= 1,
+      `flux separators ${flux} vs argocd ${argocd} (parity ±1)`,
+    )
+  })
+
+  it('covers the Flux beat vocabulary (CRDs, prune/suspend, CLI, OpenGitOps callout)', () => {
+    const flux = readFileSync(fluxPath, 'utf8')
+    assert.match(flux, /controller="Flux"/)
+    assert.match(flux, /source\.toolkit\.fluxcd\.io/)
+    assert.match(flux, /kustomize\.toolkit\.fluxcd\.io/)
+    assert.match(flux, /helm\.toolkit\.fluxcd\.io/)
+    assert.match(flux, /\bGitRepository\b/)
+    assert.match(flux, /\bKustomization\b/)
+    assert.match(flux, /\bHelmRelease\b/)
+    assert.match(flux, /\bprune:\s*true\b/)
+    assert.match(flux, /\bsuspend\b/)
+    assert.match(flux, /flux (install|bootstrap|get|reconcile|suspend|resume)/)
+    assert.match(flux, /Argo CD/)
+    assert.match(flux, /labs\/day-3\/21-gitops-flux\.md/)
   })
 })
