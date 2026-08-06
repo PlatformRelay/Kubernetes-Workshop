@@ -1,6 +1,6 @@
 ---
 layout: section-cover
-image: /covers/section-06-the-herd.png
+image: /covers/section-06-the-herd.webp
 day: Day 1
 section: '06'
 tier: core

@@ -1,6 +1,6 @@
 ---
 layout: section-cover
-image: /covers/section-16-elastic-herd.png
+image: /covers/section-16-elastic-herd.webp
 day: Day 2
 section: '16'
 tier: optional

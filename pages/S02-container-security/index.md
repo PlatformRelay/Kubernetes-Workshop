@@ -1,6 +1,6 @@
 ---
 layout: section-cover
-image: /covers/section-02-customs-inspection.png
+image: /covers/section-02-customs-inspection.webp
 day: Day 1
 section: '02'
 tier: recommended

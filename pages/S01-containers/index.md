@@ -1,6 +1,6 @@
 ---
 layout: section-cover
-image: /covers/section-01-wild-crates.png
+image: /covers/section-01-wild-crates.webp
 day: Day 1
 section: '01'
 tier: recommended

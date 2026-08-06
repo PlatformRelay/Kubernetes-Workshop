@@ -1,6 +1,6 @@
 ---
 layout: section-cover
-image: /covers/section-03-floating-blueprint-palace.png
+image: /covers/section-03-floating-blueprint-palace.webp
 day: Day 1
 section: '03'
 tier: core

@@ -1,6 +1,6 @@
 ---
 layout: section-cover
-image: /covers/section-26-gleaming-harbour-city.png
+image: /covers/section-26-gleaming-harbour-city.webp
 day: Day 3
 section: '26'
 tier: core

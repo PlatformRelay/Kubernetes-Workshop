@@ -1,6 +1,6 @@
 ---
 layout: section-cover
-image: /covers/section-18-paddock-fences.png
+image: /covers/section-18-paddock-fences.webp
 day: Day 3
 section: '18'
 tier: recommended

@@ -1,6 +1,6 @@
 ---
 layout: section-cover
-image: /covers/section-10-scroll-library-vault.png
+image: /covers/section-10-scroll-library-vault.webp
 day: Day 2
 section: '10'
 tier: core

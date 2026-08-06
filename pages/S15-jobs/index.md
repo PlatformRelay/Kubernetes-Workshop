@@ -1,6 +1,6 @@
 ---
 layout: section-cover
-image: /covers/section-15-courier-hourglass.png
+image: /covers/section-15-courier-hourglass.webp
 day: Day 2
 section: '15'
 tier: recommended
