@@ -47,7 +47,7 @@ profile-day-1-down: ## Tear down day-1 composed components
 profile-day-2-down: ## Tear down day-2 composed components
 	@infra/addons/profile.sh day-2 --teardown
 
-profile-day-3-down: ## Tear down day-3 composed components (GITOPS=flux to match install)
+profile-day-3-down: ## Tear down day-3 composed components (auto-detects installed GitOps tool)
 	@infra/addons/profile.sh day-3 $(if $(GITOPS),--gitops $(GITOPS),) --teardown
 
 profile-gateway-envoy: ## Install Envoy Gateway profile (S09; exclusive vs Contour)

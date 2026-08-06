@@ -271,6 +271,84 @@ EOF
   ! echo "$ADDON_MARKERS" | grep -q "monitoring:kube-prometheus"
 }
 
+# --- D-F1: day-3 teardown must remove what is actually installed ------------
+
+@test "day-3 teardown without --gitops removes installed flux (auto-detect)" {
+  run "$ROOT/infra/addons/profile.sh" day-3 --gitops flux
+  [ "$status" -eq 0 ]
+
+  run "$ROOT/infra/addons/profile.sh" day-3 --teardown
+  [ "$status" -eq 0 ]
+  # shellcheck disable=SC1090
+  . "$MOCK_ROUTING_STATE"
+  # NOTE: `! cmd` never fails a bats test — use grep -c for negative asserts.
+  [ "$(echo "$ADDON_MARKERS" | grep -c "flux-system:flux")" -eq 0 ]
+  [ "$(echo "$ADDON_MARKERS" | grep -c "cert-manager:cert-manager")" -eq 0 ]
+  [ "$(echo "$ADDON_MARKERS" | grep -c "monitoring:kube-prometheus")" -eq 0 ]
+}
+
+@test "day-3 teardown --gitops argocd refuses when flux is installed" {
+  export MOCK_ROUTING_NAMESPACES="flux-system"
+  export MOCK_ADDON_MARKERS="flux-system:flux cert-manager:cert-manager monitoring:kube-prometheus"
+  export MOCK_ADDON_DEPLOYS="flux-system:source-controller"
+
+  run "$ROOT/infra/addons/profile.sh" day-3 --gitops argocd --teardown
+  [ "$status" -ne 0 ]
+  echo "$output" | grep -qi "flux"
+  echo "$output" | grep -qi "contradict\|mismatch\|refus"
+  echo "$output" | grep -qi "remediat"
+  # Refusal happens before any component teardown — nothing removed.
+  # shellcheck disable=SC1090
+  . "$MOCK_ROUTING_STATE"
+  echo "$ADDON_MARKERS" | grep -q "flux-system:flux"
+  echo "$ADDON_MARKERS" | grep -q "cert-manager:cert-manager"
+  echo "$ADDON_MARKERS" | grep -q "monitoring:kube-prometheus"
+}
+
+@test "day-3 teardown --gitops flux refuses when argocd is installed" {
+  export MOCK_ROUTING_NAMESPACES="argocd"
+  export MOCK_ADDON_MARKERS="argocd:argocd"
+  export MOCK_ADDON_DEPLOYS="argocd:argocd-server"
+
+  run "$ROOT/infra/addons/profile.sh" day-3 --gitops flux --teardown
+  [ "$status" -ne 0 ]
+  echo "$output" | grep -qi "argocd"
+  echo "$output" | grep -qi "contradict\|mismatch\|refus"
+  # shellcheck disable=SC1090
+  . "$MOCK_ROUTING_STATE"
+  echo "$ADDON_MARKERS" | grep -q "argocd:argocd"
+}
+
+@test "day-3 teardown refuses when both Argo CD and Flux are present" {
+  export MOCK_ROUTING_NAMESPACES="argocd flux-system"
+  export MOCK_ADDON_MARKERS="argocd:argocd flux-system:flux"
+
+  run "$ROOT/infra/addons/profile.sh" day-3 --teardown
+  [ "$status" -ne 0 ]
+  echo "$output" | grep -qi "both\|conflict"
+  echo "$output" | grep -qi "remediat"
+}
+
+@test "day-3 teardown skips foreign flux but removes shared components" {
+  export MOCK_ROUTING_NAMESPACES="flux-system"
+  export MOCK_ADDON_MARKERS="cert-manager:cert-manager monitoring:kube-prometheus"
+  export MOCK_ADDON_DEPLOYS="flux-system:source-controller"
+
+  run "$ROOT/infra/addons/profile.sh" day-3 --teardown
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -qi "foreign\|unowned"
+  # shellcheck disable=SC1090
+  . "$MOCK_ROUTING_STATE"
+  echo "$ADDON_DEPLOYS" | grep -q "flux-system:source-controller"
+  [ "$(echo "$ADDON_MARKERS" | grep -c "cert-manager:cert-manager")" -eq 0 ]
+  [ "$(echo "$ADDON_MARKERS" | grep -c "monitoring:kube-prometheus")" -eq 0 ]
+}
+
+@test "day-3 teardown on an empty cluster succeeds" {
+  run "$ROOT/infra/addons/profile.sh" day-3 --teardown
+  [ "$status" -eq 0 ]
+}
+
 # --- D-F2: transition refuse paths (gitops-preflight.sh) --------------------
 
 @test "transition refuses when both Argo CD and Flux are present (conflict)" {
