@@ -59,6 +59,8 @@ GitOps tools (mutually exclusive — never install Argo CD and Flux together):
 
   day-3 --gitops argocd      default S21 path (Argo CD)
   day-3 --gitops flux        Flux variant for S21
+  day-3 --teardown           auto-detects the installed GitOps tool; an explicit
+                             --gitops that contradicts the cluster fails loudly
   transition argocd|flux     safe Argo ↔ Flux switch (refuses silent dual install)
 
 Interactive gum choose is progressive enhancement; flags/non-TTY behave identically.
@@ -109,6 +111,41 @@ day3_components() {
   local tool="${GITOPS_TOOL:-argocd}"
   printf '%s\n' "$tool"
   printf '%s\n' "${DAY3_SHARED[@]}"
+}
+
+# Teardown must remove what is ACTUALLY installed, not what --gitops claims —
+# a bare `day-3 --teardown` after a Flux install must not leave Flux behind.
+# Prints the GitOps tool to tear down (empty = skip the GitOps component);
+# fails loudly on contradiction/conflict BEFORE anything is torn down.
+resolve_day3_teardown_tool() {
+  local active
+  active="$(gitops_detect)"
+  case "$active" in
+    argocd | flux)
+      if [ "${GITOPS_TOOL_EXPLICIT:-0}" = "1" ] && [ "${GITOPS_TOOL:-argocd}" != "$active" ]; then
+        addons_err "refusing teardown: --gitops ${GITOPS_TOOL} contradicts installed GitOps tool '${active}'"
+        addons_err "Remediation: ./workshop profile day-3 --gitops ${active} --teardown"
+        addons_err "  # or omit --gitops — teardown auto-detects the installed tool"
+        return 1
+      fi
+      printf '%s\n' "$active"
+      ;;
+    none)
+      addons_warn "no workshop GitOps tool detected — skipping GitOps component teardown"
+      ;;
+    foreign-argocd | foreign-flux)
+      addons_warn "foreign/unowned GitOps install detected (${active}) — not workshop-managed, leaving it in place"
+      ;;
+    conflict)
+      addons_err "cluster reports both Argo CD and Flux — refusing day-3 teardown"
+      addons_err "Remediation: manually remove one stack, or recreate the kind cluster"
+      return 1
+      ;;
+    *)
+      addons_err "unexpected GitOps detect state: ${active}"
+      return 1
+      ;;
+  esac
 }
 
 components_for_profile() {
@@ -213,10 +250,20 @@ cmd_teardown_profile() {
     return 2
   fi
 
-  # Tear down in reverse composition order.
-  while IFS= read -r comp; do
-    comps+=("$comp")
-  done < <(components_for_profile "$profile")
+  # Tear down in reverse composition order. day-3 detects the installed
+  # GitOps tool instead of trusting --gitops (which parameterizes install).
+  if [ "$profile" = "day-3" ]; then
+    local tool
+    tool="$(resolve_day3_teardown_tool)" || return 1
+    if [ -n "$tool" ]; then
+      comps+=("$tool")
+    fi
+    comps+=("${DAY3_SHARED[@]}")
+  else
+    while IFS= read -r comp; do
+      comps+=("$comp")
+    done < <(components_for_profile "$profile")
+  fi
 
   local i
   for ((i = ${#comps[@]} - 1; i >= 0; i--)); do
@@ -337,11 +384,13 @@ main() {
       --gitops)
         shift || true
         GITOPS_TOOL="$(parse_gitops_tool "${1:-}")" || return 2
-        export GITOPS_TOOL
+        GITOPS_TOOL_EXPLICIT=1
+        export GITOPS_TOOL GITOPS_TOOL_EXPLICIT
         ;;
       --gitops=*)
         GITOPS_TOOL="$(parse_gitops_tool "${1#--gitops=}")" || return 2
-        export GITOPS_TOOL
+        GITOPS_TOOL_EXPLICIT=1
+        export GITOPS_TOOL GITOPS_TOOL_EXPLICIT
         ;;
       -h | --help) usage; return 0 ;;
       *) args+=("$1") ;;
