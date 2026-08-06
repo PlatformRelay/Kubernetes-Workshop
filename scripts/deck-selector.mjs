@@ -35,6 +35,8 @@ export function parseSelection(args) {
       action = args[++i]
       if (!['dev', 'build', 'export'].includes(action))
         throw new Error(`Invalid action ${action ?? '(missing)'}; use dev, build, or export`)
+    } else if (arg.startsWith('--gitops=')) {
+      throw new Error(`Unsupported ${arg}; use --gitops <value> with exactly one of: argocd, flux`)
     } else if (arg === '--list') list = true
     else if (arg === '--dry-run') dryRun = true
     else if (arg === '--help' || arg === '-h') help = true

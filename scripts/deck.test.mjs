@@ -540,6 +540,13 @@ describe('deck selection', () => {
     )
   })
 
+  it('rejects the equals form --gitops=flux with guidance toward --gitops <value>', () => {
+    assert.throws(
+      () => parseSelection(['--day', '3', '--gitops=flux']),
+      /use --gitops <value>/i,
+    )
+  })
+
   it('rejects reversed, unknown, and malformed contiguous ranges', () => {
     for (const range of ['S03-S01', 'S00-S99', 'S00,S02']) {
       const selection = parseSelection(['--range', range])
@@ -819,5 +826,17 @@ describe('generate-decks --gitops parsing (fail closed)', () => {
     assert.equal(result.status, 1, `expected exit 1, got ${result.status}\n${result.stderr}`)
     assert.match(result.stderr, /argocd|flux/i)
     assert.doesNotMatch(result.stderr, /at .*generate-decks\.mjs:\d+/)
+  })
+
+  it('rejects the equals form --gitops=flux instead of silently defaulting to argocd', () => {
+    const result = runGenerateDecks(['--check', '--gitops=flux'])
+    assert.equal(result.status, 1, `expected exit 1, got ${result.status}\n${result.stderr}`)
+    assert.match(result.stderr, /use --gitops <value>/i)
+  })
+
+  it('rejects unknown options such as a typo of --gitops instead of exiting 0', () => {
+    const result = runGenerateDecks(['--check', '--gitpos', 'flux'])
+    assert.equal(result.status, 1, `expected exit 1, got ${result.status}\n${result.stderr}`)
+    assert.match(result.stderr, /unknown option --gitpos/i)
   })
 })

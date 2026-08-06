@@ -14,23 +14,36 @@ import {
 } from './deck-manifest.mjs'
 
 const repoRoot = resolve(import.meta.dirname, '..')
-const check = process.argv.includes('--check')
 
-function parseGitops(argv) {
-  const indexes = argv.flatMap((arg, index) => (arg === '--gitops' ? [index] : []))
-  if (indexes.length === 0)
-    return DEFAULT_GITOPS
-  if (indexes.length > 1)
-    throw new Error('Pass --gitops at most once; choose exactly one of: argocd, flux')
-  const value = argv[indexes[0] + 1]
-  if (value === undefined || value.startsWith('--'))
-    throw new Error('Missing --gitops value; use exactly one of: argocd, flux')
-  return normalizeGitops(value)
+function parseArgs(argv) {
+  let check = false
+  let gitops = DEFAULT_GITOPS
+  let gitopsSet = false
+  for (let i = 0; i < argv.length; i += 1) {
+    const arg = argv[i]
+    if (arg === '--check') {
+      check = true
+    } else if (arg === '--gitops') {
+      if (gitopsSet)
+        throw new Error('Pass --gitops at most once; choose exactly one of: argocd, flux')
+      gitopsSet = true
+      const value = argv[++i]
+      if (value === undefined || value.startsWith('--'))
+        throw new Error('Missing --gitops value; use exactly one of: argocd, flux')
+      gitops = normalizeGitops(value)
+    } else if (arg.startsWith('--gitops=')) {
+      throw new Error(`Unsupported ${arg}; use --gitops <value> with exactly one of: argocd, flux`)
+    } else {
+      throw new Error(`Unknown option ${arg}; supported: --check, --gitops <argocd|flux>`)
+    }
+  }
+  return { check, gitops }
 }
 
+let check
 let gitops
 try {
-  gitops = parseGitops(process.argv.slice(2))
+  ({ check, gitops } = parseArgs(process.argv.slice(2)))
 } catch (error) {
   console.error(`decks: ${error.message}`)
   process.exit(1)
