@@ -719,9 +719,29 @@ describe('S21 GitOps Flux section variant (US-GITOPS-CHOICE-B)', () => {
     assert.match(flux, /labs\/day-3\/21-gitops-flux\.md/)
   })
 
+  // Non-regex HTML-comment strip (indexOf walk): a single-pass regex replace is
+  // flagged by CodeQL as incomplete multi-character sanitization.
+  function stripHtmlComments(markdown) {
+    let visible = ''
+    let cursor = 0
+    while (cursor < markdown.length) {
+      const open = markdown.indexOf('<!--', cursor)
+      if (open < 0) {
+        visible += markdown.slice(cursor)
+        break
+      }
+      visible += markdown.slice(cursor, open)
+      const close = markdown.indexOf('-->', open + '<!--'.length)
+      if (close < 0)
+        break
+      cursor = close + '-->'.length
+    }
+    return visible
+  }
+
   it('locks each claimed on-slide CLI verb into learner-visible content', () => {
     const flux = readFileSync(fluxPath, 'utf8')
-    const visible = flux.replace(/<!--[\s\S]*?-->/g, '')
+    const visible = stripHtmlComments(flux)
 
     for (const verb of ['install', 'get', 'reconcile', 'suspend']) {
       assert.match(
@@ -734,7 +754,7 @@ describe('S21 GitOps Flux section variant (US-GITOPS-CHOICE-B)', () => {
 
   it('keeps bootstrap and resume as speaker-notes-only verbs, per the accuracy locks', () => {
     const flux = readFileSync(fluxPath, 'utf8')
-    const visible = flux.replace(/<!--[\s\S]*?-->/g, '')
+    const visible = stripHtmlComments(flux)
 
     for (const verb of ['bootstrap', 'resume']) {
       assert.doesNotMatch(
