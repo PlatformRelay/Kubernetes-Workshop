@@ -347,9 +347,10 @@ the GitRepository.
 - **Suspend ⇒ drift stays.** With `spec.suspend: true`, the same drift is *not* reverted —
   the Argo `selfHeal: false` analog.
 
-Representative statuses include Ready/Running Pods, NetworkPolicy timeouts, RBAC Forbidden,
-Helm revision history, Flux Ready conditions, Certificate Ready, or Prometheus targets —
-compare meaning, not ephemeral names.
+Representative statuses include Ready/Running Pods, GitRepository and Kustomization
+`Ready=True/False` conditions, kstatus-style `Reconciling` progress, stored-artifact and
+Applied-revision messages, and the Kustomization's `spec.suspend` flag — compare meaning,
+not ephemeral values (revision SHAs, Pod-name suffixes, ages).
 
 ## Explanation
 
