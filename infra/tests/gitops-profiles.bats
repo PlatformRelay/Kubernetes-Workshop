@@ -271,6 +271,56 @@ EOF
   ! echo "$ADDON_MARKERS" | grep -q "monitoring:kube-prometheus"
 }
 
+# --- D-F2: transition refuse paths (gitops-preflight.sh) --------------------
+
+@test "transition refuses when both Argo CD and Flux are present (conflict)" {
+  export MOCK_ROUTING_NAMESPACES="argocd flux-system"
+  export MOCK_ADDON_MARKERS="argocd:argocd flux-system:flux"
+
+  run "$ROOT/infra/addons/profile.sh" transition flux
+  [ "$status" -ne 0 ]
+  echo "$output" | grep -qi "both"
+  echo "$output" | grep -qi "remediat"
+  [ ! -s "$MOCK_ROUTING_APPLY_LOG" ]
+  # Neither stack was torn down.
+  # shellcheck disable=SC1090
+  . "$MOCK_ROUTING_STATE"
+  echo "$ADDON_MARKERS" | grep -q "argocd:argocd"
+  echo "$ADDON_MARKERS" | grep -q "flux-system:flux"
+}
+
+@test "transition to flux refuses foreign Argo CD (unowned namespace)" {
+  export MOCK_ROUTING_NAMESPACES="argocd"
+  export MOCK_ADDON_DEPLOYS="argocd:argocd-server"
+
+  run "$ROOT/infra/addons/profile.sh" transition flux
+  [ "$status" -ne 0 ]
+  echo "$output" | grep -qi "foreign\|unowned"
+  echo "$output" | grep -qi "remediat"
+  [ ! -s "$MOCK_ROUTING_APPLY_LOG" ]
+}
+
+@test "transition to argocd refuses foreign Flux (unowned namespace)" {
+  export MOCK_ROUTING_NAMESPACES="flux-system"
+  export MOCK_ADDON_DEPLOYS="flux-system:source-controller"
+
+  run "$ROOT/infra/addons/profile.sh" transition argocd
+  [ "$status" -ne 0 ]
+  echo "$output" | grep -qi "foreign\|unowned"
+  echo "$output" | grep -qi "remediat"
+  [ ! -s "$MOCK_ROUTING_APPLY_LOG" ]
+}
+
+@test "transition to flux refuses foreign Flux (unowned namespace, no adopt)" {
+  export MOCK_ROUTING_NAMESPACES="flux-system"
+  export MOCK_ADDON_DEPLOYS="flux-system:source-controller"
+
+  run "$ROOT/infra/addons/profile.sh" transition flux
+  [ "$status" -ne 0 ]
+  echo "$output" | grep -qi "foreign\|unowned"
+  [ ! -s "$MOCK_ROUTING_APPLY_LOG" ]
+}
+
 @test "profile help documents --gitops and argocd/flux mutex" {
   run "$ROOT/infra/addons/profile.sh" --help
   [ "$status" -eq 0 ]
