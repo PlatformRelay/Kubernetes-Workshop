@@ -281,8 +281,22 @@ EOF
   [ "$status" -eq 0 ]
   # shellcheck disable=SC1090
   . "$MOCK_ROUTING_STATE"
-  # NOTE: `! cmd` never fails a bats test — use grep -c for negative asserts.
+  # NOTE: a non-final `! cmd` line doesn't fail a bats test (only final-line
+  # negation does) — use grep -c for negative asserts.
   [ "$(echo "$ADDON_MARKERS" | grep -c "flux-system:flux")" -eq 0 ]
+  [ "$(echo "$ADDON_MARKERS" | grep -c "cert-manager:cert-manager")" -eq 0 ]
+  [ "$(echo "$ADDON_MARKERS" | grep -c "monitoring:kube-prometheus")" -eq 0 ]
+}
+
+@test "day-3 teardown without --gitops removes installed argocd (auto-detect)" {
+  run "$ROOT/infra/addons/profile.sh" day-3
+  [ "$status" -eq 0 ]
+
+  run "$ROOT/infra/addons/profile.sh" day-3 --teardown
+  [ "$status" -eq 0 ]
+  # shellcheck disable=SC1090
+  . "$MOCK_ROUTING_STATE"
+  [ "$(echo "$ADDON_MARKERS" | grep -c "argocd:argocd")" -eq 0 ]
   [ "$(echo "$ADDON_MARKERS" | grep -c "cert-manager:cert-manager")" -eq 0 ]
   [ "$(echo "$ADDON_MARKERS" | grep -c "monitoring:kube-prometheus")" -eq 0 ]
 }
