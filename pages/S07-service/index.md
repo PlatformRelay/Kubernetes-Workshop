@@ -1,6 +1,6 @@
 ---
 layout: section-cover
-image: /covers/section-07-lighthouse-switchboard.png
+image: /covers/section-07-lighthouse-switchboard.webp
 day: Day 1
 section: '07'
 tier: core

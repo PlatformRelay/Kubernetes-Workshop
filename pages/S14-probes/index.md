@@ -1,6 +1,6 @@
 ---
 layout: section-cover
-image: /covers/section-14-clinic.png
+image: /covers/section-14-clinic.webp
 day: Day 2
 section: '14'
 tier: core

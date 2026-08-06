@@ -1,6 +1,6 @@
 ---
 layout: section-cover
-image: /covers/section-25-breakout-foiled.png
+image: /covers/section-25-breakout-foiled.webp
 day: Day 3
 section: '25'
 tier: recommended

@@ -1,6 +1,6 @@
 ---
 layout: section-cover
-image: /covers/section-05-first-hatchling.png
+image: /covers/section-05-first-hatchling.webp
 day: Day 1
 section: '05'
 tier: core

@@ -1,6 +1,6 @@
 ---
 layout: section-cover
-image: /covers/section-12-luggage-caravan.png
+image: /covers/section-12-luggage-caravan.webp
 day: Day 2
 section: '12'
 tier: recommended

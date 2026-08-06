@@ -1,6 +1,6 @@
 ---
 layout: section-cover
-image: /covers/section-00-arrival.png
+image: /covers/section-00-arrival.webp
 day: Day 1
 section: '00'
 tier: core
