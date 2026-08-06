@@ -17,13 +17,24 @@ const repoRoot = resolve(import.meta.dirname, '..')
 const check = process.argv.includes('--check')
 
 function parseGitops(argv) {
-  const index = argv.indexOf('--gitops')
-  if (index < 0)
+  const indexes = argv.flatMap((arg, index) => (arg === '--gitops' ? [index] : []))
+  if (indexes.length === 0)
     return DEFAULT_GITOPS
-  return normalizeGitops(argv[index + 1])
+  if (indexes.length > 1)
+    throw new Error('Pass --gitops at most once; choose exactly one of: argocd, flux')
+  const value = argv[indexes[0] + 1]
+  if (value === undefined || value.startsWith('--'))
+    throw new Error('Missing --gitops value; use exactly one of: argocd, flux')
+  return normalizeGitops(value)
 }
 
-const gitops = parseGitops(process.argv.slice(2))
+let gitops
+try {
+  gitops = parseGitops(process.argv.slice(2))
+} catch (error) {
+  console.error(`decks: ${error.message}`)
+  process.exit(1)
+}
 const resolved = applyGitopsVariant(sections, gitops)
 
 try {
