@@ -321,9 +321,10 @@ Clean up the fork path the same way: `kubectl -n argocd delete application guest
 - **Drift detection ≠ self-heal.** With `selfHeal: false`, the same drift stays `OutOfSync` and is
   *not* reverted — detection always runs; self-heal is the auto-fix on top.
 
-Representative statuses include Ready/Running Pods, NetworkPolicy timeouts, RBAC Forbidden,
-Helm revision history, Application Synced/Healthy, Certificate Ready, or Prometheus targets —
-compare meaning, not ephemeral names.
+Representative statuses include Ready/Running Pods, Application `Synced/OutOfSync` sync
+statuses, `Healthy/Progressing` health statuses, drift held at `OutOfSync` while
+`selfHeal: false` and auto-reverted once `selfHeal: true`, and the last-sync revision
+message — compare meaning, not ephemeral values (revision SHAs, Pod-name suffixes, ages).
 
 ## Explanation
 
