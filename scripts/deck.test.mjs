@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { spawnSync } from 'node:child_process'
 import { existsSync, mkdtempSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -714,8 +715,89 @@ describe('S21 GitOps Flux section variant (US-GITOPS-CHOICE-B)', () => {
     assert.match(flux, /\bHelmRelease\b/)
     assert.match(flux, /\bprune:\s*true\b/)
     assert.match(flux, /\bsuspend\b/)
-    assert.match(flux, /flux (install|bootstrap|get|reconcile|suspend|resume)/)
     assert.match(flux, /Argo CD/)
     assert.match(flux, /labs\/day-3\/21-gitops-flux\.md/)
+  })
+
+  it('locks each claimed on-slide CLI verb into learner-visible content', () => {
+    const flux = readFileSync(fluxPath, 'utf8')
+    const visible = flux.replace(/<!--[\s\S]*?-->/g, '')
+
+    for (const verb of ['install', 'get', 'reconcile', 'suspend']) {
+      assert.match(
+        visible,
+        new RegExp(`flux ${verb}`),
+        `\`flux ${verb}\` must appear on-slide (outside HTML comments)`,
+      )
+    }
+  })
+
+  it('keeps bootstrap and resume as speaker-notes-only verbs, per the accuracy locks', () => {
+    const flux = readFileSync(fluxPath, 'utf8')
+    const visible = flux.replace(/<!--[\s\S]*?-->/g, '')
+
+    for (const verb of ['bootstrap', 'resume']) {
+      assert.doesNotMatch(
+        visible,
+        new RegExp(`flux ${verb}`),
+        `\`flux ${verb}\` must stay speaker-notes-only; if it moves on-slide, update the locks and this test`,
+      )
+      assert.match(
+        flux,
+        new RegExp(`flux ${verb}`),
+        `\`flux ${verb}\` must still be covered in speaker notes / comments`,
+      )
+    }
+
+    const onSlideClaim = /CLI verbs used on-slide:([\s\S]*?)(?:Speaker-notes-only|\n- |\n\n)/
+      .exec(flux)?.[1] ?? ''
+    assert.notEqual(onSlideClaim, '', 'ACCURACY LOCKS must keep the on-slide CLI verbs claim')
+    assert.doesNotMatch(
+      onSlideClaim,
+      /bootstrap|resume/,
+      'ACCURACY LOCKS must not claim bootstrap/resume as on-slide verbs',
+    )
+    assert.match(
+      flux,
+      /(speaker-)?notes-only:.*`flux bootstrap`.*`flux resume`/is,
+      'ACCURACY LOCKS must name bootstrap/resume as notes-only verbs',
+    )
+  })
+})
+
+describe('generate-decks --gitops parsing (fail closed)', () => {
+  const root = join(import.meta.dirname, '..')
+
+  function runGenerateDecks(args) {
+    return spawnSync(
+      process.execPath,
+      [join(root, 'scripts', 'generate-decks.mjs'), ...args],
+      { cwd: root, encoding: 'utf8' },
+    )
+  }
+
+  it('rejects a bare --gitops flag instead of defaulting silently', () => {
+    const result = runGenerateDecks(['--check', '--gitops'])
+    assert.equal(result.status, 1, `expected exit 1, got ${result.status}\n${result.stderr}`)
+    assert.match(result.stderr, /missing --gitops value.*argocd.*flux/i)
+  })
+
+  it('rejects a --gitops flag whose value is another flag', () => {
+    const result = runGenerateDecks(['--gitops', '--check'])
+    assert.equal(result.status, 1, `expected exit 1, got ${result.status}\n${result.stderr}`)
+    assert.match(result.stderr, /missing --gitops value.*argocd.*flux/i)
+  })
+
+  it('rejects duplicate --gitops flags instead of keeping the first', () => {
+    const result = runGenerateDecks(['--check', '--gitops', 'argocd', '--gitops', 'flux'])
+    assert.equal(result.status, 1, `expected exit 1, got ${result.status}\n${result.stderr}`)
+    assert.match(result.stderr, /--gitops at most once.*argocd.*flux/i)
+  })
+
+  it('rejects invalid --gitops values with a clean message, not a stack trace', () => {
+    const result = runGenerateDecks(['--check', '--gitops', 'both'])
+    assert.equal(result.status, 1, `expected exit 1, got ${result.status}\n${result.stderr}`)
+    assert.match(result.stderr, /argocd|flux/i)
+    assert.doesNotMatch(result.stderr, /at .*generate-decks\.mjs:\d+/)
   })
 })
