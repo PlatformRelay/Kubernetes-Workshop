@@ -31,6 +31,15 @@ these** — pick a named profile when a lab day needs controllers.
   Preflight refuses a dual install; use `transition` for a safe switch. The day-3
   `--gitops` flag matches the deck launcher spelling (`argocd` default; `flux`
   selectable) so facilitator flags stay aligned across slides and infra.
+- **Day-3 teardown removes what is actually installed**, not what `--gitops`
+  claims. A bare `./workshop profile day-3 --teardown` auto-detects the
+  installed GitOps tool and tears it down; an explicit `--gitops` that
+  contradicts the cluster (e.g. `--gitops argocd` while Flux is installed)
+  fails loudly *before* anything is removed, as does a conflict (both tools
+  present). Foreign/unowned installs (namespace without the workshop ownership
+  marker) are left in place while the shared day-3 components (`cert-manager`,
+  `kube-prometheus`) are still removed; if no GitOps tool is detected, the
+  GitOps step is skipped and only the shared components are torn down.
 - Each component: preflight/`check`, apply, bounded readiness wait, ownership
   marker, idempotent re-run, scoped teardown.
 - Versions from `infra/versions.env`. Interactive `gum` choose is progressive
