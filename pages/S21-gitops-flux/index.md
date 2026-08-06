@@ -45,8 +45,9 @@ ACCURACY LOCKS (verified against Flux v2 / GitOps Toolkit docs, 2026-08-06):
   Flux has no separate selfHeal flag; active reconcile *is* the heal).
 - Conditions: kstatus-compatible `Ready` / `Reconciling` / `Stalled` on sources and
   Kustomizations; read with `flux get …` / `kubectl get gitrepository,kustomization`.
-- CLI verbs used on-slide: `flux install`, `flux bootstrap`, `flux get`,
-  `flux reconcile`, `flux suspend`, `flux resume`.
+- CLI verbs used on-slide: `flux install`, `flux get`, `flux reconcile`,
+  `flux suspend`. Speaker-notes-only: `flux bootstrap` (production install path)
+  and `flux resume` (undo suspend) — never shown to learners on a slide.
 - Demo source on-slide: public `stefanprodan/podinfo` (Flux docs example) — hostless,
   kind-friendly. Writable-repo stretch stays a fork, same honesty as the Argo lab.
 
