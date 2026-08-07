@@ -1,9 +1,11 @@
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
-import { existsSync, mkdtempSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { describe, it } from 'node:test'
+import { fileURLToPath } from 'node:url'
+import { parse as parseDeck } from '@slidev/parser/fs'
 
 import {
   DEFAULT_GITOPS,
@@ -838,5 +840,213 @@ describe('generate-decks --gitops parsing (fail closed)', () => {
     const result = runGenerateDecks(['--check', '--gitpos', 'flux'])
     assert.equal(result.status, 1, `expected exit 1, got ${result.status}\n${result.stderr}`)
     assert.match(result.stderr, /unknown option --gitpos/i)
+  })
+})
+
+/**
+ * US-FIX-ANIM-CLICKS — a bound animation only runs if its slide reserves clicks.
+ *
+ * Slidev derives a slide's click total from `clicksTotalOverrides ?? max(registered
+ * clicks)` (@slidev/client `composables/useClicks.ts`), so `clicks:` in frontmatter is
+ * an OVERRIDE, not a floor, and in-body `v-click` / `v-clicks` / `magic-move` elements
+ * reserve a budget on their own. A slide that binds `:step="$clicks"` but reserves
+ * fewer clicks than the bound component documents renders frozen at the last reachable
+ * step — `slidev build` cannot catch this, because the deck still parses.
+ *
+ * `registeredClicks` mirrors Slidev's runtime accounting. It was validated against 21
+ * live measurements (drive the dev server, press ArrowRight until the slide number
+ * changes, count the presses) and reproduced every measured total exactly.
+ */
+
+/** Click budget a slide body reserves, mirroring Slidev's runtime accounting. */
+export function registeredClicks(content) {
+  let cursor = 0
+  let max = 0
+  let fence = null
+  let magic = null
+  let vclicks = null
+
+  const bump = (n) => {
+    cursor = Math.max(cursor, n)
+    max = Math.max(max, n)
+  }
+
+  for (const raw of content.split('\n')) {
+    const line = raw.replace(/<!--[\s\S]*?-->/g, '')
+
+    // `md magic-move` container (4+ backticks): N inner frames reserve N-1 clicks.
+    const magicOpen = line.match(/^\s*(`{4,})\s*md\s+magic-move/)
+    if (!magic && magicOpen) {
+      magic = { marker: magicOpen[1], fences: 0 }
+      continue
+    }
+    if (magic) {
+      if (line.trim() === magic.marker) {
+        bump(cursor + Math.max(0, magic.fences / 2 - 1))
+        magic = null
+      } else if (/^\s*```/.test(line)) {
+        magic.fences += 1
+      }
+      continue
+    }
+
+    // Nothing inside a plain code fence registers a click.
+    const fenceMark = line.match(/^\s*(`{3,}|~{3,})/)
+    if (fence) {
+      if (fenceMark && line.trim().startsWith(fence)) fence = null
+      continue
+    }
+    if (fenceMark) {
+      fence = fenceMark[1]
+      continue
+    }
+
+    // <v-clicks [at="N"]> … </v-clicks> — one click per top-level list item.
+    if (vclicks) {
+      if (/<\/v-clicks>/.test(line)) {
+        const start = vclicks.start ?? cursor + 1
+        if (vclicks.items > 0) bump(start + vclicks.items - 1)
+        vclicks = null
+      } else if (/^[-*+]\s+\S/.test(line)) {
+        vclicks.items += 1
+      }
+      continue
+    }
+    const vclicksOpen = line.match(/<v-clicks(\s[^>]*)?>/)
+    if (vclicksOpen) {
+      const at = (vclicksOpen[1] || '').match(/\bat="(\d+)"/)
+      vclicks = { start: at ? Number(at[1]) : null, items: 0 }
+      continue
+    }
+
+    if (/<\/v-click>/.test(line)) continue
+
+    const explicit = line.match(/\bv-click="(\d+)"/)
+    if (explicit) {
+      bump(Number(explicit[1]))
+      continue
+    }
+    const atForm = line.match(/<v-click\s+at="(\d+)"/)
+    if (atForm) {
+      bump(Number(atForm[1]))
+      continue
+    }
+    if (/\bv-after\b/.test(line)) continue
+    if (/\bv-click\b/.test(line)) bump(cursor + 1)
+  }
+
+  return max
+}
+
+/** Effective click total Slidev will use for a slide. */
+export function slideClickBudget(slide) {
+  const override = slide.frontmatter?.clicks
+  return typeof override === 'number' ? override : registeredClicks(slide.content)
+}
+
+/** Highest `step N:` a component's header comment documents, or null if undocumented. */
+export function documentedMaxStep(repoRoot, component) {
+  const file = join(repoRoot, 'components', `${component}.vue`)
+  if (!existsSync(file)) return null
+  const header = readFileSync(file, 'utf8').match(/\/\*\*[\s\S]*?\*\//)
+  if (!header) return null
+  const steps = [...header[0].matchAll(/^\s*\*\s*step\s+(\d+)\s*:/gim)].map((m) => Number(m[1]))
+  return steps.length ? Math.max(...steps) : null
+}
+
+/** Section-library files plus the standalone galleries (generated roots only import). */
+function clickableDeckFiles(repoRoot) {
+  return readdirSync(join(repoRoot, 'pages'), { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => join('pages', entry.name, 'index.md'))
+    .concat(['slides-templates.md', 'slides-showcase.md'])
+    .filter((rel) => existsSync(join(repoRoot, rel)))
+}
+
+/** Every slide that binds `:step="$clicks"`, with the budget it actually reserves. */
+async function collectClickBoundSlides(repoRoot) {
+  const found = []
+  for (const rel of clickableDeckFiles(repoRoot)) {
+    const abs = join(repoRoot, rel)
+    const deck = await parseDeck(readFileSync(abs, 'utf8'), abs)
+    for (const slide of deck.slides) {
+      for (const match of slide.content.matchAll(/<([A-Z][A-Za-z0-9]*)[^>]*:step="\$clicks"/g)) {
+        found.push({
+          slide: rel,
+          line: slide.start + 1,
+          heading: (slide.content.match(/^#\s+(.*)$/m) || [])[1] || '(untitled)',
+          component: match[1],
+          budget: slideClickBudget(slide),
+          declared: slide.frontmatter?.clicks ?? null,
+        })
+      }
+    }
+  }
+  return found
+}
+
+describe('animated component click budgets (US-FIX-ANIM-CLICKS)', () => {
+  const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..')
+
+  it('discovers the deck\'s animated slides (guards the collector against matching nothing)', async () => {
+    const bound = await collectClickBoundSlides(repoRoot)
+    assert.ok(
+      bound.length >= 20,
+      `expected the deck's :step="$clicks" bindings to be discovered, found ${bound.length}`,
+    )
+  })
+
+  it('every component bound with :step="$clicks" documents its step contract', async () => {
+    const bound = await collectClickBoundSlides(repoRoot)
+    const undocumented = [...new Set(bound.map((b) => b.component))]
+      .filter((component) => documentedMaxStep(repoRoot, component) === null)
+      .sort()
+    assert.deepEqual(
+      undocumented,
+      [],
+      'each components/<name>.vue header comment must enumerate its "step N:" beats — ' +
+        `that comment is the contract a slide's click budget has to cover: ${undocumented.join(', ')}`,
+    )
+  })
+
+  it('every slide binding :step="$clicks" reserves a budget >= the component max step', async () => {
+    const bound = await collectClickBoundSlides(repoRoot)
+    const starved = bound
+      .map((b) => ({ ...b, maxStep: documentedMaxStep(repoRoot, b.component) }))
+      .filter((b) => b.maxStep !== null && b.budget < b.maxStep)
+      .map(
+        (b) =>
+          `${b.slide}:${b.line} "${b.heading}" — <${b.component}> documents steps 0..${b.maxStep} ` +
+          `but the slide reserves only ${b.budget} click(s), so it freezes at step ${b.budget}. ` +
+          `Missing budget: ${b.maxStep - b.budget} (add "clicks: ${b.maxStep}" to the slide frontmatter).`,
+      )
+    assert.deepEqual(
+      starved,
+      [],
+      `slides whose animation cannot reach its last documented step:\n  ${starved.join('\n  ')}`,
+    )
+  })
+
+  it('an explicit clicks: override never shrinks a budget the slide body already reserves', async () => {
+    const shrunk = []
+    for (const rel of clickableDeckFiles(repoRoot)) {
+      const abs = join(repoRoot, rel)
+      const deck = await parseDeck(readFileSync(abs, 'utf8'), abs)
+      for (const slide of deck.slides) {
+        const declared = slide.frontmatter?.clicks
+        if (typeof declared !== 'number') continue
+        const inBody = registeredClicks(slide.content)
+        if (declared < inBody) {
+          shrunk.push(
+            `${rel}:${slide.start + 1} declares "clicks: ${declared}" but its body reserves ${inBody}`,
+          )
+        }
+      }
+    }
+    assert.deepEqual(
+      shrunk,
+      [],
+      `clicks: is an override, not a floor — these slides lose steps:\n  ${shrunk.join('\n  ')}`,
+    )
   })
 })

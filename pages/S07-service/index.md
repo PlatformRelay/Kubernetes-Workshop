@@ -89,6 +89,8 @@ ClusterIP only, which works identically in namespace and kind.
 -->
 
 ---
+clicks: 3
+---
 
 <div class="kw-slide-dense">
 
