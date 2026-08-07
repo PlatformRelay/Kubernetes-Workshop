@@ -245,6 +245,8 @@ teaching view; the lab ships the full block-style files plus the metrics-server 
 -->
 
 ---
+clicks: 5
+---
 
 <span class="kw-kicker">The control loop, made physical · load drives the herd</span>
 
