@@ -286,7 +286,7 @@ reason to re-paste a beta warning on the README or docs landing.
 | Status | Item | Story / note |
 | --- | --- | --- |
 | Backlog | Full clean-environment rehearsal | **US-BETA-6** — useful for facilitators who want a recorded run; syllabus minutes stay planning aids, not a contract |
-| Backlog | Validation matrix → `kind-smoke` | **US-ENV-4** Day-2/3 drivers + recorded evidence |
+| Backlog | Validation matrix → `kind-smoke` for the Day-2/3 drivers | **US-ENV-4** Day-2/3 drivers + recorded evidence; the Flux S21 variant row is already promoted |
 | Accepted deferred | S24 kubebuilder | **US-S24** — see [known limitations](./beta-limitations.md) |
 | Done | Repo description + topics | **US-BETA-2** |
 
