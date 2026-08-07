@@ -9,6 +9,13 @@ direction, not delivery.
 Internal planning notes (if any) stay out of the published site. This page
 summarizes; it does not lead over private trackers.
 
+> **GitOps tool choice is on `main`, not direction.** The GitOps section (S21)
+> ships with **Argo CD as the default** and **Flux as a selectable variant**, so
+> facilitators can match the tool their room actually uses without forking the
+> curriculum. Choose one per delivery with `--gitops argocd|flux`; see
+> [running the slides](./run-slides.md).
+> [Discuss GitOps tool choice →](https://github.com/PlatformRelay/Kubernetes-Workshop/discussions/22)
+
 ## Status vocabulary
 
 | Status | Meaning |
@@ -18,13 +25,6 @@ summarizes; it does not lead over private trackers.
 | **exploring** | Under consideration only — explicitly **not** committed. |
 
 ## Direction
-
-> **No longer listed here: GitOps tool choice.** It is on `main`, not direction —
-> the GitOps section (S21) ships with **Argo CD as the default** and **Flux as a
-> selectable variant**, so facilitators can match the tool their room actually
-> uses without forking the curriculum. Choose one per delivery with
-> `--gitops argocd|flux`; see [running the slides](./run-slides.md).
-> [Discuss GitOps tool choice →](https://github.com/PlatformRelay/Kubernetes-Workshop/discussions/22)
 
 ### Live quizzes — planned
 

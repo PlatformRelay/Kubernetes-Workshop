@@ -168,9 +168,9 @@ PSA `restricted`-clean, with native `/healthz`, `/ready`, `POST /fail|/recover` 
 endpoints). The S08/S09 rows above reflect the new stack; defect **D1** is retained as
 resolved history. Both of those rows stay `unrun` until the US-BETA-6 rehearsal /
 US-ENV-4 smoke re-runs them against the new stack. Elsewhere in the matrix exactly one
-row sits above that line — the Flux S21 variant's maintainer-recorded `kind-smoke`, per
-the honesty rule above — and every other row remains `unrun`/`server-dry-run`, with the
-unauthored S24 stub `deferred`.
+row is promoted past the `unrun`/`server-dry-run` band — the Flux S21 variant's
+maintainer-recorded `kind-smoke`, per the honesty rule above — and every other row
+remains `unrun`/`server-dry-run`, with the unauthored S24 stub `deferred`.
 
 ## What this matrix feeds
 
