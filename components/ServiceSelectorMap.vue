@@ -1,7 +1,13 @@
 <script setup lang="ts">
 /**
  * Styled selector → EndpointSlice → Pods diagram (replaces default mermaid on S07).
- * Bind `:step="$clicks"` for progressive reveal.
+ * Bind `:step="$clicks"` for progressive reveal — the slide must reserve a budget
+ * of 3 (`clicks: 3`), or the reveal never leaves step 0.
+ *
+ * step 0: cluster DNS only — the stable front door clients dial
+ * step 1: the Service lights up — ClusterIP + the `selector` label query
+ * step 2: the EndpointSlice lights up — matching Pod IPs, rewritten on every change
+ * step 3: the Pods themselves — the churning backends beneath the fixed front door
  */
 const props = withDefaults(
   defineProps<{
