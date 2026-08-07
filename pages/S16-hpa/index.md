@@ -273,7 +273,8 @@ dashed target line, the formula chip recomputes desired=4. (2) the herd grows to
 insight — the gauge eases back down, because the SAME total load divided over more Pods is less
 per Pod; autoscaling is negative feedback finding equilibrium. (3) it settles where per-Pod CPU ==
 target. (4) load disappears, the gauge drops, but the herd does NOT immediately shrink — it holds
-for the scaleDown stabilization window (default 300s) before returning to min. That asymmetry is
+for the scaleDown stabilization window (default 300s). (5) the window elapses and it returns to
+min — the click the budget was missing, so pause on it. That asymmetry is
 the next slide: scale up fast, scale down slow. This is the lab beat 3 (why did scale-down lag?).
 -->
 
