@@ -19,6 +19,13 @@ summarizes; it does not lead over private trackers.
 
 ## Direction
 
+> **No longer listed here: GitOps tool choice.** It is on `main`, not direction —
+> the GitOps section (S21) ships with **Argo CD as the default** and **Flux as a
+> selectable variant**, so facilitators can match the tool their room actually
+> uses without forking the curriculum. Choose one per delivery with
+> `--gitops argocd|flux`; see [running the slides](./run-slides.md).
+> [Discuss GitOps tool choice →](https://github.com/PlatformRelay/Kubernetes-Workshop/discussions/22)
+
 ### Live quizzes — planned
 
 Per-section retrieval questions plus a self-hosted live-quiz add-on for the room.
@@ -29,14 +36,6 @@ none of them (0/3)** — so the live host and full question bank remain **planne
 with architecture still open.
 
 [Discuss live quizzes →](https://github.com/PlatformRelay/Kubernetes-Workshop/discussions/21)
-
-### GitOps tool choice — planned
-
-Deliver the GitOps section with **Argo CD as the default** and **Flux as a
-selectable variant**, so facilitators can match the tool their room actually
-uses without forking the curriculum.
-
-[Discuss GitOps tool choice →](https://github.com/PlatformRelay/Kubernetes-Workshop/discussions/22)
 
 ### OpenTelemetry — exploring
 
