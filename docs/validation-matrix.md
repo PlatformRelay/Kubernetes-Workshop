@@ -166,8 +166,11 @@ v1.8.2** (GatewayClass `eg`), and every demo web image is the purpose-built
 `ghcr.io/platformrelay/workshop-web` (`:v1`/`:v2`/`:v3`, port **8080**, non-root, distroless,
 PSA `restricted`-clean, with native `/healthz`, `/ready`, `POST /fail|/recover` probe
 endpoints). The S08/S09 rows above reflect the new stack; defect **D1** is retained as
-resolved history. All rows stay `unrun`/`server-dry-run` until the US-BETA-6 rehearsal /
-US-ENV-4 smoke re-runs them against the new stack.
+resolved history. Both of those rows stay `unrun` until the US-BETA-6 rehearsal /
+US-ENV-4 smoke re-runs them against the new stack. Elsewhere in the matrix exactly one
+row sits above that line — the Flux S21 variant's maintainer-recorded `kind-smoke`, per
+the honesty rule above — and every other row remains `unrun`/`server-dry-run`, with the
+unauthored S24 stub `deferred`.
 
 ## What this matrix feeds
 
