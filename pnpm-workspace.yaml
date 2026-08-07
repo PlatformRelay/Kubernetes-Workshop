@@ -17,6 +17,12 @@ overrides:
   # markdownlint 5.x line patched without forcing its unrelated 3.x/4.x users
   # across a major-version boundary.
   "js-yaml@>=5.0.0 <6.0.0": 5.2.3
+  # GHSA-5p4m-2wfm-xmqj (CVE-2026-59870) hits both the 3.x and 4.x js-yaml
+  # lines that @slidev/cli pulls in transitively. The fix was released on each
+  # line separately, so pin each range to its own first patched version rather
+  # than dragging Slidev's YAML parser across a major-version boundary.
+  "js-yaml@>=4.0.0 <5.0.0": 4.3.1
+  "js-yaml@>=3.0.0 <4.0.0": 3.15.1
   # monaco-editor / mermaid pull older DOMPurify; pin the patched line.
   dompurify: 3.4.13
   # Dependabot/GHSA collapses @hono/node-server to "<2.0.5" even though

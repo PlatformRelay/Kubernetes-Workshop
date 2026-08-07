@@ -7,6 +7,8 @@ settings:
 overrides:
   postcss: 8.5.25
   js-yaml@>=5.0.0 <6.0.0: 5.2.3
+  js-yaml@>=4.0.0 <5.0.0: 4.3.1
+  js-yaml@>=3.0.0 <4.0.0: 3.15.1
   dompurify: 3.4.13
   '@hono/node-server': 2.1.0
 
@@ -2098,12 +2100,12 @@ packages:
   js-tokens@4.0.0:
     resolution: {integrity: sha512-RdJUflcE3cUzKiMqQgsCu06FPu9UdIJO0beYbPhHN4k6apgJtifcoCtT9bcxOpYBtpD2kCM6Sbzg4CausW/PKQ==}
 
-  js-yaml@3.15.0:
-    resolution: {integrity: sha512-ttBQIIQPDeLjpPOohtUdXuXUVoA2uIB6fEH9HyJ7234s5mBJ5wTx20njxplLZQgLaOfpmPQA7X2t5AX6tIPbog==}
+  js-yaml@3.15.1:
+    resolution: {integrity: sha512-S99WuO3HlhO3XN41EtYUNl9zzXjoJx7QvmipxsJVxtCBT0YHEFy+iOJhjSvrmV12nYhWpZaM8lPHkJm0yUMbag==}
     hasBin: true
 
-  js-yaml@4.3.0:
-    resolution: {integrity: sha512-1td788aAnnZ5qs7V2QIRl1owjtYpbKt749Y3xauqQgwIIGF/xXWz1wMTEBx5O3LK3lXLVuqXPdPxj2BoFHaW9Q==}
+  js-yaml@4.3.1:
+    resolution: {integrity: sha512-CY6crGq313MX8GkwvB7tzgp99vjQxY1++5y10/BKN/GUfHqWaOGQMNZkBvqSzsZKWk/ijwHlWzzkLulsGHhjWQ==}
     hasBin: true
 
   js-yaml@5.2.3:
@@ -3466,7 +3468,7 @@ snapshots:
   '@comark/markdown-it@0.3.4(@types/markdown-it@14.1.2)(markdown-it@14.3.0)':
     dependencies:
       '@types/markdown-it': 14.1.2
-      js-yaml: 4.3.0
+      js-yaml: 4.3.1
       markdown-it: 14.3.0
 
   '@devframes/hub@0.7.16(devframe@0.7.16(cac@7.0.0)(srvx@0.12.5)(typescript@6.0.3))':
@@ -5507,7 +5509,7 @@ snapshots:
 
   gray-matter@4.0.3:
     dependencies:
-      js-yaml: 3.15.0
+      js-yaml: 3.15.1
       kind-of: 6.0.3
       section-matter: 1.0.0
       strip-bom-string: 1.0.0
@@ -5647,12 +5649,12 @@ snapshots:
 
   js-tokens@4.0.0: {}
 
-  js-yaml@3.15.0:
+  js-yaml@3.15.1:
     dependencies:
       argparse: 1.0.10
       esprima: 4.0.1
 
-  js-yaml@4.3.0:
+  js-yaml@4.3.1:
     dependencies:
       argparse: 2.0.1
 
