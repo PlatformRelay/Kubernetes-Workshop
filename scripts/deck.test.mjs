@@ -34,6 +34,33 @@ import {
   selectSections,
 } from './deck-selector.mjs'
 
+/**
+ * Non-regex HTML-comment strip (indexOf walk). A single-pass regex replace such as
+ * `/<!--[\s\S]*?-->/g` is flagged by CodeQL as incomplete multi-character
+ * sanitization (js/incomplete-multi-character-sanitization), because the replacement
+ * can reassemble a `<!--` from the surrounding text. Walking with indexOf cannot.
+ *
+ * An unterminated `<!--` drops everything after it: in this deck's markdown an
+ * unclosed comment means the rest of the file is speaker notes, not visible content.
+ */
+export function stripHtmlComments(markdown) {
+  let visible = ''
+  let cursor = 0
+  while (cursor < markdown.length) {
+    const open = markdown.indexOf('<!--', cursor)
+    if (open < 0) {
+      visible += markdown.slice(cursor)
+      break
+    }
+    visible += markdown.slice(cursor, open)
+    const close = markdown.indexOf('-->', open + '<!--'.length)
+    if (close < 0)
+      break
+    cursor = close + '-->'.length
+  }
+  return visible
+}
+
 const section = (id, overrides = {}) => ({
   id,
   slug: `topic-${id.toLowerCase()}`,
@@ -728,26 +755,6 @@ describe('S21 GitOps Flux section variant (US-GITOPS-CHOICE-B)', () => {
     assert.match(flux, /labs\/day-3\/21-gitops-flux\.md/)
   })
 
-  // Non-regex HTML-comment strip (indexOf walk): a single-pass regex replace is
-  // flagged by CodeQL as incomplete multi-character sanitization.
-  function stripHtmlComments(markdown) {
-    let visible = ''
-    let cursor = 0
-    while (cursor < markdown.length) {
-      const open = markdown.indexOf('<!--', cursor)
-      if (open < 0) {
-        visible += markdown.slice(cursor)
-        break
-      }
-      visible += markdown.slice(cursor, open)
-      const close = markdown.indexOf('-->', open + '<!--'.length)
-      if (close < 0)
-        break
-      cursor = close + '-->'.length
-    }
-    return visible
-  }
-
   it('locks each claimed on-slide CLI verb into learner-visible content', () => {
     const flux = readFileSync(fluxPath, 'utf8')
     const visible = stripHtmlComments(flux)
@@ -871,9 +878,8 @@ export function registeredClicks(content) {
     max = Math.max(max, n)
   }
 
-  for (const raw of content.split('\n')) {
-    const line = raw.replace(/<!--[\s\S]*?-->/g, '')
-
+  // Speaker notes are HTML comments and reserve nothing — strip them before counting.
+  for (const line of stripHtmlComments(content).split('\n')) {
     // `md magic-move` container (4+ backticks): N inner frames reserve N-1 clicks.
     const magicOpen = line.match(/^\s*(`{4,})\s*md\s+magic-move/)
     if (!magic && magicOpen) {
