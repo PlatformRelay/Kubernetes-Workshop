@@ -288,4 +288,17 @@ and `scripts/release-tag-guard.sh`).
   available.
 - Verify every lab runs from a clean namespace **and** a clean kind cluster, and that
   cleanup returns the environment to a known state.
+- `pnpm lint` (markdownlint-cli2) is scoped to the single glob `labs/**/*.md` in
+  `.markdownlint-cli2.jsonc`, so a green lint is **no** evidence about `README.md`,
+  `docs/**`, `slides*.md`, or `pages/**` (`labs/README.md` is covered; the root
+  `README.md` is not). `pnpm link-check` covers a different set again — an explicit
+  14-file list in `scripts/link-check.mjs`, links and anchors only, excluding
+  `docs/decisions/**`, `slides*.md` and `pages/**`. Outside those two scopes there is
+  no **markdownlint or link/anchor** gate, but targeted *content* gates do exist:
+  `pnpm decks:check` (drift for the six decks in `generatedDecks` only — hand-authored
+  `slides-templates.md`/`slides-showcase.md` get only `test:deck`'s click-budget check —
+  plus each section's `pages/<id>-<slug>/index.md`, `README.md` and the syllabus/
+  facilitator/validation-matrix/labs-README docs), `pnpm test:pages` (`README.md`,
+  `docs/index.md`, `docs/release.md`, `mkdocs.yml`) and `pnpm test:labs` (lab contract;
+  the numbered ADRs and index in `docs/decisions/`). Check the gate, not the glob.
 - Keep planning docs in `agent-context/` concise and current as decisions change.
