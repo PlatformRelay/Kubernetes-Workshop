@@ -2,6 +2,11 @@
 /**
  * Click-driven kubectl verb tour — command + sample output pairs.
  * Bind `:step="$clicks"`. Story: on-call triage for deployment `web`.
+ *
+ * step 0: `get`          — the surface view, is anything wrong at a glance?
+ * step 1: `describe`     — Events say *why* the Pod will not schedule
+ * step 2: `logs`         — app output from the last crash (OOMKilled, exit 137)
+ * step 3: `diff` + `apply` — preview, then declare: the safe-change sequence
  */
 const props = withDefaults(defineProps<{ step?: number }>(), { step: 0 })
 

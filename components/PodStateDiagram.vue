@@ -6,7 +6,10 @@ import { NEW_TAG, OLD_TAG } from './usePodReplace'
 /**
  * Click-driven cluster state, meant to sit next to a `magic-move` manifest:
  * bind `:step="$clicks"` so the diagram advances in lockstep with the code.
- * step 0: old pod Running · 1: new pod creating · 2: replaced
+ *
+ * step 0: old pod Running
+ * step 1: new pod creating alongside it
+ * step 2: replaced — the old pod is Terminating
  */
 const props = withDefaults(defineProps<{ step?: number }>(), { step: 0 })
 
