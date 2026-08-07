@@ -49,7 +49,7 @@ maintenance load are scarcer than authoring enthusiasm.
 | C3 | Authoring + maintenance cost (higher score = cheaper) | 4 |
 | C4 | Environment cost — kind footprint and namespace-mode viability | 3 |
 | C5 | Supply-chain / pin surface added to `infra/versions.env` | 3 |
-| C6 | Roadmap honesty — does it deliver what is publicly advertised | 3 |
+| C6 | Delivers what the roadmap currently advertises (traces, OTLP, a collector) | 3 |
 | C7 | Reversibility if the decision is wrong | 2 |
 
 Scores are 1–5, where **5 is best for the workshop** (so a cheap option scores high on C3–C5).
@@ -106,9 +106,13 @@ fit inside S23's existing slide budget rather than extend it.
 Do no curriculum work. The variant matters: **dropping** the item honestly (and naming distributed
 tracing in the S27 "what we skipped" map, where service mesh, multi-cluster, and cluster operations
 already live) is defensible and costs nothing. **Staying `exploring` indefinitely** is not — it
-advertises a door nobody is walking through, which is exactly the state this ADR exists to end. C6
-scores 2 for that reason: the honest-drop variant is truthful but leaves the learner-facing question
-("we use OTel at work — how does that relate to what you just taught?") unanswered in the room.
+advertises a door nobody is walking through, which is exactly the state this ADR exists to end.
+
+C6 scores 2 because the criterion measures *delivery of the advertised content*, of which C delivers
+none — **not** because dropping is dishonest. The drop variant is entirely honest, which is exactly
+why it is written in as the rule-3 fallback below. What C leaves unhandled is the learner-facing
+question ("we use OTel at work — how does that relate to what you just taught?"), and that cost is
+already priced in C1.
 
 ## Decision
 
