@@ -170,7 +170,7 @@ resolved history. Both of those rows stay `unrun` until the US-BETA-6 rehearsal 
 US-ENV-4 smoke re-runs them against the new stack. Elsewhere in the matrix exactly one
 row is promoted past the `unrun`/`server-dry-run` band — the Flux S21 variant's
 maintainer-recorded `kind-smoke`, per the honesty rule above — and every other row
-remains `unrun`/`server-dry-run`, with the unauthored S24 stub `deferred`.
+remains `unrun`/`server-dry-run`, apart from the unauthored S24 stub, which stays `deferred`.
 
 ## What this matrix feeds
 
