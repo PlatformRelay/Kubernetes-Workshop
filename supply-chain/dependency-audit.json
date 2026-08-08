@@ -1,3 +1,16 @@
 {
-  "exceptions": []
+  "exceptions": [
+    {
+      "id": "GHSA-w3rx-r6r6-pgpr",
+      "reason": "image-size ICNS infinite-loop DoS. No patched release exists: the npm registry's latest image-size is 2.0.2, still inside the vulnerable range <= 2.0.2. The only dependency path is pptxgenjs (slidev PPTX export), pinned by upstream to image-size ^1.2.1, and the parser only ever sees this repository's curated slide assets, never attacker-supplied images. Re-check the registry for a patched release before expiry.",
+      "owner": "maintainers",
+      "expires": "2026-10-08"
+    },
+    {
+      "id": "GHSA-5p2g-fcmc-qvqq",
+      "reason": "image-size JXL/HEIF infinite-loop DoS. Same situation as GHSA-w3rx-r6r6-pgpr: no patched release exists on npm (latest 2.0.2 is inside <= 2.0.2), the sole path is pptxgenjs via slidev PPTX export, and inputs are repository-curated slide assets only. Re-check the registry for a patched release before expiry.",
+      "owner": "maintainers",
+      "expires": "2026-10-08"
+    }
+  ]
 }
