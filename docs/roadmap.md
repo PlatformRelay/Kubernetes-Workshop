@@ -14,7 +14,17 @@ summarizes; it does not lead over private trackers.
 > facilitators can match the tool their room actually uses without forking the
 > curriculum. Choose one per delivery with `--gitops argocd|flux`; see
 > [running the slides](./run-slides.md).
+>
 > [Discuss GitOps tool choice →](https://github.com/PlatformRelay/Kubernetes-Workshop/discussions/22)
+
+> **OpenTelemetry scope is decided, not direction.** OpenTelemetry is covered as
+> **concepts inside the Prometheus operator section (S23)**: OTLP as the wire
+> protocol and the collector as a pipeline shape, with traces named but not
+> exercised. No dedicated section, lab, or environment add-on is planned; the
+> decision and the conditions that would reopen it are recorded in
+> [ADR 0013](./decisions/0013-opentelemetry-scope.md).
+>
+> [Discuss OpenTelemetry →](https://github.com/PlatformRelay/Kubernetes-Workshop/discussions/23)
 
 ## Status vocabulary
 
@@ -36,14 +46,6 @@ none of them (0/3)** — so the live host and full question bank remain **planne
 with architecture still open.
 
 [Discuss live quizzes →](https://github.com/PlatformRelay/Kubernetes-Workshop/discussions/21)
-
-### OpenTelemetry — exploring
-
-Optional depth beyond the Prometheus operator path (S23): traces, OTLP, and a
-collector as a candidate add-on section. This is **exploring only** — not
-committed to the syllabus.
-
-[Discuss OpenTelemetry →](https://github.com/PlatformRelay/Kubernetes-Workshop/discussions/23)
 
 ## Standing debts (referenced, not restated)
 
