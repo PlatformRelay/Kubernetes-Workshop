@@ -31,7 +31,7 @@ shaped the way it is — not just *what* it looks like.
 | [0010](0010-task-runner-spike.md) | Keep the workshop entrypoint and defer a task-runner migration | accepted |
 | [0011](0011-live-quiz-spike.md) | Defer live-quiz adoption until a complete FOSS runtime passes | proposed |
 | [0012](0012-sibling-lab-solutions.md) | Single-file labs with sibling solution companions | accepted |
-| [0013](0013-opentelemetry-scope.md) | Scope OpenTelemetry as a concept coda on S23, not a new section | proposed |
+| [0013](0013-opentelemetry-scope.md) | Scope OpenTelemetry as a concept coda on S23, not a new section | accepted |
 
 ## Template
 
