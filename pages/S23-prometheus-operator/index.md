@@ -25,14 +25,21 @@ into scrape config, name the four golden signals and metrics-vs-logs-vs-traces, 
 kube-state-metrics + node-exporter as the standard sources, read a ServiceMonitor + one PromQL
 rate() query, and in the lab install kube-prometheus-stack, expose a /metrics app, wire a
 ServiceMonitor (break it with a mismatched selector, diagnose on /targets, fix it), and run a
-PromQL query.
+PromQL query. Coda outcome (ADR 0013): relate OpenTelemetry to the Prometheus pipeline at concept
+level — OTLP as the wire protocol, the collector as a receive → process → export pipeline shape,
+traces named and motivated but not exercised.
 Beats: problem (dozens of dynamic Pods — hand-editing scrape config doesn't scale) · mental model
 (operator watches ServiceMonitor/PodMonitor → GENERATES scrape config = S22 made concrete, call
 back explicitly) · the four CRDs (Prometheus/ServiceMonitor/PodMonitor/Alertmanager) · the four
 golden signals + metrics vs logs vs traces · the two standard sources (kube-state-metrics +
 node-exporter) · code-annotated (a ServiceMonitor selecting a Service by label + named port) ·
 magic-move (ServiceMonitor selects Service → target appears in Prometheus → one PromQL query
-returns data) · a taste of PromQL (rate() over a counter) · recap → lab.
+returns data) · a taste of PromQL (rate() over a counter) · OTel coda, 2 slides (OTLP + collector
+as concepts · traces = the question metrics can't answer) · recap → lab.
+Coda timing is NET-ZERO (ADR 0013 rule 3): the minutes come from the slimmed three-pillars beat
+on the golden-signals slide — the pillars expansion moved here — not from new allocation.
+sectionTimings S23 stays [30, 25]; the coda is capped at six slides and ships no lab, no pin, no
+install (docs/decisions/0013-opentelemetry-scope.md).
 Animation: NONE (guardrail: S23 is "made concrete" — magic-move + comparison + cards). Do NOT
 author a Vue component. ReconcileLoop reuse is optional and not used here; the teaching device is
 the ServiceMonitor→scrape-config generation, shown via the code-annotated + magic-move slides.
@@ -53,6 +60,19 @@ ACCURACY LOCKS (web-verified 2026-07-10):
   Service TARGET selection — spec.selector.matchLabels picks the Service. The lab's deliberate
   BREAK is on layer (2). A THIRD, separate field: spec.endpoints[].port is a NAME (string) that
   must match the Service's named port — that's the lab's port-name QUESTION, not the break.
+
+OTEL CODA ACCURACY LOCKS (web-verified 2026-08-09, opentelemetry.io + prometheus.io):
+- OTLP = the OpenTelemetry Protocol: encoding, transport, and delivery of telemetry between
+  sources, intermediate nodes such as collectors, and backends. Transports: gRPC (default port
+  4317) and HTTP with protobuf payloads (default port 4318). Signals traces/metrics/logs are
+  stable; profiles is in development. Push-based (the app/SDK exports), unlike Prometheus pull.
+- Collector: vendor-agnostic; pipeline = receivers → processors → exporters (receive → process →
+  export); decouples what an app emits from where it lands; runs as agent or gateway. Nothing on
+  the slides names a collector version, image, or chart — concepts only, so no pin is needed.
+- Prometheus (v3.x) can natively ingest OTLP METRICS: an opt-in receiver, disabled by default
+  (--web.enable-otlp-receiver), serving POST /api/v1/otlp/v1/metrics. Metrics only — not traces.
+  Speaker-notes-only, and re-verify against the deployed stack per delivery; the slides pin no
+  version (ADR 0013 rule 6). It still needs an instrumented producer, so hands-on stays out.
 CKx tie-in: CKA/CKAD observability (metrics, monitoring) — a one-liner on the recap.
 -->
 
@@ -227,10 +247,9 @@ thing the lab checks. Next: what should you even measure? The golden signals.
 
 <span class="kw-kicker">metrics ≠ logs ≠ traces — the three pillars</span>
 
-**Metrics** are cheap numeric time-series — *"how many, how fast, how full"* — perfect for
-dashboards and alerts (this is Prometheus). **Logs** are discrete text events — *"what exactly
-happened here."* **Traces** follow **one request** across services — *"where did the time go."*
-You need all three; Prometheus owns the **metrics** pillar.
+**Metrics** are cheap numeric time-series — *"how many, how fast, how full"* (this is Prometheus).
+**Logs** are discrete text events; **traces** follow **one request** across services. Prometheus
+owns the **metrics** pillar — how the *other* signals travel is this section's closing coda.
 
 </div>
 
@@ -242,11 +261,11 @@ starting checklist for any service: LATENCY (how long — and always look at the
 average hides the pain); TRAFFIC (how much demand — req/s, the denominator for rates); ERRORS (rate
 of failures — 5xx, timeouts, bad responses); SATURATION (how full — CPU/mem/queue, the leading
 indicator that the other three are about to degrade). If you instrument only these four you already
-have most of the value. Then the three-pillars framing so they don't think metrics are everything:
-METRICS = cheap numeric time-series, great for dashboards + alerting (Prometheus); LOGS = discrete
-text events, for "what exactly happened"; TRACES = one request followed across many services, for
-"where did the latency go." Complementary, not competing. Prometheus is the metrics pillar; logs and
-traces are separate systems. Next: where the cluster-wide metrics come from.
+have most of the value. Then name the three pillars in ONE BREATH — metrics (numeric time-series,
+Prometheus), logs (discrete events), traces (one request across services) — complementary, not
+competing. Do NOT expand on logs/traces here: the section's closing coda spends those minutes on
+how the other signals travel (OTLP, the collector) and on what traces buy you. Next: where the
+cluster-wide metrics come from.
 -->
 
 ---
@@ -477,11 +496,109 @@ spike. {code="200"} is a label matcher — PromQL is a label-selection language,
 label-thinking as Services and NetworkPolicy, applied to time-series. Land the golden-signals tie:
 sum(rate(http_requests_total[5m])) = total traffic (signal 2); the same with code=~"5.." over total
 = the error rate (signal 3). One function turns a boring counter into the two most important signals.
-This is the query the learner runs against their own app in the lab. Next: recap, then go do it.
+This is the query the learner runs against their own app in the lab. Next: the promised coda —
+how the OTHER signals travel. Two slides, concepts only, then recap.
+-->
+
+---
+
+<div class="kw-slide-dense">
+
+<span class="kw-kicker">Coda · "we use OpenTelemetry at work — how does this relate?"</span>
+
+# OpenTelemetry: one wire protocol, one pipeline shape
+
+<div class="kw-cols-2 mt-3 text-sm">
+  <v-click at="1">
+    <KwCard heading="OTLP — the wire protocol" icon="🔌" variant="ok">
+      <strong>OpenTelemetry</strong> is the vendor-neutral open standard for emitting telemetry,
+      and <strong>OTLP</strong> is the <strong>wire protocol</strong> the ecosystem converged on —
+      one format that carries signals from apps toward <em>any</em> backend.
+    </KwCard>
+  </v-click>
+  <v-click at="2">
+    <KwCard heading="The collector — a pipeline shape" icon="🔀" variant="ok">
+      A <strong>collector</strong> is a pipeline: <strong>receive → process → export</strong>. It
+      <strong>decouples</strong> what your app emits from where it lands — swap the backend by
+      editing the pipeline, never the app.
+    </KwCard>
+  </v-click>
+</div>
+
+<div v-click="3" class="mt-4 text-sm kw-muted">
+
+Nothing to install today — this is a **map**, not a lab. Your **pull** pipeline (ServiceMonitor →
+scrape) and an OTLP **push** pipeline are two shapes that can feed the **same kind of store**.
+
+</div>
+
+</div>
+
+<!--
+Speaker: the coda the pillars slide promised — pitched at the learner who already runs OTel at
+work and wants to place it on today's map. Two concepts, no installation. (1) OpenTelemetry is the
+vendor-neutral open standard for emitting telemetry, and OTLP is its wire protocol — the encoding
+and transport that moves telemetry from sources through intermediaries to backends (gRPC or
+HTTP/protobuf on the wire; the stable signals are traces, metrics, and logs). The convergence is
+the point: one protocol instead of one agent per vendor. (2) The collector is a pipeline SHAPE —
+receivers take data in, processors batch/filter/transform, exporters send it on. That shape
+decouples emission from destination: repoint the exporter, redeploy nothing. Contrast with today:
+Prometheus PULLS via scrape config the operator generates; OTLP is a PUSH from the app's SDK. Two
+pipeline shapes, same destination idea — in fact a current Prometheus can ingest OTLP metrics
+natively (an opt-in receiver, off by default; verify the deployed stack per delivery — no version
+promised on-slide). It still needs an instrumented producer, which is the next slide's point.
+Next: the signal metrics cannot give you.
+-->
+
+---
+
+<div class="kw-slide-dense">
+
+<span class="kw-kicker">Coda · the question metrics can't answer</span>
+
+# Traces: **which** request was slow — and **where**
+
+<div class="kw-cols-2 mt-3 text-sm">
+  <v-click at="1">
+    <KwCard heading="Metrics aggregate" icon="📉" variant="ok">
+      <code>rate()</code> told you <em>"~4.7 req/s and p99 latency is up."</em> Averages and
+      quantiles over <strong>all</strong> requests — no <strong>single</strong> request in sight.
+    </KwCard>
+  </v-click>
+  <v-click at="2">
+    <KwCard heading="A trace follows ONE request" icon="🧵" variant="ok">
+      Across <strong>every service it touches</strong>, recording where the time went — the
+      signal for <em>"this specific request was slow: which hop?"</em>
+    </KwCard>
+  </v-click>
+</div>
+
+<div v-click="3" class="mt-4 text-sm">
+
+Producing traces means **instrumenting the app** — code changes, not just YAML — which is why
+they're **named here, not run**. The Prometheus Operator stays this section's hands-on spine;
+OpenTelemetry **extends** what you built today, it doesn't replace it.
+
+</div>
+
+</div>
+
+<!--
+Speaker: name and motivate traces without pretending to teach them. Metrics are aggregates:
+rate() and histogram quantiles summarise ALL requests — perfect for dashboards and alerts,
+structurally unable to show ONE request. A trace is the complement: one request's journey across
+every service it touches, each hop timed, so "the checkout is slow" becomes "the payment call
+inside the checkout is slow." Why no lab: traces don't exist until the APP emits them — an SDK in
+the code or an injected agent — and instrumenting the demo app is a different concern from
+operating workloads, so it stays out of scope by decision (ADR 0013: no collector install, no
+trace backend, no pin). Close the frame: OTel EXTENDS the observability you built today — another
+pipeline that can feed the same kind of store — it does not replace the operator, the
+ServiceMonitor, or PromQL. Next: recap the whole section, then the lab.
 -->
 
 ---
 layout: recap
+compact: true
 heading: 'Recap — declare monitoring intent; let the operator write the config'
 story: 'Hand-editing scrape config against ephemeral Pods is impossible. So monitoring became declarative: you apply a ServiceMonitor CR that selects a Service by label and names its metrics port, and the Prometheus Operator — the operator pattern shipped for real — watches it and generates the scrape config. The target appears in Prometheus, and one rate() query turns the scraped counter into a live request rate.'
 next: 'Operator dev 101 — you''ve USED operators (cert-manager, Prometheus); now peek at building one with kubebuilder'
@@ -499,8 +616,11 @@ next: 'Operator dev 101 — you''ve USED operators (cert-manager, Prometheus); n
   metrics), both shipped and wired by the stack
 - **A ServiceMonitor** selects the **Service by label** and names its **metrics port** (a
   **name**, not a number); **`rate(counter[5m])`** turns a raw counter into a per-second rate
-- **CKx tie-in:** CKA/CKAD **observability** (metrics, monitoring) — knowing *how* the cluster is
-  scraped and querying it is the exam-relevant skill
+- **The coda:** **OpenTelemetry** — **OTLP** is the wire protocol, a **collector** is a
+  **receive → process → export** pipeline, and **traces** answer *which* request was slow —
+  concepts only, nothing installed
+- **CKx tie-in:** CKA/CKAD **observability** (metrics, monitoring) — *how* the cluster is scraped
+  is the exam-relevant skill
 
 <!--
 Speaker: tie the bow and point forward. The problem: you cannot hand-maintain scrape config against
@@ -511,7 +631,9 @@ four CRDs (Prometheus = the server, ServiceMonitor = targets via a Service, PodM
 Alertmanager = alert routing); the four golden signals (latency/traffic/errors/saturation) and the
 metrics/logs/traces split (Prometheus = metrics); the two standard sources (kube-state-metrics for
 object state, node-exporter for host state); and the ServiceMonitor mechanics — select the Service
-by label, name the metrics port (a NAME), and rate() to read a counter as a rate. Hand to Lab 23:
+by label, name the metrics port (a NAME), and rate() to read a counter as a rate. One line on the
+coda: OpenTelemetry relates via OTLP (the wire protocol) and the collector (receive → process →
+export) — traces were named, not run, and nothing was installed. Hand to Lab 23:
 install kube-prometheus-stack, expose an app on /metrics, wire a ServiceMonitor, break it with a
 mismatched selector and diagnose on the /targets page, fix it, then run rate(http_requests_total).
 Forward to S24: you've now USED two operators — next, a peek at building one.

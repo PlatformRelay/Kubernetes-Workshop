@@ -17,6 +17,7 @@ import {
   renderDeck,
   renderGeneratedDecks,
   sectionPath,
+  sectionTimings,
   sections as workshopSections,
   validateCanonicalScheduleTables,
   validateFrontDoorFacts,
@@ -847,6 +848,73 @@ describe('generate-decks --gitops parsing (fail closed)', () => {
     const result = runGenerateDecks(['--check', '--gitpos', 'flux'])
     assert.equal(result.status, 1, `expected exit 1, got ${result.status}\n${result.stderr}`)
     assert.match(result.stderr, /unknown option --gitpos/i)
+  })
+})
+
+describe('S23 OpenTelemetry concept coda (ADR 0013)', () => {
+  const root = join(dirname(fileURLToPath(import.meta.url)), '..')
+  const s23Path = join(root, 'pages', 'S23-prometheus-operator', 'index.md')
+
+  it('names OTLP, the collector pipeline shape, and traces in learner-visible content', () => {
+    const visible = stripHtmlComments(readFileSync(s23Path, 'utf8'))
+    assert.match(visible, /OpenTelemetry/, 'the coda must name OpenTelemetry on-slide')
+    assert.match(visible, /OTLP/, 'OTLP must be named on-slide as the wire protocol')
+    assert.match(visible, /wire protocol/i, 'OTLP must be framed as a wire protocol')
+    assert.match(
+      visible,
+      /receive → process → export/,
+      'the collector must be framed as the receive → process → export pipeline shape',
+    )
+    assert.match(visible, /\btraces?\b/i, 'traces must be named as a signal type')
+  })
+
+  it('keeps the coda concepts-only: no install surface, no OTel lab, no OTel pin', () => {
+    const visible = stripHtmlComments(readFileSync(s23Path, 'utf8'))
+    assert.doesNotMatch(
+      visible,
+      /helm (install|upgrade)[^\n]*(otel|opentelemetry)/i,
+      'ADR 0013 rule 1: nothing is installed — no collector install command on-slide',
+    )
+    assert.doesNotMatch(
+      visible,
+      /opentelemetry-collector|otel\/[a-z-]+:/i,
+      'ADR 0013 rule 5: no collector image or chart reference in learner-visible content',
+    )
+
+    const versions = readFileSync(join(root, 'infra', 'versions.env'), 'utf8')
+    assert.doesNotMatch(
+      versions,
+      /otel|opentelemetry/i,
+      'ADR 0013 rule 5: infra/versions.env gains no OpenTelemetry pin',
+    )
+
+    const day3Labs = readdirSync(join(root, 'labs', 'day-3'))
+    assert.deepEqual(
+      day3Labs.filter((file) => /otel|telemetry|tracing/i.test(file)),
+      [],
+      'ADR 0013 rule 4: no OpenTelemetry lab file exists',
+    )
+  })
+
+  it('holds S23 timing at net-zero: sectionTimings unchanged at [30, 25]', () => {
+    assert.deepEqual(
+      sectionTimings.S23,
+      [30, 25],
+      'ADR 0013 rule 3: the coda fits the existing 30-minute allocation or it does not ship',
+    )
+  })
+
+  it('keeps S23 at 13 slides (11 baseline + 2 coda; ADR caps the coda at 6)', async () => {
+    const deck = await parseDeck(readFileSync(s23Path, 'utf8'), s23Path)
+    assert.ok(
+      deck.slides.length <= 17,
+      `ADR 0013 rule 2: the coda is at most six slides on the 11-slide baseline, found ${deck.slides.length}`,
+    )
+    assert.equal(
+      deck.slides.length,
+      13,
+      'S23 is 11 baseline slides + a 2-slide coda; growing it must be a conscious timing decision',
+    )
   })
 })
 
