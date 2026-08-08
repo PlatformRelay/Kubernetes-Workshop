@@ -1,5 +1,5 @@
 {
-  "captured": "2026-08-07",
+  "captured": "2026-08-09",
   "source": "GitHub Global Security Advisory API",
   "advisories": [
     {
@@ -37,6 +37,24 @@
       "vulnerableVersionRange": ">= 4.0.0, < 4.3.1",
       "firstPatchedVersion": "4.3.1",
       "source": "https://github.com/advisories/GHSA-5p4m-2wfm-xmqj"
+    },
+    {
+      "id": "GHSA-2v37-7h3g-55p8",
+      "package": "nanoid",
+      "ecosystem": "npm",
+      "severity": "high",
+      "vulnerableVersionRange": "< 3.3.17",
+      "firstPatchedVersion": "3.3.17",
+      "source": "https://github.com/advisories/GHSA-2v37-7h3g-55p8"
+    },
+    {
+      "id": "GHSA-2v37-7h3g-55p8",
+      "package": "nanoid",
+      "ecosystem": "npm",
+      "severity": "high",
+      "vulnerableVersionRange": ">= 4.0.0, < 5.1.6",
+      "firstPatchedVersion": "5.1.6",
+      "source": "https://github.com/advisories/GHSA-2v37-7h3g-55p8"
     }
   ]
 }
