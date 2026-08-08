@@ -308,6 +308,17 @@ test('js-yaml override is bounded to the intended 5.x major', async () => {
   assert.doesNotMatch(workspace, /"js-yaml@>=5\.0\.0":/)
 })
 
+test('js-yaml 3.x and 4.x overrides are bounded to their own patched floors', async () => {
+  const root = path.resolve(import.meta.dirname, '..')
+  const workspace = await readFile(path.join(root, 'pnpm-workspace.yaml'), 'utf8')
+
+  assert.match(workspace, /"js-yaml@>=3\.0\.0 <4\.0\.0": 3\.15\.1/)
+  assert.match(workspace, /"js-yaml@>=4\.0\.0 <5\.0\.0": 4\.3\.1/)
+  assert.doesNotMatch(workspace, /"js-yaml@>=3\.0\.0":/)
+  assert.doesNotMatch(workspace, /"js-yaml@>=4\.0\.0":/)
+  assert.doesNotMatch(workspace, /(^|\s)js-yaml:/m)
+})
+
 test('nanoid override is bounded to the intended 3.x major at its patched floor', async () => {
   const root = path.resolve(import.meta.dirname, '..')
   const workspace = await readFile(path.join(root, 'pnpm-workspace.yaml'), 'utf8')
