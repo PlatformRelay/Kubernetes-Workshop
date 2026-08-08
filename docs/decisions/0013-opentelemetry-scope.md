@@ -1,6 +1,6 @@
 # ADR 0013: Scope OpenTelemetry as a concept coda on S23, not a new section
 
-- **Status:** proposed
+- **Status:** accepted (2026-08-08, operator ruling — option B)
 - **Scope:** whether and how OpenTelemetry enters the curriculum — section numbering, day placement,
   lab surface, environment add-ons, and `infra/versions.env` pins. This ADR **proposes**; it does not
   enact. It deliberately does **not** change the OpenTelemetry wording in
