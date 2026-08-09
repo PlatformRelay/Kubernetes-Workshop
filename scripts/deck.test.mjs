@@ -855,17 +855,24 @@ describe('S23 OpenTelemetry concept coda (ADR 0013)', () => {
   const root = join(dirname(fileURLToPath(import.meta.url)), '..')
   const s23Path = join(root, 'pages', 'S23-prometheus-operator', 'index.md')
 
-  it('names OTLP, the collector pipeline shape, and traces in learner-visible content', () => {
-    const visible = stripHtmlComments(readFileSync(s23Path, 'utf8'))
-    assert.match(visible, /OpenTelemetry/, 'the coda must name OpenTelemetry on-slide')
-    assert.match(visible, /OTLP/, 'OTLP must be named on-slide as the wire protocol')
-    assert.match(visible, /wire protocol/i, 'OTLP must be framed as a wire protocol')
+  it('names OTLP, the collector pipeline shape, and traces on the coda slides themselves', async () => {
+    const deck = await parseDeck(readFileSync(s23Path, 'utf8'), s23Path)
+    const codaSlides = deck.slides.filter((slide) => /kw-kicker">Coda\b/.test(slide.content))
+    assert.equal(
+      codaSlides.length,
+      2,
+      'ADR 0013 ships exactly two kicker-marked coda slides — the recap bullet alone must not satisfy the vocabulary locks',
+    )
+    const coda = stripHtmlComments(codaSlides.map((slide) => slide.content).join('\n'))
+    assert.match(coda, /OpenTelemetry/, 'the coda must name OpenTelemetry on-slide')
+    assert.match(coda, /OTLP/, 'OTLP must be named on-slide as the wire protocol')
+    assert.match(coda, /wire protocol/i, 'OTLP must be framed as a wire protocol')
     assert.match(
-      visible,
+      coda,
       /receive → process → export/,
       'the collector must be framed as the receive → process → export pipeline shape',
     )
-    assert.match(visible, /\btraces?\b/i, 'traces must be named as a signal type')
+    assert.match(coda, /\btraces?\b/i, 'traces must be named as a signal type')
   })
 
   it('keeps the coda concepts-only: no install surface, no OTel lab, no OTel pin', () => {
@@ -1018,12 +1025,28 @@ export function slideClickBudget(slide) {
   return typeof override === 'number' ? override : registeredClicks(slide.content)
 }
 
-/** Highest `step N:` a component's header comment documents, or null if undocumented. */
+/**
+ * Highest `step N:` a component's header comment documents, or null if undocumented.
+ *
+ * Throws on a condensed one-line contract (`step 0: … · 1: … · 2: …`): the line-anchored
+ * parse would read only the leading `step 0:` and report maxStep 0 — non-null, so both the
+ * documents-its-contract check and the starvation checks would pass vacuously.
+ */
 export function documentedMaxStep(repoRoot, component) {
   const file = join(repoRoot, 'components', `${component}.vue`)
   if (!existsSync(file)) return null
   const header = readFileSync(file, 'utf8').match(/\/\*\*[\s\S]*?\*\//)
   if (!header) return null
+  const condensed = header[0].match(
+    /^[ \t]*\*[ \t]*steps?[ \t]+\d+[ \t]*:[^\n]*[·•|,;][ \t]*\d+[ \t]*:[^\n]*/im,
+  )
+  if (condensed) {
+    throw new Error(
+      `components/${component}.vue documents its step contract on one condensed line ` +
+        `(${JSON.stringify(condensed[0].trim())}) — the line-anchored parser would silently ` +
+        'report maxStep 0. Use one "* step N:" line per step.',
+    )
+  }
   const steps = [...header[0].matchAll(/^\s*\*\s*step\s+(\d+)\s*:/gim)].map((m) => Number(m[1]))
   return steps.length ? Math.max(...steps) : null
 }
@@ -1138,16 +1161,28 @@ describe('operator-requested section extensions (US-FIX-CONTENT-GAPS)', () => {
 
     it('keeps the channel facts accurate at the v1.5 pin: TLSRoute standard, TCP/UDP experimental', () => {
       const visible = visibleOf(rel)
-      assert.match(visible, /standard/i, 'the standard-channel framing must survive')
+      const card = (heading) => {
+        const match = visible.match(
+          new RegExp(`<KwCard heading="${heading}"[\\s\\S]*?</KwCard>`),
+        )
+        assert.ok(match, `the "${heading}" KwCard must exist on-slide`)
+        return match[0]
+      }
+      const tlsRoute = card('TLSRoute')
       assert.match(
-        visible,
-        /experimental/i,
-        'TCPRoute/UDPRoute must be marked experimental at the pinned v1.5 channel',
+        tlsRoute,
+        /standard channel/i,
+        'the TLSRoute card must claim the standard channel (GA since Gateway API v1.5.0)',
       )
       assert.doesNotMatch(
-        visible,
-        /TLSRoute[^\n]{0,80}experimental|experimental[^\n]{0,80}TLSRoute/i,
-        'TLSRoute is standard channel since Gateway API v1.5.0 — it must not be called experimental',
+        tlsRoute,
+        /experimental/i,
+        'TLSRoute is standard channel since Gateway API v1.5.0 — its card must not call it experimental',
+      )
+      assert.match(
+        card('TCPRoute / UDPRoute'),
+        /experimental/i,
+        'TCPRoute/UDPRoute must be marked experimental at the pinned v1.5 channel',
       )
     })
 
@@ -1319,6 +1354,30 @@ describe('animated component click budgets (US-FIX-ANIM-CLICKS)', () => {
       'each components/<name>.vue header comment must enumerate its "step N:" beats — ' +
         `that comment is the contract a slide's click budget has to cover: ${undocumented.join(', ')}`,
     )
+  })
+
+  it('rejects a condensed one-line step contract instead of silently parsing maxStep 0', () => {
+    const tmpRoot = mkdtempSync(join(tmpdir(), 'deck-step-contract-'))
+    mkdirSync(join(tmpRoot, 'components'))
+    writeFileSync(
+      join(tmpRoot, 'components', 'Condensed.vue'),
+      '<script setup lang="ts">\n/**\n * Click-driven scratch fixture.\n' +
+        ' * step 0: old pod Running · 1: new pod creating · 2: replaced\n */\n</script>\n',
+    )
+    assert.throws(
+      () => documentedMaxStep(tmpRoot, 'Condensed'),
+      /Condensed\.vue[\s\S]*condensed line[\s\S]*one "\* step N:" line per step/,
+      'a condensed header must fail loudly, naming the component — never parse as maxStep 0',
+    )
+  })
+
+  it('still parses every deck component with a per-line step contract', async () => {
+    const bound = await collectClickBoundSlides(repoRoot)
+    for (const component of new Set(bound.map((b) => b.component))) {
+      const maxStep = documentedMaxStep(repoRoot, component)
+      assert.notEqual(maxStep, null, `${component} must keep a parseable step contract`)
+      assert.ok(maxStep > 0, `${component} documents steps beyond 0, so maxStep must be > 0`)
+    }
   })
 
   it('every slide binding :step="$clicks" reserves a budget >= the component max step', async () => {
