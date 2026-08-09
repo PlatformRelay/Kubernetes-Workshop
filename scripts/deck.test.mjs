@@ -1421,3 +1421,66 @@ describe('animated component click budgets (US-FIX-ANIM-CLICKS)', () => {
     )
   })
 })
+
+describe('S07/S14 — the NotReady beat precedes the reroute (US-FIX-REMOVEAT-BEAT)', () => {
+  const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..')
+  const visibleOf = (rel) => stripHtmlComments(readFileSync(join(repoRoot, rel), 'utf8'))
+  const componentSource = () =>
+    readFileSync(join(repoRoot, 'components', 'ServiceRouting.vue'), 'utf8')
+
+  it('ServiceRouting documents four states — NotReady (step 2) distinct from the reroute (step 3)', () => {
+    assert.equal(
+      documentedMaxStep(repoRoot, 'ServiceRouting'),
+      3,
+      'the fused "NotReady + reroute" click must be split into two documented steps',
+    )
+    const header = componentSource().match(/\/\*\*[\s\S]*?\*\//)[0]
+    assert.match(
+      header,
+      /^\s*\*\s*step 2:.*NotReady.*still in the slice/im,
+      'step 2 must be the intermediate state: probe failed, endpoint still listed',
+    )
+    assert.match(
+      header,
+      /^\s*\*\s*step 3:.*reroutes/im,
+      'step 3 must be the state where the slice updates and traffic reroutes',
+    )
+  })
+
+  it('the component fails readiness one step BEFORE it removes the endpoint', () => {
+    const src = componentSource()
+    assert.match(
+      src,
+      /step >= props\.removeAt - 1/,
+      'NotReady must fire at removeAt - 1 (readiness probe fails first)',
+    )
+    assert.match(
+      src,
+      /step >= props\.removeAt\b(?!\s*-)/,
+      'endpoint removal must key on removeAt itself — one step after the probe failure',
+    )
+  })
+
+  for (const rel of ['pages/S07-service/index.md', 'pages/S14-probes/index.md']) {
+    it(`${rel} narrates NotReady-still-in-the-slice before the slice drop, in click order`, () => {
+      const visible = visibleOf(rel)
+      assert.match(
+        visible,
+        /NotReady[\s\S]*?still in the slice[\s\S]*?drops it from the (?:Endpoint)?[Ss]lice/,
+        'the NotReady beat (endpoint still listed) must come before the reroute beat on-slide',
+      )
+    })
+
+    it(`${rel} reserves exactly the 3 clicks the ServiceRouting contract needs`, async () => {
+      const abs = join(repoRoot, rel)
+      const deck = await parseDeck(readFileSync(abs, 'utf8'), abs)
+      const slide = deck.slides.find((s) => s.content.includes('<ServiceRouting'))
+      assert.ok(slide, `${rel} must keep its ServiceRouting slide`)
+      assert.equal(
+        slideClickBudget(slide),
+        3,
+        'the slide budget must reach step 3 so the reroute beat is reachable',
+      )
+    })
+  }
+})

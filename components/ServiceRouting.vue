@@ -4,16 +4,20 @@ import { computed } from 'vue'
 /**
  * Click-driven service routing — the shared US-X3 animation.
  * Bind `:step="$clicks"`. Shows the wiring a Service actually is:
- * selector → EndpointSlice → Pods, then the readiness variant that removes a
- * Pod from the slice without deleting it (the bridge S14 reuses).
+ * selector → EndpointSlice → Pods, then the readiness variant that first marks a
+ * Pod NotReady and only then removes it from the slice, without deleting it
+ * (the bridge S14 reuses).
  *
  * Pure Vue + CSS on the kw-* vocabulary (ADR 0001); every fixed `step` is a
  * meaningful static state for export. Parameterized (serviceName / selector /
  * pods / removeAt) so S14 can reuse it for the readiness-probe story.
+ * `removeAt` is the step at which the endpoint leaves the slice; the readiness
+ * probe fails one step earlier, at `removeAt - 1`.
  *
  * step 0: Service + selector, all Pods in the slice (steady state)
  * step 1: a request fans out across all endpoints (load-balanced)
- * step 2: one Pod goes NotReady → leaves the slice → traffic reroutes to the rest
+ * step 2: one Pod's readiness probe fails → NotReady, but its IP is still in the slice
+ * step 3: the endpoint controller drops the IP from the slice → traffic reroutes to the rest
  */
 interface RoutePod {
   name: string
@@ -39,14 +43,21 @@ const props = withDefaults(
       { name: 'web-6f8c-7nqld', ip: '10.244.0.8' },
       { name: 'web-6f8c-lm4tt', ip: '10.244.0.9' },
     ],
-    removeAt: 2,
+    removeAt: 3,
   },
 )
 
-// The last Pod drops out of the EndpointSlice once step reaches removeAt.
-const isReady = (i: number) => !(props.step >= props.removeAt && i === props.pods.length - 1)
+// The last Pod's readiness probe fails one step BEFORE its endpoint is removed:
+// NotReady at removeAt - 1 (IP still listed), gone from the slice at removeAt.
+const isReady = (i: number) => !(props.step >= props.removeAt - 1 && i === props.pods.length - 1)
+const isRemoved = (i: number) => props.step >= props.removeAt && i === props.pods.length - 1
+const isLeaving = (i: number) => !isReady(i) && !isRemoved(i)
 const routing = computed(() => props.step >= 1)
-const endpoints = computed(() => props.pods.filter((_, i) => isReady(i)).map((p) => p.ip))
+const endpoints = computed(() =>
+  props.pods
+    .map((p, i) => ({ ip: p.ip, leaving: isLeaving(i), removed: isRemoved(i) }))
+    .filter((e) => !e.removed),
+)
 </script>
 
 <template>
@@ -60,7 +71,13 @@ const endpoints = computed(() => props.pods.filter((_, i) => isReady(i)).map((p)
         <div class="kw-route-slice">
           <div class="kw-route-slice-label">EndpointSlice</div>
           <TransitionGroup name="kw-route-ep" tag="div" class="kw-route-eps">
-            <code v-for="ip in endpoints" :key="ip" class="kw-route-ep">{{ ip }}</code>
+            <code
+              v-for="ep in endpoints"
+              :key="ep.ip"
+              class="kw-route-ep"
+              :class="{ 'is-leaving': ep.leaving }"
+              >{{ ep.ip }}</code
+            >
             <span v-if="endpoints.length === 0" key="empty" class="kw-route-ep is-empty"
               >&lt;none&gt;</span
             >
@@ -76,7 +93,11 @@ const endpoints = computed(() => props.pods.filter((_, i) => isReady(i)).map((p)
           v-for="(pod, i) in props.pods"
           :key="pod.name"
           class="kw-route-pod"
-          :class="{ 'is-out': !isReady(i), 'is-hot': routing && isReady(i) }"
+          :class="{
+            'is-out': isRemoved(i),
+            'is-failing': isLeaving(i),
+            'is-hot': routing && isReady(i),
+          }"
         >
           <div class="kw-route-pod-head">
             <K8sIcon kind="pod" variant="unlabeled" size="0.95rem" alt="" class="kw-route-pod-logo" />
@@ -98,13 +119,18 @@ const endpoints = computed(() => props.pods.filter((_, i) => isReady(i)).map((p)
         <code>{{ props.selector }}</code> and writes each Pod's IP into the
         <strong>EndpointSlice</strong> — the live list of who is behind the stable ClusterIP.
       </template>
-      <template v-else-if="props.step === 1">
+      <template v-else-if="props.step < props.removeAt - 1">
         A request to the ClusterIP is <strong>load-balanced</strong> across every address in
         the slice — three Pods, three ways to answer.
       </template>
+      <template v-else-if="props.step < props.removeAt">
+        One Pod is <strong>{{ props.reason }}</strong>: it flips to <strong>NotReady</strong> —
+        still <code>Running</code>, and for a beat its IP is still in the slice. The endpoint
+        controller hasn't reacted yet.
+      </template>
       <template v-else>
-        One Pod is <strong>{{ props.reason }}</strong>: still <code>Running</code>, but dropped
-        from the slice — so traffic reroutes to the healthy two, with no error to the caller.
+        Now the endpoint controller <strong>drops the IP from the slice</strong> — traffic
+        reroutes to the healthy two, with no error to the caller.
         <span class="kw-muted">(This is exactly the readiness behaviour S14 builds on.)</span>
       </template>
     </div>
@@ -184,6 +210,13 @@ const endpoints = computed(() => props.pods.filter((_, i) => isReady(i)).map((p)
   color: var(--kw-danger);
 }
 
+/* The failing Pod's IP while it is NotReady but not yet dropped from the slice. */
+.kw-route-ep.is-leaving {
+  border-color: var(--kw-danger);
+  color: var(--kw-danger);
+  border-style: dashed;
+}
+
 .kw-route-arrow {
   font-size: 1.6rem;
   color: var(--kw-text-faint);
@@ -220,6 +253,12 @@ const endpoints = computed(() => props.pods.filter((_, i) => isReady(i)).map((p)
 .kw-route-pod.is-out {
   opacity: 0.5;
   border-color: var(--kw-danger);
+}
+
+/* Readiness failed, endpoint not yet removed: alarmed but still fully present. */
+.kw-route-pod.is-failing {
+  border-color: var(--kw-danger);
+  box-shadow: 0 0 0 1px var(--kw-danger) inset;
 }
 
 .kw-route-pod-head {
