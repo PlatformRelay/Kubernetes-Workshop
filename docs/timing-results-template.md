@@ -48,21 +48,21 @@ Fill this in per run:
 | S01 | Containers | 30 | 25 | | | | | |
 | S02 | Container security & supply chain | 30 | 25 | | | | | |
 | S03 | Kubernetes mental model | 30 | 20 | | | | | |
-| S04 | kubectl | 25 | 25 | | | | | |
+| S04 | kubectl | 30 | 25 | | | | | |
 | S05 | Pod | 30 | 25 | | | | | |
 | S06 | Deployment | 35 | 30 | | | | | |
 | S07 | Service | 30 | 30 | | | | | |
-| S08 | Ingress | 25 | 25 | | | | | |
+| S08 | Ingress | 30 | 25 | | | | | |
 
 ## Day 2
 
 | ID | Section | PLANNED slides | PLANNED lab | MEASURED slides | MEASURED lab | Δ slides | Δ lab | Blockers / notes |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| S09 | Gateway API | 30 | 25 | | | | | |
-| S10 | ConfigMap & Secret | 25 | 25 | | | | | |
+| S09 | Gateway API | 35 | 25 | | | | | |
+| S10 | ConfigMap & Secret | 30 | 25 | | | | | |
 | S11 | Storage (PV/PVC/StorageClass) | 30 | 30 | | | | | |
 | S12 | StatefulSet | 30 | 30 | | | | | |
-| S13 | Resources & limits | 30 | 30 | | | | | |
+| S13 | Resources & limits | 35 | 30 | | | | | |
 | S14 | Health probes | 30 | 30 | | | | | |
 | S15 | Jobs & CronJobs | 20 | 20 | | | | | |
 | S16 | Autoscaling (HPA) | 20 | 20 | | | | | |
@@ -95,8 +95,8 @@ included (the planned totals below assume the canonical cut, which omits some se
 
 | Day | PLANNED total (canonical cut) | MEASURED total (this run) | Δ | Sections run this run |
 | --- | --- | --- | --- | --- |
-| Day 1 | 365 | | | |
-| Day 2 | 345 | | | |
+| Day 1 | 375 | | | |
+| Day 2 | 360 | | | |
 | Day 3 | 420 | | | |
 
 > **Reading the deltas.** The open pre-delivery question is whether the cut lands near
