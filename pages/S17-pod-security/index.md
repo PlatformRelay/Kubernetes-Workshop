@@ -22,8 +22,16 @@ runtime enforcement the kubelet applies (runAsNonRoot on an image that runs as r
 Beats: problem (root + writable rootfs on a shared kernel → foreshadows S25) · mental model
 (container vs pod-level securityContext; PSS ladder privileged/baseline/restricted) ·
 code-annotated (the four restricted gates) · magic-move (insecure → four gates PASS restricted →
-+readOnlyRootFilesystem, BEYOND restricted) · S02 callback + the runtime landmine · PSA via
++readOnlyRootFilesystem, BEYOND restricted) · S02 callback + the runtime landmine · Trivy
+image-scan gate (the S02 scanner named + the CI exit-code pattern; net-zero add — 11 slides
+still under the deck's 30-min density norm) · PSA via
 namespace labels (enforce/warn/audit) · AdmissionGate animation · recap → S25 · lab.
+Trivy ACCURACY LOCKS (verified against trivy.dev docs, 2026-08): open-source scanner
+by Aqua Security; `trivy image` matches OS packages AND language dependencies against
+CVE feeds (also misconfig/secret/SBOM scanning); `--severity HIGH,CRITICAL
+--exit-code 1` is the documented CI-gate pattern; workshop-web's own build pipeline
+is genuinely Trivy-gated (see infra/versions.env commentary). Concepts-only: no
+TRIVY pin, no lab step; S25 adds the in-cluster live half (Trivy Operator).
 Animation: AdmissionGate.vue (new, self-contained) — request → PSA check → deny then admit.
 ACCURACY LOCKS (verified against the current Pod Security Standards doc):
 - `restricted` gates EXACTLY four spec fields for a plain Pod: runAsNonRoot:true,
@@ -313,6 +321,53 @@ actually supports. Most base images (busybox, debian, …) run as root and would
 lab's callout names it; workshop-web ships as the distroless nonroot user 65532, so our hardened
 Pod actually serves traffic. Point back to S02: the reason we did all that image hygiene is so
 runtime hardening like this is even possible.
+-->
+
+---
+layout: code-annotated
+heading: 'Scan the image before any gate sees the Pod'
+compact: true
+---
+
+```console {none|1-2|4-5|all}
+$ trivy image ghcr.io/platformrelay/workshop-web:v1
+  0 known CVEs — distroless: almost nothing to match
+
+$ trivy image --severity HIGH,CRITICAL --exit-code 1 app:2019
+  47 CVEs (HIGH 31, CRITICAL 16) → exit 1 — deploy stops
+```
+
+::notes::
+
+<CodeNote at="1" label="what a scanner checks" variant="ok">
+<strong>Trivy</strong> — the scanner from the container-security section —
+matches OS packages <em>and</em> language deps against CVE feeds.
+</CodeNote>
+
+<CodeNote at="2" label="the CI gate" variant="warn">
+<code>--exit-code 1</code> fails the pipeline: a vulnerable image never ships.
+Our own <code>workshop-web</code> build is gated exactly like this.
+</CodeNote>
+
+<CodeNote at="3" label="two different questions" variant="ok">
+The scanner gates the image's <strong>contents</strong>; PSA (next slide) gates
+the Pod's <strong>spec</strong>. Defence in depth needs both.
+</CodeNote>
+
+<!--
+Speaker: this beat names the tool the S02 scan story used generically. Trivy is the
+open-source scanner (Aqua Security) most of the ecosystem reaches for — Grype is a
+fine alternative, and S25 keeps the vendor-neutral category framing. First command:
+our demo image comes back clean, and not by luck — distroless means there's
+almost no package inventory to match, which is the S02 lesson paying rent. Second
+command: the CI-gate idiom straight from the Trivy docs — filter to HIGH/CRITICAL,
+--exit-code 1, and the deploy stops in the pipeline; tell them honestly that the
+workshop-web image they've used all week is built behind exactly this gate (plus
+signing + SBOM) in this repo's own CI. The third note is the slide's real point and
+the bridge to PSA: image contents vs pod spec are ORTHOGONAL admission questions —
+scanning can't see privileged:true, PSA can't see an outdated OpenSSL. Defence in
+depth needs both, and S25 adds the third leg: what about CVEs disclosed AFTER the
+image was admitted?
 -->
 
 ---

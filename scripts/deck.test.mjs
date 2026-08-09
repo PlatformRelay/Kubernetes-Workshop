@@ -396,11 +396,11 @@ describe('deck manifest validation', () => {
       /planning estimate.*measured/i,
     )
     assert.throws(
-      () => validatePlanningLanguage('Day 2: 345 min.'),
-      /345.*planned/i,
+      () => validatePlanningLanguage('Day 2: 360 min.'),
+      /360.*planned/i,
     )
     assert.doesNotThrow(
-      () => validatePlanningLanguage('Day 2: 345 min planned (unrehearsed planning estimate).'),
+      () => validatePlanningLanguage('Day 2: 360 min planned (unrehearsed planning estimate).'),
     )
     assert.throws(
       () => validatePlanningLanguage('Treat the totals as measured facts.'),
@@ -1058,6 +1058,244 @@ async function collectClickBoundSlides(repoRoot) {
   }
   return found
 }
+
+describe('operator-requested section extensions (US-FIX-CONTENT-GAPS)', () => {
+  const root = join(dirname(fileURLToPath(import.meta.url)), '..')
+  const visibleOf = (rel) => stripHtmlComments(readFileSync(join(root, rel), 'utf8'))
+  const slideCount = async (rel) => {
+    const abs = join(root, rel)
+    return (await parseDeck(readFileSync(abs, 'utf8'), abs)).slides.length
+  }
+
+  describe('S04 — k9s intro (the pinned tool finally appears on-slide)', () => {
+    const rel = 'pages/S04-kubectl/index.md'
+
+    it('names k9s and its command idiom in learner-visible content', () => {
+      const visible = visibleOf(rel)
+      assert.match(visible, /\bk9s\b/, 'k9s must be named on-slide')
+      assert.match(visible, /:pods\b/, 'the `:resource` command idiom must appear on-slide')
+      assert.match(visible, /:xray\b/, 'the XRay dependency view must appear on-slide')
+      assert.match(visible, /--readonly\b/, 'the --readonly guardrail flag must appear on-slide')
+    })
+
+    it('frames k9s as kubeconfig + RBAC parity, not a privileged side door', () => {
+      const visible = visibleOf(rel)
+      assert.match(visible, /kubeconfig/, 'k9s must be tied to the kubeconfig context on-slide')
+      assert.match(visible, /RBAC/, 'RBAC parity with kubectl must be stated on-slide')
+    })
+
+    it('accounts for the k9s beat: S04 timing is [30, 25]', () => {
+      assert.deepEqual(sectionTimings.S04, [30, 25])
+    })
+
+    it('grows S04 to exactly 12 slides (9 baseline + 3 k9s)', async () => {
+      assert.equal(await slideCount(rel), 12)
+    })
+  })
+
+  describe('S08 — TLS with cert-manager and the Certificate resource', () => {
+    const rel = 'pages/S08-ingress/index.md'
+
+    it('names cert-manager, Certificate, and the issuer model on-slide', () => {
+      const visible = visibleOf(rel)
+      assert.match(visible, /cert-manager/, 'cert-manager must be named on-slide')
+      assert.match(visible, /kind: Certificate/, 'the Certificate resource must be shown as YAML')
+      assert.match(visible, /ClusterIssuer/, 'the ClusterIssuer must be named on-slide')
+      assert.match(visible, /ACME/, 'the ACME issuance flow must be named on-slide')
+      assert.match(visible, /renew/i, 'automatic renewal must be claimed on-slide')
+    })
+
+    it('ties the Certificate to the ingress.yaml web-tls Secret from the magic-move', () => {
+      const visible = visibleOf(rel)
+      assert.match(
+        visible,
+        /kind: Certificate[\s\S]{0,200}secretName: web-tls/,
+        'the Certificate spec itself must target the same web-tls Secret the Ingress tls block names',
+      )
+    })
+
+    it('shows the stable cert-manager.io/v1 API, consistent with the S22 operator demo', () => {
+      assert.match(visibleOf(rel), /cert-manager\.io\/v1/)
+    })
+
+    it('accounts for the TLS beat: S08 timing is [30, 25]', () => {
+      assert.deepEqual(sectionTimings.S08, [30, 25])
+    })
+
+    it('grows S08 to exactly 12 slides (10 baseline + 2 TLS)', async () => {
+      assert.equal(await slideCount(rel), 12)
+    })
+  })
+
+  describe('S09 — the route family beyond HTTP', () => {
+    const rel = 'pages/S09-gateway-api/index.md'
+
+    it('names GRPCRoute, TCPRoute, TLSRoute, and UDPRoute on-slide', () => {
+      const visible = visibleOf(rel)
+      for (const kind of ['GRPCRoute', 'TCPRoute', 'TLSRoute', 'UDPRoute'])
+        assert.match(visible, new RegExp(`\\b${kind}\\b`), `${kind} must appear on-slide`)
+    })
+
+    it('keeps the channel facts accurate at the v1.5 pin: TLSRoute standard, TCP/UDP experimental', () => {
+      const visible = visibleOf(rel)
+      assert.match(visible, /standard/i, 'the standard-channel framing must survive')
+      assert.match(
+        visible,
+        /experimental/i,
+        'TCPRoute/UDPRoute must be marked experimental at the pinned v1.5 channel',
+      )
+      assert.doesNotMatch(
+        visible,
+        /TLSRoute[^\n]{0,80}experimental|experimental[^\n]{0,80}TLSRoute/i,
+        'TLSRoute is standard channel since Gateway API v1.5.0 — it must not be called experimental',
+      )
+    })
+
+    it('explains the listener TLS modes: Terminate vs Passthrough', () => {
+      const visible = visibleOf(rel)
+      assert.match(visible, /Terminate/, 'TLS mode Terminate must appear on-slide')
+      assert.match(visible, /Passthrough/, 'TLS mode Passthrough must appear on-slide')
+    })
+
+    it('accounts for the route-family beat: S09 timing is [35, 25]', () => {
+      assert.deepEqual(sectionTimings.S09, [35, 25])
+    })
+
+    it('grows S09 to exactly 11 slides (9 baseline + 2 route family)', async () => {
+      assert.equal(await slideCount(rel), 11)
+    })
+  })
+
+  describe('S10 — secure secret delivery comparison', () => {
+    const rel = 'pages/S10-config/index.md'
+
+    it('names the three delivery approaches on-slide', () => {
+      const visible = visibleOf(rel)
+      assert.match(visible, /External Secrets Operator/, 'ESO must be named on-slide')
+      assert.match(visible, /\bExternalSecret\b/, 'the ExternalSecret resource must be named')
+      assert.match(visible, /Sealed Secrets/, 'Sealed Secrets must be named on-slide')
+      assert.match(visible, /\bkubeseal\b/, 'the kubeseal CLI must be named on-slide')
+      assert.match(visible, /\bVault\b/, 'Vault must be named on-slide')
+    })
+
+    it('frames the comparison around where the secret lives and Git safety', () => {
+      const visible = visibleOf(rel)
+      assert.match(visible, /\bGit\b/, 'the Git-safety question must be on-slide')
+      assert.match(
+        visible,
+        /SealedSecret/,
+        'the SealedSecret CRD (the thing that IS safe to commit) must be named',
+      )
+    })
+
+    it('stays concepts-level: no delivery-tool pin keys in infra/versions.env', () => {
+      assert.doesNotMatch(
+        readFileSync(join(root, 'infra', 'versions.env'), 'utf8'),
+        /^(?:EXTERNAL_SECRETS|SEALED_SECRETS|VAULT|OPENBAO)\w*=/m,
+      )
+    })
+
+    it('accounts for the delivery beat: S10 timing is [30, 25]', () => {
+      assert.deepEqual(sectionTimings.S10, [30, 25])
+    })
+
+    it('grows S10 to exactly 11 slides (9 baseline + 2 delivery)', async () => {
+      assert.equal(await slideCount(rel), 11)
+    })
+  })
+
+  describe('S13 — right-sizing with a usage-graph beat', () => {
+    const rel = 'pages/S13-resources/index.md'
+
+    it('teaches right-sizing from observed usage in learner-visible content', () => {
+      const visible = visibleOf(rel)
+      assert.match(visible, /right-siz/i, 'right-sizing must be named on-slide')
+      assert.match(visible, /kubectl top/, 'kubectl top must appear as the observation tool')
+    })
+
+    it('binds the RightSizing usage-graph component with a documented step contract', () => {
+      const source = readFileSync(join(root, rel), 'utf8')
+      assert.match(
+        source,
+        /<RightSizing :step="\$clicks"/,
+        'the usage-graph beat must be a step-driven RightSizing component',
+      )
+      assert.notEqual(
+        documentedMaxStep(root, 'RightSizing'),
+        null,
+        'components/RightSizing.vue must document its "step N:" contract in the header comment',
+      )
+    })
+
+    it('accounts for the right-sizing beat: S13 timing is [35, 30]', () => {
+      assert.deepEqual(sectionTimings.S13, [35, 30])
+    })
+
+    it('grows S13 to exactly 12 slides (10 baseline + 2 right-sizing)', async () => {
+      assert.equal(await slideCount(rel), 12)
+    })
+  })
+
+  describe('S17 + S25 — Trivy image scanning, build-time and live', () => {
+    const s17 = 'pages/S17-pod-security/index.md'
+    const s25 = 'pages/S25-pod-escape/index.md'
+
+    it('S17 shows the trivy image CI gate on-slide', () => {
+      const visible = visibleOf(s17)
+      assert.match(visible, /\bTrivy\b/, 'Trivy must be named on-slide in S17')
+      assert.match(visible, /trivy image/, 'the trivy image command must appear on-slide')
+      assert.match(visible, /--exit-code 1/, 'the CI-gate exit-code pattern must appear on-slide')
+    })
+
+    it('S25 shows in-cluster live scanning via the Trivy Operator on-slide', () => {
+      const visible = visibleOf(s25)
+      assert.match(visible, /Trivy Operator/, 'the Trivy Operator must be named on-slide in S25')
+      assert.match(
+        visible,
+        /VulnerabilityReport/,
+        'the VulnerabilityReport CRD must be named as the queryable result',
+      )
+    })
+
+    it('S25 keeps the no-endorsement stance alongside the worked example', () => {
+      assert.match(visibleOf(s25), /endorses none/)
+    })
+
+    it('holds Day 3 at net-zero: S17 stays [30, 25] and S25 stays [35, 30]', () => {
+      assert.deepEqual(sectionTimings.S17, [30, 25])
+      assert.deepEqual(sectionTimings.S25, [35, 30])
+    })
+
+    it('caps the additions at one slide each: S17 is 11 slides, S25 is 12', async () => {
+      assert.equal(await slideCount(s17), 11)
+      assert.equal(await slideCount(s25), 12)
+    })
+
+    it('adds no scanning pins and no new labs for any of the extended topics', () => {
+      assert.doesNotMatch(
+        readFileSync(join(root, 'infra', 'versions.env'), 'utf8'),
+        /^(?:TRIVY|K9S)\w*=/m,
+      )
+      for (const day of ['day-1', 'day-2', 'day-3']) {
+        assert.deepEqual(
+          readdirSync(join(root, 'labs', day))
+            .filter((file) => /k9s|trivy|cert-manager|external-secret|sealed|right-siz/i.test(file)),
+          [],
+          `${day} must gain no lab for the concepts-only extensions`,
+        )
+      }
+    })
+  })
+
+  describe('timing surfaces stay consistent after the extensions', () => {
+    it('derives the new planning totals: Day 1 375, Day 2 360, Day 3 unchanged at 420', () => {
+      const totals = canonicalDayTotals(workshopSections)
+      assert.deepEqual(totals.get(1), { slides: 205, lab: 170, total: 375 })
+      assert.deepEqual(totals.get(2), { slides: 190, lab: 170, total: 360 })
+      assert.deepEqual(totals.get(3), { slides: 230, lab: 190, total: 420 })
+    })
+  })
+})
 
 describe('animated component click budgets (US-FIX-ANIM-CLICKS)', () => {
   const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..')

@@ -117,21 +117,21 @@ Each section pairs concept slides with a standalone lab under
 | S01 | Explain what a container image *is* and build one. | [`labs/day-1/01-containers.md`](../labs/day-1/01-containers.md) | 30 | 25 |
 | S02 | Build/choose images that are small, non-root, and scanned (build-time security). | [`labs/day-1/02-container-security.md`](../labs/day-1/02-container-security.md) | 30 | 25 |
 | S03 | Describe the control plane, nodes, and reconciliation. | [`labs/day-1/03-cluster-tour.md`](../labs/day-1/03-cluster-tour.md) | 30 | 20 |
-| S04 | Fluent discovery, inspection, and change with kubectl. | [`labs/day-1/04-kubectl.md`](../labs/day-1/04-kubectl.md) | 25 | 25 |
+| S04 | Fluent discovery, inspection, and change with kubectl — and k9s as the terminal UI over the same API. | [`labs/day-1/04-kubectl.md`](../labs/day-1/04-kubectl.md) | 30 | 25 |
 | S05 | Author, inspect, and delete a Pod; know its lifecycle. | [`labs/day-1/05-pod.md`](../labs/day-1/05-pod.md) | 30 | 25 |
 | S06 | Run and update a Deployment; understand ReplicaSets and rollouts. | [`labs/day-1/06-deployment.md`](../labs/day-1/06-deployment.md) | 35 | 30 |
 | S07 | Give Pods a stable address; debug selector→endpoint routing. | [`labs/day-1/07-service.md`](../labs/day-1/07-service.md) | 30 | 30 |
-| S08 | Expose HTTP north-south through an Ingress controller. | [`labs/day-1/08-ingress.md`](../labs/day-1/08-ingress.md) | 25 | 25 |
+| S08 | Expose HTTP north-south through an Ingress controller; know how cert-manager keeps the TLS Secret issued and renewed. | [`labs/day-1/08-ingress.md`](../labs/day-1/08-ingress.md) | 30 | 25 |
 
 ### Day 2 — Modern routing and running workloads well
 
 | ID | Outcome | Lab | Slides | Lab time |
 | --- | --- | --- | --- | --- |
-| S09 | Route with the Gateway API and explain why it succeeds Ingress. | [`labs/day-2/09-gateway-api.md`](../labs/day-2/09-gateway-api.md) | 30 | 25 |
-| S10 | Inject configuration and secrets; know the caveats. | [`labs/day-2/10-config.md`](../labs/day-2/10-config.md) | 25 | 25 |
+| S09 | Route with the Gateway API, explain why it succeeds Ingress, and name the route family beyond HTTP. | [`labs/day-2/09-gateway-api.md`](../labs/day-2/09-gateway-api.md) | 35 | 25 |
+| S10 | Inject configuration and secrets; know the caveats and the secure-delivery patterns. | [`labs/day-2/10-config.md`](../labs/day-2/10-config.md) | 30 | 25 |
 | S11 | Attach durable storage and reason about the storage stack. | [`labs/day-2/11-storage.md`](../labs/day-2/11-storage.md) | 30 | 30 |
 | S12 | Run a stateful workload with stable identity and per-Pod storage. | [`labs/day-2/12-statefulset.md`](../labs/day-2/12-statefulset.md) | 30 | 30 |
-| S13 | Set requests/limits and reason about scheduling and QoS. | [`labs/day-2/13-resources.md`](../labs/day-2/13-resources.md) | 30 | 30 |
+| S13 | Set requests/limits, reason about scheduling and QoS, and right-size from observed usage. | [`labs/day-2/13-resources.md`](../labs/day-2/13-resources.md) | 35 | 30 |
 | S14 | Configure liveness, readiness, and startup probes correctly. | [`labs/day-2/14-probes.md`](../labs/day-2/14-probes.md) | 30 | 30 |
 | S15 | Run batch and scheduled workloads. | [`labs/day-2/15-jobs.md`](../labs/day-2/15-jobs.md) | 20 | 20 |
 | S16 | Scale a workload on demand with an HPA. | [`labs/day-2/16-hpa.md`](../labs/day-2/16-hpa.md) | 20 | 20 |
@@ -165,7 +165,7 @@ available in the Optional / Appendix deck; deferred entries are visible as stubs
 not schedulable. The cut is deliberately adjustable — the listed add-backs are the first
 knobs to reach for.
 
-### Day 1 (~365 min planned)
+### Day 1 (~375 min planned)
 
 **Sections:** S00, S03, S04, S05, S06, S07, S08.
 
@@ -178,14 +178,14 @@ knobs to reach for.
 | --- | --- | --- | --- |
 | S00 | 20 | 15 | 35 |
 | S03 | 30 | 20 | 50 |
-| S04 | 25 | 25 | 50 |
+| S04 | 30 | 25 | 55 |
 | S05 | 30 | 25 | 55 |
 | S06 | 35 | 30 | 65 |
 | S07 | 30 | 30 | 60 |
-| S08 | 25 | 25 | 50 |
-| **Day 1** | **195** | **170** | **365** |
+| S08 | 30 | 25 | 55 |
+| **Day 1** | **205** | **170** | **375** |
 
-### Day 2 (~345 min planned)
+### Day 2 (~360 min planned)
 
 **Sections:** S09, S10, S11, S12, S13, S14.
 
@@ -194,13 +194,13 @@ knobs to reach for.
 
 | Section | Slides | Lab | Total |
 | --- | --- | --- | --- |
-| S09 | 30 | 25 | 55 |
-| S10 | 25 | 25 | 50 |
+| S09 | 35 | 25 | 60 |
+| S10 | 30 | 25 | 55 |
 | S11 | 30 | 30 | 60 |
 | S12 | 30 | 30 | 60 |
-| S13 | 30 | 30 | 60 |
+| S13 | 35 | 30 | 65 |
 | S14 | 30 | 30 | 60 |
-| **Day 2** | **175** | **170** | **345** |
+| **Day 2** | **190** | **170** | **360** |
 
 ### Day 3 (~420 min planned)
 
@@ -222,7 +222,7 @@ knobs to reach for.
 | S27 | 20 | — | 20 |
 | **Day 3** | **230** | **190** | **420** |
 
-> **Reading the totals.** Day 1 (365) and Day 2 (345) sit under the ~390 target, leaving
+> **Reading the totals.** Day 1 (375) and Day 2 (360) sit under the ~390 target, leaving
 > headroom for the S01/S02 pre-read (Day 1) and the S15/S16 add-backs (Day 2). Day 3 as
 > listed sums to **420** — over target — so a facilitator running to time should drop one
 > of the Day-3 add-backs (S18/S19 are already excluded, and deferred S24 is not

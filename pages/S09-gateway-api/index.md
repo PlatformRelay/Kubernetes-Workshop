@@ -15,20 +15,32 @@ model, none of the annotation sprawl.
 **recommended** · suggested Day 2 · Core track
 
 <!--
-Section S09 — Gateway API. Timing: ~30 min slides + 25 min lab. Opens Day 2 and
+Section S09 — Gateway API. Timing: ~35 min slides + 25 min lab. Opens Day 2 and
 closes the red line Pod → Deployment → Service → Ingress → Gateway API.
 Outcome: learners can explain WHY Gateway API exists (Ingress's ceiling from S08),
 name the three roles (GatewayClass / Gateway / HTTPRoute) and who owns each,
 translate an Ingress into a Gateway + HTTPRoute that fronts the SAME web/web2
-Services, add a typed header match + weighted split, and read status.conditions
-(Accepted / Programmed / ResolvedRefs) as the "did it wire up" signal.
+Services, add a typed header match + weighted split, read status.conditions
+(Accepted / Programmed / ResolvedRefs) as the "did it wire up" signal, and name
+the route family beyond HTTP (GRPCRoute / TLSRoute / TCPRoute / UDPRoute) with
+the listener TLS modes (Terminate vs Passthrough).
 Stack: Gateway API standard-channel CRDs v1.5.1 + Envoy Gateway v1.8.2 (class `eg`)
 — pinned in infra/versions.env.
 Beats: problem (Ingress annotation sprawl, concretely) · mental model (3-box role
 split, parentRefs) · magic-move Ingress → Gateway + HTTPRoute → typed header match →
 weighted split · GatewayRouting animation · prereq (CRDs on the standard channel + a
 conformant controller + an explicitly declared GatewayClass) · state (conditions vs
-Ingress opaqueness) · red-line recap · lab.
+Ingress opaqueness) · route family beyond HTTP · TLS modes Terminate/Passthrough ·
+red-line recap · lab.
+Route-family ACCURACY LOCKS (verified against gateway-api.sigs.k8s.io + the
+v1.5.0/v1.6.0 release notes, 2026-08):
+- GRPCRoute: GA, standard channel since v1.1.0.
+- TLSRoute: GA (v1), standard channel since v1.5.0 — do NOT call it experimental;
+  it routes Passthrough TLS by SNI without decrypting.
+- TCPRoute/UDPRoute: experimental (v1alpha2) at OUR pinned v1.5 channel;
+  graduated to standard (v1) in v1.6.0 — the slide says exactly that.
+- Listener TLS modes are Terminate and Passthrough; Passthrough pairs with
+  TLSRoute; TCPRoute is TLS-unaware L4 forwarding.
 Red line: the Gateway + HTTPRoute built here route to the S07 `web`/`web2` Services
 — it REPLACES S08's ingress.yaml in front of the same backends. CKx: CKA now
 includes Gateway API; CKAD service exposure.
@@ -277,8 +289,10 @@ the tell is `kubectl get gatewayclass`. That's the deliberate break in Lab 09.
 <!--
 Speaker: reassure them this is the Ingress pattern they already know — CRDs are the API,
 a controller is the implementation, and nothing routes until a controller claims the
-class. The one new wrinkle is "channels": standard = GA (GatewayClass/Gateway/HTTPRoute),
-experimental = newer stuff (TCPRoute, TLSRoute, some HTTPRoute extras). Teach standard.
+class. The one new wrinkle is "channels": standard = GA (at our v1.5 pin that's
+GatewayClass/Gateway/HTTPRoute plus GRPCRoute, TLSRoute, ReferenceGrant,
+BackendTLSPolicy, ListenerSet), experimental = still-maturing kinds (TCPRoute,
+UDPRoute at v1.5 — standard from v1.6 — plus some HTTPRoute extras). Teach standard.
 Version nuance worth saying out loud: pin the CRD channel version your controller
 COMPILES AGAINST, not the newest release — a newer standard channel exists (v1.6.0),
 but our controller (Envoy Gateway v1.8) is built and conformance-tested against v1.5.1,
@@ -331,6 +345,110 @@ break→fix goes one level deeper: a gatewayClassName nobody owns leaves the CRD
 default conditions — Unknown (Pending) "Waiting for controller" — and the
 ResolvedRefs=False question (BackendNotFound) shows the controller-reported "typed why".
 When routing breaks you read a condition and a reason instead of guessing.
+-->
+
+---
+
+<span class="kw-kicker">Beyond HTTP · one grammar, many protocols</span>
+
+# HTTPRoute has siblings
+
+<div class="kw-cols-3 mt-4 text-sm">
+  <v-click at="1">
+    <KwCard heading="GRPCRoute" icon="📡" variant="ok">
+      Typed <strong>gRPC</strong> routing — match by service and method instead of
+      URL paths. GA, <strong>standard channel</strong> since v1.1.
+    </KwCard>
+  </v-click>
+  <v-click at="2">
+    <KwCard heading="TLSRoute" icon="🔐" variant="ok">
+      Routes <strong>encrypted</strong> traffic by <strong>SNI</strong> — the
+      hostname in the TLS handshake — <em>without decrypting it</em>. GA,
+      <strong>standard channel</strong> since v1.5.
+    </KwCard>
+  </v-click>
+  <v-click at="3">
+    <KwCard heading="TCPRoute / UDPRoute" icon="🔌" variant="plain">
+      Plain <strong>L4 forwarding</strong> — databases, brokers, DNS. Still
+      <strong>experimental</strong> at our pinned v1.5 channel; standard from v1.6.
+    </KwCard>
+  </v-click>
+</div>
+
+<div v-click="4" class="mt-4 kw-muted text-sm">
+
+Same grammar everywhere: `parentRefs` to a Gateway listener, `backendRefs` to
+Services. One Gateway can front HTTP, gRPC, and raw TCP **side by side** — the
+whole protocol family Ingress's HTTP-only data model could never express.
+
+</div>
+
+<!--
+Speaker: this is the "it's a family, not one object" beat — and a big practical
+reason teams outgrow Ingress even before the annotation pain: Ingress simply has
+no answer for gRPC method routing, SNI passthrough, or a database port. Walk the
+cards. GRPCRoute: gRPC is HTTP/2 underneath, but its identity is service/method,
+not path — GRPCRoute makes that a typed match (standard since v1.1). TLSRoute: the
+Gateway reads only the SNI in the ClientHello and forwards the still-encrypted
+stream — end-to-end TLS with routing in the middle (standard since v1.5, so at our
+v1.5.1 pin it IS installable from the standard channel). TCPRoute/UDPRoute: no
+protocol awareness at all, a listener port forwarded to backends — at our pinned
+v1.5 channel these two are still experimental; they graduated to standard in
+v1.6.0, so say "check your channel version" rather than "don't use them". The
+muted line is the point to land: the grammar (parentRefs/backendRefs) is identical
+across the family — learners already know how to read every one of these. Envoy
+Gateway (our controller) implements the non-HTTP routes too; the lab stays on
+HTTPRoute.
+-->
+
+---
+layout: comparison
+class: kw-cmp-compact
+heading: 'Two ways a listener treats TLS'
+leftHeading: 'Terminate'
+leftBadge: 'decrypt at the door'
+rightHeading: 'Passthrough'
+rightBadge: 'route without decrypting'
+---
+
+The **Gateway** decrypts. The listener holds the cert (`certificateRefs` → a
+`kubernetes.io/tls` Secret) and routes see **plain HTTP**.
+
+<v-clicks>
+
+- Pairs with **HTTPRoute** — host, path, and header matches all work, because the
+  bytes are readable.
+- This is S08's `tls:` block, grown up: same idea, but the cert lives on a
+  **typed listener** the cluster operator owns.
+
+</v-clicks>
+
+::right::
+
+The Gateway forwards the **encrypted stream untouched**, routing only by **SNI**.
+
+<v-clicks>
+
+- Pairs with **TLSRoute** — the backend holds the cert, so encryption runs
+  **end-to-end** through the proxy.
+- The trade: no path/header matching — the Gateway never sees inside the
+  connection. (**TCPRoute** goes further still: TLS-unaware, pure port forwarding.)
+
+</v-clicks>
+
+<!--
+Speaker: one decision per listener: mode Terminate or mode Passthrough. Terminate
+is the S08 world made typed: the cert is a kubernetes.io/tls Secret referenced by
+the LISTENER (certificateRefs) — operator-owned, exactly the role split from the
+three-boxes slide — and because the proxy decrypts, HTTPRoute's full match
+vocabulary applies; this is also where cert-manager (S08's TLS beat) plugs in on
+the Gateway side. Passthrough trades inspection for end-to-end encryption: the
+proxy reads the SNI from the ClientHello, picks a backend via TLSRoute, and pipes
+the encrypted bytes through — the backend terminates. Compliance-friendly, but no
+L7 matching by definition. And if the traffic isn't TLS at all, TCPRoute is the
+TLS-unaware floor of the family. Bridge to the recap: role separation, typed
+fields, a protocol family, and readable status — that's the complete Gateway API
+story the red line ends on.
 -->
 
 ---

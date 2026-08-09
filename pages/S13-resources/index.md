@@ -14,19 +14,30 @@ Reserve what you need, cap what you use — and know **how** each cap is enforce
 **core** · suggested Day 2 · Workloads track
 
 <!--
-Section S13 — Resources & limits. Timing: ~30 min slides + 30 min lab. Follows S12.
+Section S13 — Resources & limits. Timing: ~35 min slides + 30 min lab. Follows S12.
 Outcome: learners can state what requests vs limits do (scheduling vs enforcement), the
-CPU-throttle vs memory-OOMKill asymmetry, the three QoS classes by their EXACT rules, and
+CPU-throttle vs memory-OOMKill asymmetry, the three QoS classes by their EXACT rules,
+how to right-size from observed usage (kubectl top → request ≈ steady state, limit =
+burst headroom; VPA recommends at scale), and
 how LimitRange (per-object defaults/bounds) and ResourceQuota (namespace aggregate cap)
 constrain a namespace.
 Beats: problem (no resources → contention + unschedulable) · mental model (requests drive
 scheduling, limits drive enforcement) · code-annotated (the requests/limits block on the web
 Deployment) · magic-move (no resources → +requests → +limits) · ResourcePressure animation
 (throttle vs OOMKill asymmetry) · QoS classes (Guaranteed/Burstable/BestEffort, precise
-rules) · namespace guardrails (LimitRange vs ResourceQuota) · recap → lab.
-Animation: ResourcePressure.vue (new, self-contained). DEVIATION from the story's suggested
-"scheduling fits/doesn't-fit" animation: the memorable state transition in S13 is the
-throttle-vs-kill asymmetry, not scheduling — so the animation illustrates that instead.
+rules) · right-sizing (RightSizing usage-graph animation + the kubectl top observation
+loop) · namespace guardrails (LimitRange vs ResourceQuota) · recap → lab.
+Animations: ResourcePressure.vue and RightSizing.vue (both self-contained). DEVIATION from
+the story's suggested "scheduling fits/doesn't-fit" animation: the memorable state
+transition in S13 is the throttle-vs-kill asymmetry, not scheduling — so the first
+animation illustrates that instead. RightSizing.vue rationale: right-sizing is a
+time-series story (usage vs request vs limit reference lines), a genuinely new
+transition no existing component draws.
+Right-sizing ACCURACY LOCKS: kubectl top needs metrics-server (the S16 add-back
+installs it on kind — say so, don't imply it's built in); VPA (VerticalPodAutoscaler)
+is an install-yourself autoscaler that recommends/applies request updates from observed
+usage — keep it named-concept-only, no install surface; HPA (S16) scales out while VPA
+sizes the Pod — the caution is not to let both act on the same resource dimension.
 CKx: CKAD/CKA — requests/limits, QoS, LimitRange, ResourceQuota.
 -->
 
@@ -305,6 +316,95 @@ matters: under node memory pressure the kubelet evicts BestEffort first, then Bu
 exceeding requests, and Guaranteed last — so QoS is your eviction insurance. You never type a
 QoS class; it's derived and shown in `describe pod`. The lab confirms all three by reading
 `describe`.
+-->
+
+---
+clicks: 3
+---
+
+<span class="kw-kicker">Right-sizing · the numbers come from a graph, not from vibes</span>
+
+# Right-size against what the app actually uses
+
+<div class="mt-2">
+  <RightSizing :step="$clicks" :show-caption="false" />
+</div>
+
+<div class="mt-3 text-sm">
+<v-clicks at="1">
+
+- A **guessed** request reserves capacity nobody uses — the node's ledger fills up with fiction and real Pods go `Pending`.
+- **Right-size:** set the request at observed **steady state** — the reservation matches reality.
+- Set the **limit** as burst headroom above it — the daily peak fits, nothing is OOMKilled, nothing is hoarded.
+
+</v-clicks>
+</div>
+
+<!--
+Speaker: drive with clicks — this is the dashboard-graph moment every platform team
+lives in. (0) the only truth: observed usage, steady state ~90Mi with one daily
+burst. (1) the guessed request, 512Mi "to be safe": the shaded band is capacity the
+scheduler HOLDS — remember, requests are a reservation, not a measurement — so a
+node full of guessed requests is "full" while its actual usage idles; that's how
+clusters end up 30% utilised and still rejecting Pods. (2) right-size: request just
+above steady state — the same Pod, honestly booked. (3) the limit as burst
+headroom: the peak fits under 256Mi, so no OOMKill (asymmetry beat!), and nothing
+above the request is hoarded. The two failure directions to say out loud:
+request too HIGH wastes the cluster (money, Pending neighbours); limit too LOW
+kills the burst (exit 137, from the animation earlier). Next slide: where these
+observed numbers come from.
+-->
+
+---
+layout: code-annotated
+heading: 'The observation loop — `kubectl top`, then adjust'
+compact: true
+lab: labs/day-2/13-resources.md
+---
+
+```console {none|1-3|5|all}
+$ kubectl top pod -l app=s13     # usage vs what you set
+NAME                    CPU(cores)   MEMORY(bytes)
+web-6d5f8c7b9d-x2x7v    3m           92Mi
+
+$ kubectl describe node <node>   # → "Allocated resources"
+```
+
+::notes::
+
+<CodeNote at="1" label="usage, live" variant="ok">
+Steady <code>92Mi</code> against a <code>128Mi</code> request is honest; against
+<code>512Mi</code> it's hoarding. Needs <strong>metrics-server</strong> (the HPA
+section installs it).
+</CodeNote>
+
+<CodeNote at="2" label="the node's ledger">
+<code>Allocated resources</code> sums every Pod's <strong>requests</strong>
+against allocatable. A wide gap between <em>requested</em> and <em>used</em> is
+right-sizing debt.
+</CodeNote>
+
+<CodeNote at="3" label="a loop — and VPA at scale" variant="ok">
+Observe → adjust → watch (<code>OOMKilled</code>, throttling,
+<code>Pending</code>). At scale the <strong>VerticalPodAutoscaler</strong>
+recommends sizes; HPA scales <em>out</em> — don't point both at one resource.
+</CodeNote>
+
+<!--
+Speaker: the graph on the previous slide is aspirational until you have numbers —
+this is where they come from. kubectl top reads the metrics pipeline
+(metrics-server), which is an add-on: kind doesn't ship it, the S16 HPA section
+installs it, and managed clusters usually have it. Real teams watch longer windows
+than a live top — a metrics stack (S23's Prometheus + Grafana) gives you the
+percentiles; top is the five-second version of the same loop. describe node's
+Allocated resources table is the scheduler's ledger from the mental-model slide
+made visible — walk it: requests summed vs allocatable, and the gap to actual
+usage is exactly the shaded band from the graph. Close with the automation ladder:
+VPA observes per-Pod usage and recommends (or applies) request changes —
+concept-level here, it's a separate install and applying mode restarts Pods; HPA
+changes REPLICAS instead. The classic caution: don't let VPA resize and HPA scale
+on the same metric or they chase each other. Lab 13's break→fix already showed the
+failure modes right-sizing avoids.
 -->
 
 ---
