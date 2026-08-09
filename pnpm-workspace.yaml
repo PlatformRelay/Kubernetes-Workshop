@@ -34,6 +34,13 @@ overrides:
   # 1.19.15+ is patched on the 1.x line; pin 2.1.0 so the alert clears.
   # MCP only needs getRequestListener from this package.
   "@hono/node-server": 2.1.0
+  # Five advisories against the mermaid @slidev/client pulls in, all first
+  # patched in 11.16.1: prototype pollution in the architecture renderer
+  # (GHSA-2v8p-3f2j-5mp7) and the config APIs (GHSA-c4c3-pg64-4m4v), DoS in the
+  # radar (GHSA-rhh3-jpg6-66xh) and XY-chart (GHSA-6x64-9x62-f2gx) renderers,
+  # and sibling-element CSS injection (GHSA-3rrr-jr9j-h3q3). The deck only uses
+  # flowchart and stateDiagram-v2, so this is a patch bump on the same line.
+  mermaid: 11.16.1
 
 # pnpm 11 minimumReleaseAge gate: allow this override pin through when fresh on the registry.
 minimumReleaseAgeExclude:
