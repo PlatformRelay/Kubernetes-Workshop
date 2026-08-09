@@ -37,6 +37,43 @@ test('accepts a documented unexpired advisory exception', () => {
   assert.equal(result.ok, true)
 })
 
+test('a passing run enumerates each active exception with id, package, expiry, and reason', () => {
+  const result = evaluateAudit(highAdvisory, {
+    exceptions: [{
+      id: 'GHSA-aaaa-bbbb-cccc',
+      reason: 'No reachable vulnerable path in the static deck build.',
+      owner: 'maintainers',
+      expires: '2026-08-31',
+    }],
+  }, '2026-08-03')
+
+  assert.equal(result.ok, true)
+  assert.match(result.message, /Active exceptions \(1\)/)
+  assert.match(result.message, /GHSA-aaaa-bbbb-cccc: example — expires 2026-08-31 — No reachable vulnerable path in the static deck build\./)
+})
+
+test('a passing run lists an active exception even when no current advisory matches it', () => {
+  const result = evaluateAudit({ advisories: {}, metadata: { vulnerabilities: {} } }, {
+    exceptions: [{
+      id: 'GHSA-aaaa-bbbb-cccc',
+      reason: 'Kept until the upstream fix lands.',
+      owner: 'maintainers',
+      expires: '2026-08-31',
+    }],
+  }, '2026-08-03')
+
+  assert.equal(result.ok, true)
+  assert.match(result.message, /Active exceptions \(1\)/)
+  assert.match(result.message, /GHSA-aaaa-bbbb-cccc: \(no matching advisory in this run\) — expires 2026-08-31 — Kept until the upstream fix lands\./)
+})
+
+test('a passing run without exceptions stays free of an exception section', () => {
+  const result = evaluateAudit({ advisories: {}, metadata: { vulnerabilities: {} } }, { exceptions: [] }, '2026-08-03')
+
+  assert.equal(result.ok, true)
+  assert.doesNotMatch(result.message, /Active exceptions/i)
+})
+
 test('fails an expired advisory exception', () => {
   const result = evaluateAudit(highAdvisory, {
     exceptions: [{
