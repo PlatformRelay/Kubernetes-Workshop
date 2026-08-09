@@ -68,20 +68,31 @@ export function evaluateAudit(report, policy, today = new Date().toISOString().s
     validExceptions.set(exception.id, exception)
   }
 
+  const waivedPackages = new Map()
   for (const advisory of Object.values(report.advisories ?? {})) {
     if (!BLOCKED_SEVERITIES.has(advisory.severity)) continue
     const id = advisory.github_advisory_id ?? String(advisory.id ?? 'unknown-advisory')
     if (!validExceptions.has(id)) {
       errors.push(`${id}: ${advisory.module_name} (${advisory.severity}) — ${advisory.title}`)
+    } else {
+      waivedPackages.set(id, advisory.module_name)
     }
   }
 
-  return {
-    ok: errors.length === 0,
-    message: errors.length === 0
-      ? 'Locked dependency audit passed: no unexcepted high or critical advisories.'
-      : errors.join('\n'),
-  }
+  if (errors.length > 0) return { ok: false, message: errors.join('\n') }
+
+  const exceptionLines = [...validExceptions.values()].map((exception) => {
+    const subject = waivedPackages.get(exception.id) ?? '(no matching advisory in this run)'
+    return `  ${exception.id}: ${subject} — expires ${exception.expires} — ${exception.reason}`
+  })
+  const message = exceptionLines.length === 0
+    ? 'Locked dependency audit passed: no unexcepted high or critical advisories.'
+    : [
+        'Locked dependency audit passed: no unexcepted high or critical advisories.',
+        `Active exceptions (${exceptionLines.length}):`,
+        ...exceptionLines,
+      ].join('\n')
+  return { ok: true, message }
 }
 
 function compareVersions(left, right) {
