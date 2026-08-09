@@ -264,9 +264,10 @@ all three Pods reach READY 1/1.
 <v-clicks at="1">
 
 - Steady state: the Service load-balances across **all three** endpoints.
-- One Pod's readiness probe starts failing — it flips to **NotReady**, still `Running`.
-- The endpoint controller **drops it from the EndpointSlice**; the ClusterIP now targets the
-  healthy two. **No error reaches the caller** — that's zero-downtime by design.
+- One Pod's readiness probe starts failing — it flips to **NotReady**, still `Running`, and
+  for a beat its IP is still in the slice.
+- The endpoint controller **drops it from the EndpointSlice**; traffic reroutes to the healthy
+  two — **no error reaches the caller**.
 
 </v-clicks>
 </div>
@@ -275,9 +276,11 @@ all three Pods reach READY 1/1.
 Speaker: this is the S07 ServiceRouting animation, reused — readiness is literally the
 mechanism that decides who's in a Service's EndpointSlice. Drive with clicks: (0) three Ready
 Pods, three endpoints. (1) a request fans out — load-balanced. (2) one Pod's readiness goes
-red; it stays Running (this is the crucial part — it is NOT restarted, NOT deleted) but its IP
-leaves the slice, so kube-proxy stops routing to it. The other two absorb the traffic; the user
-sees nothing. This is exactly what a rolling update leans on: a new Pod is kept out of the slice
+red; it stays Running (this is the crucial part — it is NOT restarted, NOT deleted) and for a
+beat its IP is STILL in the slice — kubelet has marked it NotReady but the endpoint controller
+hasn't reconciled yet. (3) the controller drops the IP from the slice, kube-proxy reprograms,
+and traffic stops reaching it. The other two absorb the traffic; the user sees nothing —
+that's zero-downtime by design. This is exactly what a rolling update leans on: a new Pod is kept out of the slice
 until readiness passes, so users never touch a half-warmed replica. In the lab you'll cause
 this by POSTing /fail to ONE Pod (its /ready flips to 503) and watch its IP vanish from
 `get endpointslices` while curl keeps returning 200 from the others. Contrast with liveness on

@@ -179,7 +179,8 @@ deployment.yaml, it doesn't edit it.
 <v-clicks at="1">
 
 - The ClusterIP never moves; requests **load-balance** across whatever is in the slice right now.
-- Fail one Pod's **readiness** and it leaves the slice while still `Running` — traffic reroutes, callers see nothing.
+- Fail one Pod's **readiness** and it flips **NotReady** — still `Running`, and for a beat its IP is still in the slice.
+- Then the endpoint controller **drops it from the slice** — traffic reroutes to the healthy two, callers see nothing.
 
 </v-clicks>
 </div>
@@ -187,8 +188,10 @@ deployment.yaml, it doesn't edit it.
 <!--
 Speaker: this is the shared US-X3 service-routing animation, owned here and reused
 by S14 for the readiness-probe story (same component, the removed Pod is the
-readiness-failing one). Click through: slice populated → request fans out →
-one Pod goes NotReady and drops from the slice, traffic reroutes to two. Land the
+readiness-failing one). Click through FOUR states: slice populated → request fans
+out → one Pod goes NotReady while its IP is STILL listed (the probe failed; the
+endpoint controller hasn't reacted yet — that little window is real) → the
+controller drops the IP from the slice and traffic reroutes to two. Land the
 bridge: "membership in the slice = readiness, and S14 makes that a knob." The lab
 proves the dark version — a wrong selector empties the slice entirely.
 -->
