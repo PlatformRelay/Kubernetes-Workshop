@@ -15,19 +15,31 @@ into your Services — and does nothing until a controller stands behind it.
 **core** · suggested Day 1 · Core track
 
 <!--
-Section S08 — Ingress. Timing: ~25 min slides + 25 min lab.
+Section S08 — Ingress. Timing: ~30 min slides + 25 min lab.
 Outcome: learners can front their Services with an Ingress, explain that the
 Ingress object is inert without a controller, route by host with a required
-pathType, terminate TLS, place the 2026 ingress-nginx retirement (frozen API,
-controller choice matters, Contour is the maintained CNCF path here), and
-articulate why Ingress motivates Gateway API.
+pathType, terminate TLS, explain how cert-manager issues and renews the TLS
+Secret (Certificate → web-tls, ingress-shim annotation), place the 2026
+ingress-nginx retirement (frozen API, controller choice matters, Contour is
+the maintained CNCF path here), and articulate why Ingress motivates Gateway API.
 Beats: problem (a Service is L4 + in-cluster only) · dependency (Ingress inert
 without a controller; IngressClass links them) · rules (host/path/mandatory
 pathType) · magic-move build ingress.yaml (web.example.com → web,
 web2.example.com → web2, + tls) · IngressActivation animation (inert → claimed
-→ programmed → routed) · retirement beat (the ONLY slide in the workshop that
-names the retired controller) · pain-points → Gateway API (S09, red line 5/5)
+→ programmed → routed) · TLS beat (who fills web-tls: manual vs cert-manager ·
+Certificate resource + ingress-shim, forward-ref S22's operator demo) ·
+retirement beat (the ONLY slide in the workshop that names the retired
+controller) · pain-points → Gateway API (S09, red line 5/5)
 · end-of-Day-1 recap of the whole manifest family · lab handoff.
+cert-manager ACCURACY LOCKS (verified against cert-manager.io docs, 2026-08):
+stable API is cert-manager.io/v1 (Certificate/Issuer/ClusterIssuer); the
+signed cert + key land in the kubernetes.io/tls Secret named by
+spec.secretName; renewal is automatic before expiry; ingress-shim creates the
+Certificate from the cert-manager.io/cluster-issuer (or …/issuer) annotation
+using the Ingress tls block's secretName + hosts; ACME solvers are HTTP-01
+and DNS-01, exactly two; cert-manager is a CNCF **graduated** project. S22
+installs cert-manager as its no-code operator demo (CERT_MANAGER_VERSION in
+infra/versions.env belongs to that lab, not this concepts-only beat).
 Red line: the ingress.yaml built here IS labs/day-1/08-ingress's manifest; it
 fronts the workshop-web backends — `web` (workshop-web:v1) and `web2`
 (workshop-web:v2), Service port 80 → container 8080 — behind one entry point.
@@ -266,6 +278,111 @@ curls routed by Host header to web (v1) and web2 (v2). Land it: kubectl acceptin
 your YAML proves nothing about traffic — activation is the controller's job. The
 lab replays every one of these states for real, including the silent-failure
 variant (an ingressClassName nobody owns).
+-->
+
+---
+
+<span class="kw-kicker">TLS · the Secret nobody wants to babysit</span>
+
+# `web-tls` doesn't fill itself — enter cert-manager
+
+<div class="kw-cols-2 mt-3 text-sm">
+  <v-click at="1">
+    <KwCard heading="By hand" icon="🔧" variant="warn">
+      Generate a key + certificate, <code>kubectl create secret tls web-tls …</code>,
+      repeat per host — and remember to rotate it before it <strong>expires</strong>.
+      Nobody remembers. Outages at the front door follow.
+    </KwCard>
+  </v-click>
+  <v-click at="2">
+    <KwCard heading="With cert-manager" icon="🤖" variant="ok">
+      A controller (CNCF <strong>graduated</strong>) that watches
+      <strong>Certificate</strong> resources, obtains the cert from an
+      <strong>Issuer / ClusterIssuer</strong> — e.g. via <strong>ACME</strong>
+      (Let's Encrypt) — stores it in the named Secret, and <strong>renews it
+      automatically</strong> before expiry.
+    </KwCard>
+  </v-click>
+</div>
+
+<div v-click="3" class="mt-4 kw-muted text-sm">
+
+The Ingress doesn't change at all — it keeps pointing at `secretName: web-tls`.
+cert-manager's job is to make sure that Secret **exists and stays valid**.
+
+</div>
+
+<!--
+Speaker: the tls: block two slides back named a Secret — this beat answers where it
+comes from in real clusters. By hand works (the lab's stretch goal does exactly
+that with a self-signed cert) but doesn't scale past a handful of hosts, and expiry
+is a time bomb: certs are short-lived on purpose now (ACME certs ~90 days), so
+manual rotation WILL be forgotten. cert-manager is the ecosystem's standard answer
+and a CNCF graduated project: it introduces a Certificate resource; a controller
+reconciles it by talking to an issuer. Issuer is namespaced, ClusterIssuer is
+cluster-wide — same object, different scope. ACME/Let's Encrypt is the famous path
+(free, automated, HTTP-01 or DNS-01 domain proof — exactly two solver types), but
+issuers can also be a private CA or Vault. Key framing for the next slide: the
+INGRESS is untouched; automation targets the Secret. This is also a quiet operator
+preview — cert-manager is literally S22's demo operator, where you'll install it
+and watch the reconcile loop recreate a deleted Secret.
+-->
+
+---
+layout: code-annotated
+heading: 'A Certificate resource keeps `web-tls` issued and renewed'
+compact: true
+---
+
+```yaml {none|1-2|5|6-9|all}
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata: { name: web }
+spec:
+  secretName: web-tls        # the Secret our Ingress tls: names
+  dnsNames: [web.example.com]
+  issuerRef:
+    name: letsencrypt
+    kind: ClusterIssuer      # cluster-wide (Issuer = one ns)
+```
+
+::notes::
+
+<CodeNote at="1" label="a CRD, not core Kubernetes">
+The <strong>operator</strong> section installs cert-manager for real.
+</CodeNote>
+
+<CodeNote at="2" label="secretName — the handshake" variant="ok">
+Writes the <code>kubernetes.io/tls</code> Secret the <code>tls:</code> block
+names — and <strong>renews it automatically</strong>.
+</CodeNote>
+
+<CodeNote at="3" label="issuerRef — who signs">
+<strong>ACME</strong> (Let's Encrypt) proves control — HTTP-01 via your Ingress,
+DNS-01 via TXT — then signs.
+</CodeNote>
+
+<CodeNote at="4" label="or skip the YAML — ingress-shim" variant="ok">
+Annotate the Ingress with <code>cert-manager.io/cluster-issuer</code> — the
+Certificate is created <em>for you</em>.
+</CodeNote>
+
+<!--
+Speaker: walk the YAML against the ingress.yaml they just built. (1) It's a CRD
+from cert-manager.io/v1 — nothing here ships with Kubernetes, which is why this is
+a concepts beat, not a lab step; S22 installs cert-manager for real (pinned in the
+infra for that lab) and uses this very resource to teach reconciliation. (2)
+secretName is the whole integration: Ingress consumes the Secret, Certificate
+produces it — loose coupling through a well-known name, very Kubernetes. Signed
+cert + key land in a kubernetes.io/tls Secret (the type from the S10 Secret-types
+beat), and the controller renews before expiry — delete the Secret and it comes
+back, which is S22's punchline. (3) issuerRef picks the authority: ClusterIssuer
+(cluster-wide) vs Issuer (namespaced) is pure scope; ACME with HTTP-01 is the neat
+loop — the challenge is served through the SAME Ingress data path you just built —
+DNS-01 proves via TXT record instead (needed for wildcards). (4) ingress-shim is
+what most teams actually run: one annotation on the Ingress, cert-manager derives
+the Certificate. On kind there's no public DNS so ACME can't complete — the lab's
+stretch stays self-signed; the flow here is the production shape.
 -->
 
 ---

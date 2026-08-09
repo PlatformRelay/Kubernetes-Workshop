@@ -25,7 +25,17 @@ Beats: (1) DEFENSIVE framing + ethics/scope · (2) shared-kernel threat model (c
 processes, not VMs) · (3) catalogue of dangerous settings · (4) conceptual escape walkthrough
 (privileged + hostPath / → node filesystem) · (5) magic-move attacker Pod → hardened Pod ·
 (6) AdmissionGate — the SAME restricted gate admitting the hardened Pod · (7) defences map
-(S02/S17/S18 + scan/detect) · (8) NSA/CISA + MITRE ATT&CK + tool categories · (9) recap → lab.
+(S02/S17/S18 + scan/detect) · (7b) live scanning — Trivy Operator as the worked open-source
+example of the scan-the-running-cluster half (net-zero add: 12 slides in 35 min stays under
+the deck's density norm; the categories slide and its endorses-none stance are unchanged) ·
+(8) NSA/CISA + MITRE ATT&CK + tool categories · (9) recap → lab.
+Trivy Operator ACCURACY LOCKS (verified against aquasecurity.github.io/trivy-operator,
+2026-08): runs IN-cluster; scans RUNNING workloads — a scan triggers when a workload
+changes AND when a report's TTL expires (default 24h), NOT on a cron schedule (say
+"as reports expire", never "nightly"); results are CRDs queryable with kubectl —
+VulnerabilityReport, ConfigAuditReport, ExposedSecretReport…; the point vs CI
+scanning: it catches CVEs disclosed AFTER an already-admitted image was deployed.
+Concepts-only: no pin, no lab step.
 Reuse AdmissionGate.vue (do NOT author a new component). NOTE: AdmissionGate renders the FOUR
 restricted fields (runAsNonRoot / allowPrivilegeEscalation / drop ALL / seccompProfile) — NOT
 privileged/hostPath. So it is narrated ONLY as "the same gate that admits the hardened Pod";
@@ -378,6 +388,53 @@ radius. Then two categories beyond this workshop: image scanning (shift-left, pr
 and runtime detection (watch syscalls/behaviour for exactly these escape patterns). Layers: no one
 of them is sufficient, all of them together shrink the problem to noise. Vendor-neutral — we name
 CATEGORIES next, not products.
+-->
+
+---
+layout: code-annotated
+heading: 'The scan can''t stop at the pipeline — CVEs age in place'
+compact: true
+---
+
+```console {none|1-4|all}
+$ kubectl get vulnerabilityreports -n team-a
+NAME                     REPOSITORY           CRITICAL  HIGH
+replicaset-web-5d4b-web  library/legacy-app   2         11
+
+$ kubectl describe vulnerabilityreport replicaset-web-5d4b-web
+```
+
+::notes::
+
+<CodeNote at="1" label="scan the running cluster" variant="ok">
+The <strong>Trivy Operator</strong> runs <em>inside</em> the cluster and scans
+<strong>running workloads</strong> — when a workload changes, and again as each
+report expires. An image that was clean at deploy time gets re-checked against
+<em>today's</em> CVE feed.
+</CodeNote>
+
+<CodeNote at="2" label="findings are Kubernetes objects" variant="ok">
+Results land as CRDs — <code>VulnerabilityReport</code>,
+<code>ConfigAuditReport</code>, <code>ExposedSecretReport</code> — you query with
+plain <code>kubectl</code>. The <strong>operator pattern</strong> from the
+operators track, applied to security.
+</CodeNote>
+
+<!--
+Speaker: this closes the loop the S17 Trivy beat opened. The CI gate scans an image
+ONCE, at build time — but CVEs are disclosed continuously, so the fleet's risk
+drifts while the images stand still; last year's clean image is this year's
+critical finding. The Trivy Operator is the in-cluster answer and the worked
+open-source example of the defences-map "scan" card: it watches workloads, scans on
+change, and re-scans as report TTLs expire (default 24h — it's expiry-driven, not a
+nightly cron), publishing findings as CRDs per workload. Because reports are just
+Kubernetes objects, they inherit everything the workshop taught: kubectl get/
+describe, RBAC on who may read them, and watch-based tooling. Say the operator
+connection out loud — CRD + controller, exactly S22's pattern. Keep the
+vendor-neutral posture from the next slide intact: Trivy is ONE open-source example
+of the image-scanner category (the same scanner S02/S17 used), runtime behavioural
+detection is still its own category, and the workshop endorses no product. Nothing
+is installed here — concepts only; the lab stays focused on the escape/block arc.
 -->
 
 ---

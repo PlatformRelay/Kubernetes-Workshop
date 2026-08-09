@@ -15,19 +15,39 @@ does and doesn't protect, and learn why changing config doesn't restart your Pod
 **core** · suggested Day 2 · Core track
 
 <!--
-Section S10 — ConfigMap & Secret. Timing: ~25 min slides + 25 min lab. First
+Section S10 — ConfigMap & Secret. Timing: ~30 min slides + 25 min lab. First
 config-layering section of Day 2 (the red line ended at S09). Outcome: learners can
 externalise config into a ConfigMap/Secret, consume it three ways (env via envFrom,
 mounted files, Secret as env), explain that base64 is encoding not encryption (etcd
-encryption-at-rest + RBAC are the real controls), and — the sharp edge — know that
+encryption-at-rest + RBAC are the real controls), compare the three secure-delivery
+patterns (Sealed Secrets / External Secrets Operator / Vault) by where the truth
+lives and what is safe to commit, and — the sharp edge — know that
 updating a ConfigMap/Secret does NOT restart Pods: env is frozen at start, whole-dir
 mounted files update eventually (~60–90s), subPath mounts never update. The
 checksum-annotation trick forces a rollout on purpose.
 Beats: problem (config baked in → rebuild per env) · mental model (two objects, two
 consumption modes, subPath caveat) · magic-move (extend the web Deployment: +envFrom
 → +mounted file → +Secret env) · security (base64 ≠ encryption; Secret types) ·
+secure delivery (the Git problem · Sealed Secrets vs ESO vs Vault) ·
 immutability (immutable: true tradeoff) · rotation gotcha (what updates, what doesn't;
 checksum trick) · recap → lab.
+Delivery ACCURACY LOCKS (verified against external-secrets.io, the HashiCorp
+Vault Kubernetes docs, and bitnami-labs/sealed-secrets, 2026-08):
+- Sealed Secrets: kubeseal encrypts with the in-cluster controller's PUBLIC key
+  into a SealedSecret CRD (safe to commit — asymmetric; only the controller
+  decrypts, strict name+namespace scope by default) which the controller unseals
+  into a normal Secret.
+- External Secrets Operator: ExternalSecret + SecretStore/ClusterSecretStore
+  (external-secrets.io API group) sync values FROM an external manager (AWS/GCP/
+  Azure/Vault/…) INTO native Secrets on spec.refreshInterval. CNCF SANDBOX —
+  do not claim a higher maturity; 2025 maintainer pause resolved, releases
+  monthly again (speaker-note honesty beat).
+- Vault: three delivery paths — Agent Injector sidecar (files in the Pod, no
+  K8s Secret, stays out of etcd), CSI provider (files via volume), Vault
+  Secrets Operator (writes real K8s Secrets). Pods authenticate via their
+  ServiceAccount token. Vault is BSL-licensed since 2023; OpenBao is the
+  Linux Foundation open-source fork (notes-only nuance).
+Concepts-only: no delivery-tool pin, no lab step — the comparison is the deliverable.
 No shared animation (per outline S10 has none; the rotation story is a live console
 sequence, not a state-machine). CKx: CKAD application-configuration.
 -->
@@ -256,6 +276,102 @@ RBAC and etcd config do. Enable encryption-at-rest and lock down `get secrets`; 
 where the security actually lives. Then the types: Opaque is the default; tls and
 dockerconfigjson are consumed by specific machinery. Lab decodes a real Secret with
 `-o jsonpath | base64 -d` so the "not encrypted" point is felt, not just told.
+-->
+
+---
+layout: statement
+kicker: 'The next question · your manifests live in Git'
+---
+
+Everything else on this slide deck can be **committed**. A Secret can't.
+
+The Deployment, the Service, the ConfigMap — all of it belongs in Git, reviewed and
+versioned. But a Secret's `data:` is just base64: committing it **is** publishing
+it. So every real platform answers one question deliberately: **where does the
+truth about a secret live, and how does it reach the cluster?** Three patterns
+dominate.
+
+<!--
+Speaker: this is the bridge from "a Secret is weak" to "so how do teams actually do
+this". Frame it with Git because Day 3's GitOps section makes everything-in-Git the
+delivery model — secrets are the one thing that can't ride along in plain form.
+Name the anti-pattern out loud: a Secret manifest in a private repo is still a
+leaked credential to everyone with repo access, forever, in history. The three
+patterns on the next slide differ in exactly one deep way: where the source of
+truth lives (encrypted in Git / in an external manager / in Vault) — everything
+else is mechanics. Keep this slide short; the comparison carries the content.
+-->
+
+---
+
+<div class="kw-slide-dense">
+
+<span class="kw-kicker">Secure delivery · three patterns, one question — where does the truth live?</span>
+
+# Sealed Secrets · External Secrets Operator · Vault
+
+<div class="kw-cols-3 mt-3 text-sm">
+  <v-click at="1">
+    <KwCard heading="Sealed Secrets — encrypt for Git" icon="📮" variant="ok">
+      <code>kubeseal</code> encrypts your Secret with the controller's
+      <strong>public key</strong> into a <strong>SealedSecret</strong> — safe to
+      commit. Only the in-cluster controller can decrypt it, into a normal Secret.
+      <div class="kw-muted mt-1">Truth lives <strong>in Git</strong>, encrypted.</div>
+    </KwCard>
+  </v-click>
+  <v-click at="2">
+    <KwCard heading="External Secrets Operator — sync in" icon="🔄" variant="ok">
+      An <strong>ExternalSecret</strong> names keys in a
+      <strong>SecretStore</strong> (AWS/GCP/Azure/Vault…); the operator pulls them
+      into a native Secret and <strong>re-syncs</strong> on an interval.
+      <div class="kw-muted mt-1">Truth lives in the <strong>external manager</strong>;
+      Git holds only references.</div>
+    </KwCard>
+  </v-click>
+  <v-click at="3">
+    <KwCard heading="Vault — deliver to the Pod" icon="🏦" variant="ok">
+      A central secrets service. A sidecar or CSI volume mounts secrets as
+      <strong>files in the Pod</strong> — often <em>never</em> creating a K8s
+      Secret at all (nothing lands in etcd); its operator can also sync real Secrets.
+      <div class="kw-muted mt-1">Truth lives <strong>in Vault</strong>; Pods
+      authenticate with their ServiceAccount.</div>
+    </KwCard>
+  </v-click>
+</div>
+
+<div v-click="4" class="mt-3 kw-muted text-sm">
+
+All three end at (or deliberately bypass) the **same object you just learned** —
+the app still consumes env vars or files. What you're choosing is **where truth
+lives** and **what's safe to commit**.
+
+</div>
+
+</div>
+
+<!--
+Speaker: three cards, one axis — source of truth. (1) Sealed Secrets (bitnami-labs)
+is the lightest: asymmetric crypto, kubeseal encrypts with the cluster
+controller's public key, the SealedSecret CRD is safe even in a public repo, and
+the controller unseals it into a regular Secret. By default sealing is scoped
+strictly to that name + namespace, so a sealed blob can't be replayed elsewhere.
+Fits pure GitOps with no extra infrastructure — but rotation still means
+re-sealing and committing. (2) External Secrets Operator: the secret is mastered
+in a cloud secret manager or Vault; ExternalSecret + SecretStore/
+ClusterSecretStore CRDs (external-secrets.io) declare WHICH keys, and the
+operator materialises and refreshes native Secrets (spec.refreshInterval) —
+rotation upstream flows in automatically. Honesty notes: it's a CNCF Sandbox
+project, and in 2025 it briefly paused releases over maintainer shortage before
+new maintainers resumed monthly releases — "check the health of what you adopt"
+is a fair lesson to say out loud. (3) Vault: secrets stay in Vault; the Agent
+Injector sidecar or the CSI provider deliver them as files straight into the Pod
+filesystem — no Secret object, nothing in etcd — while the Vault Secrets
+Operator alternatively syncs real Secrets for apps that need env vars. Pods
+authenticate via their ServiceAccount token (Kubernetes auth method). Licensing
+nuance for the curious: Vault moved to BSL in 2023; OpenBao is the Linux
+Foundation fork continuing under an open-source license. Close on the muted
+line: the CONSUMPTION story from this section is unchanged in all three — that's
+why we taught the plain Secret first.
 -->
 
 ---

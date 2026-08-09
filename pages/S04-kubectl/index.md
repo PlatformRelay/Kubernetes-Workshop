@@ -14,13 +14,22 @@ The one tool you drive every cluster with — discover, inspect, and change.
 **core** · suggested Day 1 · Foundations track
 
 <!--
-Section S04 — kubectl. Timing: ~25 min slides + 25 min lab.
+Section S04 — kubectl. Timing: ~30 min slides + 25 min lab.
 Outcome: learners can drive and inspect any cluster fluently — the core verbs,
 output modes (incl. jsonpath), client-vs-server dry-run, and labels/selectors as
-a query language — building the "explain habit" from S03.
+a query language — building the "explain habit" from S03 — and know k9s as the
+terminal UI over the same API (same kubeconfig, same RBAC, kubectl-first labs).
 Beats: imperative one-off vs declarative apply · verb tour · output modes with a
 jsonpath example (magic-move growing one command) · dry-run client vs server ·
-labels & selectors · namespaces/contexts back to Lab 00.
+labels & selectors · namespaces/contexts back to Lab 00 · k9s tour (what it
+is/is not · drive it · views + --readonly guardrail).
+k9s ACCURACY LOCKS (verified against k9scli.io + the k9s README, 2026-08):
+single binary; reads the kubeconfig context; acts under YOUR RBAC (nothing
+kubectl couldn't do); `:` command mode takes resource names AND aliases
+(`:pods` and `:pod` both resolve); `/` filters; row hotkeys d/l/s/y/e/ctrl-d;
+`:xray` dependency view; `:pulses` cluster dashboard; `--readonly` disables
+all modification commands. k9s is pinned in mise.toml and documented in
+docs/setup.md — the slides introduce it; no k9s lab exists by design.
 CKx tie-in: CKAD/CKA — core kubectl workflow across every domain.
 Lab: labs/day-1/04-kubectl.md.
 -->
@@ -251,6 +260,140 @@ web search. That's the habit the rest of the workshop assumes.
 Speaker: close the loop to Lab 00 — most "it's not working" moments are a wrong
 context/namespace. Then re-plant the explain habit from S03. The lab is a
 scavenger hunt that forces get/describe/explain before anyone creates a thing.
+Then the k9s coda: now that they know the verbs, show the cockpit built on them.
+-->
+
+---
+
+<span class="kw-kicker">Same API, friendlier cockpit</span>
+
+# k9s — a terminal UI over the API you just learned
+
+<div class="kw-cols-2 mt-3 text-sm">
+  <v-click at="1">
+    <KwCard heading="What it is" icon="🐶">
+      A single-binary <strong>terminal UI</strong> that <strong>watches</strong> the
+      cluster live — the resources, Events, and logs you've been pulling by hand,
+      refreshing in place. It's already in your workshop toolchain.
+    </KwCard>
+  </v-click>
+  <v-click at="2">
+    <KwCard heading="What it is not" icon="🔑" variant="plain">
+      Not a side door. k9s reads your <strong>kubeconfig</strong> and talks to the
+      same API server under your <strong>RBAC</strong> — it can do nothing
+      <code>kubectl</code> couldn't.
+    </KwCard>
+  </v-click>
+</div>
+
+<div v-click="3" class="mt-4 kw-muted text-sm">
+
+Think of it as `kubectl get … -w` for **everything at once**: navigation instead
+of retyping, with describe, logs, and a shell one keystroke away.
+
+</div>
+
+<!--
+Speaker: why introduce k9s AFTER the verb tour and not instead of it — you need the
+kubectl vocabulary first, because k9s is a *view* over exactly those verbs and
+resources; every panel it shows maps to a get/describe/logs you now know. It ships
+in the workshop toolchain (pinned via mise, see docs/setup.md), so everyone already
+has it — `k9s` in the same shell where kubectl works. Land the trust boundary hard:
+it authenticates with the SAME kubeconfig context and namespace you set in Lab 00
+and is subject to the same RBAC — on the shared cluster it sees your namespace,
+nothing more. No agent, no server-side install. The "-w for everything" framing is
+the honest pitch: k9s's core is a live watch loop over the resource views.
+-->
+
+---
+layout: code-annotated
+heading: 'Drive it — one `:` command and a handful of keys'
+compact: true
+---
+
+```text {none|1|2|3|4}
+:pods          # a live resource view (:deploy, :svc, :ns …)
+/web           # filter as you type
+d · l · s · y  # describe · logs · shell · YAML
+ctrl-d         # delete — asks first
+```
+
+::notes::
+
+<CodeNote at="1" label="`:` command mode">
+<code>:</code> plus a resource name — <code>:pods</code>, <code>:deploy</code> —
+opens that view, <strong>live</strong>.
+</CodeNote>
+
+<CodeNote at="2" label="filter, don't scroll">
+<code>/</code> narrows as you type — quicker than <code>-l</code> + <code>grep</code>.
+</CodeNote>
+
+<CodeNote at="3" label="the triage keys" variant="ok">
+<strong>get → describe → logs</strong> become single keys; <code>s</code> shells in.
+</CodeNote>
+
+<CodeNote at="4" label="modifying verbs confirm" variant="warn">
+<code>ctrl-d</code> / <code>e</code> prompt first — same API server, same RBAC.
+</CodeNote>
+
+<!--
+Speaker: do this as a 60-second live demo if the room setup allows — open k9s next
+to the deck, type :pods, filter, hit d and l on a row. Narrate the mapping out
+loud each time ("that's kubectl describe", "that's kubectl logs -f"). The colon
+commands take the same resource names and short names kubectl uses (aliases work:
+:pod and :pods both resolve), which is why we taught the verbs first. If no live
+demo: the keys on the slide are the complete starter set — command mode, filter,
+d/l/s/y, and the confirming delete. Everything is the same API call under the
+hood, so nothing here bypasses audit logs or RBAC.
+-->
+
+---
+
+<span class="kw-kicker">Views &amp; guardrails</span>
+
+# X-ray vision — and a read-only safety catch
+
+<div class="kw-cols-3 mt-4 text-sm">
+  <v-click at="1">
+    <KwCard heading=":xray" icon="🩻">
+      A <strong>dependency tree</strong> per resource — <code>:xray deploy</code>
+      walks Deployment → ReplicaSet → Pods. You'll meet that ownership chain over
+      the next two sections; come back and watch it live.
+    </KwCard>
+  </v-click>
+  <v-click at="2">
+    <KwCard heading=":pulses" icon="📈" variant="plain">
+      A one-screen <strong>cluster dashboard</strong> — workloads, events, and
+      errors ticking in real time. The "is anything on fire" view.
+    </KwCard>
+  </v-click>
+  <v-click at="3">
+    <KwCard heading="--readonly" icon="🛑" variant="ok">
+      <code>k9s --readonly</code> disables <strong>every modifying command</strong> —
+      the right default when you're inspecting a cluster you don't own.
+    </KwCard>
+  </v-click>
+</div>
+
+<div v-click="4" class="mt-4 kw-muted text-sm">
+
+The labs stay **`kubectl`-first** — the CLI is the language every doc, script, and
+pipeline speaks. Reach for k9s when you're *watching* something unfold, and keep
+translating what it shows back into the verbs.
+
+</div>
+
+<!--
+Speaker: two power views and one guardrail. :xray shows ownership/dependency
+chains — it will make much more sense after S06 (Deployment → ReplicaSet → Pod),
+so plant it as "come back to this"; it's a genuine foreshadow, not a dependency.
+:pulses is the at-a-glance dashboard — useful projected on a wall during the labs.
+--readonly matters on the shared cluster: it turns k9s into a pure observer (also
+settable per-context in its config). Close with the framing the workshop holds
+throughout: kubectl is the language, k9s is a faster way to read; using k9s well
+REQUIRES the kubectl mental model, which is why this is a coda and not the lead.
+Optional: invite learners to keep k9s open in a second terminal during Lab 04+.
 -->
 
 ---
