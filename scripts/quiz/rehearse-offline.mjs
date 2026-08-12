@@ -25,8 +25,8 @@ function execute(script, args = []) {
   }).replaceAll(outputDirectory, '<OUT>').trim()
 }
 
-const input = readFileSync(path.join(root, 'quiz/questions.prototype.json'))
-const validateOutput = execute('scripts/quiz/validate.mjs', ['quiz/questions.prototype.json'])
+const input = readFileSync(path.join(root, 'quiz/questions.json'))
+const validateOutput = execute('scripts/quiz/validate.mjs', ['quiz/questions.json'])
 const firstExportOutput = execute('scripts/quiz/export.mjs', ['--out', outputDirectory])
 const generatedFiles = ['adapter-preview.json', 'facilitator.md', 'participant.md']
 const firstHashes = Object.fromEntries(generatedFiles.map(file => [
@@ -45,7 +45,8 @@ const resetHashes = Object.fromEntries(generatedFiles.map(file => [
   sha256(readFileSync(path.join(outputDirectory, file))),
 ]))
 const resetPassed = JSON.stringify(firstHashes) === JSON.stringify(resetHashes)
-const fallbackPassed = participant.length > 0 && facilitator.length > 0 && participantAnswers === 0 && facilitatorAnswers === 3
+const expectedAnswers = JSON.parse(input.toString('utf8')).questions.length
+const fallbackPassed = participant.length > 0 && facilitator.length > 0 && participantAnswers === 0 && facilitatorAnswers === expectedAnswers
 
 if (!resetPassed || !fallbackPassed) throw new Error('offline rehearsal assertions failed')
 
@@ -54,14 +55,14 @@ const transcript = `# Offline quiz rehearsal transcript
 
 - Recorded at: ${timestamp}
 - Scope: offline fallback only; no live service was exercised
-- Input: \`quiz/questions.prototype.json\`
+- Input: \`quiz/questions.json\`
 - Input SHA-256: \`${sha256(input)}\`
 - Runner: \`node ${process.version}\`
 
 ## Command transcript
 
 \`\`\`text
-$ node scripts/quiz/validate.mjs quiz/questions.prototype.json
+$ node scripts/quiz/validate.mjs quiz/questions.json
 ${validateOutput}
 $ node scripts/quiz/export.mjs --out <OUT>
 ${firstExportOutput}

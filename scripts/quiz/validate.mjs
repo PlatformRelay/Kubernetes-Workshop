@@ -4,13 +4,15 @@ import Ajv2020 from 'ajv/dist/2020.js'
 import { sections as deckSections } from '../deck-manifest.mjs'
 
 const root = path.resolve(import.meta.dirname, '../..')
-const bankPath = path.resolve(process.argv[2] ?? path.join(root, 'quiz/questions.prototype.json'))
+const bankPath = path.resolve(process.argv[2] ?? path.join(root, 'quiz/questions.json'))
 const bank = JSON.parse(readFileSync(bankPath, 'utf8'))
 const schema = JSON.parse(readFileSync(path.join(root, 'quiz/questions.schema.json'), 'utf8'))
 const errors = []
 const ids = new Set()
 const sections = new Set()
-const canonicalSections = new Set(deckSections.map(section => section.id))
+const knownSections = new Set(deckSections.map(section => section.id))
+const requiredSections = deckSections.filter(section => section.status === 'authored')
+const questionsBySection = new Map()
 const ajv = new Ajv2020({ allErrors: true, strict: true })
 const validateSchema = ajv.compile(schema)
 
@@ -28,8 +30,9 @@ for (const [index, question] of (bank.questions ?? []).entries()) {
   if (!/^S\d{2}$/.test(question.section ?? '') || !question.id?.startsWith(`${question.section}-`)) {
     errors.push(`${label}: section must match the question id`)
   }
-  if (!canonicalSections.has(question.section)) errors.push(`${label}: unknown section ${question.section}`)
+  if (!knownSections.has(question.section)) errors.push(`${label}: unknown section ${question.section}`)
   sections.add(question.section)
+  questionsBySection.set(question.section, (questionsBySection.get(question.section) ?? 0) + 1)
   if (!Array.isArray(question.options) || question.options.length < 3 || question.options.length > 5) {
     continue
   }
@@ -38,6 +41,11 @@ for (const [index, question] of (bank.questions ?? []).entries()) {
   if (optionIds.filter(id => id === question.answer).length !== 1) {
     errors.push(`${label}: answer must name exactly one option`)
   }
+}
+
+for (const section of requiredSections) {
+  const count = questionsBySection.get(section.id) ?? 0
+  if (count < 2) errors.push(`${section.id}: need at least 2 questions, found ${count}`)
 }
 
 if (errors.length) {

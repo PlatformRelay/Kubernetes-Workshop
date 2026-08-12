@@ -36,14 +36,14 @@ summarizes; it does not lead over private trackers.
 
 ## Direction
 
-### Live quizzes — planned
+### Live quizzes — planned (host)
 
-Per-section retrieval questions plus a self-hosted live-quiz add-on for the room.
-A portable question-bank prototype already exists in
-[`quiz/`](https://github.com/PlatformRelay/Kubernetes-Workshop/tree/main/quiz).
+Per-section retrieval questions ship as a portable bank in
+[`quiz/`](https://github.com/PlatformRelay/Kubernetes-Workshop/tree/main/quiz)
+(facilitator and participant Markdown export; no live host).
 The architecture spike evaluated three FOSS live-host candidates and **adopted
-none of them (0/3)** — so the live host and full question bank remain **planned**,
-with architecture still open.
+none of them (0/3)** — so the self-hosted live quiz add-on remains **planned**,
+with host architecture still open.
 
 [Discuss live quizzes →](https://github.com/PlatformRelay/Kubernetes-Workshop/discussions/21)
 

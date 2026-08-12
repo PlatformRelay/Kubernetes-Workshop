@@ -9,7 +9,7 @@
 
 **Free. Open source. No paywall.** A vendor-neutral Kubernetes workshop you can run for
 yourself, for colleagues, or as a full multi-day delivery — with interactive slides,
-ready-to-run labs, a portable quiz prototype, and downloadable PDFs.
+ready-to-run labs, a portable question bank, and downloadable PDFs.
 
 Use it to **learn**, to **explain Kubernetes concepts to your team**, or to **facilitate**
 a room. Restyle it, reorder it, fork it, redistribute it, or sell it under the
@@ -33,7 +33,7 @@ telemetry.
 | **Live decks** | [Day 1](https://platformrelay.github.io/Kubernetes-Workshop/deck/day-1/) · [Day 2](https://platformrelay.github.io/Kubernetes-Workshop/deck/day-2/) · [Day 3](https://platformrelay.github.io/Kubernetes-Workshop/deck/day-3/) · [3-day cut](https://platformrelay.github.io/Kubernetes-Workshop/deck/3day/) · [Superset](https://platformrelay.github.io/Kubernetes-Workshop/deck/) |
 | **PDF handouts** | [GitHub Releases](https://github.com/PlatformRelay/Kubernetes-Workshop/releases) (day + full + 3-day PDFs on each `v*` tag) |
 | **Labs** | [`labs/README.md`](./labs/README.md) · start at [`labs/day-1/00-setup.md`](./labs/day-1/00-setup.md) |
-| **Quizzes** | [`quiz/README.md`](./quiz/README.md) (portable prototype; FOSS live host still open) |
+| **Quizzes** | [`quiz/README.md`](./quiz/README.md) (portable bank; FOSS live host still open) |
 | **Run slides locally** | [`docs/run-slides.md`](./docs/run-slides.md) (Node.js + pnpm) |
 | **Known limitations** | [`docs/beta-limitations.md`](./docs/beta-limitations.md) (S24 stub; add-on smoke backlog) |
 | **Roadmap** | [`docs/roadmap.md`](./docs/roadmap.md) (quizzes, OpenTelemetry — no dates) |
@@ -155,7 +155,7 @@ pnpm pages:build        # MkDocs + hash-routed decks → ./site (needs MkDocs)
 | `slides.md` / `slides-3day.md` | Compatibility superset / three-day cut |
 | `pages/SNN-topic/` | Section sources |
 | `labs/day-*/` | Standalone labs |
-| `quiz/` | Portable quiz prototype |
+| `quiz/` | Portable question bank |
 | `theme/` | Local Slidev theme |
 | `docs/decisions/` | ADRs |
 
