@@ -56,4 +56,4 @@ notes body. How tags are cut: [release.md](./release.md).
 | --- | --- |
 | Participant labs | [labs/README.md](https://github.com/PlatformRelay/Kubernetes-Workshop/tree/main/labs#readme) |
 | Lab 00 (start here) | [labs/day-1/00-setup.md](https://github.com/PlatformRelay/Kubernetes-Workshop/blob/main/labs/day-1/00-setup.md) |
-| Quiz prototype | [quiz/README.md](https://github.com/PlatformRelay/Kubernetes-Workshop/tree/main/quiz#readme) |
+| Question bank | [quiz/README.md](https://github.com/PlatformRelay/Kubernetes-Workshop/tree/main/quiz#readme) |
