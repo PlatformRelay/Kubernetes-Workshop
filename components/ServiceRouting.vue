@@ -17,6 +17,7 @@ import { computed } from 'vue'
  * step 0: Service + selector, all Pods in the slice (steady state)
  * step 1: a request fans out across all endpoints (load-balanced)
  * step 2: one Pod's readiness probe fails → NotReady, but its IP is still in the slice
+ *         (still a traffic target — kube-proxy has not dropped it yet)
  * step 3: the endpoint controller drops the IP from the slice → traffic reroutes to the rest
  */
 interface RoutePod {
@@ -96,7 +97,7 @@ const endpoints = computed(() =>
           :class="{
             'is-out': isRemoved(i),
             'is-failing': isLeaving(i),
-            'is-hot': routing && isReady(i),
+            'is-hot': routing && !isRemoved(i),
           }"
         >
           <div class="kw-route-pod-head">
@@ -259,6 +260,13 @@ const endpoints = computed(() =>
 .kw-route-pod.is-failing {
   border-color: var(--kw-danger);
   box-shadow: 0 0 0 1px var(--kw-danger) inset;
+}
+
+/* Probe failed, IP still in the slice: keep the traffic highlight. is-failing
+   alone would paint the pod as already off the path. */
+.kw-route-pod.is-hot.is-failing {
+  border-color: var(--kw-accent);
+  box-shadow: 0 0 0 1px var(--kw-accent) inset;
 }
 
 .kw-route-pod-head {
