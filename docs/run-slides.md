@@ -1,46 +1,48 @@
-# Run the slides locally
+# Rode os slides localmente
 
-Preview the interactive Slidev decks on your laptop with Node.js. This path does **not**
-need a Kubernetes cluster — it only serves the presentation.
+Visualize os decks interativos do Slidev no seu laptop com Node.js. Este caminho **não**
+precisa de um cluster Kubernetes — ele apenas serve a apresentação.
 
-The repository is locked to **pnpm** (`packageManager` in `package.json` + `pnpm-lock.yaml`).
-Use the commands below as written. Plain `npm install` is not supported (there is no
-`package-lock.json`).
+O repositório está travado no **pnpm** (`packageManager` no `package.json` + `pnpm-lock.yaml`).
+Use os comandos abaixo exatamente como estão escritos. `npm install` puro não é suportado
+(não existe `package-lock.json`).
 
-## Prerequisites
+## Pré-requisitos
 
-- **Node.js 22** (LTS) — [nodejs.org](https://nodejs.org/) or a version manager
-- **Corepack** (ships with Node 16.13+) to activate the pinned pnpm
-- Optional: a modern browser (Chrome, Firefox, Safari, Edge)
+- **Node.js 22** (LTS) — [nodejs.org](https://nodejs.org/) ou um gerenciador de versões
+- **Corepack** (vem com o Node 16.13+) para ativar o pnpm pinado
+- Opcional: um navegador moderno (Chrome, Firefox, Safari, Edge)
 
-Check versions:
+Confira as versões:
 
 ```bash
 node -v    # expect v22.x
 corepack -v
 ```
 
-### Or: let mise pin the toolchain for you
+### Ou: deixe o mise pinar a toolchain para você
 
-The deck toolchain is pinned and checksummed in `mise.facilitator.toml`, kept
-**separate from the participant toolchain** in `mise.toml`. `./workshop up` installs the
-participant tools only — nobody attending the workshop needs Node to run a lab — so the
-deck tools live behind a config environment and their own `mise.facilitator.lock`:
+A toolchain do deck é pinada e tem checksums em `mise.facilitator.toml`, mantida
+**separada da toolchain do participante** em `mise.toml`. `./workshop up` instala apenas
+as ferramentas do participante — ninguém que assiste ao workshop precisa de Node para
+rodar um lab — então as ferramentas do deck ficam atrás de um config environment e do seu
+próprio `mise.facilitator.lock`:
 
 ```bash
 MISE_ENV=facilitator mise install --locked
 ```
 
-Set `MISE_ENV=facilitator` in your shell (or an untracked `.envrc`) to keep it active
-while you work on the deck. After a version bump, re-lock from the same environment with
-`MISE_ENV=facilitator mise lock`.
+Defina `MISE_ENV=facilitator` no seu shell (ou em um `.envrc` fora do versionamento) para
+mantê-lo ativo enquanto trabalha no deck. Depois de um bump de versão, refaça o lock a
+partir do mesmo ambiente com `MISE_ENV=facilitator mise lock`.
 
-> **Apple Silicon and Intel:** pnpm 11 publishes no Intel-Mac (`darwin-x64`) build, so
-> `--locked` cannot resolve pnpm on an Intel Mac. Use the corepack path below there.
+> **Apple Silicon e Intel:** o pnpm 11 não publica build para Mac Intel (`darwin-x64`),
+> então `--locked` não consegue resolver o pnpm em um Mac Intel. Use o caminho com
+> corepack abaixo nesse caso.
 
-## Install dependencies
+## Instale as dependências
 
-From the repository root:
+A partir da raiz do repositório:
 
 ```bash
 corepack enable
@@ -48,9 +50,9 @@ corepack prepare pnpm@11.9.0 --activate
 pnpm install --frozen-lockfile
 ```
 
-## Start the development server
+## Inicie o servidor de desenvolvimento
 
-Pick the deck you want:
+Escolha o deck que você quer:
 
 ```bash
 # Interactive menu (day / section / range) when gum is available
@@ -66,14 +68,15 @@ pnpm dev:optional    # Optional / Appendix
 pnpm dev:templates   # Theme / template gallery
 ```
 
-### Facilitator launcher and S21 GitOps tool
+### Launcher do facilitador e a ferramenta de GitOps do S21
 
-For a one-off facilitator selection (day, section, or range), use `pnpm deck` with an
-explicit selector. Non-interactive shells must pass the selector on the command line;
-the gum menu is progressive enhancement when a TTY and gum are available.
+Para uma seleção pontual do facilitador (dia, seção ou intervalo), use `pnpm deck` com um
+seletor explícito. Shells não interativos precisam passar o seletor na linha de comando;
+o menu do gum é progressive enhancement quando há um TTY e o gum está disponível.
 
-S21 ships as a two-way switch — **Argo CD** (default) or **Flux**. Exactly one tool per
-delivery; there is no "both" mode and no third-tool plug-in surface.
+O S21 vem como uma chave de duas posições — **Argo CD** (default) ou **Flux**. Exatamente
+uma ferramenta por entrega; não existe modo "ambos" nem superfície de plug-in para uma
+terceira ferramenta.
 
 ```bash
 # Default GitOps tool is Argo CD (byte-identical to the committed day decks)
@@ -88,20 +91,21 @@ pnpm decks:check
 pnpm decks:generate -- --gitops flux   # fails clearly until the Flux section exists
 ```
 
-Slidev prints a local URL — typically:
+O Slidev imprime uma URL local — tipicamente:
 
 ```text
 http://localhost:3030/
 ```
 
-Open that URL in your browser. Use arrow keys or the on-screen controls to move between
-slides. Presenter mode is available from Slidev’s UI (often `http://localhost:3030/presenter/`).
+Abra essa URL no seu navegador. Use as setas do teclado ou os controles na tela para
+navegar entre os slides. O modo apresentador fica disponível na UI do Slidev
+(normalmente em `http://localhost:3030/presenter/`).
 
-Stop the server with `Ctrl+C`.
+Pare o servidor com `Ctrl+C`.
 
-## Production build and local preview
+## Build de produção e preview local
 
-Build static SPAs (useful before changing GitHub Pages wiring):
+Faça o build de SPAs estáticas (útil antes de mexer na configuração do GitHub Pages):
 
 ```bash
 # Live day entries (default `pnpm build`)
@@ -112,29 +116,29 @@ pnpm exec slidev build slides.md --base /deck/ --out dist-deck --router-mode has
 pnpm exec slidev build slides-3day.md --base /deck/3day/ --out dist-deck-3day --router-mode hash
 ```
 
-Serve a built folder with any static file server, for example:
+Sirva uma pasta buildada com qualquer servidor de arquivos estáticos, por exemplo:
 
 ```bash
 pnpm dlx serve dist-deck
 ```
 
-For the **exact** GitHub Pages layout (MkDocs landing + decks under `/deck/`), use the
-Pages workflow locally:
+Para o layout **exato** do GitHub Pages (landing em MkDocs + decks sob `/deck/`), use o
+workflow do Pages localmente:
 
 ```bash
 pnpm pages:build
 pnpm pages:preview   # serves ./site at http://localhost:4173
 ```
 
-`pages:build` expects the Python MkDocs stack from [`requirements-docs.txt`](./requirements-docs.txt):
+`pages:build` espera a stack Python do MkDocs de [`requirements-docs.txt`](./requirements-docs.txt):
 
 ```bash
 python3 -m pip install -r docs/requirements-docs.txt
 pnpm pages:build
 ```
 
-## Related
+## Relacionados
 
-- Cluster/lab environment (kind): [setup.md](./setup.md)
-- Live Pages decks and PDF releases: [downloads.md](./downloads.md)
-- Quiz prototype (Node scripts, not Slidev): [quiz/README.md](https://github.com/PlatformRelay/Kubernetes-Workshop/blob/main/quiz/README.md)
+- Ambiente de cluster/labs (kind): [setup.md](./setup.md)
+- Decks ao vivo no Pages e releases em PDF: [downloads.md](./downloads.md)
+- Protótipo de quiz (scripts Node, não Slidev): [quiz/README.md](https://github.com/PlatformRelay/Kubernetes-Workshop/blob/main/quiz/README.md)

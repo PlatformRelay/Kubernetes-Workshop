@@ -7,11 +7,12 @@ hide:
 
 # Kubernetes Practitioner Workshop
 
-**A free, open-source, vendor-neutral Kubernetes workshop** — Slidev presentations,
-ready-to-run labs, and a portable quiz prototype. Use it to learn yourself, to teach
-colleagues, or to run a full multi-day delivery. Adapt it, restyle it, redistribute it
-under the [0BSD License](https://github.com/PlatformRelay/Kubernetes-Workshop/blob/main/LICENSE)
-(no attribution required).
+**Um workshop de Kubernetes gratuito, open-source e vendor-neutral** — apresentações
+Slidev, labs prontos para rodar e um protótipo portátil de quiz. Use para aprender
+sozinho, para ensinar colegas ou para conduzir uma entrega completa de vários dias.
+Adapte, mude o estilo, redistribua sob a
+[Licença 0BSD](https://github.com/PlatformRelay/Kubernetes-Workshop/blob/main/LICENSE)
+(sem exigência de atribuição).
 
 <p markdown="1">
 
@@ -23,45 +24,45 @@ under the [0BSD License](https://github.com/PlatformRelay/Kubernetes-Workshop/bl
 
 </p>
 
-**Live decks:** [Day 1](https://platformrelay.github.io/Kubernetes-Workshop/deck/day-1/) ·
+**Decks ao vivo:** [Day 1](https://platformrelay.github.io/Kubernetes-Workshop/deck/day-1/) ·
 [Day 2](https://platformrelay.github.io/Kubernetes-Workshop/deck/day-2/) ·
 [Day 3](https://platformrelay.github.io/Kubernetes-Workshop/deck/day-3/) ·
-[3-day cut](https://platformrelay.github.io/Kubernetes-Workshop/deck/3day/) ·
+[Corte de 3 dias](https://platformrelay.github.io/Kubernetes-Workshop/deck/3day/) ·
 [Superset](https://platformrelay.github.io/Kubernetes-Workshop/deck/)
 
-[Interactive decks :octicons-arrow-right-24:](downloads.md#interactive-slidev-decks){ .md-button .md-button--primary }
-[PDF downloads :octicons-download-24:](downloads.md#pdf-downloads){ .md-button }
-[Run locally :octicons-terminal-24:](run-slides.md){ .md-button }
+[Decks interativos :octicons-arrow-right-24:](downloads.md#interactive-slidev-decks){ .md-button .md-button--primary }
+[Downloads em PDF :octicons-download-24:](downloads.md#pdf-downloads){ .md-button }
+[Rodar localmente :octicons-terminal-24:](run-slides.md){ .md-button }
 
-## Why this workshop
+## Por que este workshop
 
 | | |
 | --- | --- |
-| **Free** | No paywall, no account, no telemetry. Clone it and go. |
-| **Teach-ready** | Decks + labs + facilitator notes so you can explain Kubernetes to colleagues. |
-| **Hands-on** | Standalone Markdown labs (about half the time) with copy-pasteable commands. |
-| **Flexible delivery** | Solo learning, a single afternoon, or a canonical three-day cut. |
-| **Many formats** | Live Slidev in the browser, local Node.js preview, and downloadable PDFs. |
-| **Yours to adapt** | Restyle the theme, reorder sections, fork or sell freely under 0BSD. |
+| **Gratuito** | Sem paywall, sem conta, sem telemetria. Clone e comece. |
+| **Pronto para ensinar** | Decks + labs + notas do facilitador para você explicar Kubernetes aos colegas. |
+| **Mão na massa** | Labs autônomos em Markdown (cerca de metade do tempo) com comandos prontos para copiar e colar. |
+| **Entrega flexível** | Estudo solo, uma única tarde ou o corte canônico de três dias. |
+| **Vários formatos** | Slidev ao vivo no navegador, preview local com Node.js e PDFs para download. |
+| **Seu para adaptar** | Mude o estilo do tema, reordene as seções, faça fork ou venda livremente sob a 0BSD. |
 
-## Start here
+## Comece por aqui
 
-| Goal | Go to |
+| Objetivo | Vá para |
 | --- | --- |
-| Preview the slides in the browser | [Live decks](downloads.md#interactive-slidev-decks) |
-| Download PDF handouts | [PDF downloads](downloads.md#pdf-downloads) / [GitHub Releases](https://github.com/PlatformRelay/Kubernetes-Workshop/releases) |
-| Run Slidev on your laptop | [Run the slides locally](run-slides.md) |
-| Do the labs | [Labs guide](https://github.com/PlatformRelay/Kubernetes-Workshop/tree/main/labs#readme) · [Lab 00 setup](https://github.com/PlatformRelay/Kubernetes-Workshop/blob/main/labs/day-1/00-setup.md) |
-| Stand up a local kind cluster | [Local kind setup](setup.md) |
-| Try the quiz prototype | [Quiz README](https://github.com/PlatformRelay/Kubernetes-Workshop/tree/main/quiz#readme) |
-| See the full section map | [Syllabus](syllabus.md) |
-| Facilitate a room | [Facilitator guide](facilitator-guide.md) |
+| Ver os slides no navegador | [Decks ao vivo](downloads.md#interactive-slidev-decks) |
+| Baixar os handouts em PDF | [Downloads em PDF](downloads.md#pdf-downloads) / [GitHub Releases](https://github.com/PlatformRelay/Kubernetes-Workshop/releases) |
+| Rodar o Slidev no seu laptop | [Rodar os slides localmente](run-slides.md) |
+| Fazer os labs | [Guia dos labs](https://github.com/PlatformRelay/Kubernetes-Workshop/tree/main/labs#readme) · [Lab 00 setup](https://github.com/PlatformRelay/Kubernetes-Workshop/blob/main/labs/day-1/00-setup.md) |
+| Subir um cluster kind local | [Setup local com kind](setup.md) |
+| Testar o protótipo do quiz | [README do quiz](https://github.com/PlatformRelay/Kubernetes-Workshop/tree/main/quiz#readme) |
+| Ver o mapa completo de seções | [Syllabus](syllabus.md) |
+| Conduzir uma turma | [Guia do facilitador](facilitator-guide.md) |
 
-## Curriculum spine
+## Espinha dorsal do currículo
 
-The red line grows one app step by step:
+A "linha vermelha" (red line) faz uma mesma aplicação crescer passo a passo:
 
 **Pod → Deployment → Service → Ingress → Gateway API**
 
-Later topics (config, storage, probes, security, Helm, GitOps, operators) hang off that
-same workload. Full map: [syllabus](syllabus.md).
+Os tópicos posteriores (config, storage, probes, security, Helm, GitOps, operators) se
+apoiam nesse mesmo workload. Mapa completo: [syllabus](syllabus.md).

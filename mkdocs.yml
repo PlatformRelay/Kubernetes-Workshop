@@ -1,5 +1,5 @@
 site_name: Kubernetes Practitioner Workshop
-site_description: Free, open-source Kubernetes workshop — Slidev decks, labs, quizzes, and PDFs.
+site_description: Workshop de Kubernetes gratuito e open source — decks Slidev, labs, quizzes e PDFs.
 site_url: https://platformrelay.github.io/Kubernetes-Workshop/
 repo_url: https://github.com/PlatformRelay/Kubernetes-Workshop
 repo_name: PlatformRelay/Kubernetes-Workshop
@@ -33,13 +33,13 @@ theme:
       accent: cyan
       toggle:
         icon: material/brightness-7
-        name: Switch to light mode
+        name: Mudar para o modo claro
     - scheme: default
       primary: indigo
       accent: cyan
       toggle:
         icon: material/brightness-4
-        name: Switch to dark mode
+        name: Mudar para o modo escuro
   features:
     - navigation.tabs
     - navigation.tabs.sticky
@@ -75,19 +75,19 @@ markdown_extensions:
       permalink: true
 
 nav:
-  - Home: index.md
-  - Get started:
-      - Run the slides locally: run-slides.md
-      - Local kind cluster: setup.md
+  - Início: index.md
+  - Comece por aqui:
+      - Rodar os slides localmente: run-slides.md
+      - Cluster kind local: setup.md
       - Windows / WSL2: windows-wsl2.md
-  - Curriculum:
+  - Currículo:
       - Syllabus: syllabus.md
-      - Facilitator guide: facilitator-guide.md
-      - Known limitations: beta-limitations.md
-  - Downloads & previews:
-      - Live decks & PDFs: downloads.md
-  - Project:
+      - Guia do facilitador: facilitator-guide.md
+      - Limitações conhecidas: beta-limitations.md
+  - Downloads e prévias:
+      - Decks ao vivo e PDFs: downloads.md
+  - Projeto:
       - Roadmap: roadmap.md
-      - Release process: release.md
-      - Validation matrix: validation-matrix.md
-      - Rehearsal checklist: rehearsal-checklist.md
+      - Processo de release: release.md
+      - Matriz de validação: validation-matrix.md
+      - Checklist de ensaio: rehearsal-checklist.md

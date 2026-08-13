@@ -7,117 +7,121 @@
 [![Release](https://img.shields.io/github/v/release/PlatformRelay/Kubernetes-Workshop)](https://github.com/PlatformRelay/Kubernetes-Workshop/releases)
 [![License: 0BSD](https://img.shields.io/github/license/PlatformRelay/Kubernetes-Workshop)](./LICENSE)
 
-**Free. Open source. No paywall.** A vendor-neutral Kubernetes workshop you can run for
-yourself, for colleagues, or as a full multi-day delivery — with interactive slides,
-ready-to-run labs, a portable quiz prototype, and downloadable PDFs.
+**Gratuito. Open source. Sem paywall.** Um workshop de Kubernetes vendor-neutral que você
+pode conduzir para si mesmo, para colegas ou como uma entrega completa de vários dias — com
+slides interativos, labs prontos para rodar, um protótipo portátil de quiz e PDFs para
+download.
 
-Use it to **learn**, to **explain Kubernetes concepts to your team**, or to **facilitate**
-a room. Restyle it, reorder it, fork it, redistribute it, or sell it under the
-[0BSD License](./LICENSE) — no attribution required. No royalties, no accounts, and no
-telemetry.
+Use para **aprender**, para **explicar conceitos de Kubernetes ao seu time** ou para
+**facilitar** uma sala. Mude o estilo, reordene, faça fork, redistribua ou venda sob a
+[0BSD License](./LICENSE) — sem exigência de atribuição. Sem royalties, sem contas e sem
+telemetria.
 
-**Live decks** (always-current GitHub Pages builds):
+**Decks ao vivo** (builds sempre atuais no GitHub Pages):
 
-- [Day 1 — Foundations](https://platformrelay.github.io/Kubernetes-Workshop/deck/day-1/)
-- [Day 2 — Running workloads](https://platformrelay.github.io/Kubernetes-Workshop/deck/day-2/)
-- [Day 3 — Security, delivery, operators](https://platformrelay.github.io/Kubernetes-Workshop/deck/day-3/)
-- [Canonical 3-day cut](https://platformrelay.github.io/Kubernetes-Workshop/deck/3day/) ·
-  [Full content (superset)](https://platformrelay.github.io/Kubernetes-Workshop/deck/) ·
-  [Docs home](https://platformrelay.github.io/Kubernetes-Workshop/)
+- [Day 1 — Fundamentos](https://platformrelay.github.io/Kubernetes-Workshop/deck/day-1/)
+- [Day 2 — Rodando workloads](https://platformrelay.github.io/Kubernetes-Workshop/deck/day-2/)
+- [Day 3 — Segurança, entrega, operators](https://platformrelay.github.io/Kubernetes-Workshop/deck/day-3/)
+- [Corte canônico de 3 dias](https://platformrelay.github.io/Kubernetes-Workshop/deck/3day/) ·
+  [Conteúdo completo (superset)](https://platformrelay.github.io/Kubernetes-Workshop/deck/) ·
+  [Início da documentação](https://platformrelay.github.io/Kubernetes-Workshop/)
 
-## Try it in sixty seconds
+## Experimente em sessenta segundos
 
 | | |
 | --- | --- |
-| **Docs home** | <https://platformrelay.github.io/Kubernetes-Workshop/> |
-| **Live decks** | [Day 1](https://platformrelay.github.io/Kubernetes-Workshop/deck/day-1/) · [Day 2](https://platformrelay.github.io/Kubernetes-Workshop/deck/day-2/) · [Day 3](https://platformrelay.github.io/Kubernetes-Workshop/deck/day-3/) · [3-day cut](https://platformrelay.github.io/Kubernetes-Workshop/deck/3day/) · [Superset](https://platformrelay.github.io/Kubernetes-Workshop/deck/) |
-| **PDF handouts** | [GitHub Releases](https://github.com/PlatformRelay/Kubernetes-Workshop/releases) (day + full + 3-day PDFs on each `v*` tag) |
-| **Labs** | [`labs/README.md`](./labs/README.md) · start at [`labs/day-1/00-setup.md`](./labs/day-1/00-setup.md) |
-| **Quizzes** | [`quiz/README.md`](./quiz/README.md) (portable prototype; FOSS live host still open) |
-| **Run slides locally** | [`docs/run-slides.md`](./docs/run-slides.md) (Node.js + pnpm) |
-| **Known limitations** | [`docs/beta-limitations.md`](./docs/beta-limitations.md) (S24 stub; add-on smoke backlog) |
-| **Roadmap** | [`docs/roadmap.md`](./docs/roadmap.md) (quizzes, OpenTelemetry — no dates) |
+| **Documentação** | <https://platformrelay.github.io/Kubernetes-Workshop/> |
+| **Decks ao vivo** | [Day 1](https://platformrelay.github.io/Kubernetes-Workshop/deck/day-1/) · [Day 2](https://platformrelay.github.io/Kubernetes-Workshop/deck/day-2/) · [Day 3](https://platformrelay.github.io/Kubernetes-Workshop/deck/day-3/) · [Corte de 3 dias](https://platformrelay.github.io/Kubernetes-Workshop/deck/3day/) · [Superset](https://platformrelay.github.io/Kubernetes-Workshop/deck/) |
+| **Handouts em PDF** | [GitHub Releases](https://github.com/PlatformRelay/Kubernetes-Workshop/releases) (PDFs por dia + completo + 3 dias em cada tag `v*`) |
+| **Labs** | [`labs/README.md`](./labs/README.md) · comece por [`labs/day-1/00-setup.md`](./labs/day-1/00-setup.md) |
+| **Quizzes** | [`quiz/README.md`](./quiz/README.md) (protótipo portátil; host FOSS ao vivo ainda em aberto) |
+| **Rodar os slides localmente** | [`docs/run-slides.md`](./docs/run-slides.md) (Node.js + pnpm) |
+| **Limitações conhecidas** | [`docs/beta-limitations.md`](./docs/beta-limitations.md) (stub de S24; backlog de smoke dos add-ons) |
+| **Roadmap** | [`docs/roadmap.md`](./docs/roadmap.md) (quizzes, OpenTelemetry — sem datas) |
 
-![Animated tour of the workshop deck — real slides stepping through their click animations](docs/images/deck-showcase.gif)
+![Tour animado do deck do workshop — slides reais avançando pelas suas animações de clique](docs/images/deck-showcase.gif)
 
-<sub>Real deck, no hand-taken screenshots: CI re-renders this tour from the slide sources
-(`pnpm showcase:gif`). Static frame: [`docs/images/deck-preview.png`](docs/images/deck-preview.png).</sub>
+<sub>Deck real, sem screenshots tirados à mão: o CI regera este tour a partir das fontes dos
+slides (`pnpm showcase:gif`). Frame estático: [`docs/images/deck-preview.png`](docs/images/deck-preview.png).</sub>
 
-## What you get
+## O que você leva
 
-- **~50% slides / ~50% practice** — Slidev decks paired with standalone Markdown labs.
-- **A clear red line** — one app grown **Pod → Deployment → Service → Ingress → Gateway API**,
-  then config, storage, probes, security, Helm, GitOps, and operators on the same workload.
-- **Two lab environments** — assigned namespace on a shared cluster, or a local **kind**
-  cluster via [`./workshop up`](./docs/setup.md).
-- **Facilitator support** — syllabus, pacing notes, and add-on checklists in
+- **~50% slides / ~50% prática** — decks Slidev acompanhados de labs Markdown independentes.
+- **Uma "linha vermelha" (red line) clara** — uma aplicação crescendo por
+  **Pod → Deployment → Service → Ingress → Gateway API**, e depois config, storage, probes,
+  security, Helm, GitOps e operators sobre o mesmo workload.
+- **Dois ambientes de lab** — um namespace atribuído em um cluster compartilhado, ou um
+  cluster **kind** local via [`./workshop up`](./docs/setup.md).
+- **Apoio ao facilitador** — syllabus, notas de ritmo e checklists de add-ons em
   [`docs/facilitator-guide.md`](./docs/facilitator-guide.md).
-- **Offline PDFs** — every release exports day decks plus full/3-day compatibility PDFs.
+- **PDFs offline** — cada release exporta os decks de cada dia mais os PDFs de
+  compatibilidade completo/3 dias.
 
-## Audience
+## Público
 
-**Beginner-to-intermediate.** Comfortable in a shell, with basic Git, YAML, HTTP, and
-container vocabulary. Container on-ramp labs (S01/S02) need no cluster.
+**Iniciante a intermediário.** À vontade em um shell, com noções de Git, YAML, HTTP e
+vocabulário de containers. Os labs de rampa de entrada em containers (S01/S02) não precisam
+de cluster.
 
-**By the end, a learner can** build and secure an image; explain the control plane;
-author and operate core workloads through Gateway API; inject config and storage; set
-resources and probes; harden with PSA, NetworkPolicy, and RBAC; deliver with Helm and
-GitOps; and read an operator in the wild — mapped to CKA/CKAD domains as a design check
-(cert prep is not the organizing principle).
+**Ao final, quem aprende consegue** buildar e proteger uma image; explicar o control plane;
+escrever e operar os workloads centrais até o Gateway API; injetar config e storage; definir
+resources e probes; endurecer com PSA, NetworkPolicy e RBAC; entregar com Helm e GitOps; e
+ler um operator no mundo real — mapeado aos domínios do CKA/CKAD como verificação de design
+(preparação para certificação não é o princípio organizador).
 
-## Curriculum at a glance
+## O currículo em resumo
 
-The workshop is a **superset of 28 sections** (`S00`–`S27`), boiled down per delivery into a
-**canonical 3-day cut**. Spine: **Pod → Deployment → Service → Ingress → Gateway API**
-(`S05`–`S09`).
+O workshop é um **superset de 28 seções** (`S00`–`S27`), reduzido em cada entrega a um
+**corte canônico de 3 dias**. Espinha dorsal: **Pod → Deployment → Service → Ingress →
+Gateway API** (`S05`–`S09`).
 
-| Day | Theme | Sections |
+| Day | Tema | Seções |
 | --- | --- | --- |
-| **Day 1** | Foundations + red line | `S00`, `S03`–`S08` |
-| **Day 2** | Running workloads well | `S09`–`S14` |
-| **Day 3** | Security, delivery, operators | `S17`, `S20`–`S23`, `S25`–`S27` |
+| **Day 1** | Fundamentos + red line | `S00`, `S03`–`S08` |
+| **Day 2** | Rodando workloads bem | `S09`–`S14` |
+| **Day 3** | Segurança, entrega, operators | `S17`, `S20`–`S23`, `S25`–`S27` |
 
-Authored on-ramp / add-back sections (`S01`, `S02`, `S15`, `S16`, `S18`, `S19`) live in
-**Optional / Appendix**; `S24` is a deferred stub (not schedulable).
-**26 of 28 sections are fully authored** (`S27` slides-only wrap-up). Full map:
-[`docs/syllabus.md`](./docs/syllabus.md) — contract-checked against
+As seções escritas de rampa de entrada / add-back (`S01`, `S02`, `S15`, `S16`, `S18`, `S19`)
+ficam em **Optional / Appendix**; `S24` é um stub deferred (fora de agenda).
+**26 of 28 sections are fully authored** (`S27` é slides-only, de fechamento). Mapa completo:
+[`docs/syllabus.md`](./docs/syllabus.md) — verificado por contrato contra
 `scripts/deck-manifest.mjs`.
 
-## Why this, not X?
+## Por que este, e não X?
 
-- **vs. paid platforms** (KodeKloud, A Cloud Guru, Linux Foundation courses) — this is
-  **free forever**, 0BSD, no account, no subscription, no paywalled labs. `git clone` (or
-  the live Pages site) gets you everything: slides, labs, and PDFs.
-- **vs. Kubernetes the Hard Way** — KTHW teaches you to bootstrap a control plane from
-  scratch by hand; deep, but narrow, and it stops before you ever run a workload. This
-  workshop assumes a cluster exists (`kind` or shared) and teaches the **practitioner
-  path**: workloads, config, storage, probes, security, delivery, and operators — where a
-  working engineer actually spends their time.
-- **vs. single-video courses** (YouTube walkthroughs, one-off Udemy/paid videos) — great
-  as an intro, but usually one linear recording with no standalone labs to run yourself,
-  no multi-day structure, and no facilitator materials. This is slides **plus** separate
-  hands-on labs, a syllabus, and a [facilitator guide](./docs/facilitator-guide.md) —
-  built to run as a real room, not just watched.
-- **vs. the official Kubernetes docs/tutorials** — an excellent reference, but a
-  reference isn't a curriculum. There's no red line, no pacing, no lab progression that
-  grows one app end to end.
-- **Ownership** — 0BSD means you can restyle it, cut your own agenda from the 28-section
-  superset, teach it inside your company, or resell it. No attribution required, no
-  royalties, ever.
+- **vs. plataformas pagas** (KodeKloud, A Cloud Guru, cursos da Linux Foundation) — este é
+  **gratuito para sempre**, 0BSD, sem conta, sem assinatura, sem labs atrás de paywall. Um
+  `git clone` (ou o site do Pages ao vivo) já entrega tudo: slides, labs e PDFs.
+- **vs. Kubernetes the Hard Way** — o KTHW ensina a fazer o bootstrap de um control plane do
+  zero, na mão; é profundo, mas estreito, e para antes de você rodar qualquer workload. Este
+  workshop assume que o cluster existe (`kind` ou compartilhado) e ensina o **caminho do
+  praticante**: workloads, config, storage, probes, security, entrega e operators — onde uma
+  pessoa de engenharia realmente gasta o seu tempo.
+- **vs. cursos em vídeo único** (walkthroughs no YouTube, vídeos avulsos pagos/Udemy) — ótimos
+  como introdução, mas em geral uma gravação linear, sem labs independentes para você rodar,
+  sem estrutura de vários dias e sem material de facilitação. Aqui são slides **mais** labs
+  práticos separados, um syllabus e um [guia do facilitador](./docs/facilitator-guide.md) —
+  feito para rodar como uma sala de verdade, não só para assistir.
+- **vs. a documentação/tutoriais oficiais do Kubernetes** — uma referência excelente, mas uma
+  referência não é um currículo. Não há red line, não há ritmo, não há progressão de labs que
+  faça uma aplicação crescer de ponta a ponta.
+- **Propriedade** — 0BSD significa que você pode mudar o estilo, recortar a sua própria agenda
+  do superset de 28 seções, ensinar dentro da sua empresa ou revender. Sem exigência de
+  atribuição, sem royalties, nunca.
 
-## Choose your path
+## Escolha o seu caminho
 
-- **Preview** — [documentation site](https://platformrelay.github.io/Kubernetes-Workshop/) and
-  [live decks](https://platformrelay.github.io/Kubernetes-Workshop/deck/) ·
-  [PDF releases](https://github.com/PlatformRelay/Kubernetes-Workshop/releases).
-- **Participate** — [`labs/README.md`](./labs/README.md), then Lab 00. For kind:
+- **Conhecer** — [site de documentação](https://platformrelay.github.io/Kubernetes-Workshop/) e
+  [decks ao vivo](https://platformrelay.github.io/Kubernetes-Workshop/deck/) ·
+  [releases em PDF](https://github.com/PlatformRelay/Kubernetes-Workshop/releases).
+- **Participar** — [`labs/README.md`](./labs/README.md) e então o Lab 00. Para o kind:
   [`docs/setup.md`](./docs/setup.md).
-- **Facilitate** — [`docs/facilitator-guide.md`](./docs/facilitator-guide.md).
-- **Contribute** — authoring rules in [`AGENT.md`](./AGENT.md).
+- **Facilitar** — [`docs/facilitator-guide.md`](./docs/facilitator-guide.md).
+- **Contribuir** — regras de autoria em [`AGENT.md`](./AGENT.md).
 
-## Run the slides on your machine
+## Rodar os slides na sua máquina
 
-Complete copy-paste path (Node 22 + pnpm — this repo does not ship an npm lockfile):
+Caminho completo de copiar e colar (Node 22 + pnpm — este repositório não traz lockfile do npm):
 
 ```bash
 git clone https://github.com/PlatformRelay/Kubernetes-Workshop.git
@@ -130,9 +134,9 @@ pnpm install --frozen-lockfile
 pnpm dev:day1          # http://localhost:3030/ — or pnpm dev / dev:3day / dev:superset
 ```
 
-More detail (build, preview, Pages tree): [`docs/run-slides.md`](./docs/run-slides.md).
+Mais detalhes (build, preview, árvore do Pages): [`docs/run-slides.md`](./docs/run-slides.md).
 
-## Develop (maintainers)
+## Desenvolver (mantenedores)
 
 ```bash
 pnpm install
@@ -145,33 +149,33 @@ pnpm test:pages         # Pages wiring contract
 pnpm pages:build        # MkDocs + hash-routed decks → ./site (needs MkDocs)
 ```
 
-## Layout
+## Estrutura
 
-| Path | Purpose |
+| Path | Propósito |
 | --- | --- |
-| `docs/` | MkDocs documentation (GitHub Pages landing) |
-| `scripts/deck-manifest.mjs` | Section metadata + generated deck membership |
-| `slides-day-{1,2,3}.md` | Live day entries |
-| `slides.md` / `slides-3day.md` | Compatibility superset / three-day cut |
-| `pages/SNN-topic/` | Section sources |
-| `labs/day-*/` | Standalone labs |
-| `quiz/` | Portable quiz prototype |
-| `theme/` | Local Slidev theme |
+| `docs/` | Documentação MkDocs (landing do GitHub Pages) |
+| `scripts/deck-manifest.mjs` | Metadados das seções + composição gerada dos decks |
+| `slides-day-{1,2,3}.md` | Entradas ao vivo de cada dia |
+| `slides.md` / `slides-3day.md` | Superset de compatibilidade / corte de três dias |
+| `pages/SNN-topic/` | Fontes das seções |
+| `labs/day-*/` | Labs independentes |
+| `quiz/` | Protótipo portátil de quiz |
+| `theme/` | Tema Slidev local |
 | `docs/decisions/` | ADRs |
 
-## Continuous integration & publishing
+## Integração contínua e publicação
 
-| Workflow | Trigger | Role |
+| Workflow | Gatilho | Papel |
 | --- | --- | --- |
-| `ci.yml` | PR + `main` | Labs lint, deck builds, link-check, Pages contract tests, showcase GIF |
+| `ci.yml` | PR + `main` | Lint dos labs, builds dos decks, link-check, testes do contrato do Pages, GIF de showcase |
 | `pages.yml` | `main` (+ manual) | MkDocs + Slidev → GitHub Pages |
-| `release.yml` | `v*` tags | PDF + offline zip GitHub Release |
-| `lab-smoke.yml` | schedule / dispatch / PR subset | Disposable kind Day-1 smoke |
+| `release.yml` | tags `v*` | GitHub Release com PDF + zip offline |
+| `lab-smoke.yml` | schedule / dispatch / subconjunto em PR | Smoke descartável do Day 1 em kind |
 | `codeql.yml` | `main` / schedule | Code scanning |
 
-Release policy (immutable tags, day-deck artifacts): [`docs/release.md`](./docs/release.md).
+Política de release (tags imutáveis, artefatos dos decks por dia): [`docs/release.md`](./docs/release.md).
 
-## License
+## Licença
 
-**[0BSD](./LICENSE)** — use, copy, modify, redistribute, and sell freely. No attribution
-required. Copyright (C) 2026 Platform Relay.
+**[0BSD](./LICENSE)** — use, copie, modifique, redistribua e venda livremente. Sem exigência
+de atribuição. Copyright (C) 2026 Platform Relay.

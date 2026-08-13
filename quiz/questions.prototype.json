@@ -5,46 +5,46 @@
     {
       "id": "S05-Q-SPK-01",
       "section": "S05",
-      "prompt": "A Pod's container exits and the kubelet restarts it. Which statement is accurate?",
+      "prompt": "O container de um Pod termina e o kubelet o reinicia. Qual afirmação está correta?",
       "options": [
-        { "id": "same-pod", "text": "The Pod identity stays the same while its container restart count increases.", "rationale": "A container restart within the Pod does not create a replacement Pod." },
-        { "id": "new-pod", "text": "The kubelet creates a new Pod with a new UID.", "rationale": "A controller or user creates replacement Pods; a container restart alone does not." },
-        { "id": "new-deployment", "text": "Kubernetes creates a Deployment to preserve the workload.", "rationale": "Kubernetes does not infer a Deployment from a standalone Pod." }
+        { "id": "same-pod", "text": "A identidade do Pod permanece a mesma, enquanto o contador de restarts do container aumenta.", "rationale": "Um restart de container dentro do Pod não cria um Pod substituto." },
+        { "id": "new-pod", "text": "O kubelet cria um novo Pod com um novo UID.", "rationale": "Pods substitutos são criados por um controller ou por um usuário; um restart de container, sozinho, não faz isso." },
+        { "id": "new-deployment", "text": "O Kubernetes cria um Deployment para preservar o workload.", "rationale": "O Kubernetes não infere um Deployment a partir de um Pod avulso." }
       ],
       "answer": "same-pod",
-      "explanation": "The kubelet restarts containers according to the Pod restart policy; the Pod UID is unchanged.",
+      "explanation": "O kubelet reinicia containers de acordo com a restart policy do Pod; o UID do Pod não muda.",
       "difficulty": "introductory",
-      "learningObjective": "Distinguish a container restart from Pod replacement.",
+      "learningObjective": "Distinguir um restart de container da substituição do Pod.",
       "references": ["https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/"]
     },
     {
       "id": "S07-Q-SPK-01",
       "section": "S07",
-      "prompt": "A Service has no ready endpoints although matching Pods are Running. What should you inspect first?",
+      "prompt": "Um Service não tem endpoints ready, embora os Pods correspondentes estejam Running. O que você deve inspecionar primeiro?",
       "options": [
-        { "id": "readiness", "text": "The Pods' readiness conditions and the Service selector.", "rationale": "EndpointSlices normally include ready matching Pods; readiness and selector mismatches are the direct checks." },
-        { "id": "nodeport", "text": "Whether the Service uses NodePort.", "rationale": "Service type does not repair selector or readiness problems." },
-        { "id": "replicaset", "text": "Whether the Pods share a ReplicaSet owner.", "rationale": "Service selection is label-based and independent of controller ownership." }
+        { "id": "readiness", "text": "As readiness conditions dos Pods e o selector do Service.", "rationale": "Normalmente as EndpointSlices incluem os Pods correspondentes que estão ready; divergências de readiness e de selector são as verificações diretas." },
+        { "id": "nodeport", "text": "Se o Service usa NodePort.", "rationale": "O type do Service não corrige problemas de selector nem de readiness." },
+        { "id": "replicaset", "text": "Se os Pods compartilham o mesmo ReplicaSet como owner.", "rationale": "A seleção do Service é baseada em labels e independe do ownership de controller." }
       ],
       "answer": "readiness",
-      "explanation": "Services discover backends through selectors and EndpointSlices; unready or non-matching Pods do not become ready endpoints.",
+      "explanation": "Services descobrem backends por meio de selectors e EndpointSlices; Pods que não estão ready ou que não correspondem ao selector não viram endpoints ready.",
       "difficulty": "intermediate",
-      "learningObjective": "Diagnose the selector-to-EndpointSlice routing path.",
+      "learningObjective": "Diagnosticar o caminho de roteamento do selector até a EndpointSlice.",
       "references": ["https://kubernetes.io/docs/concepts/services-networking/service/"]
     },
     {
       "id": "S09-Q-SPK-01",
       "section": "S09",
-      "prompt": "Who chooses which GatewayClass a Gateway uses?",
+      "prompt": "Quem escolhe qual GatewayClass um Gateway usa?",
       "options": [
-        { "id": "gateway-author", "text": "The Gateway author sets spec.gatewayClassName.", "rationale": "GatewayClass selection is explicit in the Gateway specification." },
-        { "id": "controller-default", "text": "Whichever controller starts first becomes the default.", "rationale": "Gateway API does not select a class by controller startup order." },
-        { "id": "route-author", "text": "Each HTTPRoute chooses the GatewayClass directly.", "rationale": "Routes attach to Gateways; the Gateway selects the GatewayClass." }
+        { "id": "gateway-author", "text": "O autor do Gateway define spec.gatewayClassName.", "rationale": "A seleção da GatewayClass é explícita na spec do Gateway." },
+        { "id": "controller-default", "text": "O controller que iniciar primeiro se torna o padrão.", "rationale": "A Gateway API não seleciona uma class pela ordem de inicialização dos controllers." },
+        { "id": "route-author", "text": "Cada HTTPRoute escolhe a GatewayClass diretamente.", "rationale": "As Routes se anexam a Gateways; o Gateway seleciona a GatewayClass." }
       ],
       "answer": "gateway-author",
-      "explanation": "A Gateway references one GatewayClass by spec.gatewayClassName; Routes attach to the resulting Gateway listeners.",
+      "explanation": "Um Gateway referencia uma GatewayClass por spec.gatewayClassName; as Routes se anexam aos listeners resultantes do Gateway.",
       "difficulty": "intermediate",
-      "learningObjective": "Explain the GatewayClass, Gateway, and HTTPRoute ownership boundary.",
+      "learningObjective": "Explicar a fronteira de ownership entre GatewayClass, Gateway e HTTPRoute.",
       "references": ["https://gateway-api.sigs.k8s.io/api-types/gatewayclass/"]
     }
   ]
