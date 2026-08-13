@@ -1,74 +1,75 @@
 # Syllabus — Kubernetes Practitioner Workshop
 
-A modern, code-heavy, vendor-neutral Kubernetes workshop. It takes a learner from
-"what is a container" through "what is a cluster" to confidently authoring, running,
-and operating core Kubernetes workloads. Every concept block is paired with a hands-on
-lab: roughly **50% presentation, 50% practice**.
+Um workshop de Kubernetes moderno, cheio de código e vendor-neutral. Ele leva quem aprende
+de "o que é um container", passando por "o que é um cluster", até escrever, rodar e operar
+com confiança os workloads centrais do Kubernetes. Cada bloco de conceito vem acompanhado
+de um lab prático: aproximadamente **50% apresentação, 50% prática**.
 
-This document is the public, self-contained schedule. A facilitator should be able to
-reconstruct the whole workshop from this file alone. See also:
+Este documento é o cronograma público e autocontido. Um facilitador deve conseguir
+reconstruir o workshop inteiro só a partir deste arquivo. Veja também:
 
-- [`labs/README.md`](../labs/README.md) — participant entry point (how the labs work, prerequisites).
-- [`docs/facilitator-guide.md`](./facilitator-guide.md) — facilitator entry point (room/environment setup, pacing).
-- [`docs/decisions/`](./decisions/) — architecture decision records (why the repo is shaped this way).
+- [`labs/README.md`](../labs/README.md) — porta de entrada do participante (como os labs funcionam, pré-requisitos).
+- [`docs/facilitator-guide.md`](./facilitator-guide.md) — porta de entrada do facilitador (setup de sala/ambiente, ritmo).
+- [`docs/decisions/`](./decisions/) — architecture decision records (por que o repositório tem este formato).
 
-## Premise & audience
+## Premissa e público
 
-The workshop is built around a **red line of core resources** and then layers container,
-operational, delivery, and security topics on top of that foundation.
+O workshop é construído em torno de uma **"linha vermelha" (red line) de recursos
+centrais** e depois empilha temas de containers, operação, entrega e segurança sobre
+essa base.
 
-**Level: beginner-to-intermediate**, not pure beginner. The arc runs from container
-foundations up to operators, GitOps, and pod-escape hardening.
+**Nível: iniciante a intermediário**, não iniciante puro. O arco vai dos fundamentos de
+containers até operators, GitOps e hardening contra pod escape.
 
-**Assumed prerequisites** (stated up front and reinforced in the labs):
+**Pré-requisitos assumidos** (declarados logo de início e reforçados nos labs):
 
-- A shell you are comfortable in, and basic Git.
-- Basic YAML, basic HTTP, and basic container vocabulary.
-- One of two lab environments: an **assigned namespace** on a shared cluster, **or** a
-  local **kind** cluster. See [`labs/README.md`](../labs/README.md) for the exact tools.
+- Um shell no qual você se sinta à vontade, e noções de Git.
+- Noções de YAML, de HTTP e de vocabulário de containers.
+- Um de dois ambientes de lab: um **namespace atribuído** em um cluster compartilhado, **ou**
+  um cluster **kind** local. Veja [`labs/README.md`](../labs/README.md) para as ferramentas exatas.
 
-The two container sections (S01/S02) are offered as an **on-ramp** for anyone new to
-containers — they run entirely locally and need no cluster.
+As duas seções de containers (S01/S02) são oferecidas como **rampa de entrada** para quem é
+novo em containers — elas rodam inteiramente local e não precisam de cluster.
 
 ## The red line
 
-The spine of the workshop is a single application taken step by step through the five
-core networking/workload resources:
+A espinha dorsal do workshop é uma única aplicação levada passo a passo pelos cinco recursos
+centrais de networking/workload:
 
-> **Pod → Deployment → Service → Ingress → Gateway API** (sections S05–S09)
+> **Pod → Deployment → Service → Ingress → Gateway API** (seções S05–S09)
 
-Each resource **extends the previous manifest** rather than starting over, so learners
-watch one app grow from a bare Pod into a Deployment, gain a stable Service address,
-get exposed north-south via Ingress, and finally route with the Gateway API. Every
-later topic (config, storage, health, security, delivery, observability) hangs off this
-same running app.
+Cada recurso **estende o manifesto anterior** em vez de começar do zero, então quem aprende
+vê uma mesma aplicação crescer de um Pod puro até um Deployment, ganhar um endereço estável
+de Service, ser exposta no sentido norte-sul via Ingress e, por fim, ser roteada com a
+Gateway API. Todo tema posterior (config, storage, health, security, entrega, observabilidade)
+se pendura nessa mesma aplicação em execução.
 
 ## Superset vs. the canonical 3-day cut
 
-The section map below (**S00–S27**) is a **content superset** — it deliberately contains
-**more material than fits in three days**. This lets the workshop be authored richly and
-**boiled down per delivery** by toggling sections on or off. Nothing is wasted: each
-section is a self-contained, individually toggleable unit.
+O mapa de seções abaixo (**S00–S27**) é um **content superset** — ele contém
+deliberadamente **mais material do que cabe em três dias**. Isso permite que o workshop seja
+escrito com riqueza e **reduzido a cada entrega**, ligando ou desligando seções. Nada é
+desperdiçado: cada seção é uma unidade autocontida e individualmente alternável.
 
-- Every section carries a **Tier** — `core`, `recommended`, or `optional` — and a
-  **Suggested day** for the canonical cut.
-- The **canonical 3-day cut** (see [The 3-day cut](#the-canonical-3-day-cut)) is the
-  subset that must land near **~390 min/day at ~50/50 slides:lab**. The superset as a
-  whole does not, by design.
-- The 3-day cut = all `core` sections + selected `recommended` sections; `optional`
-  sections are cut first. A facilitator composes each delivery from authored sections
-  rather than cutting material live.
+- Toda seção carrega um **Tier** — `core`, `recommended` ou `optional` — e um **dia sugerido**
+  para o corte canônico.
+- O **corte canônico de 3 dias** (veja [The 3-day cut](#the-canonical-3-day-cut)) é o
+  subconjunto que precisa ficar perto de **~390 minutos/dia com ~50/50 slides:lab**. O superset
+  como um todo não fica, por design.
+- O corte de 3 dias = todas as seções `core` + seções `recommended` selecionadas; as seções
+  `optional` são as primeiras a cair. O facilitador compõe cada entrega a partir de seções já
+  escritas, em vez de cortar material ao vivo.
 
-> **Timing note.** The per-section timings below are the primitive. The day totals in
-> the canonical cut are **planning estimates that have not yet been rehearsed
-> end-to-end** — confirming the cut lands near ~390 min/day at ~50/50 is explicitly a
-> pre-delivery rehearsal task that is still open. Treat the totals as targets to pace
-> against, not measured facts.
+> **Nota sobre tempos.** Os tempos por seção abaixo são a primitiva. Os totais por dia no
+> corte canônico são **estimativas de planejamento que ainda não foram ensaiadas de ponta a
+> ponta** — confirmar que o corte fica perto de ~390 minutos/dia com ~50/50 é explicitamente
+> uma tarefa de ensaio pré-entrega ainda em aberto. Trate os totais como alvos de ritmo, não
+> como fatos verificados.
 
 ## Section map (S00–S27)
 
-**Tier:** `core` (always in the cut) · `recommended` (in the cut if time allows) ·
-`optional` (cut first). **Day** is the suggested grouping for the canonical 3-day cut.
+**Tier:** `core` (sempre no corte) · `recommended` (entra no corte se houver tempo) ·
+`optional` (o primeiro a cair). **Day** é o agrupamento sugerido para o corte canônico de 3 dias.
 
 | ID | Section | Tier | Day | Status | Track |
 | --- | --- | --- | --- | --- | --- |
@@ -101,80 +102,80 @@ section is a self-contained, individually toggleable unit.
 | S26 | Best practices (capstone) | core | 3 | authored | Wrap |
 | S27 | Wrap-up & next steps | core | 3 | authored | Wrap |
 
-> **Suggested day** is guidance, not a hard schedule. Toggle any `recommended` /
-> `optional` section off to fit a shorter room.
+> O **dia sugerido** é orientação, não cronograma rígido. Desligue qualquer seção
+> `recommended` / `optional` para caber em uma sala mais curta.
 
 ## Per-section outcomes, timings, and labs
 
-Each section pairs concept slides with a standalone lab under
-[`labs/day-N/`](../labs/README.md). Timing is **slides + lab**.
+Cada seção combina slides de conceito com um lab independente em
+[`labs/day-N/`](../labs/README.md). O tempo é **slides + lab**.
 
-### Day 1 — Foundations, containers, and the core red line
+### Day 1 — Fundamentos, containers e a red line central
 
-| ID | Outcome | Lab | Slides | Lab time |
+| ID | Resultado | Lab | Slides | Tempo de lab |
 | --- | --- | --- | --- | --- |
-| S00 | Everyone can reach their environment and run kubectl. | [`labs/day-1/00-setup.md`](../labs/day-1/00-setup.md) | 20 | 15 |
-| S01 | Explain what a container image *is* and build one. | [`labs/day-1/01-containers.md`](../labs/day-1/01-containers.md) | 30 | 25 |
-| S02 | Build/choose images that are small, non-root, and scanned (build-time security). | [`labs/day-1/02-container-security.md`](../labs/day-1/02-container-security.md) | 30 | 25 |
-| S03 | Describe the control plane, nodes, and reconciliation. | [`labs/day-1/03-cluster-tour.md`](../labs/day-1/03-cluster-tour.md) | 30 | 20 |
-| S04 | Fluent discovery, inspection, and change with kubectl — and k9s as the terminal UI over the same API. | [`labs/day-1/04-kubectl.md`](../labs/day-1/04-kubectl.md) | 30 | 25 |
-| S05 | Author, inspect, and delete a Pod; know its lifecycle. | [`labs/day-1/05-pod.md`](../labs/day-1/05-pod.md) | 30 | 25 |
-| S06 | Run and update a Deployment; understand ReplicaSets and rollouts. | [`labs/day-1/06-deployment.md`](../labs/day-1/06-deployment.md) | 35 | 30 |
-| S07 | Give Pods a stable address; debug selector→endpoint routing. | [`labs/day-1/07-service.md`](../labs/day-1/07-service.md) | 30 | 30 |
-| S08 | Expose HTTP north-south through an Ingress controller; know how cert-manager keeps the TLS Secret issued and renewed. | [`labs/day-1/08-ingress.md`](../labs/day-1/08-ingress.md) | 30 | 25 |
+| S00 | Todo mundo alcança o seu ambiente e roda kubectl. | [`labs/day-1/00-setup.md`](../labs/day-1/00-setup.md) | 20 | 15 |
+| S01 | Explicar o que uma container image *é* e buildar uma. | [`labs/day-1/01-containers.md`](../labs/day-1/01-containers.md) | 30 | 25 |
+| S02 | Buildar/escolher images pequenas, non-root e escaneadas (segurança em tempo de build). | [`labs/day-1/02-container-security.md`](../labs/day-1/02-container-security.md) | 30 | 25 |
+| S03 | Descrever o control plane, os nodes e a reconciliação. | [`labs/day-1/03-cluster-tour.md`](../labs/day-1/03-cluster-tour.md) | 30 | 20 |
+| S04 | Fluência para descobrir, inspecionar e mudar com kubectl — e o k9s como UI de terminal sobre a mesma API. | [`labs/day-1/04-kubectl.md`](../labs/day-1/04-kubectl.md) | 30 | 25 |
+| S05 | Escrever, inspecionar e deletar um Pod; conhecer o seu ciclo de vida. | [`labs/day-1/05-pod.md`](../labs/day-1/05-pod.md) | 30 | 25 |
+| S06 | Rodar e atualizar um Deployment; entender ReplicaSets e rollouts. | [`labs/day-1/06-deployment.md`](../labs/day-1/06-deployment.md) | 35 | 30 |
+| S07 | Dar aos Pods um endereço estável; depurar o roteamento selector→endpoint. | [`labs/day-1/07-service.md`](../labs/day-1/07-service.md) | 30 | 30 |
+| S08 | Expor HTTP no sentido norte-sul através de um Ingress controller; saber como o cert-manager mantém o Secret de TLS emitido e renovado. | [`labs/day-1/08-ingress.md`](../labs/day-1/08-ingress.md) | 30 | 25 |
 
-### Day 2 — Modern routing and running workloads well
+### Day 2 — Routing moderno e como rodar bem os workloads
 
-| ID | Outcome | Lab | Slides | Lab time |
+| ID | Resultado | Lab | Slides | Tempo de lab |
 | --- | --- | --- | --- | --- |
-| S09 | Route with the Gateway API, explain why it succeeds Ingress, and name the route family beyond HTTP. | [`labs/day-2/09-gateway-api.md`](../labs/day-2/09-gateway-api.md) | 35 | 25 |
-| S10 | Inject configuration and secrets; know the caveats and the secure-delivery patterns. | [`labs/day-2/10-config.md`](../labs/day-2/10-config.md) | 30 | 25 |
-| S11 | Attach durable storage and reason about the storage stack. | [`labs/day-2/11-storage.md`](../labs/day-2/11-storage.md) | 30 | 30 |
-| S12 | Run a stateful workload with stable identity and per-Pod storage. | [`labs/day-2/12-statefulset.md`](../labs/day-2/12-statefulset.md) | 30 | 30 |
-| S13 | Set requests/limits, reason about scheduling and QoS, and right-size from observed usage. | [`labs/day-2/13-resources.md`](../labs/day-2/13-resources.md) | 35 | 30 |
-| S14 | Configure liveness, readiness, and startup probes correctly. | [`labs/day-2/14-probes.md`](../labs/day-2/14-probes.md) | 30 | 30 |
-| S15 | Run batch and scheduled workloads. | [`labs/day-2/15-jobs.md`](../labs/day-2/15-jobs.md) | 20 | 20 |
-| S16 | Scale a workload on demand with an HPA. | [`labs/day-2/16-hpa.md`](../labs/day-2/16-hpa.md) | 20 | 20 |
+| S09 | Rotear com a Gateway API, explicar por que ela sucede o Ingress e nomear a família de routes além do HTTP. | [`labs/day-2/09-gateway-api.md`](../labs/day-2/09-gateway-api.md) | 35 | 25 |
+| S10 | Injetar configuração e secrets; conhecer as ressalvas e os padrões de entrega segura. | [`labs/day-2/10-config.md`](../labs/day-2/10-config.md) | 30 | 25 |
+| S11 | Anexar storage durável e raciocinar sobre a stack de storage. | [`labs/day-2/11-storage.md`](../labs/day-2/11-storage.md) | 30 | 30 |
+| S12 | Rodar um workload stateful com identidade estável e storage por Pod. | [`labs/day-2/12-statefulset.md`](../labs/day-2/12-statefulset.md) | 30 | 30 |
+| S13 | Definir requests/limits, raciocinar sobre scheduling e QoS, e dimensionar a partir do uso observado. | [`labs/day-2/13-resources.md`](../labs/day-2/13-resources.md) | 35 | 30 |
+| S14 | Configurar corretamente as liveness, readiness e startup probes. | [`labs/day-2/14-probes.md`](../labs/day-2/14-probes.md) | 30 | 30 |
+| S15 | Rodar workloads batch e agendados. | [`labs/day-2/15-jobs.md`](../labs/day-2/15-jobs.md) | 20 | 20 |
+| S16 | Escalar um workload sob demanda com um HPA. | [`labs/day-2/16-hpa.md`](../labs/day-2/16-hpa.md) | 20 | 20 |
 
-### Day 3 — Security, delivery, operators, best practices
+### Day 3 — Segurança, entrega, operators, boas práticas
 
-| ID | Outcome | Lab | Slides | Lab time |
+| ID | Resultado | Lab | Slides | Tempo de lab |
 | --- | --- | --- | --- | --- |
-| S17 | Harden a Pod and understand Pod Security Standards. | [`labs/day-3/17-pod-security.md`](../labs/day-3/17-pod-security.md) | 30 | 25 |
-| S18 | Isolate workloads at the network layer (default-deny + explicit allows). | [`labs/day-3/18-networkpolicy.md`](../labs/day-3/18-networkpolicy.md) | 25 | 25 |
-| S19 | Grant least-privilege access with RBAC. | [`labs/day-3/19-rbac.md`](../labs/day-3/19-rbac.md) | 25 | 25 |
-| S20 | Install and customize apps with Helm; upgrade and roll back. | [`labs/day-3/20-helm.md`](../labs/day-3/20-helm.md) | 30 | 30 |
-| S21 | Drive desired state from Git; understand sync and drift. | [`labs/day-3/21-gitops.md`](../labs/day-3/21-gitops.md) | 30 | 25 |
-| S22 | Explain what an operator is and why it matters. | [`labs/day-3/22-operator-concept.md`](../labs/day-3/22-operator-concept.md) | 25 | 15 |
-| S23 | See an operator manage a real system; learn observability basics. | [`labs/day-3/23-prometheus.md`](../labs/day-3/23-prometheus.md) | 30 | 25 |
-| S24 † | Scaffold a tiny operator and understand reconcile. | [`labs/day-3/24-kubebuilder.md`](../labs/day-3/24-kubebuilder.md) *(stub)* | 40 | 40 |
-| S25 | Understand how weak Pod settings enable escape, and how to prevent it. | [`labs/day-3/25-pod-escape.md`](../labs/day-3/25-pod-escape.md) | 35 | 30 |
-| S26 | Critically review real manifests against a production checklist. | [`labs/day-3/26-capstone.md`](../labs/day-3/26-capstone.md) | 30 | 40 |
-| S27 | Know where to go next. | *(none — slides-only: open Q&A / office hours)* | 20 | — |
+| S17 | Endurecer um Pod e entender os Pod Security Standards. | [`labs/day-3/17-pod-security.md`](../labs/day-3/17-pod-security.md) | 30 | 25 |
+| S18 | Isolar workloads na camada de rede (default-deny + allows explícitos). | [`labs/day-3/18-networkpolicy.md`](../labs/day-3/18-networkpolicy.md) | 25 | 25 |
+| S19 | Conceder acesso de menor privilégio com RBAC. | [`labs/day-3/19-rbac.md`](../labs/day-3/19-rbac.md) | 25 | 25 |
+| S20 | Instalar e customizar aplicações com Helm; fazer upgrade e rollback. | [`labs/day-3/20-helm.md`](../labs/day-3/20-helm.md) | 30 | 30 |
+| S21 | Dirigir o estado desejado a partir do Git; entender sync e drift. | [`labs/day-3/21-gitops.md`](../labs/day-3/21-gitops.md) | 30 | 25 |
+| S22 | Explicar o que é um operator e por que ele importa. | [`labs/day-3/22-operator-concept.md`](../labs/day-3/22-operator-concept.md) | 25 | 15 |
+| S23 | Ver um operator gerenciando um sistema real; aprender o básico de observabilidade. | [`labs/day-3/23-prometheus.md`](../labs/day-3/23-prometheus.md) | 30 | 25 |
+| S24 † | Fazer o scaffold de um operator minúsculo e entender o reconcile. | [`labs/day-3/24-kubebuilder.md`](../labs/day-3/24-kubebuilder.md) *(stub)* | 40 | 40 |
+| S25 | Entender como configurações fracas de Pod permitem escape, e como impedir isso. | [`labs/day-3/25-pod-escape.md`](../labs/day-3/25-pod-escape.md) | 35 | 30 |
+| S26 | Revisar criticamente manifestos reais contra um checklist de produção. | [`labs/day-3/26-capstone.md`](../labs/day-3/26-capstone.md) | 30 | 40 |
+| S27 | Saber para onde ir depois. | *(nenhum — slides-only: Q&A aberto / office hours)* | 20 | — |
 
-† **S24 is a deferred stub.** The slides and lab are outlined but not yet fully authored —
-it needs a Go + kubebuilder toolchain and is scheduled for a later milestone. Its timing is
-the planned slot, not delivered content. See the
-[facilitator guide](./facilitator-guide.md) before including it.
+† **S24 é um stub deferred.** Os slides e o lab estão esboçados, mas ainda não foram
+totalmente escritos — precisam de uma toolchain Go + kubebuilder e estão previstos para um
+milestone posterior. O seu tempo é o slot planejado, não conteúdo entregue. Consulte o
+[guia do facilitador](./facilitator-guide.md) antes de incluí-lo.
 
 ## The canonical 3-day cut
 
-The boil-down that a facilitator delivers by default. Target **~390 min/day at ~50/50**.
-Everything **not** listed is toggled off for that delivery. Authored add-backs remain
-available in the Optional / Appendix deck; deferred entries are visible as stubs but are
-not schedulable. The cut is deliberately adjustable — the listed add-backs are the first
-knobs to reach for.
+A redução que um facilitador entrega por padrão. Alvo: **~390 minutos/dia com ~50/50**.
+Tudo que **não** está listado fica desligado naquela entrega. Os add-backs já escritos
+continuam disponíveis no deck Optional / Appendix; entradas deferred aparecem como stubs, mas
+ficam fora de agenda. O corte é deliberadamente ajustável — os add-backs listados são os
+primeiros botões a girar.
 
-### Day 1 (~375 min planned)
+### Day 1 (~375 minutos planejados)
 
-**Sections:** S00, S03, S04, S05, S06, S07, S08.
+**Seções:** S00, S03, S04, S05, S06, S07, S08.
 
-- **S01 Containers** and **S02 Container security** are offered as an **optional
-  pre-read or a "day 0" evening block** — they are *not* in the core Day-1 cut above,
-  even though the section map tags them Day 1. If the room needs container grounding,
-  fold them in and drop **S09 Gateway API** to Day 2 to make room.
+- **S01 Containers** e **S02 Container security** são oferecidas como **pré-leitura opcional
+  ou bloco noturno de "day 0"** — elas *não* estão no corte central do Day 1 acima, mesmo que
+  o mapa de seções as marque como Day 1. Se a sala precisar de base em containers, encaixe as
+  duas e empurre **S09 Gateway API** para o Day 2 para abrir espaço.
 
-| Section | Slides | Lab | Total |
+| Seção | Slides | Lab | Total |
 | --- | --- | --- | --- |
 | S00 | 20 | 15 | 35 |
 | S03 | 30 | 20 | 50 |
@@ -185,14 +186,14 @@ knobs to reach for.
 | S08 | 30 | 25 | 55 |
 | **Day 1** | **205** | **170** | **375** |
 
-### Day 2 (~360 min planned)
+### Day 2 (~360 minutos planejados)
 
-**Sections:** S09, S10, S11, S12, S13, S14.
+**Seções:** S09, S10, S11, S12, S13, S14.
 
-- **S15 Jobs & CronJobs** and **S16 HPA** are the first **add-backs** if time allows
-  (each ~40 min).
+- **S15 Jobs & CronJobs** e **S16 HPA** são os primeiros **add-backs** se houver tempo
+  (cada um ~40 minutos).
 
-| Section | Slides | Lab | Total |
+| Seção | Slides | Lab | Total |
 | --- | --- | --- | --- |
 | S09 | 35 | 25 | 60 |
 | S10 | 30 | 25 | 55 |
@@ -202,15 +203,15 @@ knobs to reach for.
 | S14 | 30 | 30 | 60 |
 | **Day 2** | **190** | **170** | **360** |
 
-### Day 3 (~420 min planned)
+### Day 3 (~420 minutos planejados)
 
-**Sections:** S17, S20, S21, S22, S23, S25, S26, S27.
+**Seções:** S17, S20, S21, S22, S23, S25, S26, S27.
 
-- **S18 NetworkPolicy** and **S19 RBAC** are optional add-backs for a longer delivery.
-  **S24 kubebuilder is deferred and is not schedulable** until its paired slides and lab
-  meet the authoring contract.
+- **S18 NetworkPolicy** e **S19 RBAC** são add-backs opcionais para uma entrega mais longa.
+  **S24 kubebuilder está deferred e fora de agenda** até que os seus slides e lab pareados
+  atendam ao contrato de autoria.
 
-| Section | Slides | Lab | Total |
+| Seção | Slides | Lab | Total |
 | --- | --- | --- | --- |
 | S17 | 30 | 25 | 55 |
 | S20 | 30 | 30 | 60 |
@@ -222,30 +223,30 @@ knobs to reach for.
 | S27 | 20 | — | 20 |
 | **Day 3** | **230** | **190** | **420** |
 
-> **Reading the totals.** Day 1 (375) and Day 2 (360) sit under the ~390 target, leaving
-> headroom for the S01/S02 pre-read (Day 1) and the S15/S16 add-backs (Day 2). Day 3 as
-> listed sums to **420** — over target — so a facilitator running to time should drop one
-> of the Day-3 add-backs (S18/S19 are already excluded, and deferred S24 is not
-> schedulable); trim the S26 capstone lab or move a recommended section. These are unrehearsed
-> planning estimates; the [facilitator guide](./facilitator-guide.md#timing-and-pacing)
-> covers how to pace against them.
+> **Como ler os totais.** Day 1 (375) e Day 2 (360) ficam abaixo do alvo de ~390, deixando
+> folga para a pré-leitura S01/S02 (Day 1) e para os add-backs S15/S16 (Day 2). O Day 3 como
+> listado soma **420** — acima do alvo — então um facilitador que precise fechar no horário
+> deve cortar um dos add-backs do Day 3 (S18/S19 já estão fora, e o S24 deferred está fora de
+> agenda); enxugar o lab do capstone S26 ou mover uma seção recommended. Estas são estimativas
+> de planejamento não ensaiadas; o [guia do facilitador](./facilitator-guide.md#timing-and-pacing)
+> explica como manter o ritmo em cima delas.
 
-## CKAD / CKA alignment
+## Alinhamento com CKAD / CKA
 
-Alignment is a **design check**, not the workshop's structure — certification prep is
-explicitly *not* the organizing principle. Topic coverage is mapped to CKA/CKAD domains
-so the workshop is a strong foundation for certification, and so certification-curious
-learners can self-map.
+O alinhamento é uma **verificação de design**, não a estrutura do workshop — preparação para
+certificação explicitamente *não* é o princípio organizador. A cobertura de temas é mapeada
+aos domínios do CKA/CKAD para que o workshop seja uma base forte para certificação e para que
+quem tem curiosidade sobre certificação consiga se situar sozinho.
 
-> **Currency.** Verify the current Kubernetes release and CKA/CKAD curriculum versions
-> at delivery time; this document does not hard-pin a version. The CKA was substantially
-> revised (collapsing to five domains and adding **Gateway API, Helm/Kustomize, and
-> CRDs/Operators**), all of which this workshop teaches — so the spine is deliberately
-> modern.
+> **Atualidade.** Verifique a release atual do Kubernetes e as versões dos currículos
+> CKA/CKAD no momento da entrega; este documento não fixa uma versão. O CKA foi revisado
+> substancialmente (reduzindo para cinco domínios e adicionando **Gateway API, Helm/Kustomize
+> e CRDs/Operators**), tudo que este workshop ensina — então a espinha dorsal é
+> deliberadamente moderna.
 
-### Covered by the workshop
+### Coberto pelo workshop
 
-| Cert domain (theme) | Sections | CKAD | CKA |
+| Domínio da certificação (tema) | Seções | CKAD | CKA |
 | --- | --- | --- | --- |
 | Container images & build | S01, S02 | Design & Build | — |
 | Cluster architecture & API model | S03, S04 | Design & Build | Cluster Arch |
@@ -258,33 +259,33 @@ learners can self-map.
 | Packaging & delivery (Helm, GitOps) | S20, S21 | App Deployment (Helm) | Cluster Arch (Helm/Kustomize) |
 | Extensibility (CRDs, operators) | S22, S23, S24 | App Env (CRD/Operators) | Cluster Arch (CRDs/operators) |
 
-### Intentionally optional / next-steps
+### Intencionalmente opcional / próximos passos
 
-Called out in the wrap-up (S27) as "where to go next" rather than taught in depth:
+Mencionados no fechamento (S27) como "para onde ir depois", em vez de ensinados a fundo:
 
-- **Multi-container patterns** (sidecar/init/ambassador/adapter, incl. native sidecar
-  containers) — a CKAD item; touched in S05.
-- **Node scheduling controls** — nodeAffinity, taints/tolerations, topology spread — a
-  CKA workloads item; a candidate for a future optional section.
-- **Canary / blue-green** — a CKAD strategy item; conceptual demo in S06/S21.
-- **Cluster internals** — CoreDNS, `crictl`, and the CNI/CSI/CRI extension interfaces;
-  `crictl` is touched in S25 node debugging, and the CRI in S01/S03.
-- **Admin track (out of scope for app developers)** — kubeadm lifecycle/upgrades, etcd
-  backup/restore, HA control plane, node `drain`/`cordon`. Pointed to external
-  resources and skipped.
+- **Padrões multi-container** (sidecar/init/ambassador/adapter, incluindo native sidecar
+  containers) — um item de CKAD; tocado em S05.
+- **Controles de scheduling em nodes** — nodeAffinity, taints/tolerations, topology spread — um
+  item de workloads do CKA; candidato a uma futura seção opcional.
+- **Canary / blue-green** — um item de estratégia do CKAD; demo conceitual em S06/S21.
+- **Internals do cluster** — CoreDNS, `crictl` e as interfaces de extensão CNI/CSI/CRI;
+  o `crictl` é tocado no debugging de node em S25, e o CRI em S01/S03.
+- **Trilha de administração (fora de escopo para quem desenvolve aplicações)** — ciclo de
+  vida/upgrades com kubeadm, backup/restore do etcd, control plane em HA, `drain`/`cordon` de
+  node. Apontados para recursos externos e pulados.
 
-## Where to go next (free resources)
+## Para onde ir depois (recursos gratuitos)
 
-Surfaced in S27 as downstream options — certification is a possibility, not the goal.
+Apresentados em S27 como opções seguintes — certificação é uma possibilidade, não o objetivo.
 
-- **Official docs** — <https://kubernetes.io/docs/home/> · interactive Kubernetes Basics
-  tutorial · Gateway API (<https://gateway-api.sigs.k8s.io/>) · Pod Security Standards.
-- **CNCF / Linux Foundation** — the free LFS158 "Introduction to Kubernetes" course and
-  the open-source CKA/CKAD curricula (<https://github.com/cncf/curriculum>).
-- **Hands-on practice (free)** — Killercoda "Killer Shell" CKA/CKAD scenarios and
-  ephemeral-cluster playgrounds.
-- **Containers & images** — the OCI image spec, Trivy, Sigstore/cosign, SLSA, and
-  distroless base images.
-- **Operators** — the Kubebuilder Book and the Operator SDK.
-- **Security (defensive)** — NSA/CISA Kubernetes Hardening Guidance, MITRE ATT&CK for
-  Containers, and tooling such as kube-bench, Trivy, Kubescape, and Falco.
+- **Documentação oficial** — <https://kubernetes.io/docs/home/> · tutorial interativo
+  Kubernetes Basics · Gateway API (<https://gateway-api.sigs.k8s.io/>) · Pod Security Standards.
+- **CNCF / Linux Foundation** — o curso gratuito LFS158 "Introduction to Kubernetes" e os
+  currículos open source de CKA/CKAD (<https://github.com/cncf/curriculum>).
+- **Prática hands-on (gratuita)** — cenários CKA/CKAD do Killercoda "Killer Shell" e
+  playgrounds de clusters efêmeros.
+- **Containers & images** — a OCI image spec, Trivy, Sigstore/cosign, SLSA e as base images
+  distroless.
+- **Operators** — o Kubebuilder Book e o Operator SDK.
+- **Segurança (defensiva)** — NSA/CISA Kubernetes Hardening Guidance, MITRE ATT&CK for
+  Containers, e ferramentas como kube-bench, Trivy, Kubescape e Falco.

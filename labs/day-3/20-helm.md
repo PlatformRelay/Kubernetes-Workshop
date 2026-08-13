@@ -10,60 +10,61 @@
 
 ## Objective
 
-Package the familiar `web` app as a **chart**, install it as a **release**, override its
-values, **upgrade** through a couple of revisions, then deliberately **break** an upgrade and
-**roll back**. By the end you'll be able to say exactly what a *revision* stores and what
-*rollback* restores — and you'll have proven that `helm install` is just "render the template
-with values, then apply the result."
+Empacotar a familiar aplicação `web` como um **chart**, instalá-la como uma **release**,
+sobrescrever seus values, fazer **upgrade** por algumas revisions, depois **quebrar** um upgrade
+de propósito e fazer **rollback**. Ao final você será capaz de dizer exatamente o que uma
+*revision* armazena e o que o *rollback* restaura — e terá provado que `helm install` é apenas
+"renderizar o template com os values, depois aplicar o resultado".
 
-The whole lab turns on one idea: **a chart is a template, a release is an installed instance,
-and every install/upgrade/rollback is a numbered, reversible revision.**
+O lab inteiro gira em torno de uma ideia: **um chart é um template, uma release é uma instância
+instalada, e todo install/upgrade/rollback é uma revision numerada e reversível.**
 
 ## Prerequisites
 
-- `helm` v3.8+ (the workshop pins **Helm 3.21.x** via `mise`; `helm version` should print
-  `v3.8` or newer — OCI support, used in the stretch, is GA from 3.8).
-- `kubectl`, and a place to install into:
-  - **namespace path:** your assigned namespace on the shared cluster (Helm needs no
-    cluster-admin — it applies as *you*, with your RBAC).
-  - **kind path:** a local cluster (`kind create cluster`).
-- Internet pull access for `ghcr.io/platformrelay/workshop-web:v1` / `:v2`.
+- `helm` v3.8+ (o workshop fixa o **Helm 3.21.x** via `mise`; `helm version` deve imprimir
+  `v3.8` ou mais novo — o suporte a OCI, usado no stretch, é GA a partir do 3.8).
+- `kubectl`, e um lugar para instalar:
+  - **caminho namespace:** seu namespace atribuído no cluster compartilhado (o Helm não precisa
+    de cluster-admin — ele aplica como *você*, com o seu RBAC).
+  - **caminho kind:** um cluster local (`kind create cluster`).
+- Acesso de pull à internet para `ghcr.io/platformrelay/workshop-web:v1` / `:v2`.
 
-> **Helm is a client.** There is no server component (no "Tiller" since Helm 3). `helm install`
-> renders the chart on your machine and applies the result with your kubeconfig — if you can't
-> `kubectl apply` it, neither can Helm.
+> **O Helm é um cliente.** Não há componente de servidor (nenhum "Tiller" desde o Helm 3). O
+> `helm install` renderiza o chart na sua máquina e aplica o resultado com o seu kubeconfig — se
+> você não consegue dar `kubectl apply` nele, o Helm também não consegue.
 
 ## Files used
 
-You'll create a tiny chart called `demo-app` (four files). It renders to the exact `web`
-Deployment + Service from Day 1 — a chart is your same manifests, parameterised.
+Você vai criar um chart minúsculo chamado `demo-app` (quatro arquivos). Ele renderiza para
+exatamente o Deployment + Service `web` do Day 1 — um chart são os seus mesmos manifestos,
+parametrizados.
 
-- `demo-app/Chart.yaml` — chart identity + `apiVersion: v2`.
-- `demo-app/values.yaml` — the default knobs (`replicaCount`, `image.*`, `service.port`).
-- `demo-app/templates/deployment.yaml` — the `web` Deployment with `{{ .Values.* }}` holes.
-- `demo-app/templates/service.yaml` — the matching Service.
-- `values-prod.yaml` — an override values file for the upgrade step.
+- `demo-app/Chart.yaml` — identidade do chart + `apiVersion: v2`.
+- `demo-app/values.yaml` — os parâmetros padrão (`replicaCount`, `image.*`, `service.port`).
+- `demo-app/templates/deployment.yaml` — o Deployment `web` com lacunas `{{ .Values.* }}`.
+- `demo-app/templates/service.yaml` — o Service correspondente.
+- `values-prod.yaml` — um arquivo de values de sobrescrita para o passo de upgrade.
 
 ---
 
 ## Guided task
 
-Work through the steps without opening the companion unless you are blocked. The spoiler
-contains exact commands, expected state, explanations, and recovery guidance.
+Percorra os passos sem abrir o companion, a menos que fique travado. O spoiler contém os
+comandos exatos, o estado esperado, explicações e orientações de recuperação.
 
-[Spoiler: guided solutions and expected output](./20-helm.solution.md#guided-solutions)
+[Spoiler: soluções guiadas e saída esperada](./20-helm.solution.md#guided-solutions)
 
-### Step 0 — pick a namespace
+### Step 0 — escolha um namespace
 
-### namespace path (shared cluster)
+### caminho namespace (cluster compartilhado)
 
 ```bash
 export NS=<your-assigned-namespace>
 kubectl config set-context --current --namespace="$NS"
-helm version        # expect v3.8+ (workshop pins Helm 3.21.x)
+helm version        # esperado: v3.8+ (o workshop fixa o Helm 3.21.x)
 ```
 
-### kind path
+### caminho kind
 
 ```bash
 kind create cluster --name helm-lab
@@ -73,10 +74,10 @@ helm version
 
 ---
 
-### Step 1 — build the chart
+### Step 1 — construa o chart
 
-Create the four chart files. The `{{ … }}` placeholders are **Helm template directives**, not
-shell — the quoted heredoc (`<<'EOF'`) keeps your shell from touching them.
+Crie os quatro arquivos do chart. Os placeholders `{{ … }}` são **diretivas de template do
+Helm**, não shell — o heredoc com aspas (`<<'EOF'`) impede que o seu shell os toque.
 
 ```bash
 mkdir -p demo-app/templates
@@ -137,7 +138,7 @@ spec:
 EOF
 ```
 
-**Task:** lint the chart and confirm it's structurally valid.
+**Tarefa:** faça o lint do chart e confirme que ele é estruturalmente válido.
 
 ```bash
 helm lint demo-app
@@ -145,23 +146,23 @@ helm lint demo-app
 
 ---
 
-### Step 2 — render before you install (`helm template`)
+### Step 2 — renderize antes de instalar (`helm template`)
 
-`helm template` renders the chart to plain manifests **client-side** — it never contacts the
-cluster. This is how you *see what Helm would apply* before applying it.
+O `helm template` renderiza o chart para manifestos puros **client-side** — ele nunca contata o
+cluster. É assim que você *vê o que o Helm aplicaria* antes de aplicar.
 
 ```bash
 helm template web demo-app
 ```
 
-**Task:** confirm the rendered Deployment has `name: web`, `replicas: 1`, and the `:v1`
-image — i.e. the values flowed in.
+**Tarefa:** confirme que o Deployment renderizado tem `name: web`, `replicas: 1` e a image
+`:v1` — ou seja, os values fluíram para dentro.
 
-**Question:** how is `helm template` different from `helm install --dry-run=server`?
+**Pergunta:** qual a diferença entre `helm template` e `helm install --dry-run=server`?
 
 ---
 
-### Step 3 — install the release (revision 1)
+### Step 3 — instale a release (revision 1)
 
 ```bash
 helm install web demo-app
@@ -169,20 +170,20 @@ helm list
 kubectl get deploy,svc,pods -l app=web
 ```
 
-**Task:** confirm one release named `web` at revision 1, and that its Pod is Running.
+**Tarefa:** confirme uma release chamada `web` na revision 1, e que o Pod dela está Running.
 
 ---
 
-### Step 4 — override values and upgrade (revisions 2 & 3)
+### Step 4 — sobrescreva values e faça upgrade (revisions 2 e 3)
 
-Same template, new values → a new revision. Override two ways: inline with `--set`, and with a
-values **file**.
+Mesmo template, novos values → uma nova revision. Sobrescreva de duas formas: inline com
+`--set`, e com um **arquivo** de values.
 
 ```bash
-# revision 2: scale up inline
+# revision 2: escale inline
 helm upgrade web demo-app --set replicaCount=3
 
-# revision 3: bump the image tag via a values file
+# revision 3: suba a tag da image via arquivo de values
 cat > values-prod.yaml <<'EOF'
 replicaCount: 3
 image:
@@ -193,30 +194,30 @@ helm upgrade web demo-app -f values-prod.yaml
 helm history web
 ```
 
-**Task:** confirm three revisions, and that the live Deployment now runs 3 replicas on `:v2`.
+**Tarefa:** confirme três revisions, e que o Deployment vivo agora roda 3 réplicas na `:v2`.
 
 ```bash
 kubectl get deploy web -o jsonpath='{.spec.replicas} {.spec.template.spec.containers[0].image}{"\n"}'
 ```
 
-**Question:** revision 3 only set `image.tag`, yet `replicas` stayed 3. Why didn't it fall back
-to the `values.yaml` default of 1?
+**Pergunta:** a revision 3 só definiu `image.tag`, e mesmo assim `replicas` continuou 3. Por que
+não voltou ao padrão 1 do `values.yaml`?
 
 ---
 
-### Step 5 — break an upgrade, then roll back
+### Step 5 — quebre um upgrade, depois faça rollback
 
-Upgrade to a values set that can't run — an image tag that doesn't exist — and watch the new
-Pods fail. Then roll back to the last good revision.
+Faça o upgrade para um conjunto de values que não consegue rodar — uma tag de image que não
+existe — e observe os novos Pods falharem. Depois faça rollback para a última revision boa.
 
 ```bash
 helm upgrade web demo-app --set image.tag=9.9.9-nope
 kubectl get pods -l app=web
 ```
 
-**Task:** observe the new Pod stuck pulling the bad image (`ErrImagePull` / `ImagePullBackOff`).
+**Tarefa:** observe o novo Pod travado fazendo pull da image ruim (`ErrImagePull` / `ImagePullBackOff`).
 
-**Task:** roll back to the last good revision (3) and confirm recovery.
+**Tarefa:** faça rollback para a última revision boa (3) e confirme a recuperação.
 
 ```bash
 helm rollback web 3
@@ -224,12 +225,12 @@ helm history web
 kubectl get pods -l app=web
 ```
 
-**Question (required):** what does a revision actually store, and what does `helm rollback`
-restore?
+**Pergunta (obrigatória):** o que uma revision realmente armazena, e o que o `helm rollback`
+restaura?
 
 ---
 
-### Step 6 — where the history lives (optional read)
+### Step 6 — onde o histórico vive (leitura opcional)
 
 ```bash
 kubectl get secret -l owner=helm -l name=web
@@ -237,38 +238,40 @@ kubectl get secret -l owner=helm -l name=web
 
 ## Observe
 
-- **A chart is a template; a release is an instance.** `helm template` rendered the chart to the
-  exact `web` Deployment + Service from Day 1 — client-side, no cluster.
-- **`helm install` = render + apply as you.** No server component; your RBAC applies.
-- **Values flow in and are overridable:** `--set` (inline) and `-f` (a file) both feed
-  `.Values`; upgrade **reuses prior values** and merges overrides on top.
-- **Every change is a numbered revision** (`helm history`); a revision is a full **snapshot**
-  (manifests + values + metadata), stored as a `helm.sh/release.v1` `Secret`.
-- **A Helm "success" isn't app health:** the bad-tag upgrade "deployed" but the Pod was
-  `ImagePullBackOff` — check `kubectl get pods`.
-- **`rollback N` rolls *forward* to an old state:** it replays revision N as a *new* revision and
-  never destroys history.
+- **Um chart é um template; uma release é uma instância.** O `helm template` renderizou o chart
+  para exatamente o Deployment + Service `web` do Day 1 — client-side, sem cluster.
+- **`helm install` = renderizar + aplicar como você.** Sem componente de servidor; seu RBAC se
+  aplica.
+- **Values fluem para dentro e são sobrescrevíveis:** `--set` (inline) e `-f` (um arquivo)
+  alimentam `.Values`; o upgrade **reutiliza os values anteriores** e faz o merge das
+  sobrescritas por cima.
+- **Toda mudança é uma revision numerada** (`helm history`); uma revision é um **snapshot**
+  completo (manifestos + values + metadata), armazenado como um `Secret` `helm.sh/release.v1`.
+- **Um "sucesso" do Helm não é saúde da aplicação:** o upgrade com a tag ruim ficou "deployed",
+  mas o Pod estava `ImagePullBackOff` — verifique `kubectl get pods`.
+- **`rollback N` avança *para a frente* rumo a um estado antigo:** ele reexecuta a revision N
+  como uma *nova* revision e nunca destrói o histórico.
 
 ## Challenge
 
-A helm upgrade reports Deployed but the app Pods are ImagePullBackOff. Diagnose Helm
-release success versus REST workload health, roll back to the last known-good revision, and
-prove the release history kept the failed revision.
+Um helm upgrade reporta Deployed, mas os Pods da aplicação estão em ImagePullBackOff.
+Diagnostique sucesso da release do Helm versus a saúde real do workload, faça rollback para a
+última revision sabidamente boa e prove que o histórico da release manteve a revision que falhou.
 
 **Difficulty:** Intermediate
 
-**Success criteria:** Identify the failing Pod status with kubectl, use helm history to name the bad
-revision, helm rollback to a prior revision so Pods become Ready, and show history still lists
-the failed revision after rollback.
+**Success criteria:** Identifique o status do Pod que falha com kubectl, use helm history para
+nomear a revision ruim, faça helm rollback para uma revision anterior de modo que os Pods fiquem
+Ready, e prove que o history ainda lista a revision que falhou após o rollback.
 
-**Hints:** Compare helm status with kubectl get pods -l app=web; use helm history and
-helm rollback <revision> rather than uninstalling the release.
+**Hints:** Compare o helm status com kubectl get pods -l app=web; use helm history e
+helm rollback <revision> em vez de desinstalar a release.
 
-[Spoiler: challenge solution](./20-helm.solution.md#challenge-solution)
+[Spoiler: solução do challenge](./20-helm.solution.md#challenge-solution)
 
 ## Verify
 
-Confirm Helm release evidence before cleanup.
+Confirme as evidências da release do Helm antes do cleanup.
 
 ```bash
 helm list -n "$NS"
@@ -276,41 +279,41 @@ helm history web -n "$NS" | head
 kubectl get deploy,svc,pods -n "$NS" -l app=web
 ```
 
-Expected: the release still exists (or you note the revision you will uninstall) and Pods match
-the revision you intend to keep.
+Esperado: a release ainda existe (ou você anota a revision que vai desinstalar) e os Pods
+correspondem à revision que você pretende manter.
 
 ## Cleanup / reset
 
 ```bash
-# one command removes the workload AND all the revision history
+# um único comando remove o workload E todo o histórico de revisions
 helm uninstall web
 
-# if you did the OCI stretch: remove the second release and the local registry
-helm uninstall web2 2>/dev/null || true      # the release installed from oci://localhost:5000
-docker rm -f registry 2>/dev/null || true    # the throwaway registry:2 container
+# se você fez o stretch de OCI: remova a segunda release e o registry local
+helm uninstall web2 2>/dev/null || true      # a release instalada a partir de oci://localhost:5000
+docker rm -f registry 2>/dev/null || true    # o container registry:2 descartável
 
-# tidy the local files
+# limpe os arquivos locais
 rm -rf demo-app values-prod.yaml demo-app-*.tgz
 
-# confirm nothing is left
+# confirme que nada sobrou
 helm list
 kubectl get deploy,svc,pods -l app=web
 ```
 
-## Stretch (optional) — ship the chart to an OCI registry
+## Stretch (opcional) — envie o chart para um registry OCI
 
-Charts are OCI artifacts, so they live in the **same kind of registry as your images**. Package
-the chart and push it, then install straight from the `oci://` URL — no `helm repo add`.
+Charts são artefatos OCI, então eles vivem no **mesmo tipo de registry que as suas images**.
+Empacote o chart e faça o push, depois instale direto da URL `oci://` — sem `helm repo add`.
 
 ```bash
-# run a throwaway local registry (kind/Docker)
+# suba um registry local descartável (kind/Docker)
 docker run -d -p 5000:5000 --name registry registry:2
 
-# package the chart into a versioned .tgz, then push it
+# empacote o chart em um .tgz versionado, depois faça o push
 helm package demo-app
 helm push demo-app-0.1.0.tgz oci://localhost:5000/charts
 
-# install a fresh release straight from the registry URL
+# instale uma release nova direto da URL do registry
 helm install web2 oci://localhost:5000/charts/demo-app --version 0.1.0
 helm list
 ```

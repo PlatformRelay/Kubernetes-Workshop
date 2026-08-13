@@ -7,136 +7,143 @@ tier: recommended
 track: Delivery
 ---
 
-# GitOps with Argo CD
+# GitOps com Argo CD
 
-Drive desired state from Git; understand sync, self-heal, and drift.
+Dirija o estado desejado a partir do Git; entenda sync, self-heal e drift.
 
-**recommended** · suggested Day 3 · Delivery track
+**recommended** · sugerido para o Day 3 · trilha Delivery
 
 <!--
-Section S21 — GitOps with Argo CD. Recommended, Day 3, Delivery track.
-Timing: ~30 min slides + 25 min lab.
-Outcome: learners can explain pull-based GitOps, read/author an Argo CD `Application`,
-and predict sync / self-heal / drift behaviour — then feel it in the lab (create an
-Application, watch it sync Healthy, drift it by hand, watch self-heal revert).
-Beats: problem (push-based apply has no drift detection — "what's running vs what's in
-Git?") · mental model (pull-based: an in-cluster agent continuously reconciles the
-cluster toward Git) · Application CRD (source repo/path/revision + destination
-cluster/namespace + syncPolicy) · three behaviours (sync / self-heal / drift) ·
-magic-move building the Application manifest (== the lab's application.yaml) ·
-reconcile-loop animation with GIT as the desired-state source (reuse ReconcileLoop,
-callback to S03, forward to S22) · sync status vs health status (two axes) ·
-OpenGitOps four principles · recap → S22 · lab.
+Seção S21 — GitOps com Argo CD. Recommended, Day 3, trilha Delivery.
+Tempo: ~30 min de slides + 25 min de lab.
+Resultado: os participantes conseguem explicar GitOps pull-based, ler/escrever uma
+`Application` do Argo CD e prever o comportamento de sync / self-heal / drift — e então
+sentir isso no lab (criar uma Application, vê-la sincronizar Healthy, gerar drift na mão,
+ver o self-heal reverter).
+Beats: problema (apply push-based não tem detecção de drift — "o que está rodando vs o
+que está no Git?") · modelo mental (pull-based: um agente dentro do cluster reconcilia
+continuamente o cluster em direção ao Git) · CRD Application (source repo/path/revision +
+destination cluster/namespace + syncPolicy) · três comportamentos (sync / self-heal /
+drift) · magic-move construindo o manifesto da Application (== application.yaml do lab) ·
+animação do loop de reconciliação com GIT como fonte do estado desejado (reutiliza
+ReconcileLoop, callback ao S03, aponta para o S22) · sync status vs health status (dois
+eixos) · quatro princípios do OpenGitOps · recap → S22 · lab.
 
-Animation: REUSE ReconcileLoop (US-X1, built in S03) — pass controller="Argo CD",
-resource="replica", desiredSource="Git". This is the reuse guardrail in action: the
-GitOps loop IS the S03 reconcile loop with Git in the desired slot. The new
-desiredSource/observedSource props were added backward-compatibly (default spec/status)
-so S03 stays byte-identical.
+Animação: REUTILIZAR ReconcileLoop (US-X1, construído no S03) — passar controller="Argo CD",
+resource="réplica", desiredSource="Git". Este é o guardrail de reuso em ação: o loop do
+GitOps É o loop de reconciliação do S03 com o Git no slot de desejado. As novas props
+desiredSource/observedSource foram adicionadas de forma retrocompatível (default
+spec/status) para o S03 permanecer byte-idêntico.
 
-ACCURACY LOCKS (verified against Argo CD stable / v3.x docs, 2026-07-10):
+ACCURACY LOCKS (verificados contra a doc do Argo CD stable / v3.x, 2026-07-10):
 - Install: kubectl create namespace argocd; kubectl apply -n argocd --server-side
   --force-conflicts -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
-  (server-side apply — the install manifest is too large for client-side last-applied).
-- Application CRD: apiVersion argoproj.io/v1alpha1, kind Application, lives in the
-  `argocd` namespace. spec.source{repoURL,targetRevision,path} = desired state in Git;
-  spec.destination{server,namespace} = where it lands (server
-  https://kubernetes.default.svc = the same in-cluster API); spec.syncPolicy.automated
+  (server-side apply — o manifesto de instalação é grande demais para o last-applied
+  client-side).
+- CRD Application: apiVersion argoproj.io/v1alpha1, kind Application, vive no namespace
+  `argocd`. spec.source{repoURL,targetRevision,path} = estado desejado no Git;
+  spec.destination{server,namespace} = onde aterrissa (server
+  https://kubernetes.default.svc = a mesma API dentro do cluster); spec.syncPolicy.automated
   {prune,selfHeal}.
-- selfHeal=true → Argo reverts hand-edits back to Git. prune=true → resources deleted
-  from Git are removed from the cluster.
-- Sync status: Synced / OutOfSync (/ Unknown) — is the cluster == Git? Health status:
-  Healthy / Progressing / Degraded / Suspended / Missing (/ Unknown) — are the workloads
-  actually OK? Two INDEPENDENT axes.
-- Initial admin secret: `argocd-initial-admin-secret` (CLI: argocd admin
+- selfHeal=true → o Argo reverte edições manuais de volta ao Git. prune=true → recursos
+  deletados do Git são removidos do cluster.
+- Sync status: Synced / OutOfSync (/ Unknown) — o cluster == Git? Health status:
+  Healthy / Progressing / Degraded / Suspended / Missing (/ Unknown) — os workloads estão
+  realmente OK? Dois eixos INDEPENDENTES.
+- Secret inicial de admin: `argocd-initial-admin-secret` (CLI: argocd admin
   initial-password -n argocd).
-- The lab pulls the canonical PUBLIC repo argoproj/argocd-example-apps, path guestbook
-  — runnable in kind with nothing to host. Red-line continuity (the `web` app) is
-  deliberately broken here: pushing a Git change requires a writable repo we don't host,
-  so the required "change Git → re-sync" beat is a fork-based stretch, while the marquee
-  self-heal drift break→fix needs no Git write. Noted honestly in the lab.
+- O lab usa o repo PÚBLICO canônico argoproj/argocd-example-apps, path guestbook —
+  executável no kind sem hospedar nada. A continuidade da red line (a app `web`) é
+  deliberadamente quebrada aqui: fazer push de uma mudança no Git exige um repo gravável
+  que não hospedamos, então o beat obrigatório "mudar o Git → re-sync" vira um stretch
+  baseado em fork, enquanto o quebre→conserte estrela do self-heal com drift não precisa de
+  escrita no Git. Registrado honestamente no lab.
 
-ACCURACY LOCKS — tool landscape callout (verified 2026-08-06, slow-moving facts only):
-- CNCF graduation: **Argo** (the umbrella project — Argo CD, Workflows, Rollouts, Events;
-  graduated 2022) and **Flux** (graduated 2022) are both CNCF-graduated. Argo CD alone is
-  NOT the graduated entity — never claim "Argo CD is CNCF-graduated" on-slide.
-- Flux (v2.x) core CRDs: GitRepository (source.toolkit.fluxcd.io), Kustomization
+ACCURACY LOCKS — callout do panorama de ferramentas (verificado 2026-08-06, só fatos de
+mudança lenta):
+- Graduação CNCF: **Argo** (o projeto guarda-chuva — Argo CD, Workflows, Rollouts, Events;
+  graduado em 2022) e **Flux** (graduado em 2022) são ambos CNCF-graduated. O Argo CD
+  sozinho NÃO é a entidade graduada — nunca afirme "Argo CD é CNCF-graduated" no slide.
+- CRDs core do Flux (v2.x): GitRepository (source.toolkit.fluxcd.io), Kustomization
   (kustomize.toolkit.fluxcd.io), HelmRelease (helm.toolkit.fluxcd.io).
-- Positioning axes (UI vs composability, multi-tenancy, scale) are deliberately KEPT OFF
-  the slide — contestable and fast-rotting; speaker notes carry the mechanical
-  difference only. The vendored logo is the umbrella "Argo" mark, so the slide pairs the
-  icon variant with an explicit "Argo CD" text caption (see public/icons/README.md).
-CKx tie-in: GitOps is ecosystem/adjacent — not a hard CKA/CKAD domain, but the
-reconcile-loop mental model is squarely CKA cluster-architecture. Landed on the recap.
+- Eixos de posicionamento (UI vs composabilidade, multi-tenancy, escala) foram
+  deliberadamente MANTIDOS FORA do slide — contestáveis e envelhecem rápido; as speaker
+  notes carregam apenas a diferença mecânica. O logo vendorizado é a marca guarda-chuva
+  "Argo", então o slide combina a variante de ícone com uma legenda textual explícita
+  "Argo CD" (ver public/icons/README.md).
+Amarração CKx: GitOps é assunto de ecossistema/adjacente — não é um domínio duro de
+CKA/CKAD, mas o modelo mental do loop de reconciliação é claramente arquitetura de
+cluster da CKA. Aterrissou no recap.
 -->
 
 ---
 layout: statement
-kicker: The problem
+kicker: O problema
 ---
 
-You ran `kubectl apply` from your laptop last Tuesday. **Is the cluster still what you applied?**
+Você rodou `kubectl apply` do seu laptop na terça passada. **O cluster ainda é o que você aplicou?**
 
-Push-based delivery — `kubectl apply` / `helm upgrade` from a laptop or CI job — fires **once** and walks away. There is no record of *what should be running*, and nothing watching for **drift**: someone `kubectl edit`s a Deployment, scales it by hand at 2am, or a half-finished rollout leaves the cluster in a state **no file describes**. You can't answer the one question that matters — *what is running versus what's in Git?* — because the source of truth is a command someone typed, not a file you can diff.
+Entrega push-based — `kubectl apply` / `helm upgrade` de um laptop ou de um job de CI — dispara **uma vez** e vai embora. Não fica registro de *o que deveria estar rodando*, e nada vigia o **drift**: alguém faz `kubectl edit` num Deployment, escala na mão às 2 da manhã, ou um rollout pela metade deixa o cluster num estado que **nenhum arquivo descreve**. Você não consegue responder à única pergunta que importa — *o que está rodando versus o que está no Git?* — porque a fonte da verdade é um comando que alguém digitou, não um arquivo que você pode diffar.
 
 <!--
-Speaker: the pain is real and universal. Push-based apply (kubectl/helm from a
-laptop or a CI runner) has three holes: (1) no persisted desired state — the "truth"
-was a transient command; (2) no drift detection — nobody reverts a manual hotfix, so
-the cluster silently diverges from any file; (3) no audit — who changed what, when?
-Git already solves versioning/audit/review for code. GitOps asks: what if the cluster
-CONTINUOUSLY made itself match a Git repo? Next: flip push to pull.
+Speaker: a dor é real e universal. O apply push-based (kubectl/helm de um laptop ou de
+um runner de CI) tem três buracos: (1) nenhum estado desejado persistido — a "verdade"
+foi um comando transitório; (2) nenhuma detecção de drift — ninguém reverte um hotfix
+manual, então o cluster diverge silenciosamente de qualquer arquivo; (3) nenhuma
+auditoria — quem mudou o quê, quando? O Git já resolve versionamento/auditoria/revisão
+para código. GitOps pergunta: e se o cluster CONTINUAMENTE se fizesse igual a um repo
+Git? A seguir: inverter push para pull.
 -->
 
 ---
 
 <div class="kw-slide-dense">
 
-<span class="kw-kicker">Mental model · flip the arrow — pull, don't push</span>
+<span class="kw-kicker">Modelo mental · inverta a seta — pull, não push</span>
 
-# GitOps: Git is the desired state, the cluster pulls it
+# GitOps: o Git é o estado desejado, o cluster o puxa
 
 <div class="kw-cols-2 mt-3 text-sm">
   <v-click at="1">
-    <KwCard heading="Push (what you've done so far)" icon="📤" variant="warn">
-      A human or CI runs <code>kubectl apply</code> <em>at</em> the cluster from outside.
-      Fire-and-forget: no stored desired state, no drift detection, credentials live in CI.
+    <KwCard heading="Push (o que você fez até agora)" icon="📤" variant="warn">
+      Um humano ou o CI roda <code>kubectl apply</code> <em>contra</em> o cluster, de fora.
+      Fire-and-forget: sem estado desejado armazenado, sem detecção de drift, credenciais vivem no CI.
     </KwCard>
   </v-click>
   <v-click at="2">
     <KwCard heading="Pull (GitOps)" icon="📥" variant="ok">
-      An <strong>in-cluster agent</strong> watches a Git repo and continuously reconciles
-      the cluster <em>toward</em> it. Git is the single source of truth; the agent has the
-      credentials, not your laptop.
+      Um <strong>agente dentro do cluster</strong> observa um repo Git e reconcilia
+      continuamente o cluster <em>em direção</em> a ele. O Git é a única fonte da verdade; o
+      agente tem as credenciais, não o seu laptop.
     </KwCard>
   </v-click>
 </div>
 
 <div v-click="3" class="mt-4 text-sm">
 
-**It's the same reconcile loop, one level up.** There, a controller drove *observed* toward
-*desired = `spec`*. Here, **Argo CD** drives the whole cluster toward *desired = **Git***.
-Same observe → diff → act → repeat — the desired state just moved into a versioned,
-reviewable, auditable repo.
+**É o mesmo loop de reconciliação, um nível acima.** Lá, um controller levava o *observado*
+em direção ao *desejado = `spec`*. Aqui, o **Argo CD** leva o cluster inteiro em direção ao
+*desejado = **Git***. O mesmo observar → diffar → agir → repetir — o estado desejado só se
+mudou para um repo versionado, revisável e auditável.
 
 </div>
 
 </div>
 
 <!--
-Speaker: two arrows. PUSH: the actor is outside, pointing a command at the cluster —
-that's every apply/helm you've run. PULL: an agent INSIDE the cluster subscribes to a
-Git repo and makes reality match it, forever. Consequences worth naming: desired state
-is now a file with history/review/audit (Git); drift gets corrected automatically;
-cluster credentials never leave the cluster (CI only needs push-to-Git). Tie it hard to
-S03 — this is literally the reconciliation loop with Git in the "desired" slot. Argo CD
-(and Flux) are the CNCF tools that implement it. Next: the one resource that expresses
-"reconcile this repo into this cluster."
+Speaker: duas setas. PUSH: o ator está fora, apontando um comando para o cluster — é todo
+apply/helm que você já rodou. PULL: um agente DENTRO do cluster assina um repo Git e faz
+a realidade coincidir com ele, para sempre. Consequências que valem nomear: o estado
+desejado agora é um arquivo com histórico/revisão/auditoria (Git); o drift é corrigido
+automaticamente; as credenciais do cluster nunca saem do cluster (o CI só precisa de
+push-para-o-Git). Amarre com força ao S03 — isto é literalmente o loop de reconciliação
+com o Git no slot de "desejado". Argo CD (e Flux) são as ferramentas CNCF que o
+implementam. A seguir: o único recurso que expressa "reconcilie este repo neste cluster."
 -->
 
 ---
 layout: code-annotated
-heading: 'One CRD says: reconcile this repo into this cluster'
+heading: 'Um CRD diz: reconcilie este repo neste cluster'
 compact: true
 lab: labs/day-3/21-gitops.md
 ---
@@ -148,15 +155,15 @@ metadata:
   name: guestbook
   namespace: argocd
 spec:
-  source:                                    # DESIRED — where the truth lives in Git
+  source:                                    # DESEJADO — onde a verdade vive no Git
     repoURL: https://github.com/argoproj/argocd-example-apps.git
     targetRevision: HEAD
     path: guestbook
-  destination:                               # WHERE it should run
+  destination:                               # ONDE deve rodar
     server: https://kubernetes.default.svc
     namespace: default
   syncPolicy:
-    automated:                               # keep it matching, hands-off
+    automated:                               # manter em sincronia, sem intervenção
       prune: true
       selfHeal: true
 ```
@@ -164,103 +171,103 @@ spec:
 ::notes::
 
 <CodeNote at="1" label="spec.source" variant="ok">
-The desired state, <strong>in Git</strong>: which <code>repoURL</code>, which
-<code>targetRevision</code> (branch/tag/commit — <code>HEAD</code> = tip), and the
-<code>path</code> to the manifests. Change these files in Git and the app follows.
+O estado desejado, <strong>no Git</strong>: qual <code>repoURL</code>, qual
+<code>targetRevision</code> (branch/tag/commit — <code>HEAD</code> = ponta), e o
+<code>path</code> até os manifestos. Mude esses arquivos no Git e a app acompanha.
 </CodeNote>
 
 <CodeNote at="2" label="spec.destination" variant="ok">
-Where the rendered manifests land: a cluster (<code>server</code> —
-<code>https://kubernetes.default.svc</code> is <em>this</em> cluster) and a
-<code>namespace</code>. One Argo CD can drive many clusters.
+Onde os manifestos renderizados aterrissam: um cluster (<code>server</code> —
+<code>https://kubernetes.default.svc</code> é <em>este</em> cluster) e um
+<code>namespace</code>. Um único Argo CD pode dirigir vários clusters.
 </CodeNote>
 
 <CodeNote at="3" label="syncPolicy.automated" variant="warn">
-<code>selfHeal: true</code> reverts hand-edits back to Git; <code>prune: true</code>
-deletes resources you removed from Git. Omit this block and sync becomes
-<strong>manual</strong> (a button / <code>argocd app sync</code>).
+<code>selfHeal: true</code> reverte edições manuais de volta ao Git; <code>prune: true</code>
+deleta recursos que você removeu do Git. Omita este bloco e o sync vira
+<strong>manual</strong> (um botão / <code>argocd app sync</code>).
 </CodeNote>
 
 <div v-click="4" class="mt-2 text-sm kw-muted">
-The <code>Application</code> is itself a Kubernetes resource (an Argo CRD) living in the
-<code>argocd</code> namespace — so GitOps configuration is <em>also</em> just YAML you can
-put in Git.
+A <code>Application</code> é ela mesma um recurso Kubernetes (um CRD do Argo) que vive no
+namespace <code>argocd</code> — então a configuração do GitOps <em>também</em> é só YAML que
+você pode colocar no Git.
 </div>
 
 <!--
-Speaker: this is the whole section on one slide. An Application is a CRD (installed with
-Argo CD) that binds a Git SOURCE to a cluster DESTINATION and says how to keep them in
-sync. source = repoURL + targetRevision + path (the desired state, versioned in Git);
-destination = server (kubernetes.default.svc = in-cluster) + namespace. syncPolicy:
-without `automated`, Argo shows drift but waits for you to click Sync; WITH automated +
-selfHeal, it reverts manual changes; + prune, it deletes what you deleted from Git. Meta
-point for the "app of apps" pattern later (S22 neighbourhood): the Application is itself
-YAML, so you can manage Applications with GitOps too. This exact manifest is the lab's
-application.yaml. Next: name the three behaviours precisely.
+Speaker: esta é a seção inteira num slide. Uma Application é um CRD (instalado junto com o
+Argo CD) que amarra um SOURCE no Git a um DESTINATION no cluster e diz como mantê-los em
+sincronia. source = repoURL + targetRevision + path (o estado desejado, versionado no Git);
+destination = server (kubernetes.default.svc = dentro do cluster) + namespace. syncPolicy:
+sem `automated`, o Argo mostra o drift mas espera você clicar em Sync; COM automated +
+selfHeal, ele reverte mudanças manuais; + prune, ele deleta o que você deletou do Git. Ponto
+meta para o padrão "app of apps" mais adiante (vizinhança do S22): a Application é ela mesma
+YAML, então você pode gerenciar Applications com GitOps também. Este manifesto exato é o
+application.yaml do lab. A seguir: nomear os três comportamentos com precisão.
 -->
 
 ---
 
 <div class="kw-slide-dense">
 
-<span class="kw-kicker">Three behaviours · sync, self-heal, drift detection</span>
+<span class="kw-kicker">Três comportamentos · sync, self-heal, detecção de drift</span>
 
-# What the agent actually does
+# O que o agente realmente faz
 
 <div class="mt-3 text-sm" style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.8rem;">
   <v-click at="1">
     <KwCard heading="Sync" icon="🔄" variant="ok">
-      Apply Git's manifests to the cluster until live == desired. Manual
-      (<code>argocd app sync</code> / a button) or <strong>automated</strong>.
+      Aplicar os manifestos do Git ao cluster até live == desejado. Manual
+      (<code>argocd app sync</code> / um botão) ou <strong>automated</strong>.
     </KwCard>
   </v-click>
   <v-click at="2">
-    <KwCard heading="Drift detection" icon="🔎" variant="warn">
-      Continuously compare live vs Git. Any divergence → the app is marked
-      <code>OutOfSync</code>, whether or not anything auto-corrects it.
+    <KwCard heading="Detecção de drift" icon="🔎" variant="warn">
+      Comparar continuamente live vs Git. Qualquer divergência → a app é marcada
+      <code>OutOfSync</code> — haja ou não correção automática.
     </KwCard>
   </v-click>
   <v-click at="3">
     <KwCard heading="Self-heal" kind="deploy" variant="ok">
-      With <code>selfHeal: true</code>, drift isn't just <em>reported</em> — Argo
-      re-applies Git and <strong>reverts</strong> the hand-change automatically.
+      Com <code>selfHeal: true</code>, o drift não é só <em>reportado</em> — o Argo
+      reaplica o Git e <strong>reverte</strong> a mudança manual automaticamente.
     </KwCard>
   </v-click>
 </div>
 
 <div v-click="4" class="mt-4 text-sm">
 
-<span class="kw-kicker">the punchline</span>
+<span class="kw-kicker">a punchline</span>
 
-Drift detection **always** runs (you'll always *see* `OutOfSync`). Self-heal is what turns
-seeing into *fixing*. Turn self-heal **off** and a hand-edit sits there as `OutOfSync`
-until a human decides — turn it **on** and the cluster refuses to stay drifted.
+A detecção de drift roda **sempre** (você sempre vai *ver* `OutOfSync`). O self-heal é o que
+transforma ver em *consertar*. Desligue o self-heal e uma edição manual fica lá como
+`OutOfSync` até um humano decidir — ligue-o e o cluster se recusa a permanecer em drift.
 
 </div>
 
 </div>
 
 <!--
-Speaker: separate three things people blur. SYNC = the act of applying Git to the
-cluster (can be manual or automated). DRIFT DETECTION = the continuous comparison; its
-output is the OutOfSync/Synced status — this runs regardless of policy, so Argo always
-SHOWS you drift. SELF-HEAL = the automated response to drift: re-apply Git, undo the
-manual change. The lab's required question hangs on this exact distinction: with selfHeal
-OFF, edit a managed resource → it goes OutOfSync and STAYS (Argo reports but won't
-revert); with selfHeal ON → it snaps back. Prune is the deletion sibling of self-heal
-(remove from Git → remove from cluster). Next: watch the manifest get built, then watch
-the loop run.
+Speaker: separe três coisas que as pessoas misturam. SYNC = o ato de aplicar o Git ao
+cluster (pode ser manual ou automated). DETECÇÃO DE DRIFT = a comparação contínua; sua
+saída é o status OutOfSync/Synced — isso roda independente de política, então o Argo sempre
+MOSTRA o drift. SELF-HEAL = a resposta automática ao drift: reaplicar o Git, desfazer a
+mudança manual. A pergunta obrigatória do lab depende exatamente dessa distinção: com
+selfHeal OFF, edite um recurso gerenciado → ele vai a OutOfSync e FICA (o Argo reporta mas
+não reverte); com selfHeal ON → ele volta no lugar. O prune é o irmão de deleção do
+self-heal (remover do Git → remover do cluster). A seguir: ver o manifesto ser construído,
+depois ver o loop rodar.
 -->
 
 ---
 layout: code-walkthrough
-heading: 'Build the Application, field by field'
+heading: 'Construa a Application, campo a campo'
 lab: labs/day-3/21-gitops.md
 ---
 
 ````md magic-move
 ```yaml
-# 1 — an Argo CD Application is a CRD in the argocd namespace
+# 1 — uma Application do Argo CD é um CRD no namespace argocd
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -269,7 +276,7 @@ metadata:
 ```
 
 ```yaml
-# 2 — SOURCE: the desired state, versioned in Git
+# 2 — SOURCE: o estado desejado, versionado no Git
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -283,7 +290,7 @@ spec:
 ```
 
 ```yaml
-# 3 — DESTINATION: which cluster + namespace it lands in
+# 3 — DESTINATION: em qual cluster + namespace ele aterrissa
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -300,7 +307,7 @@ spec:
 ```
 
 ```yaml
-# 4 — SYNC POLICY: keep it matching, hands-off (== labs/day-3/21-gitops.md)
+# 4 — SYNC POLICY: manter em sincronia, sem intervenção (== labs/day-3/21-gitops.md)
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -323,129 +330,133 @@ spec:
 ````
 
 <!--
-Speaker: four frames, and each adds one idea. (1) It's a CRD in the argocd namespace —
-GitOps config is itself Kubernetes YAML. (2) SOURCE binds the desired state to a Git
-repo/revision/path — this is the whole "Git is the truth" claim in three lines. (3)
-DESTINATION says where: in-cluster API (kubernetes.default.svc) + namespace default. (4)
-add project (the default AppProject) and syncPolicy.automated{prune,selfHeal} — now it's
-hands-off. The final frame is the lab's application.yaml byte-for-byte; the lab applies
-exactly this. Note there's no "sync" verb in the file — declaring the Application is
-enough; the agent does the rest. Next: that "agent does the rest" IS the S03 loop.
+Speaker: quatro frames, e cada um adiciona uma ideia. (1) É um CRD no namespace argocd — a
+config do GitOps é ela mesma YAML de Kubernetes. (2) SOURCE amarra o estado desejado a um
+repo/revision/path no Git — esta é a alegação inteira "o Git é a verdade" em três linhas.
+(3) DESTINATION diz onde: a API dentro do cluster (kubernetes.default.svc) + namespace
+default. (4) adicione project (o AppProject default) e syncPolicy.automated{prune,selfHeal}
+— agora é sem intervenção. O frame final é o application.yaml do lab byte a byte; o lab
+aplica exatamente isto. Repare que não existe verbo "sync" no arquivo — declarar a
+Application basta; o agente faz o resto. A seguir: esse "o agente faz o resto" É o loop
+do S03.
 -->
 
 ---
 
-<span class="kw-kicker">The one loop everything runs on — again, with Git</span>
+<span class="kw-kicker">O único loop sobre o qual tudo roda — de novo, com o Git</span>
 
-# Self-heal is reconciliation with Git as `spec`
+# Self-heal é reconciliação com o Git como `spec`
 
 <div class="mt-2">
-  <ReconcileLoop :step="$clicks" controller="Argo CD" resource="replica" desiredSource="Git" observedSource="cluster" />
+  <ReconcileLoop :step="$clicks" controller="Argo CD" resource="réplica" desiredSource="Git" observedSource="cluster" />
 </div>
 
 <div class="mt-6 text-sm">
 <v-clicks>
 
-- **Git says 3 replicas; someone scaled to 2 by hand.** Argo *observes* the gap between Git and the cluster — that's drift.
-- **Diff → act.** It re-applies Git and recreates the missing replica. Nobody ran `kubectl` — the loop closed the gap, exactly like a built-in controller.
-- **It never stops.** This is `selfHeal: true`: hand-edit a managed resource and Argo drags it back to Git, forever.
+- **O Git diz 3 réplicas; alguém escalou para 2 na mão.** O Argo *observa* a lacuna entre o Git e o cluster — isso é drift.
+- **Diff → agir.** Ele reaplica o Git e recria a réplica faltante. Ninguém rodou `kubectl` — o loop fechou a lacuna, exatamente como um controller nativo.
+- **Ele nunca para.** Isto é `selfHeal: true`: edite na mão um recurso gerenciado e o Argo o arrasta de volta ao Git, para sempre.
 
 </v-clicks>
 </div>
 
 <!--
-Speaker: this is the SAME ReconcileLoop component from S03 (reuse guardrail — no new
-animation), with Git swapped into the "desired" slot: desiredSource="Git",
-observedSource="cluster", controller="Argo CD". Click through: Observe (Git wants 3, the
-cluster shows 2 — a hand-scale dropped one) → Diff (desired 3 ≠ observed 2, delta +1) →
-Act (re-apply Git, recreate the replica) → Repeat (in sync, keep watching). Land the
-callback: S03 said "the loop is always watching, delete a Pod and it comes back." GitOps
-is that same sentence with GIT as the thing being matched. The lab makes you feel it —
-scale a managed Deployment by hand and watch Argo revert it. Forward pointer: S22's
-operators are this loop again, driven by a custom resource. Next: how Argo reports state.
+Speaker: este é o MESMO componente ReconcileLoop do S03 (guardrail de reuso — nenhuma
+animação nova), com o Git encaixado no slot de "desejado": desiredSource="Git",
+observedSource="cluster", controller="Argo CD". Clique por clique: Observe (o Git quer 3, o
+cluster mostra 2 — uma escala manual derrubou uma) → Diff (desejado 3 ≠ observado 2, delta
++1) → Act (reaplicar o Git, recriar a réplica) → Repeat (em sincronia, seguir observando).
+Aterrisse o callback: o S03 disse "o loop está sempre observando, delete um Pod e ele
+volta." GitOps é essa mesma frase com o GIT como a coisa a ser igualada. O lab faz você
+sentir isso — escale um Deployment gerenciado na mão e veja o Argo reverter. Ponteiro para
+frente: os operators do S22 são este loop de novo, dirigido por um recurso customizado. A
+seguir: como o Argo reporta estado.
 -->
 
 ---
 
 <div class="kw-slide-dense">
 
-<span class="kw-kicker">Reading Argo · two questions, two independent statuses</span>
+<span class="kw-kicker">Lendo o Argo · duas perguntas, dois statuses independentes</span>
 
 # Sync status vs health status
 
 <div class="kw-cols-2 mt-3 text-sm">
   <v-click at="1">
-    <KwCard heading="Sync status — does the cluster match Git?" icon="🔁" variant="ok">
+    <KwCard heading="Sync status — o cluster bate com o Git?" icon="🔁" variant="ok">
       <KwChip>Synced</KwChip> live == Git ·
-      <KwChip>OutOfSync</KwChip> they differ ·
-      <KwChip>Unknown</KwChip> can't tell yet.
-      <div class="kw-muted mt-1">Answers: <em>is reality what Git says?</em></div>
+      <KwChip>OutOfSync</KwChip> eles diferem ·
+      <KwChip>Unknown</KwChip> ainda não dá para dizer.
+      <div class="kw-muted mt-1">Responde: <em>a realidade é o que o Git diz?</em></div>
     </KwCard>
   </v-click>
   <v-click at="2">
-    <KwCard heading="Health status — are the workloads OK?" kind="deploy" variant="ok">
+    <KwCard heading="Health status — os workloads estão OK?" kind="deploy" variant="ok">
       <KwChip>Healthy</KwChip> · <KwChip>Progressing</KwChip> ·
       <KwChip>Degraded</KwChip> · <KwChip>Missing</KwChip> / <KwChip>Suspended</KwChip>.
-      <div class="kw-muted mt-1">Answers: <em>is the running thing actually working?</em></div>
+      <div class="kw-muted mt-1">Responde: <em>a coisa que está rodando realmente funciona?</em></div>
     </KwCard>
   </v-click>
 </div>
 
 <div v-click="3" class="mt-4 text-sm">
 
-They're **orthogonal.** `Synced + Degraded` = you faithfully deployed a **broken manifest**
-(Git is the truth, and the truth is broken — fix Git, don't hand-patch). `OutOfSync + Healthy`
-= someone's hand-patch happens to work, but it **isn't in Git** — self-heal will revert it. You
-need *both* answers to know what's going on; the lab reads both off `argocd app get`.
+Eles são **ortogonais.** `Synced + Degraded` = você fez o deploy fiel de um **manifesto
+quebrado** (o Git é a verdade, e a verdade está quebrada — conserte o Git, não faça patch na
+mão). `OutOfSync + Healthy` = o patch manual de alguém por acaso funciona, mas **não está no
+Git** — o self-heal vai revertê-lo. Você precisa de *ambas* as respostas para saber o que
+está acontecendo; o lab lê as duas no `argocd app get`.
 
 </div>
 
 </div>
 
 <!--
-Speaker: the single most useful thing to internalise about Argo's UI. Two separate axes.
-SYNC STATUS (Synced/OutOfSync/Unknown) answers "does live == Git?" — a pure diff. HEALTH
-STATUS (Healthy/Progressing/Degraded/Missing/Suspended) answers "are the workloads
-actually up?" — Argo's per-resource health checks. They move independently, and the
-cross-products are the teachable cases: Synced+Degraded means you correctly shipped a bad
-manifest — Argo did its job, your YAML is wrong, fix it IN GIT (don't hand-patch, it'll
-revert). OutOfSync+Healthy means a manual change that happens to work but isn't in Git —
-self-heal will undo it, so land it in Git if you want to keep it. In the lab you'll read
-both fields off `argocd app get` / `kubectl get application`. Next: the principles that
-make this a discipline, not just a tool.
+Speaker: a coisa mais útil de internalizar sobre a UI do Argo. Dois eixos separados. SYNC
+STATUS (Synced/OutOfSync/Unknown) responde "live == Git?" — um diff puro. HEALTH STATUS
+(Healthy/Progressing/Degraded/Missing/Suspended) responde "os workloads estão realmente de
+pé?" — os health checks por recurso do Argo. Eles se movem de forma independente, e os
+produtos cruzados são os casos didáticos: Synced+Degraded significa que você entregou
+corretamente um manifesto ruim — o Argo fez o trabalho dele, seu YAML está errado, conserte
+NO GIT (não faça patch na mão, ele vai ser revertido). OutOfSync+Healthy significa uma
+mudança manual que por acaso funciona mas não está no Git — o self-heal vai desfazê-la,
+então leve-a para o Git se quiser mantê-la. No lab você vai ler os dois campos no
+`argocd app get` / `kubectl get application`. A seguir: os princípios que fazem disto uma
+disciplina, não só uma ferramenta.
 -->
 
 ---
 
 <div class="kw-slide-dense">
 
-<span class="kw-kicker">OpenGitOps · the four principles (CNCF)</span>
+<span class="kw-kicker">OpenGitOps · os quatro princípios (CNCF)</span>
 
-# GitOps is a discipline, not a product
+# GitOps é uma disciplina, não um produto
 
 <div class="kw-cols-2 mt-3 text-sm">
   <v-click at="1">
-    <KwCard heading="1 · Declarative" icon="📜" variant="ok">
-      The whole system is described declaratively — desired state as data, not scripts of
-      steps.
+    <KwCard heading="1 · Declarativo" icon="📜" variant="ok">
+      O sistema inteiro é descrito de forma declarativa — estado desejado como dados, não
+      scripts de passos.
     </KwCard>
   </v-click>
   <v-click at="2">
-    <KwCard heading="2 · Versioned & immutable" icon="🔒" variant="ok">
-      That state is stored in Git: versioned, immutable history, revertable to any prior
-      commit.
+    <KwCard heading="2 · Versionado e imutável" icon="🔒" variant="ok">
+      Esse estado é armazenado no Git: versionado, com histórico imutável, revertível a
+      qualquer commit anterior.
     </KwCard>
   </v-click>
   <v-click at="3">
-    <KwCard heading="3 · Pulled automatically" icon="📥" variant="ok">
-      Software agents <em>pull</em> the desired state from Git — no one pushes credentials
-      at the cluster.
+    <KwCard heading="3 · Puxado automaticamente" icon="📥" variant="ok">
+      Agentes de software fazem <em>pull</em> do estado desejado do Git — ninguém aponta
+      credenciais para o cluster.
     </KwCard>
   </v-click>
   <v-click at="4">
-    <KwCard heading="4 · Continuously reconciled" kind="deploy" variant="ok">
-      Agents continuously observe and <strong>converge</strong> actual state toward
-      desired — the loop again.
+    <KwCard heading="4 · Reconciliado continuamente" kind="deploy" variant="ok">
+      Agentes observam continuamente e <strong>convergem</strong> o estado real em direção
+      ao desejado — o loop de novo.
     </KwCard>
   </v-click>
 </div>
@@ -453,77 +464,83 @@ make this a discipline, not just a tool.
 <div v-click="5" class="mt-4 text-sm">
   <div class="kw-cols-2">
     <div class="flex items-center gap-2">
-      <K8sIcon name="argo-icon-white" size="1.5rem" alt="Argo project logo" />
-      <span><strong>Argo CD</strong> — the <code>Application</code> CRD you just read</span>
+      <K8sIcon name="argo-icon-white" size="1.5rem" alt="Logo do projeto Argo" />
+      <span><strong>Argo CD</strong> — o CRD <code>Application</code> que você acabou de ler</span>
     </div>
     <div class="flex items-center gap-2">
-      <K8sIcon name="flux-icon-white" size="1.5rem" alt="Flux logo" />
-      <span><strong>Flux</strong> — <code>GitRepository</code> + <code>Kustomization</code> / <code>HelmRelease</code> CRDs</span>
+      <K8sIcon name="flux-icon-white" size="1.5rem" alt="Logo do Flux" />
+      <span><strong>Flux</strong> — os CRDs <code>GitRepository</code> + <code>Kustomization</code> / <code>HelmRelease</code></span>
     </div>
   </div>
   <div class="mt-2 kw-muted">
-  Two implementations of the same pull-based loop, both under CNCF-graduated projects. The
-  principles — not the tool — are what CNCF's <strong>OpenGitOps</strong> project standardised;
-  this whole section is principle 4 applied to principles 1–3.
+  Duas implementações do mesmo loop pull-based, ambas sob projetos CNCF-graduated. Os
+  princípios — não a ferramenta — são o que o projeto <strong>OpenGitOps</strong> da CNCF
+  padronizou; esta seção inteira é o princípio 4 aplicado aos princípios 1–3.
   </div>
 </div>
 
 </div>
 
 <!--
-Speaker: name the discipline so learners don't reduce GitOps to "Argo CD." CNCF's
-OpenGitOps working group pinned four principles: (1) DECLARATIVE — desired state as data;
-(2) VERSIONED & IMMUTABLE — that data lives in Git with full history and easy revert; (3)
-PULLED AUTOMATICALLY — agents pull it (vs a CI job pushing with cluster creds); (4)
-CONTINUOUSLY RECONCILED — agents keep converging actual toward desired. Tie the bow: this
-entire section is principle #4 (the reconcile loop) enforcing #1–3.
+Speaker: nomeie a disciplina para os participantes não reduzirem GitOps a "Argo CD". O
+working group OpenGitOps da CNCF fixou quatro princípios: (1) DECLARATIVO — estado desejado
+como dados; (2) VERSIONADO E IMUTÁVEL — esses dados vivem no Git com histórico completo e
+revert fácil; (3) PUXADO AUTOMATICAMENTE — agentes fazem pull (vs um job de CI fazendo push
+com credenciais do cluster); (4) RECONCILIADO CONTINUAMENTE — agentes seguem convergindo o
+real em direção ao desejado. Feche o laço: esta seção inteira é o princípio nº 4 (o loop de
+reconciliação) impondo os nº 1–3.
 
-The tool callout — keep it to ~30 seconds, it replaces the old one-liner, not new
-material. Argo CD and Flux are the two implementations learners will actually meet.
-Careful naming: the CNCF-GRADUATED project is **Argo**, the umbrella (Argo CD, Workflows,
-Rollouts, Events) — Argo CD is the continuous-delivery component; Flux is itself a
-graduated project. Mechanical difference, if asked: Argo CD is app-centric — one
-`Application` CRD binds source→destination, plus a Web UI showing sync/drift state; Flux
-is a toolkit of controllers — `GitRepository` points at the repo, `Kustomization` /
-`HelmRelease` reconcile from it; day-to-day state lives in kubectl/CLI, not a bundled UI.
-Both are pull-based, both reconcile continuously — skills transfer. If someone asks "which
-should we run?": genuinely fine either way; teams pick on operational fit, not capability
-gaps — don't relitigate their platform team's choice from this stage. The lab uses Argo CD
-because the UI makes sync/drift state VISIBLE while learners are still forming the mental
-model. Next: recap and hand to the lab.
+O callout de ferramentas — mantenha em ~30 segundos, ele substitui a antiga frase única,
+não é material novo. Argo CD e Flux são as duas implementações que os participantes vão de
+fato encontrar. Nomenclatura cuidadosa: o projeto CNCF-GRADUATED é o **Argo**, o
+guarda-chuva (Argo CD, Workflows, Rollouts, Events) — o Argo CD é o componente de entrega
+contínua; o Flux é ele mesmo um projeto graduado. Diferença mecânica, se perguntarem: o
+Argo CD é centrado em app — um CRD `Application` amarra source→destination, mais uma Web
+UI mostrando estado de sync/drift; o Flux é um toolkit de controllers — `GitRepository`
+aponta para o repo, `Kustomization` / `HelmRelease` reconciliam a partir dele; o estado do
+dia a dia vive no kubectl/CLI, não numa UI embutida. Ambos são pull-based, ambos
+reconciliam continuamente — as habilidades transferem. Se alguém perguntar "qual devemos
+rodar?": genuinamente tanto faz; times escolhem por adequação operacional, não por lacunas
+de capacidade — não relitigue a escolha do time de plataforma deles deste palco. O lab usa
+Argo CD porque a UI torna o estado de sync/drift VISÍVEL enquanto os participantes ainda
+estão formando o modelo mental. A seguir: recap e passar para o lab.
 -->
 
 ---
 layout: recap
-heading: 'Recap — Git is the source of truth, the cluster converges to it'
-story: 'Push-based apply left drift undetected. We flipped the arrow: an in-cluster agent (Argo CD) watches an Application''s Git source and continuously reconciles the cluster toward it — sync applies Git, drift detection reports divergence, and self-heal reverts hand-edits automatically. The same reconcile loop, with Git in the desired slot.'
-next: 'The operator pattern — the same reconcile loop again, this time driven by your own CRD'
+heading: 'Recap — o Git é a fonte da verdade, o cluster converge para ele'
+story: 'O apply push-based deixava o drift sem detecção. Invertemos a seta: um agente dentro do cluster (Argo CD) observa o source Git de uma Application e reconcilia continuamente o cluster em direção a ele — o sync aplica o Git, a detecção de drift reporta divergência, e o self-heal reverte edições manuais automaticamente. O mesmo loop de reconciliação, com o Git no slot de desejado.'
+next: 'O padrão operator — o mesmo loop de reconciliação de novo, desta vez dirigido pelo seu próprio CRD'
 ---
 
-- **Push → pull.** GitOps puts desired state in **Git** and has an in-cluster agent pull
-  and reconcile it — versioned, auditable, self-correcting; cluster creds never leave the cluster
-- **The `Application` CRD** binds a Git **source** (`repoURL`/`targetRevision`/`path`) to a
-  **destination** (cluster + namespace), with a **`syncPolicy`**
-- **Three behaviours:** **sync** (apply Git) · **drift detection** (always on → `OutOfSync`)
-  · **self-heal** (`selfHeal: true` reverts hand-edits; `prune` deletes what left Git)
-- **Two independent statuses:** **sync** (Synced/OutOfSync — matches Git?) vs **health**
-  (Healthy/Progressing/Degraded — workloads OK?); read both
-- **It's the same reconcile loop** with Git as `spec` — and **OpenGitOps** makes the four principles
-  tool-agnostic (Argo CD, Flux, …)
-- **CKx tie-in:** GitOps is ecosystem/adjacent (not a hard CKA/CKAD domain), but the
-  **reconcile-loop** mental model is core CKA cluster-architecture
+- **Push → pull.** GitOps coloca o estado desejado no **Git** e faz um agente dentro do
+  cluster puxá-lo e reconciliá-lo — versionado, auditável, autocorretivo; as credenciais do
+  cluster nunca saem do cluster
+- **O CRD `Application`** amarra um **source** no Git (`repoURL`/`targetRevision`/`path`) a
+  um **destination** (cluster + namespace), com uma **`syncPolicy`**
+- **Três comportamentos:** **sync** (aplicar o Git) · **detecção de drift** (sempre ligada →
+  `OutOfSync`) · **self-heal** (`selfHeal: true` reverte edições manuais; `prune` deleta o
+  que saiu do Git)
+- **Dois statuses independentes:** **sync** (Synced/OutOfSync — bate com o Git?) vs
+  **health** (Healthy/Progressing/Degraded — workloads OK?); leia os dois
+- **É o mesmo loop de reconciliação** com o Git como `spec` — e o **OpenGitOps** torna os
+  quatro princípios agnósticos de ferramenta (Argo CD, Flux, …)
+- **Amarração CKx:** GitOps é assunto de ecossistema/adjacente (não é um domínio duro de
+  CKA/CKAD), mas o modelo mental do **loop de reconciliação** é núcleo da arquitetura de
+  cluster da CKA
 
 <!--
-Speaker: pull the thread. The problem was drift with no detection; the fix was to move
-desired state into Git and let an in-cluster agent continuously reconcile toward it. Nail
-four facts: (1) push→pull and why (audit, revert, creds stay in-cluster); (2) the
-Application binds source→destination with a syncPolicy; (3) sync vs drift-detection vs
-self-heal are three different things (self-heal is the auto-revert; drift detection always
-runs); (4) sync status and health status are orthogonal — read both. And the through-line:
-this is S03's reconcile loop with Git as the desired state — which is exactly the setup for
-S22, where you write your OWN controller for your OWN CRD. Hand to Lab 21: install Argo CD
-on kind, apply the guestbook Application, watch it go Synced/Healthy, then drift it by hand
-and watch self-heal revert it.
+Speaker: puxe o fio. O problema era drift sem detecção; a solução foi mover o estado
+desejado para o Git e deixar um agente dentro do cluster reconciliar continuamente em
+direção a ele. Crave quatro fatos: (1) push→pull e por quê (auditoria, revert, credenciais
+ficam no cluster); (2) a Application amarra source→destination com uma syncPolicy; (3)
+sync vs detecção de drift vs self-heal são três coisas diferentes (o self-heal é o
+auto-revert; a detecção de drift roda sempre); (4) sync status e health status são
+ortogonais — leia os dois. E o fio condutor: este é o loop de reconciliação do S03 com o
+Git como estado desejado — que é exatamente a preparação para o S22, onde você escreve o
+SEU próprio controller para o SEU próprio CRD. Passe para o Lab 21: instalar o Argo CD no
+kind, aplicar a Application guestbook, vê-la ir a Synced/Healthy, então gerar drift na mão
+e ver o self-heal reverter.
 -->
 
 ---
@@ -533,10 +550,10 @@ duration: 25 min
 env: kind-only / facilitator-hosted (namespace = read-only)
 ---
 
-## Lab 21 — Git as source of truth
+## Lab 21 — Git como fonte da verdade
 
-- Install Argo CD on kind; apply the `guestbook` **Application** and watch it go **Synced / Healthy**
-- Read both statuses off `argocd app get` / `kubectl get application`
-- **Break→fix (self-heal):** hand-scale a managed Deployment → watch Argo **revert** it to Git
-- Answer: *what happens to a hand-edit if `selfHeal` is off?* (`OutOfSync`, no auto-revert)
-- Stretch: fork the repo, change a manifest, `git push` → watch the app re-sync to the new commit
+- Instale o Argo CD no kind; aplique a **Application** `guestbook` e veja-a ir a **Synced / Healthy**
+- Leia os dois statuses no `argocd app get` / `kubectl get application`
+- **Quebre→conserte (self-heal):** escale na mão um Deployment gerenciado → veja o Argo **revertê-lo** ao Git
+- Responda: *o que acontece com uma edição manual se o `selfHeal` estiver desligado?* (`OutOfSync`, sem auto-revert)
+- Stretch: faça fork do repo, mude um manifesto, `git push` → veja a app fazer re-sync para o novo commit

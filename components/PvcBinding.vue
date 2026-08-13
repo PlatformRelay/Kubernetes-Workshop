@@ -24,7 +24,7 @@ const props = withDefaults(defineProps<{ step?: number }>(), { step: 0 })
 const podPhase = computed(() => {
   switch (props.step) {
     case 0:
-      return { label: 'no Pod yet', tone: 'idle' as const }
+      return { label: 'nenhum Pod ainda', tone: 'idle' as const }
     case 2:
       return { label: 'Terminating', tone: 'danger' as const }
     default:
@@ -65,7 +65,7 @@ const hasData = computed(() => props.step >= 1)
         </div>
       </div>
 
-      <div class="kw-pvc-link" :class="{ 'is-live': pvExists }">binds →</div>
+      <div class="kw-pvc-link" :class="{ 'is-live': pvExists }">faz bind →</div>
 
       <!-- PV: the storage, persists and holds the data -->
       <div class="kw-pvc-lane">
@@ -75,28 +75,28 @@ const hasData = computed(() => props.step >= 1)
           <div v-if="pvExists" class="kw-pvc-data" :class="{ 'is-kept': hasData }">
             <span class="kw-pvc-dot" /> data.txt
           </div>
-          <div v-else class="kw-pvc-phase is-idle">not provisioned</div>
+          <div v-else class="kw-pvc-phase is-idle">não provisionado</div>
         </div>
       </div>
     </div>
 
     <div class="kw-pvc-caption">
       <template v-if="props.step <= 0">
-        The PVC is a <strong>request</strong>. With a <code>WaitForFirstConsumer</code>
-        StorageClass it stays <strong>Pending</strong> until a Pod actually mounts it — no
-        Pod, no PV yet.
+        O PVC é um <strong>pedido</strong>. Com uma StorageClass
+        <code>WaitForFirstConsumer</code> ele fica <strong>Pending</strong> até um Pod
+        realmente montá-lo — sem Pod, ainda sem PV.
       </template>
       <template v-else-if="props.step === 1">
-        The Pod schedules, the provisioner mints a <strong>PV</strong>, the PVC goes
-        <strong>Bound</strong>, and the container writes <code>data.txt</code>.
+        O Pod é agendado, o provisioner cria um <strong>PV</strong>, o PVC fica
+        <strong>Bound</strong> e o container escreve <code>data.txt</code>.
       </template>
       <template v-else-if="props.step === 2">
-        Delete the Pod — the PVC and PV are <strong>separate objects</strong>, so they (and
-        the data) stay put.
+        Delete o Pod — o PVC e o PV são <strong>objetos separados</strong>, então eles (e os
+        dados) continuam ali.
       </template>
       <template v-else>
-        The Deployment recreates the Pod; it re-binds the <strong>same</strong> PVC/PV and
-        <strong><code>data.txt</code> survived</strong>. That is durable storage.
+        O Deployment recria o Pod; ele faz bind de novo no <strong>mesmo</strong> PVC/PV e o
+        <strong><code>data.txt</code> sobreviveu</strong>. Isso é storage durável.
       </template>
     </div>
   </div>

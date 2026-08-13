@@ -455,7 +455,8 @@ export function auditContractDocumentation(repoRoot = REPO_ROOT) {
   }
   if (!/Day 3 Labs 17[–-]23,\s*25[–-]26/.test(facilitator) &&
       !/Labs 01[–-]23,\s*25[–-]26/.test(facilitator) &&
-      !/Day 1 Labs 01[–-]08[\s\S]{0,120}Day 2 Labs 09[–-]16[\s\S]{0,120}Day 3/.test(facilitator)) {
+      !/Day 1 Labs 01[–-]08[\s\S]{0,120}Day 2 Labs 09[–-]16[\s\S]{0,120}Day 3/.test(facilitator) &&
+      !/Labs 01[–-]08 do (?:Day|Dia) 1[\s\S]{0,140}Labs 09[–-]16 do (?:Day|Dia) 2[\s\S]{0,140}(?:Day|Dia) 3/.test(facilitator)) {
     errors.push('docs/facilitator-guide.md: must mention Day 3 Labs 17–23, 25–26 sibling companions');
   }
   if (/with a spoiler for\s+every task/i.test(facilitator)) {
@@ -742,13 +743,13 @@ export function auditDayOneCommandTruth(repoRoot = REPO_ROOT) {
   if (/ingress2gateway|Gateway|HTTPRoute|translat/i.test(criteria08)) {
     errors.push('Lab 08: unpinned ingress2gateway must not be mandatory challenge acceptance');
   }
-  if (!/Extension 2 \(optional, read-only\)/.test(lab08) ||
-      !/not part of the challenge success criteria or verification/i.test(lab08)) {
+  if (!/Extension 2 \((?:optional, read-only|opcional, somente leitura)\)/.test(lab08) ||
+      !/(?:not part of the challenge success criteria or verification|não faz parte dos critérios de sucesso nem da verificação do challenge)/i.test(lab08)) {
     errors.push('Lab 08: ingress2gateway preview must be clearly optional and outside verification');
   }
 
   const prereq08 = section(lab08, 'Prerequisites');
-  if (!/\$NS[^\n]*default namespace/i.test(prereq08)) {
+  if (!/\$NS[^\n]*(?:default namespace|namespace padrão)/i.test(prereq08)) {
     errors.push('Lab 08: Prerequisites must restate that $NS is the default namespace');
   }
   const cleanup08 = section(lab08, 'Cleanup / reset');

@@ -9,90 +9,92 @@ track: Core
 
 # Deployment
 
-Red line 2/5 · A controller that keeps your Pods alive, scales them, and rolls
-out new versions without an outage.
+"Linha vermelha" 2/5 · Um controller que mantém seus Pods vivos, os escala e faz
+rollout de novas versões sem indisponibilidade.
 
-**core** · suggested Day 1 · Core track
+**core** · sugerido para o Day 1 · trilha Core
 
 <!--
-Section S06 — Deployment. Timing: ~35 min slides + 30 min lab.
-Outcome: learners can wrap a Pod in a Deployment, explain the
-Deployment→ReplicaSet→Pod chain, drive a rolling update, and roll back.
-Beats: problem (bare Pods don't heal/scale) · ownership chain · magic-move
-extend pod.yaml → deployment.yaml · rolling update animation (US-X2) ·
-rollout verbs + recommended labels · scaling (spec vs status) · recap to S07.
-Red line: the deployment.yaml built here IS labs/day-1/06-deployment's manifest,
-and it wraps S05's pod.yaml unchanged under spec.template. CKx: CKAD Deployments,
-rolling updates & rollbacks.
+Seção S06 — Deployment. Tempo: ~35 min de slides + 30 min de lab.
+Resultado: os participantes conseguem envolver um Pod em um Deployment, explicar
+a cadeia Deployment→ReplicaSet→Pod, conduzir um rolling update e fazer rollback.
+Beats: problema (Pods avulsos não se curam/escalam) · cadeia de ownership ·
+magic-move estendendo pod.yaml → deployment.yaml · animação de rolling update
+(US-X2) · verbos de rollout + labels recomendados · escala (spec vs status) ·
+recap rumo ao S07.
+Red line: o deployment.yaml construído aqui É o manifesto de
+labs/day-1/06-deployment, e envolve o pod.yaml do S05 sem alterações sob
+spec.template. CKx: CKAD Deployments, rolling updates & rollbacks.
 -->
 
 ---
 layout: statement
-kicker: The problem
+kicker: O problema
 ---
 
-You deleted a Pod in Lab 05 and **nothing brought it back.**
+Você deletou um Pod no Lab 05 e **nada o trouxe de volta.**
 
-A bare Pod can't self-heal, can't scale, and can't roll out a new version — it's
-a single life with no replacement. Real workloads hand that job to a **controller**
-that holds a *desired state* and works to keep it true. For stateless apps that
-controller is the **Deployment.**
+Um Pod avulso não consegue se curar, escalar nem fazer rollout de uma nova versão —
+é uma vida única, sem substituto. Workloads reais entregam esse trabalho a um
+**controller** que guarda um *estado desejado* e trabalha para mantê-lo verdadeiro.
+Para aplicações stateless, esse controller é o **Deployment.**
 
 <!--
-Speaker: call back to S05's punchline directly — the deleted Pod that stayed
-deleted. The fix isn't "be more careful," it's "let a controller own the Pod."
-This is the first time the reconciliation loop from S03 becomes something they
-hold in their hands. Lab 06 follows this section.
+Speaker: faça a chamada direta à punchline do S05 — o Pod deletado que continuou
+deletado. O conserto não é "tome mais cuidado", é "deixe um controller ser dono
+do Pod". Esta é a primeira vez que o loop de reconciliação do S03 vira algo que
+eles seguram nas mãos. O Lab 06 vem depois desta seção.
 -->
 
 ---
 
-<span class="kw-kicker">Mental model</span>
+<span class="kw-kicker">Modelo mental</span>
 
-# One object you edit, three that do the work
+# Um objeto que você edita, três que fazem o trabalho
 
 <div class="kw-cols-3 mt-4">
   <v-click at="1">
     <KwCard heading="Deployment" kind="deploy">
-      What <strong>you</strong> edit. Holds the Pod <code>template</code> and the
-      desired <code>replicas</code>. Manages rollouts — it owns
-      <strong>ReplicaSets</strong>, not Pods directly.
+      O que <strong>você</strong> edita. Guarda o <code>template</code> do Pod e as
+      <code>replicas</code> desejadas. Gerencia rollouts — é dono de
+      <strong>ReplicaSets</strong>, não de Pods diretamente.
     </KwCard>
   </v-click>
   <v-click at="2">
     <KwCard heading="ReplicaSet" kind="rs" variant="plain">
-      One per Pod-template version. Its only job: keep exactly
-      <code>replicas</code> Pods of <em>its</em> template alive. A new image ⇒ a
-      <strong>new ReplicaSet</strong>.
+      Um por versão do template de Pod. Seu único trabalho: manter vivos exatamente
+      <code>replicas</code> Pods do template <em>dele</em>. Uma nova image ⇒ um
+      <strong>novo ReplicaSet</strong>.
     </KwCard>
   </v-click>
   <v-click at="3">
     <KwCard heading="Pods" kind="pod">
-      The Pod, minted from the template. Each carries an
-      <code>ownerReferences</code> back to its ReplicaSet — delete one and the
-      owner remints it.
+      O Pod, cunhado a partir do template. Cada um carrega um
+      <code>ownerReferences</code> apontando de volta para seu ReplicaSet — delete
+      um e o dono o cunha de novo.
     </KwCard>
   </v-click>
 </div>
 
 <div v-click="4" class="mt-5 kw-muted text-sm">
 
-`Deployment → ReplicaSet → Pods`. You almost never touch a ReplicaSet by hand —
-you edit the Deployment, and it drives the rest through the **reconciliation loop
-from the mental model.**
+`Deployment → ReplicaSet → Pods`. Você quase nunca toca um ReplicaSet à mão —
+você edita o Deployment, e ele conduz o resto através do **loop de reconciliação
+do modelo mental.**
 
 </div>
 
 <!--
-Speaker: the key surprise is the *middle* object. People expect Deployment→Pods;
-the ReplicaSet in between is what makes rollouts and rollback work — each version
-gets its own RS. Show ownerReferences later in the lab with
-`kubectl get pod -o yaml`. Reveal one box per click, then the chain line.
+Speaker: a surpresa-chave é o objeto do *meio*. As pessoas esperam
+Deployment→Pods; o ReplicaSet no meio é o que faz rollouts e rollback
+funcionarem — cada versão ganha seu próprio RS. Mostre ownerReferences depois, no
+lab, com `kubectl get pod -o yaml`. Revele uma caixa por clique, depois a linha
+da cadeia.
 -->
 
 ---
 layout: code-walkthrough
-heading: 'Extend the Pod — same spec, now inside a template'
+heading: 'Estenda o Pod — o mesmo spec, agora dentro de um template'
 lab: labs/day-1/06-deployment.md
 class: s06-walkthrough-fit
 zoom: 0.82
@@ -100,7 +102,7 @@ zoom: 0.82
 
 ````md magic-move
 ```yaml
-# pod.yaml — the red-line seed we extend
+# pod.yaml — a semente da red line que estendemos
 apiVersion: v1
 kind: Pod
 metadata:
@@ -123,21 +125,21 @@ spec:
 ```
 
 ```yaml
-apiVersion: apps/v1        # workloads live in apps/v1, not core v1
+apiVersion: apps/v1        # workloads vivem em apps/v1, não no core v1
 kind: Deployment           # Pod → Deployment
 metadata:
   name: web
   labels:
     app: web
 spec:
-  replicas: 3              # NEW — how many Pods you want
+  replicas: 3              # NOVO — quantos Pods você quer
   selector:
     matchLabels:
-      app: web             # NEW — which Pods this Deployment owns
-  template:                # everything below is the Pod, indented one level
+      app: web             # NOVO — quais Pods este Deployment possui
+  template:                # tudo abaixo é o Pod, indentado um nível
     metadata:
       labels:
-        app: web           # the Pod's own labels — must satisfy the selector
+        app: web           # os labels do próprio Pod — precisam satisfazer o selector
     spec:
       containers:
         - name: web
@@ -164,11 +166,11 @@ spec:
   replicas: 3
   selector:
     matchLabels:
-      app: web          # must match template.metadata.labels below
+      app: web          # precisa casar com template.metadata.labels abaixo
   template:
     metadata:
       labels:
-        app: web        # the Pod labels — Lab 07's Service selects these
+        app: web        # os labels do Pod — o Service do Lab 07 seleciona estes
     spec:
       containers:
         - name: web
@@ -186,14 +188,14 @@ spec:
 ````
 
 <!--
-Speaker: THREE frames. (1) the exact S05 pod.yaml — "you already wrote this."
-(2) the move that trips everyone: the metadata SPLITS — the Pod's identity goes
-two places. Pod name → Deployment metadata.name; Pod labels → BOTH
-template.metadata.labels (stamped on every Pod) AND selector.matchLabels (how the
-Deployment finds them). The whole S05 container spec drops under spec.template
-UNCHANGED. (3) the clean file you apply — this frame IS
-labs/day-1/06-deployment's deployment.yaml, byte-for-byte. Hammer: selector must
-match template labels or the API server rejects it.
+Speaker: TRÊS frames. (1) o pod.yaml exato do S05 — "você já escreveu isto."
+(2) o movimento que derruba todo mundo: a metadata se DIVIDE — a identidade do
+Pod vai para dois lugares. Nome do Pod → metadata.name do Deployment; labels do
+Pod → TANTO template.metadata.labels (carimbado em cada Pod) QUANTO
+selector.matchLabels (como o Deployment os encontra). Todo o spec de container do
+S05 cai sob spec.template SEM ALTERAÇÕES. (3) o arquivo limpo que você aplica —
+este frame É o deployment.yaml de labs/day-1/06-deployment, byte a byte. Martele:
+o selector precisa casar com os labels do template ou o API server rejeita.
 -->
 
 ---
@@ -201,24 +203,24 @@ class: kw-slide-dense s06-roll-fit
 zoom: 0.86
 ---
 
-<span class="kw-kicker">The payoff · rolling update</span>
+<span class="kw-kicker">A recompensa · rolling update</span>
 
-# Change the image → zero-downtime rollout
+# Mude a image → rollout sem downtime
 
 <div class="mt-2 s06-roll-points-grid">
   <div v-click="1">
 
-**`maxSurge`** lets the new ReplicaSet add Pods *above* desired first — capacity never dips.
+**`maxSurge`** deixa o novo ReplicaSet adicionar Pods *acima* do desejado primeiro — a capacidade nunca cai.
 
   </div>
   <div v-click="2">
 
-**`maxUnavailable`** caps how many old Pods may be down at once — here, one leaves only after a new one is `Ready`.
+**`maxUnavailable`** limita quantos Pods antigos podem estar fora ao mesmo tempo — aqui, um só sai depois que um novo fica `Ready`.
 
   </div>
   <div v-click="3">
 
-The **old ReplicaSet is kept at 0**, which is exactly what makes `rollout undo` instant.
+O **ReplicaSet antigo é mantido em 0**, e é exatamente isso que torna o `rollout undo` instantâneo.
 
   </div>
 </div>
@@ -228,17 +230,18 @@ The **old ReplicaSet is kept at 0**, which is exactly what makes `rollout undo` 
 </div>
 
 <!--
-Speaker: this is the shared US-X2 rolling-update animation, owned here and reused
-by S12 (StatefulSet contrast) and anywhere a rollout is shown. Click through:
-steady 3 → surge +1 (new Pod created above desired) → new Ready, one old
-terminates → migrated, old RS drained to 0. Land the pairing: maxSurge is the
-"how much extra" knob, maxUnavailable the "how much less" knob. Defaults are 25%
-each. Lab 06 Step 3 watches this exact churn with `kubectl get rs -w`.
+Speaker: esta é a animação compartilhada de rolling update US-X2, que pertence a
+esta seção e é reutilizada pelo S12 (contraste com StatefulSet) e onde quer que
+um rollout seja mostrado. Avance clique a clique: 3 estáveis → surge +1 (novo Pod
+criado acima do desejado) → novo Ready, um antigo termina → migrado, RS antigo
+drenado a 0. Fixe o par: maxSurge é o botão de "quanto a mais", maxUnavailable o
+de "quanto a menos". Os defaults são 25% cada. O Passo 3 do Lab 06 observa
+exatamente essa rotatividade com `kubectl get rs -w`.
 -->
 
 ---
 layout: code-annotated
-heading: 'Drive it: set image, watch, undo'
+heading: 'Opere: set image, observe, undo'
 lab: labs/day-1/06-deployment.md
 ---
 
@@ -252,37 +255,39 @@ kubectl rollout undo deployment/web
 ::notes::
 
 <CodeNote at="1" label="set image">
-Edits the Pod template's image in place. That template change is what mints a
-<strong>new ReplicaSet</strong> — the rollout you just watched.
+Edita a image do template de Pod no lugar. Essa mudança de template é o que cunha
+um <strong>novo ReplicaSet</strong> — o rollout que você acabou de assistir.
 </CodeNote>
 
 <CodeNote at="2" label="rollout status" variant="ok">
-Blocks until every new Pod is <code>Ready</code> (or the rollout stalls). Its
-exit code is your CI gate: <code>0</code> = shipped.
+Bloqueia até todo Pod novo ficar <code>Ready</code> (ou o rollout estagnar). Seu
+exit code é o seu gate de CI: <code>0</code> = entregue.
 </CodeNote>
 
 <CodeNote at="3" label="history">
-Each template change is a numbered <strong>revision</strong>. This is the audit
-trail of what shipped when — kept because old ReplicaSets stay around.
+Cada mudança de template é uma <strong>revision</strong> numerada. Esta é a
+trilha de auditoria do que foi entregue e quando — mantida porque os ReplicaSets
+antigos continuam por perto.
 </CodeNote>
 
 <CodeNote at="4" label="undo" variant="warn">
-Promotes the previous ReplicaSet back to full replicas and drains the current
-one — the rollout in reverse. No YAML editing, no redeploy.
+Promove o ReplicaSet anterior de volta às réplicas completas e drena o atual —
+o rollout ao contrário. Sem editar YAML, sem redeploy.
 </CodeNote>
 
 <!--
-Speaker: these four verbs are the whole rollout lifecycle. Emphasise that undo is
-possible ONLY because the old RS was retained at 0 — tie back to the animation's
-last frame. Lab 06 Step 5 does the scary version: roll a bad tag, watch it stall
-(old Pods keep serving), then undo. Mention revisionHistoryLimit trims old RSs.
+Speaker: estes quatro verbos são o ciclo de vida completo do rollout. Enfatize
+que o undo só é possível PORQUE o RS antigo foi mantido em 0 — amarre de volta ao
+último frame da animação. O Passo 5 do Lab 06 faz a versão assustadora: rola uma
+tag ruim, observa estagnar (os Pods antigos continuam servindo), depois undo.
+Mencione que revisionHistoryLimit apara RSs antigos.
 -->
 
 ---
 
-<span class="kw-kicker">Scaling & labelling</span>
+<span class="kw-kicker">Escala &amp; labels</span>
 
-# Scale by editing desire; label so tools can find it
+# Escale editando o desejo; rotule para as ferramentas encontrarem
 
 <div class="kw-cols-2 mt-3">
   <div>
@@ -293,9 +298,9 @@ kubectl scale deployment/web --replicas=5
 
 <div class="mt-3 text-sm" v-click="1">
 
-Scaling changes **one number** — `spec.replicas`. The ReplicaSet adds or removes
-Pods until `status.replicas` matches. You state the *want*; the loop makes it so —
-no Pods created by hand.
+Escalar muda **um número** — `spec.replicas`. O ReplicaSet adiciona ou remove
+Pods até `status.replicas` bater. Você declara o *querer*; o loop o realiza —
+nenhum Pod criado à mão.
 
 </div>
 
@@ -312,9 +317,9 @@ metadata:
 
 <div class="mt-3 text-sm">
 
-The **recommended labels** (`app.kubernetes.io/*`) are a shared vocabulary every
-tool understands — dashboards, `kubectl get -l`, and the Service selector in
-the **next section.**
+Os **labels recomendados** (`app.kubernetes.io/*`) são um vocabulário compartilhado
+que toda ferramenta entende — dashboards, `kubectl get -l` e o selector do
+Service na **próxima seção.**
 
 </div>
 
@@ -322,38 +327,42 @@ the **next section.**
 </div>
 
 <div v-click="3" class="mt-5">
-  <KwChip variant="ok">spec.replicas = desired</KwChip>
-  <KwChip>status.replicas = observed</KwChip>
-  <KwChip variant="warn">HPA writes replicas for you</KwChip>
+  <KwChip variant="ok">spec.replicas = desejado</KwChip>
+  <KwChip>status.replicas = observado</KwChip>
+  <KwChip variant="warn">o HPA escreve replicas por você</KwChip>
 </div>
 
 <!--
-Speaker: two ideas on one slide. (1) scaling is just editing desired state — the
-same reconciliation muscle, no new mechanism. Spec vs status again (from S03).
-(2) recommended labels are how the ecosystem agrees on names; they also feed the
-S07 Service selector, so it's the natural bridge. Don't dwell — one line each.
-Note HPA later automates the replica number.
+Speaker: duas ideias em um slide. (1) escalar é só editar o estado desejado — o
+mesmo músculo de reconciliação, nenhum mecanismo novo. Spec vs status de novo
+(do S03). (2) os labels recomendados são como o ecossistema combina os nomes;
+eles também alimentam o selector do Service no S07, então é a ponte natural. Não
+se demore — uma linha para cada. Note que o HPA depois automatiza o número de
+réplicas.
 -->
 
 ---
 layout: recap
-heading: 'Recap — you edit desire, the controller does the work'
-next: 'Service — a stable address in front of these churning Pods'
+heading: 'Recap — você edita o desejo, o controller faz o trabalho'
+next: 'Service — um endereço estável na frente desses Pods que não param de mudar'
 ---
 
-- A **Deployment** owns **ReplicaSets** which own **Pods**; you edit the
-  Deployment and the reconciliation loop does the rest
-- `deployment.yaml` **wraps `pod.yaml` unchanged** inside `spec.template` —
-  red line 2/5, and Lab 07's Service will select these same `app: web` Pods
-- A new image ⇒ a **new ReplicaSet**; `maxSurge`/`maxUnavailable` keep the app up
-  through the rollout, and the old RS stays at 0 so `rollout undo` is instant
-- **Scaling** is just editing `spec.replicas` — desired vs observed, one more time
+- Um **Deployment** é dono de **ReplicaSets**, que são donos de **Pods**; você
+  edita o Deployment e o loop de reconciliação faz o resto
+- O `deployment.yaml` **envolve o `pod.yaml` sem alterações** dentro de
+  `spec.template` — red line 2/5, e o Service do Lab 07 vai selecionar estes
+  mesmos Pods `app: web`
+- Uma nova image ⇒ um **novo ReplicaSet**; `maxSurge`/`maxUnavailable` mantêm a
+  aplicação no ar durante o rollout, e o RS antigo fica em 0 para o
+  `rollout undo` ser instantâneo
+- **Escalar** é só editar `spec.replicas` — desejado vs observado, mais uma vez
 
 <!--
-Speaker: the emotional beat flips from S05's "it's gone" to "it heals, scales,
-and upgrades itself." But note the gap S07 fills: every rollout changed the Pod
-IPs — clients can't chase a moving target. That's the Service. Hand off to Lab 06;
-keep deployment.yaml on disk, Lab 07 adds a Service beside it.
+Speaker: o beat emocional vira do "ele se foi" do S05 para "ele se cura, escala e
+se atualiza sozinho." Mas aponte a lacuna que o S07 preenche: cada rollout mudou
+os IPs dos Pods — clientes não conseguem perseguir um alvo em movimento. Isso é o
+Service. Passe o bastão para o Lab 06; mantenha o deployment.yaml no disco, o
+Lab 07 adiciona um Service ao lado dele.
 -->
 
 ---
@@ -365,8 +374,8 @@ env: namespace ✓ / kind ✓
 
 ## Lab 06 — Rollouts & rollbacks
 
-- Extend `pod.yaml` into `deployment.yaml`; watch **Deployment → ReplicaSet → 3 Pods**
-- Delete a Pod — the ReplicaSet remints it; **scale** to 5 and back
-- **Roll out** `workshop-web:v2`, watch two ReplicaSets churn, read `rollout history`
-- **Break it:** roll a bad tag → rollout **stalls** while old Pods keep serving → `rollout undo`
-- Keep `deployment.yaml` for Lab 07.
+- Estenda o `pod.yaml` para `deployment.yaml`; observe **Deployment → ReplicaSet → 3 Pods**
+- Delete um Pod — o ReplicaSet o cunha de novo; **escale** para 5 e de volta
+- **Faça o rollout** de `workshop-web:v2`, observe dois ReplicaSets em rotatividade, leia o `rollout history`
+- **Quebre:** role uma tag ruim → o rollout **estagna** enquanto os Pods antigos continuam servindo → `rollout undo`
+- Guarde o `deployment.yaml` para o Lab 07.

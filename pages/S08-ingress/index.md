@@ -9,166 +9,175 @@ track: Core
 
 # Ingress
 
-Red line 4/5 · One L7 entry point that routes external HTTP by **host and path**
-into your Services — and does nothing until a controller stands behind it.
+"Linha vermelha" 4/5 · Um único ponto de entrada L7 que roteia HTTP externo por
+**host e path** para os seus Services — e não faz nada até um controller ficar
+por trás dele.
 
-**core** · suggested Day 1 · Core track
+**core** · sugerido para o Day 1 · trilha Core
 
 <!--
-Section S08 — Ingress. Timing: ~30 min slides + 25 min lab.
-Outcome: learners can front their Services with an Ingress, explain that the
-Ingress object is inert without a controller, route by host with a required
-pathType, terminate TLS, explain how cert-manager issues and renews the TLS
-Secret (Certificate → web-tls, ingress-shim annotation), place the 2026
-ingress-nginx retirement (frozen API, controller choice matters, Contour is
-the maintained CNCF path here), and articulate why Ingress motivates Gateway API.
-Beats: problem (a Service is L4 + in-cluster only) · dependency (Ingress inert
-without a controller; IngressClass links them) · rules (host/path/mandatory
-pathType) · magic-move build ingress.yaml (web.example.com → web,
-web2.example.com → web2, + tls) · IngressActivation animation (inert → claimed
-→ programmed → routed) · TLS beat (who fills web-tls: manual vs cert-manager ·
-Certificate resource + ingress-shim, forward-ref S22's operator demo) ·
-retirement beat (the ONLY slide in the workshop that names the retired
-controller) · pain-points → Gateway API (S09, red line 5/5)
-· end-of-Day-1 recap of the whole manifest family · lab handoff.
-cert-manager ACCURACY LOCKS (verified against cert-manager.io docs, 2026-08):
-stable API is cert-manager.io/v1 (Certificate/Issuer/ClusterIssuer); the
-signed cert + key land in the kubernetes.io/tls Secret named by
-spec.secretName; renewal is automatic before expiry; ingress-shim creates the
-Certificate from the cert-manager.io/cluster-issuer (or …/issuer) annotation
-using the Ingress tls block's secretName + hosts; ACME solvers are HTTP-01
-and DNS-01, exactly two; cert-manager is a CNCF **graduated** project. S22
-installs cert-manager as its no-code operator demo (CERT_MANAGER_VERSION in
-infra/versions.env belongs to that lab, not this concepts-only beat).
-Red line: the ingress.yaml built here IS labs/day-1/08-ingress's manifest; it
-fronts the workshop-web backends — `web` (workshop-web:v1) and `web2`
-(workshop-web:v2), Service port 80 → container 8080 — behind one entry point.
-Closes the Day-1 spine Pod → Deployment → Service → Ingress. CKx: CKAD Ingress
-& service exposure.
+Seção S08 — Ingress. Tempo: ~30 min de slides + 25 min de lab.
+Resultado: os participantes conseguem colocar um Ingress na frente dos seus
+Services, explicar que o objeto Ingress é inerte sem um controller, rotear por
+host com o pathType obrigatório, terminar TLS, explicar como o cert-manager
+emite e renova o Secret de TLS (Certificate → web-tls, annotation do
+ingress-shim), situar a aposentadoria do ingress-nginx em 2026 (API congelada, a
+escolha do controller importa, Contour é o caminho CNCF mantido aqui) e articular
+por que o Ingress motiva o Gateway API.
+Beats: problema (um Service é L4 + só dentro do cluster) · dependência (Ingress
+inerte sem um controller; o IngressClass os liga) · regras (host/path/pathType
+obrigatório) · magic-move construindo ingress.yaml (web.example.com → web,
+web2.example.com → web2, + tls) · animação IngressActivation (inerte → reivindicado
+→ programado → roteado) · beat de TLS (quem preenche o web-tls: manual vs
+cert-manager · recurso Certificate + ingress-shim, referência futura à demo de
+operator do S22) · beat da aposentadoria (o ÚNICO slide do workshop que nomeia o
+controller aposentado) · pontos de dor → Gateway API (S09, red line 5/5)
+· recap de fim do Day 1 de toda a família de manifestos · passagem para o lab.
+cert-manager ACCURACY LOCKS (verificado contra a documentação do cert-manager.io,
+2026-08): a API estável é cert-manager.io/v1 (Certificate/Issuer/ClusterIssuer);
+o cert assinado + a chave caem no Secret kubernetes.io/tls nomeado por
+spec.secretName; a renovação é automática antes da expiração; o ingress-shim cria
+o Certificate a partir da annotation cert-manager.io/cluster-issuer (ou …/issuer)
+usando o secretName + hosts do bloco tls do Ingress; os solvers ACME são HTTP-01
+e DNS-01, exatamente dois; o cert-manager é um projeto CNCF **graduated**. O S22
+instala o cert-manager como sua demo de operator sem código (CERT_MANAGER_VERSION
+em infra/versions.env pertence àquele lab, não a este beat só de conceitos).
+Red line: o ingress.yaml construído aqui É o manifesto de labs/day-1/08-ingress;
+ele fica na frente dos backends workshop-web — `web` (workshop-web:v1) e `web2`
+(workshop-web:v2), porta 80 do Service → container 8080 — atrás de um único ponto
+de entrada. Fecha a espinha do Day 1: Pod → Deployment → Service → Ingress.
+CKx: CKAD Ingress & exposição de services.
 -->
 
 ---
 layout: statement
-kicker: The problem
+kicker: O problema
 ---
 
-Your Service in Lab 07 was reachable **only from inside the cluster.**
+Seu Service no Lab 07 era alcançável **apenas de dentro do cluster.**
 
-A `ClusterIP` is an L4 virtual IP — it forwards TCP to Pods, but it can't read an
-HTTP request. It can't route `shop.example.com/` to one app and `/api` to another,
-can't terminate **shared TLS**, and can't be reached from a browser at all. Giving
-every app its own `LoadBalancer` burns one cloud IP each and still can't route by
-URL. You need **one** L7 entry point in front of many Services — an **Ingress.**
+Um `ClusterIP` é um IP virtual L4 — ele encaminha TCP para Pods, mas não sabe ler
+uma requisição HTTP. Não consegue rotear `shop.example.com/` para uma aplicação e
+`/api` para outra, não consegue terminar **TLS compartilhado** e não pode ser
+alcançado de um navegador de jeito nenhum. Dar a cada aplicação seu próprio
+`LoadBalancer` queima um IP de cloud para cada uma e continua sem rotear por URL.
+Você precisa de **um** ponto de entrada L7 na frente de muitos Services — um
+**Ingress.**
 
 <!--
-Speaker: the frame is the reach ladder from S07. ClusterIP = inside only;
-LoadBalancer = one external IP per service, and still L4 (no host/path). The gap
-Ingress fills is L7 HTTP routing + shared TLS + one shared entry point for many
-backends. Land it as "one door, many rooms." Lab 08 follows this section — it
-installs Contour on kind (the shared cluster has a controller pre-provided).
+Speaker: o enquadramento é a escada de alcance do S07. ClusterIP = só dentro;
+LoadBalancer = um IP externo por service, e ainda L4 (sem host/path). A lacuna
+que o Ingress preenche é roteamento HTTP L7 + TLS compartilhado + um ponto de
+entrada compartilhado para muitos backends. Aterrisse como "uma porta, muitos
+cômodos." O Lab 08 vem depois desta seção — ele instala o Contour no kind (o
+cluster compartilhado tem um controller pré-provisionado).
 -->
 
 ---
 
-<span class="kw-kicker">Mental model · the catch that bites everyone</span>
+<span class="kw-kicker">Modelo mental · a pegadinha que morde todo mundo</span>
 
-# An Ingress is just rules — the controller does the work
+# Um Ingress é só regras — o controller faz o trabalho
 
 <div class="kw-cols-2 mt-3 text-sm">
-  <KwCard heading="Ingress (the object)" kind="ing">
-    A set of HTTP routing <strong>rules</strong> you write: for this host and
-    path, send traffic to that Service. Pure declaration — it moves no packets on
-    its own.
+  <KwCard heading="Ingress (o objeto)" kind="ing">
+    Um conjunto de <strong>regras</strong> de roteamento HTTP que você escreve:
+    para este host e path, mande o tráfego para aquele Service. Pura declaração —
+    ele não move nenhum pacote sozinho.
   </KwCard>
-  <KwCard heading="Ingress controller (the engine)" icon="⚙️">
-    A Pod (Contour, Traefik, HAProxy, a cloud LB…) that <strong>watches</strong>
-    Ingress objects and actually reverse-proxies traffic. A <strong>separate
-    install</strong> — not built into Kubernetes.
+  <KwCard heading="Ingress controller (o motor)" icon="⚙️">
+    Um Pod (Contour, Traefik, HAProxy, um LB de cloud…) que <strong>observa</strong>
+    objetos Ingress e de fato faz o reverse-proxy do tráfego. Uma <strong>instalação
+    separada</strong> — não vem embutido no Kubernetes.
   </KwCard>
 </div>
 
 <div v-click class="mt-4 kw-muted text-sm">
 
-An **`IngressClass`** ties the two together: your Ingress names a class
-(`ingressClassName: contour`), and the controller that owns that class picks it up.
-**No controller ⇒ your Ingress gets no address and routes nothing** — the number-one
-Ingress gotcha, and the first thing to check when "the Ingress doesn't work."
+Um **`IngressClass`** amarra os dois: seu Ingress nomeia uma classe
+(`ingressClassName: contour`), e o controller dono daquela classe o assume.
+**Sem controller ⇒ seu Ingress não ganha endereço e não roteia nada** — a pegadinha
+número um do Ingress, e a primeira coisa a checar quando "o Ingress não funciona".
 
 </div>
 
 <!--
-Speaker: this is THE Ingress mental model and the source of most confusion. The
-YAML applying cleanly means nothing — an Ingress with no matching controller sits
-there with an empty ADDRESS forever, no error. Say it plainly: Kubernetes ships
-the Ingress *API* but not an *implementation*; you install the controller. The
-IngressClass is the matchmaker. Lab 08 Step 1 installs Contour on kind (or uses
-the shared cluster's controller) — that split is the whole point. The activation
-animation two slides ahead plays this exact transition out.
+Speaker: este é O modelo mental do Ingress e a fonte da maior parte da confusão.
+O YAML aplicar sem erro não significa nada — um Ingress sem controller
+correspondente fica lá com o ADDRESS vazio para sempre, sem erro nenhum. Diga com
+todas as letras: o Kubernetes entrega a *API* de Ingress, mas não uma
+*implementação*; o controller é você quem instala. O IngressClass é o
+casamenteiro. O Passo 1 do Lab 08 instala o Contour no kind (ou usa o controller
+do cluster compartilhado) — essa separação é o ponto inteiro. A animação de
+ativação, dois slides adiante, encena exatamente essa transição.
 -->
 
 ---
 
-<span class="kw-kicker">The rules · three things every path needs</span>
+<span class="kw-kicker">As regras · três coisas que todo path precisa</span>
 
-# Host, path, and the `pathType` nobody remembers
+# Host, path e o `pathType` de que ninguém lembra
 
 <div class="kw-cols-3 mt-4 text-sm">
   <v-click at="1">
     <KwCard heading="host" icon="🌐">
-      Which hostname this rule matches — <code>shop.example.com</code>. Omit it and
-      the rule matches <em>any</em> host. This is how one Ingress fronts many sites.
+      Qual hostname esta regra casa — <code>shop.example.com</code>. Omita e a
+      regra casa com <em>qualquer</em> host. É assim que um Ingress fica na frente
+      de vários sites.
     </KwCard>
   </v-click>
   <v-click at="2">
     <KwCard heading="path" icon="🛣️" variant="plain">
-      The URL prefix — <code>/</code>, <code>/api</code>, <code>/v2</code>. The most
-      specific matching path wins, so <code>/api</code> beats the <code>/</code>
-      catch-all. The path is forwarded <em>as-is</em> — the backend must serve it.
+      O prefixo da URL — <code>/</code>, <code>/api</code>, <code>/v2</code>. O
+      path mais específico que casar vence, então <code>/api</code> ganha do
+      pega-tudo <code>/</code>. O path é encaminhado <em>como está</em> — o backend
+      precisa servi-lo.
     </KwCard>
   </v-click>
   <v-click at="3">
     <KwCard heading="pathType" icon="⚠️" variant="warn">
-      <strong>Required.</strong> <code>Prefix</code> (match this and everything
-      under it), <code>Exact</code> (this string only), or
-      <code>ImplementationSpecific</code> (controller decides).
+      <strong>Obrigatório.</strong> <code>Prefix</code> (casa isto e tudo abaixo),
+      <code>Exact</code> (só esta string exata) ou
+      <code>ImplementationSpecific</code> (o controller decide).
     </KwCard>
   </v-click>
 </div>
 
 <div v-click="4" class="mt-5 kw-muted text-sm">
 
-Forget `pathType` and the API server **rejects the manifest** — it has no default.
-That's the deliberate break in the lab: a missing `pathType` fails at `apply`, long
-before any traffic flows.
+Esqueça o `pathType` e o API server **rejeita o manifesto** — ele não tem default.
+Esse é o break deliberado do lab: um `pathType` ausente falha no `apply`, muito
+antes de qualquer tráfego fluir.
 
 </div>
 
 <!--
-Speaker: reveal one card per click, then the warning. pathType being mandatory (no
-server-side default) trips everyone migrating from old examples that omitted it.
-Prefix is what you want 95% of the time. Contrast Prefix vs Exact briefly: Prefix
-matches by URL path SEGMENTS (/foo matches /foo and /foo/bar, not /foobar), Exact
-matches the whole string. Also plant the "forwarded as-is" point on the path card:
-Ingress cannot rewrite a path — /v2 fan-out only works if the backend serves /v2.
-The lab demo routes by HOST for exactly that reason, and the lab has a spoiler
-question on it (it foreshadows the annotation pain-point). Don't rabbit-hole; the
-lab's break→fix on pathType makes the "required" point concrete.
+Speaker: revele um card por clique, depois o aviso. O pathType ser obrigatório
+(sem default no server) derruba todo mundo que migra de exemplos antigos que o
+omitiam. Prefix é o que você quer 95% do tempo. Contraste Prefix vs Exact
+rapidamente: Prefix casa por SEGMENTOS do path da URL (/foo casa /foo e /foo/bar,
+não /foobar), Exact casa a string inteira. Plante também o ponto do "encaminhado
+como está" no card do path: o Ingress não sabe reescrever um path — o fan-out de
+/v2 só funciona se o backend servir /v2. A demo do lab roteia por HOST exatamente
+por essa razão, e o lab tem uma pergunta-spoiler sobre isso (ela antecipa o ponto
+de dor das annotations). Não entre na toca do coelho; o break→fix do lab no
+pathType torna o ponto do "obrigatório" concreto.
 -->
 
 ---
 layout: code-walkthrough
-heading: 'Build the Ingress — route by host, then add TLS'
+heading: 'Construa o Ingress — roteie por host, depois adicione TLS'
 lab: labs/day-1/08-ingress.md
 ---
 
 ````md magic-move
 ```yaml
-apiVersion: networking.k8s.io/v1   # Ingress lives in networking.k8s.io/v1
+apiVersion: networking.k8s.io/v1   # o Ingress vive em networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: web
 spec:
-  ingressClassName: contour        # which controller handles this
+  ingressClassName: contour        # qual controller cuida deste
 ```
 
 ```yaml
@@ -177,12 +186,12 @@ kind: Ingress
 metadata:
   name: web
 spec:
-  ingressClassName: contour        # must match `kubectl get ingressclass`
+  ingressClassName: contour        # precisa casar com `kubectl get ingressclass`
   rules:
-    - host: web.example.com        # shared cluster: use your assigned hostnames
+    - host: web.example.com        # cluster compartilhado: use seus hostnames designados
       http:
         paths:
-          - path: /                # everything on this host → the v1 backend
+          - path: /                # tudo neste host → o backend v1
             pathType: Prefix
             backend: { service: { name: web, port: { number: 80 } } }
 ```
@@ -193,18 +202,18 @@ kind: Ingress
 metadata:
   name: web
 spec:
-  ingressClassName: contour        # must match `kubectl get ingressclass`
+  ingressClassName: contour        # precisa casar com `kubectl get ingressclass`
   rules:
-    - host: web.example.com        # shared cluster: use your assigned hostnames
+    - host: web.example.com        # cluster compartilhado: use seus hostnames designados
       http:
         paths:
-          - path: /                # everything on this host → the v1 backend
+          - path: /                # tudo neste host → o backend v1
             pathType: Prefix
             backend: { service: { name: web, port: { number: 80 } } }
-    - host: web2.example.com       # second site, same single entry point
+    - host: web2.example.com       # segundo site, mesmo ponto de entrada único
       http:
         paths:
-          - path: /                # → the v2 backend
+          - path: /                # → o backend v2
             pathType: Prefix
             backend: { service: { name: web2, port: { number: 80 } } }
 ```
@@ -216,9 +225,9 @@ metadata:
   name: web
 spec:
   ingressClassName: contour
-  tls:                             # terminate HTTPS for the first host
+  tls:                             # termina HTTPS para o primeiro host
     - hosts: [web.example.com]
-      secretName: web-tls          # a kubernetes.io/tls Secret (cert + key)
+      secretName: web-tls          # um Secret kubernetes.io/tls (cert + chave)
   rules:
     - host: web.example.com
       http:
@@ -236,23 +245,24 @@ spec:
 ````
 
 <!--
-Speaker: FOUR frames. (1) skeleton — note the apiVersion is networking.k8s.io/v1,
-not core v1, and ingressClassName names the controller. (2) one host rule:
-web.example.com → the `web` Service — the red line continues, the Ingress sits IN
-FRONT of the Service pattern from Lab 07; the backend port 80 is the SERVICE port
-(the Service maps it to the container's 8080). (3) add a second host →
-`web2` — one entry point fronting two sites; this is host-based fan-out, and the
-Host header decides. THIS third frame IS labs/day-1/08-ingress's ingress.yaml,
-byte-for-byte — the anchor. (4) add a tls: block terminating HTTPS with a web-tls
-Secret — that's the lab's stretch goal (secretName matches). Point at
-backend.service.name/port: an Ingress routes to Services, never straight to Pods.
+Speaker: QUATRO frames. (1) esqueleto — note que o apiVersion é
+networking.k8s.io/v1, não o core v1, e o ingressClassName nomeia o controller.
+(2) uma regra de host: web.example.com → o Service `web` — a red line continua, o
+Ingress fica NA FRENTE do padrão de Service do Lab 07; a porta 80 do backend é a
+porta do SERVICE (o Service a mapeia para o 8080 do container). (3) adicione um
+segundo host → `web2` — um ponto de entrada na frente de dois sites; isto é
+fan-out por host, e o header Host decide. ESTE terceiro frame É o ingress.yaml de
+labs/day-1/08-ingress, byte a byte — a âncora. (4) adicione um bloco tls:
+terminando HTTPS com um Secret web-tls — esse é o stretch goal do lab (o
+secretName bate). Aponte para backend.service.name/port: um Ingress roteia para
+Services, nunca direto para Pods.
 -->
 
 ---
 
-<span class="kw-kicker">The payoff · from inert YAML to routed traffic</span>
+<span class="kw-kicker">A recompensa · de YAML inerte a tráfego roteado</span>
 
-# Applied ≠ working — watch the controller bring it alive
+# Aplicado ≠ funcionando — veja o controller dar vida a ele
 
 <div class="mt-2">
   <IngressActivation :step="$clicks" />
@@ -261,76 +271,79 @@ backend.service.name/port: an Ingress routes to Services, never straight to Pods
 <div class="mt-3 text-sm">
 <v-clicks at="1">
 
-- Install a controller and the **IngressClass** name matches them up — the Ingress is **claimed**.
-- The controller **programs** its proxy: listeners and host rules become real data-plane config.
-- Requests route by **Host**: `web.example.com` → **web** (v1), `web2.example.com` → **web2** (v2).
+- Instale um controller e o nome do **IngressClass** casa os dois — o Ingress é **reivindicado**.
+- O controller **programa** seu proxy: listeners e regras de host viram configuração real de data plane.
+- As requisições roteiam por **Host**: `web.example.com` → **web** (v1), `web2.example.com` → **web2** (v2).
 
 </v-clicks>
 </div>
 
 <!--
-Speaker: this is the IngressActivation animation — the S08-specific transition no
-other section has: an object that is VALID but INERT until an engine claims it.
-Click through: rest state (Ingress applied, dashed empty controller slot, "routes
-nothing", no data plane) → Contour installed, the IngressClass name matches, the
-Ingress is claimed → Envoy programmed (listeners :80/:443, routes loaded) → two
-curls routed by Host header to web (v1) and web2 (v2). Land it: kubectl accepting
-your YAML proves nothing about traffic — activation is the controller's job. The
-lab replays every one of these states for real, including the silent-failure
-variant (an ingressClassName nobody owns).
+Speaker: esta é a animação IngressActivation — a transição específica do S08 que
+nenhuma outra seção tem: um objeto que é VÁLIDO mas INERTE até um motor
+reivindicá-lo. Avance clique a clique: estado de repouso (Ingress aplicado, slot
+de controller tracejado e vazio, "não roteia nada", sem data plane) → Contour
+instalado, o nome do IngressClass casa, o Ingress é reivindicado → Envoy
+programado (listeners :80/:443, rotas carregadas) → dois curls roteados pelo
+header Host para web (v1) e web2 (v2). Aterrisse: o kubectl aceitar seu YAML não
+prova nada sobre tráfego — a ativação é trabalho do controller. O lab reencena
+cada um destes estados de verdade, incluindo a variante de falha silenciosa (um
+ingressClassName que ninguém possui).
 -->
 
 ---
 
-<span class="kw-kicker">TLS · the Secret nobody wants to babysit</span>
+<span class="kw-kicker">TLS · o Secret que ninguém quer babá</span>
 
-# `web-tls` doesn't fill itself — enter cert-manager
+# O `web-tls` não se preenche sozinho — entra o cert-manager
 
 <div class="kw-cols-2 mt-3 text-sm">
   <v-click at="1">
-    <KwCard heading="By hand" icon="🔧" variant="warn">
-      Generate a key + certificate, <code>kubectl create secret tls web-tls …</code>,
-      repeat per host — and remember to rotate it before it <strong>expires</strong>.
-      Nobody remembers. Outages at the front door follow.
+    <KwCard heading="À mão" icon="🔧" variant="warn">
+      Gere uma chave + certificado, <code>kubectl create secret tls web-tls …</code>,
+      repita por host — e lembre de rotacionar antes de <strong>expirar</strong>.
+      Ninguém lembra. Seguem-se indisponibilidades na porta da frente.
     </KwCard>
   </v-click>
   <v-click at="2">
-    <KwCard heading="With cert-manager" icon="🤖" variant="ok">
-      A controller (CNCF <strong>graduated</strong>) that watches
-      <strong>Certificate</strong> resources, obtains the cert from an
-      <strong>Issuer / ClusterIssuer</strong> — e.g. via <strong>ACME</strong>
-      (Let's Encrypt) — stores it in the named Secret, and <strong>renews it
-      automatically</strong> before expiry.
+    <KwCard heading="Com cert-manager" icon="🤖" variant="ok">
+      Um controller (CNCF <strong>graduated</strong>) que observa recursos
+      <strong>Certificate</strong>, obtém o cert de um
+      <strong>Issuer / ClusterIssuer</strong> — por exemplo via <strong>ACME</strong>
+      (Let's Encrypt) — o guarda no Secret nomeado e o <strong>renova
+      automaticamente</strong> antes de expirar.
     </KwCard>
   </v-click>
 </div>
 
 <div v-click="3" class="mt-4 kw-muted text-sm">
 
-The Ingress doesn't change at all — it keeps pointing at `secretName: web-tls`.
-cert-manager's job is to make sure that Secret **exists and stays valid**.
+O Ingress não muda em nada — ele continua apontando para `secretName: web-tls`.
+O trabalho do cert-manager é garantir que esse Secret **exista e continue válido**.
 
 </div>
 
 <!--
-Speaker: the tls: block two slides back named a Secret — this beat answers where it
-comes from in real clusters. By hand works (the lab's stretch goal does exactly
-that with a self-signed cert) but doesn't scale past a handful of hosts, and expiry
-is a time bomb: certs are short-lived on purpose now (ACME certs ~90 days), so
-manual rotation WILL be forgotten. cert-manager is the ecosystem's standard answer
-and a CNCF graduated project: it introduces a Certificate resource; a controller
-reconciles it by talking to an issuer. Issuer is namespaced, ClusterIssuer is
-cluster-wide — same object, different scope. ACME/Let's Encrypt is the famous path
-(free, automated, HTTP-01 or DNS-01 domain proof — exactly two solver types), but
-issuers can also be a private CA or Vault. Key framing for the next slide: the
-INGRESS is untouched; automation targets the Secret. This is also a quiet operator
-preview — cert-manager is literally S22's demo operator, where you'll install it
-and watch the reconcile loop recreate a deleted Secret.
+Speaker: o bloco tls: dois slides atrás nomeou um Secret — este beat responde de
+onde ele vem nos clusters reais. À mão funciona (o stretch goal do lab faz
+exatamente isso com um cert autoassinado), mas não escala além de um punhado de
+hosts, e a expiração é uma bomba-relógio: hoje os certs são de vida curta de
+propósito (certs ACME ~90 dias), então a rotação manual VAI ser esquecida. O
+cert-manager é a resposta padrão do ecossistema e um projeto CNCF graduated: ele
+introduz um recurso Certificate; um controller o reconcilia falando com um
+issuer. Issuer é por namespace, ClusterIssuer é do cluster inteiro — mesmo
+objeto, escopo diferente. ACME/Let's Encrypt é o caminho famoso (grátis,
+automatizado, prova de domínio HTTP-01 ou DNS-01 — exatamente dois tipos de
+solver), mas os issuers também podem ser uma CA privada ou o Vault. Enquadramento
+chave para o próximo slide: o INGRESS fica intocado; a automação mira o Secret.
+Isto também é um preview discreto de operator — o cert-manager é literalmente o
+operator da demo do S22, onde você vai instalá-lo e ver o loop de reconcile
+recriar um Secret deletado.
 -->
 
 ---
 layout: code-annotated
-heading: 'A Certificate resource keeps `web-tls` issued and renewed'
+heading: 'Um recurso Certificate mantém o `web-tls` emitido e renovado'
 compact: true
 ---
 
@@ -339,168 +352,177 @@ apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata: { name: web }
 spec:
-  secretName: web-tls        # the Secret our Ingress tls: names
+  secretName: web-tls        # o Secret que o tls: do nosso Ingress nomeia
   dnsNames: [web.example.com]
   issuerRef:
     name: letsencrypt
-    kind: ClusterIssuer      # cluster-wide (Issuer = one ns)
+    kind: ClusterIssuer      # cluster inteiro (Issuer = um ns)
 ```
 
 ::notes::
 
-<CodeNote at="1" label="a CRD, not core Kubernetes">
-The <strong>operator</strong> section installs cert-manager for real.
+<CodeNote at="1" label="um CRD, não Kubernetes core">
+A seção de <strong>operator</strong> instala o cert-manager de verdade.
 </CodeNote>
 
-<CodeNote at="2" label="secretName — the handshake" variant="ok">
-Writes the <code>kubernetes.io/tls</code> Secret the <code>tls:</code> block
-names — and <strong>renews it automatically</strong>.
+<CodeNote at="2" label="secretName — o aperto de mãos" variant="ok">
+Escreve o Secret <code>kubernetes.io/tls</code> que o bloco <code>tls:</code>
+nomeia — e o <strong>renova automaticamente</strong>.
 </CodeNote>
 
-<CodeNote at="3" label="issuerRef — who signs">
-<strong>ACME</strong> (Let's Encrypt) proves control — HTTP-01 via your Ingress,
-DNS-01 via TXT — then signs.
+<CodeNote at="3" label="issuerRef — quem assina">
+O <strong>ACME</strong> (Let's Encrypt) prova o controle — HTTP-01 via seu Ingress,
+DNS-01 via TXT — e então assina.
 </CodeNote>
 
-<CodeNote at="4" label="or skip the YAML — ingress-shim" variant="ok">
-Annotate the Ingress with <code>cert-manager.io/cluster-issuer</code> — the
-Certificate is created <em>for you</em>.
+<CodeNote at="4" label="ou pule o YAML — ingress-shim" variant="ok">
+Anote o Ingress com <code>cert-manager.io/cluster-issuer</code> — o Certificate
+é criado <em>para você</em>.
 </CodeNote>
 
 <!--
-Speaker: walk the YAML against the ingress.yaml they just built. (1) It's a CRD
-from cert-manager.io/v1 — nothing here ships with Kubernetes, which is why this is
-a concepts beat, not a lab step; S22 installs cert-manager for real (pinned in the
-infra for that lab) and uses this very resource to teach reconciliation. (2)
-secretName is the whole integration: Ingress consumes the Secret, Certificate
-produces it — loose coupling through a well-known name, very Kubernetes. Signed
-cert + key land in a kubernetes.io/tls Secret (the type from the S10 Secret-types
-beat), and the controller renews before expiry — delete the Secret and it comes
-back, which is S22's punchline. (3) issuerRef picks the authority: ClusterIssuer
-(cluster-wide) vs Issuer (namespaced) is pure scope; ACME with HTTP-01 is the neat
-loop — the challenge is served through the SAME Ingress data path you just built —
-DNS-01 proves via TXT record instead (needed for wildcards). (4) ingress-shim is
-what most teams actually run: one annotation on the Ingress, cert-manager derives
-the Certificate. On kind there's no public DNS so ACME can't complete — the lab's
-stretch stays self-signed; the flow here is the production shape.
+Speaker: percorra o YAML contra o ingress.yaml que eles acabaram de construir.
+(1) É um CRD de cert-manager.io/v1 — nada aqui vem com o Kubernetes, e é por isso
+que este é um beat de conceitos, não um passo de lab; o S22 instala o
+cert-manager de verdade (fixado na infra daquele lab) e usa este exato recurso
+para ensinar reconciliação. (2) O secretName é a integração inteira: o Ingress
+consome o Secret, o Certificate o produz — acoplamento fraco através de um nome
+bem conhecido, muito Kubernetes. O cert assinado + a chave caem em um Secret
+kubernetes.io/tls (o tipo do beat de tipos de Secret do S10), e o controller
+renova antes de expirar — delete o Secret e ele volta, que é a punchline do S22.
+(3) O issuerRef escolhe a autoridade: ClusterIssuer (cluster inteiro) vs Issuer
+(por namespace) é puro escopo; ACME com HTTP-01 é o loop elegante — o challenge é
+servido pelo MESMO data path de Ingress que você acabou de construir — DNS-01
+prova via registro TXT (necessário para wildcards). (4) O ingress-shim é o que a
+maioria dos times de fato roda: uma annotation no Ingress e o cert-manager deriva
+o Certificate. No kind não há DNS público, então o ACME não completa — o stretch
+do lab fica no autoassinado; o fluxo aqui é o formato de produção.
 -->
 
 ---
 
-<span class="kw-kicker">2026 reality check · the one slide that names names</span>
+<span class="kw-kicker">Checagem de realidade 2026 · o único slide que dá nomes</span>
 
-# The reference controller retired — the API didn't
+# O controller de referência se aposentou — a API não
 
 <div class="kw-cols-2 mt-3 text-sm">
-  <KwCard heading="ingress-nginx: retired" icon="🪦" variant="warn">
-    The reference controller most of the internet ran. Retirement announced
-    <strong>Nov 2025</strong>; maintenance and CVE fixes <strong>ended March
-    2026</strong>; the repo is archived. Still running it = accumulating
-    unpatched CVEs at your front door.
+  <KwCard heading="ingress-nginx: aposentado" icon="🪦" variant="warn">
+    O controller de referência que a maior parte da internet rodava. Aposentadoria
+    anunciada em <strong>nov 2025</strong>; manutenção e correções de CVE
+    <strong>encerradas em março de 2026</strong>; o repositório está arquivado.
+    Continuar rodando = acumular CVEs sem correção na sua porta da frente.
   </KwCard>
-  <KwCard heading="Ingress: frozen, not dead" kind="ing">
-    The API (<code>networking.k8s.io/v1</code>) is <strong>stable and
-    ubiquitous</strong> — it is not going away. But it is <strong>frozen</strong>:
-    no new features. New routing capability lands in Gateway API instead.
+  <KwCard heading="Ingress: congelado, não morto" kind="ing">
+    A API (<code>networking.k8s.io/v1</code>) é <strong>estável e
+    onipresente</strong> — ela não vai desaparecer. Mas está <strong>congelada</strong>:
+    nenhuma feature nova. Novas capacidades de roteamento chegam no Gateway API.
   </KwCard>
-  <KwCard heading="Controller choice now matters" icon="⚙️">
-    The controller is swappable by design — that's what <code>IngressClass</code>
-    is for. This workshop uses <strong>Contour</strong>: CNCF, Envoy-based,
-    maintained, vendor-neutral. Traefik, HAProxy, and cloud LBs are fine too.
+  <KwCard heading="A escolha do controller agora importa" icon="⚙️">
+    O controller é trocável por design — é para isso que o <code>IngressClass</code>
+    existe. Este workshop usa o <strong>Contour</strong>: CNCF, baseado em Envoy,
+    mantido, neutro de fornecedor. Traefik, HAProxy e LBs de cloud também servem.
   </KwCard>
-  <KwCard heading="The exit is mechanical" icon="🌉" variant="plain">
-    <code>ingress2gateway</code> (kubernetes-sigs) converts Ingress resources into
-    Gateway API resources. Your rules survive the migration — the lab's stretch
-    goal previews it.
+  <KwCard heading="A saída é mecânica" icon="🌉" variant="plain">
+    O <code>ingress2gateway</code> (kubernetes-sigs) converte recursos Ingress em
+    recursos Gateway API. Suas regras sobrevivem à migração — o stretch goal do
+    lab dá uma prévia.
   </KwCard>
 </div>
 
 <!--
-Speaker: the ONLY place in the workshop that names nginx — keep it that way.
-Story in one breath: for a decade "Ingress" effectively meant ingress-nginx; the
-project announced retirement in November 2025, best-effort maintenance ended in
-March 2026, and the repo was archived — no more CVE fixes for the thing
-terminating TLS at the edge of thousands of clusters. Two lessons, carefully
-separated: (1) the Ingress API is fine — frozen at v1, stable, everywhere in the
-wild, you WILL meet it; (2) the controller behind it is a choice you now have to
-make consciously. We teach on Contour because it's CNCF, Envoy-based, and
-maintained. And the bridge out is mechanical: kubernetes-sigs/ingress2gateway
-translates Ingress → Gateway + HTTPRoute — which is exactly where S09 goes.
+Speaker: o ÚNICO lugar do workshop que nomeia o nginx — mantenha assim. A
+história em um fôlego: por uma década "Ingress" na prática significava
+ingress-nginx; o projeto anunciou a aposentadoria em novembro de 2025, a
+manutenção de melhor esforço terminou em março de 2026 e o repositório foi
+arquivado — sem mais correções de CVE para a coisa que termina TLS na borda de
+milhares de clusters. Duas lições, cuidadosamente separadas: (1) a API de Ingress
+está bem — congelada em v1, estável, presente em todo lugar, você VAI encontrá-la;
+(2) o controller por trás dela é uma escolha que agora você precisa fazer
+conscientemente. Ensinamos sobre o Contour porque é CNCF, baseado em Envoy e
+mantido. E a ponte de saída é mecânica: kubernetes-sigs/ingress2gateway traduz
+Ingress → Gateway + HTTPRoute — que é exatamente para onde o S09 vai.
 -->
 
 ---
 
-<span class="kw-kicker">Why there's a red line 5/5</span>
+<span class="kw-kicker">Por que existe uma red line 5/5</span>
 
-# Ingress works — but it hit a ceiling
+# O Ingress funciona — mas bateu no teto
 
 <div class="kw-cols-2 mt-3 text-sm">
-  <KwCard heading="Annotation sprawl" icon="🏷️" variant="warn">
-    Anything past host/path — rewrites, canary weights, header matches, timeouts —
-    lives in <strong>controller-specific annotations</strong>. Untyped, unvalidated,
-    and different for every controller.
+  <KwCard heading="Alastramento de annotations" icon="🏷️" variant="warn">
+    Qualquer coisa além de host/path — rewrites, pesos de canary, casamento de
+    headers, timeouts — vive em <strong>annotations específicas de cada
+    controller</strong>. Sem tipos, sem validação e diferentes para cada controller.
   </KwCard>
-  <KwCard heading="Not portable" icon="📦" variant="warn">
-    An Ingress tuned for one controller's annotation dialect doesn't move to the
-    next — the annotations don't carry. Every controller swap is a rewrite.
+  <KwCard heading="Não portável" icon="📦" variant="warn">
+    Um Ingress afinado para o dialeto de annotations de um controller não se move
+    para o próximo — as annotations não acompanham. Cada troca de controller é uma
+    reescrita.
   </KwCard>
-  <KwCard heading="No role separation" icon="👥" variant="plain">
-    One flat object mixes what the <strong>cluster operator</strong> owns (ports,
-    TLS, the load balancer) with what the <strong>app team</strong> owns (paths,
-    weights). No clean boundary.
+  <KwCard heading="Sem separação de papéis" icon="👥" variant="plain">
+    Um único objeto plano mistura o que o <strong>operador do cluster</strong>
+    possui (portas, TLS, o load balancer) com o que o <strong>time da
+    aplicação</strong> possui (paths, pesos). Nenhuma fronteira limpa.
   </KwCard>
-  <KwCard heading="Thin data model" icon="📉" variant="plain">
-    Host + path + backend, and that's about it. Header/method matching, traffic
-    splitting, and path rewrites simply aren't in the spec.
+  <KwCard heading="Modelo de dados raso" icon="📉" variant="plain">
+    Host + path + backend, e é mais ou menos isso. Casamento por header/método,
+    divisão de tráfego e rewrites de path simplesmente não estão no spec.
   </KwCard>
 </div>
 
 <div v-click class="mt-4 kw-muted text-sm">
 
-The fix is a typed, role-separated successor: **Gateway API** — red line **5/5**,
-next up.
+O conserto é um sucessor tipado e com papéis separados: o **Gateway API** — red
+line **5/5**, a seguir.
 
 </div>
 
 <!--
-Speaker: Ingress is frozen but everywhere — teach it. Be honest about the ceiling:
-the moment you need anything beyond host/path you fall into per-vendor
-annotations, and portability + typing + role separation all break. The retirement
-sharpened this: annotation dialects die with their controller. Even our lab felt
-the thin data model — we route by host because the spec has no typed way to
-rewrite a path. That's precisely the gap Gateway API (GatewayClass/Gateway/
-HTTPRoute) fills, and it reuses the same routing mental model. Bridge to S09 as
-red line 5/5 — Day 2, taught on Envoy Gateway (class `eg`); ingress2gateway
-carries your Ingress rules over.
+Speaker: o Ingress está congelado mas está em todo lugar — ensine-o. Seja honesto
+sobre o teto: no momento em que você precisa de qualquer coisa além de host/path
+você cai em annotations por fornecedor, e portabilidade + tipagem + separação de
+papéis quebram todas. A aposentadoria afiou isso: dialetos de annotation morrem
+com seu controller. Até o nosso lab sentiu o modelo de dados raso — roteamos por
+host porque o spec não tem um jeito tipado de reescrever um path. Essa é
+precisamente a lacuna que o Gateway API (GatewayClass/Gateway/HTTPRoute)
+preenche, e ele reutiliza o mesmo modelo mental de roteamento. Ponte para o S09
+como red line 5/5 — Day 2, ensinado sobre o Envoy Gateway (classe `eg`); o
+ingress2gateway carrega suas regras de Ingress para lá.
 -->
 
 ---
 layout: recap
-heading: 'Recap — the full Day-1 spine, one manifest family'
-next: 'Gateway API — the typed, role-separated successor to Ingress (red line 5/5)'
+heading: 'Recap — a espinha completa do Day 1, uma família de manifestos'
+next: 'Gateway API — o sucessor tipado e com papéis separados do Ingress (red line 5/5)'
 ---
 
-- An **Ingress** is L7 HTTP rules (host + path + required `pathType`) that route to
-  **Services** — the north-south front door a `ClusterIP` couldn't be
-- It is **inert without a controller**; `IngressClass` links them, and a missing
-  controller = an Ingress with no address and no traffic (check that first)
-- `ingress.yaml` fronts two sites on one entry point — `web.example.com` → **`web`**
-  (v1), `web2.example.com` → **`web2`** (v2) — and can terminate **TLS** — red line 4/5
-- The API is **frozen** and the retired reference controller made **controller choice
-  real** — we run **Contour** (CNCF, maintained); `ingress2gateway` bridges forward
-- Day 1 built one growing family: **`pod.yaml` → `deployment.yaml` → `service.yaml`
-  → `ingress.yaml`** — problem, mental model, minimal YAML, run, observe, break, fix
+- Um **Ingress** é um conjunto de regras HTTP L7 (host + path + `pathType`
+  obrigatório) que roteiam para **Services** — a porta da frente norte-sul que um
+  `ClusterIP` não podia ser
+- Ele é **inerte sem um controller**; o `IngressClass` os liga, e um controller
+  ausente = um Ingress sem endereço e sem tráfego (cheque isso primeiro)
+- O `ingress.yaml` põe dois sites atrás de um ponto de entrada —
+  `web.example.com` → **`web`** (v1), `web2.example.com` → **`web2`** (v2) — e
+  pode terminar **TLS** — red line 4/5
+- A API está **congelada** e o controller de referência aposentado tornou a
+  **escolha de controller algo real** — rodamos o **Contour** (CNCF, mantido); o
+  `ingress2gateway` faz a ponte adiante
+- O Day 1 construiu uma família que cresce: **`pod.yaml` → `deployment.yaml` →
+  `service.yaml` → `ingress.yaml`** — problema, modelo mental, YAML mínimo,
+  executar, observar, quebrar, consertar
 
 <!--
-Speaker: this is the Day-1 capstone. Walk the manifest family out loud: a Pod runs
-the container, a Deployment keeps N of them healthy and upgradable, a Service gives
-them one stable in-cluster address, an Ingress exposes that by host with TLS.
-Every step extended the last. Then set up Day 2: Gateway API finishes the red line
-(same web/web2 backends, typed routing, Envoy Gateway), and the rest of Day 2
-layers config, storage, and running-well concerns. Hand off to Lab 08 — it
-installs Contour on kind (or uses the shared controller), creates the
-IngressClass, and proves host routing plus the loud pathType break and the silent
-wrong-class break.
+Speaker: este é o gran finale do Day 1. Percorra a família de manifestos em voz
+alta: um Pod roda o container, um Deployment mantém N deles saudáveis e
+atualizáveis, um Service lhes dá um endereço estável dentro do cluster, um
+Ingress expõe isso por host com TLS. Cada passo estendeu o anterior. Depois
+prepare o Day 2: o Gateway API termina a red line (mesmos backends web/web2,
+roteamento tipado, Envoy Gateway), e o resto do Day 2 empilha configuração,
+storage e preocupações de rodar bem. Passe o bastão para o Lab 08 — ele instala o
+Contour no kind (ou usa o controller compartilhado), cria o IngressClass e prova
+o roteamento por host mais o break barulhento do pathType e o break silencioso da
+classe errada.
 -->
 
 ---
@@ -510,13 +532,13 @@ duration: 25 min
 env: kind ✓ (controller install) · namespace ✓ (shared controller)
 ---
 
-## Lab 08 — Route two hostnames through a controller
+## Lab 08 — Roteie dois hostnames através de um controller
 
-- **kind:** install **Contour** (pinned quickstart) and create the `contour`
-  **IngressClass** · **shared:** use the provided controller + your assigned hostnames
-- Deploy two backends — `web` (**workshop-web:v1**) and `web2` (**v2**), Service
-  port 80 → container 8080; add `ingress.yaml` routing one host to each
-- `curl` with a `Host:` header — the response body **names the version** that answered
-- **Break it twice:** drop `pathType` → `apply` **rejected** (loud); point
-  `ingressClassName` at a class nobody owns → **silent** 404; fix both
-- Stretch: terminate **TLS** with a self-signed Secret · preview `ingress2gateway`.
+- **kind:** instale o **Contour** (quickstart fixado) e crie o **IngressClass**
+  `contour` · **compartilhado:** use o controller fornecido + seus hostnames designados
+- Faça o deploy de dois backends — `web` (**workshop-web:v1**) e `web2` (**v2**), porta 80
+  do Service → container 8080; adicione o `ingress.yaml` roteando um host para cada
+- `curl` com um header `Host:` — o corpo da resposta **nomeia a versão** que respondeu
+- **Quebre duas vezes:** remova o `pathType` → `apply` **rejeitado** (barulhento); aponte
+  o `ingressClassName` para uma classe sem dono → 404 **silencioso**; conserte os dois
+- Stretch: termine **TLS** com um Secret autoassinado · prévia do `ingress2gateway`.

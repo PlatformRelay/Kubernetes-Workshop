@@ -1,20 +1,21 @@
-## Known limitations
+## Limitações conhecidas
 
-Honest leftovers for facilitators — not a release blocker, and **not** a pacing
-contract. Room tempo depends on the presenter, the audience, and which optional
-sections you keep.
+Pendências assumidas com honestidade, para facilitadores — não são bloqueio de release e
+**não** são um contrato de pacing. O ritmo da sala depende do apresentador, da audiência e
+de quais seções opcionais você mantém.
 
-- **S24 (Operator dev / kubebuilder) is a deferred stub** — it needs a Go +
-  kubebuilder toolchain and is not scheduled as a full hands-on lab until authored.
-- **Some add-on-heavy labs** (notably Contour, Envoy Gateway, metrics-server,
-  cert-manager, Argo CD, kube-prometheus paths) have stronger paper/CI coverage than
-  end-to-end clean-`kind` smoke on every combination. Dry-runs and authored commands
-  are in tree; expect occasional install-order or `describe` string drift on a fresh
-  cluster and budget a dry-run of the add-ons *your* cut needs.
-- **Syllabus minute marks** are planning aids for facilitators, not measured delivery
-  facts. Adjust on the day.
+- **S24 (Operator dev / kubebuilder) é um stub `deferred`** — depende de uma toolchain Go +
+  kubebuilder e não está programado como lab hands-on completo enquanto não for escrito.
+- **Alguns labs com muitos add-ons** (em especial os caminhos de Contour, Envoy Gateway,
+  metrics-server, cert-manager, Argo CD e kube-prometheus) têm cobertura mais forte no
+  papel/CI do que smoke de ponta a ponta em `kind` limpo para todas as combinações. Os
+  dry-runs e os comandos escritos estão na árvore do repositório; espere eventual variação
+  de ordem de instalação ou de strings do `describe` em um cluster novo, e reserve tempo
+  para um dry-run dos add-ons que o *seu* corte precisa.
+- **As marcações de minutos do syllabus** são apoios de planejamento para facilitadores,
+  não fatos medidos de entrega. Ajuste no dia.
 
-> **Source of truth.** This file is the single tracked copy of the known-limitations
-> statement. Pre-release tags (semver with a `-`, e.g. `v0.5.0-beta.1`) still prepend
-> this file to auto-generated GitHub Release notes via `release.yml`. Edit here —
-> do not fork the wording.
+> **Fonte da verdade.** Este arquivo é a única cópia versionada da declaração de limitações
+> conhecidas. Tags de pré-release (semver com um `-`, por exemplo `v0.5.0-beta.1`) ainda
+> prefixam este arquivo às release notes geradas automaticamente no GitHub via
+> `release.yml`. Edite aqui — não duplique o texto em outro lugar.

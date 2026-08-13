@@ -15,25 +15,25 @@ const beats = [
     verb: 'get',
     cmd: 'kubectl get pods -l app=web',
     out: `NAME          READY   STATUS    RESTARTS   AGE\nweb-6f8c-x2l   0/1     Pending   0          12s`,
-    note: 'Surface view — is anything wrong at a glance?',
+    note: 'Visão de superfície — dá pra ver algo errado de cara?',
   },
   {
     verb: 'describe',
     cmd: 'kubectl describe pod web-6f8c-x2l',
     out: `Events:\n  Warning  FailedScheduling  0/3 nodes available: insufficient memory\n  Normal   Scheduled         Successfully assigned default/web-6f8c-x2l`,
-    note: 'Events tell you why — status is just the headline.',
+    note: 'Os Events dizem o porquê — o status é só a manchete.',
   },
   {
     verb: 'logs',
     cmd: 'kubectl logs web-6f8c-x2l -c web --previous',
     out: `Error: OOMKilled\nexit code 137`,
-    note: 'App output from the last crash — pair with describe.',
+    note: 'Saída da aplicação no último crash — use junto com o describe.',
   },
   {
     verb: 'apply + diff',
     cmd: 'kubectl diff -f pod.yaml && kubectl apply -f pod.yaml',
     out: `diff -u -N /tmp/LIVE-… /tmp/MERGED-…\n+  memory: 256Mi\napply: configured`,
-    note: 'Preview, then declare — the safe-change sequence.',
+    note: 'Pré-visualize, depois declare — a sequência segura de mudança.',
   },
 ]
 
@@ -43,10 +43,11 @@ const beat = () => beats[Math.min(props.step, beats.length - 1)]
 <template>
   <div class="kw-kvd">
     <div class="kw-kvd-story">
-      <span class="kw-kicker">Story · 03:14 on-call</span>
+      <span class="kw-kicker">História · 03:14 de plantão</span>
       <p>
-        Deployment <code>web</code> is flapping. You don't guess — you walk the verb chain:
-        <strong>get → describe → logs</strong>, then <strong>diff → apply</strong> to fix it.
+        O Deployment <code>web</code> está oscilando. Você não chuta — você percorre a cadeia
+        de verbos: <strong>get → describe → logs</strong>, depois
+        <strong>diff → apply</strong> para consertar.
       </p>
     </div>
 

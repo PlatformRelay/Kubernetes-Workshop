@@ -1,94 +1,98 @@
-# Lab 21 — GitOps with Argo CD (S21)
+# Lab 21 — GitOps com Argo CD (S21)
 
 <!-- lab-contract:v1 -->
 
 | | |
 | --- | --- |
-| **Section** | S21 — GitOps with Argo CD |
-| **Environment** | **kind ✓** (installs Argo CD) / shared namespace: **read-only** |
+| **Section** | S21 — GitOps com Argo CD |
+| **Environment** | **kind ✓** (instala o Argo CD) / namespace compartilhado: **read-only** |
 | **Estimated time** | 25 min |
 
 ## Objective
 
-Install **Argo CD** on a throwaway kind cluster, hand it one **`Application`** that points at a
-public Git repo, and watch it **pull** that repo into the cluster — going **Synced / Healthy**
-on its own. Then feel the part that makes GitOps different from `kubectl apply`: **drift** a
-managed resource by hand and watch Argo CD's **self-heal** revert it back to Git.
+Instalar o **Argo CD** em um cluster kind descartável, entregar a ele uma **`Application`** que
+aponta para um repo Git público e observá-lo fazer **pull** desse repo para dentro do cluster —
+ficando **Synced / Healthy** por conta própria. Depois, sentir a parte que torna o GitOps
+diferente do `kubectl apply`: provocar **drift** em um recurso gerenciado, na mão, e observar o
+**self-heal** do Argo CD revertê-lo de volta ao Git.
 
-The whole lab turns on one idea: **Git is the desired state, and an in-cluster agent
-continuously reconciles the cluster toward it** — the S03 reconcile loop, with Git as `spec`.
+O lab inteiro gira em torno de uma ideia: **Git é o estado desejado, e um agente dentro do
+cluster reconcilia continuamente o cluster em direção a ele** — o loop de reconciliação da S03,
+com o Git como `spec`.
 
-> **Why not the `web` app?** Every other Day-1/2 lab extends the `web` Deployment. This one
-> deliberately uses the canonical public repo **`argoproj/argocd-example-apps` / `guestbook`**
-> so it runs on kind with **nothing to host**. The one beat that needs a *writable* repo
-> (change Git → re-sync) is the optional **Stretch** at the end; the required self-heal
-> break→fix needs no Git write at all.
+> **Por que não a app `web`?** Todos os outros labs dos Dias 1/2 estendem o Deployment `web`.
+> Este usa deliberadamente o repo público canônico **`argoproj/argocd-example-apps` /
+> `guestbook`** para rodar no kind **sem nada para hospedar**. O único momento que precisa de um
+> repo *gravável* (mudar o Git → re-sincronizar) é o **Stretch** opcional no final; o break→fix
+> de self-heal obrigatório não exige nenhuma escrita no Git.
 
 ## Prerequisites
 
-- **kind path (do this):** Docker + `kind` + `kubectl`, and rights to create a local cluster.
-  You'll make a throwaway cluster named `gitops`. Argo CD runs cluster-wide, so this is
-  **kind-only** — you can't install it into a shared assigned namespace.
-- **Shared-cluster path:** **read-only.** If the facilitator has hung an Argo CD in the room,
-  you can *inspect* a running `Application` (Steps 3–4 read-only) but not install or drift it.
-  Prefer kind if you can.
-- The `argocd` CLI is **optional** — every required step here works with `kubectl` alone.
-- Internet pull access for the Argo CD images and the guestbook image
+- **Caminho kind (faça este):** Docker + `kind` + `kubectl`, e permissão para criar um cluster
+  local. Você vai criar um cluster descartável chamado `gitops`. O Argo CD roda em escopo de
+  cluster, então este lab é **kind-only** — você não pode instalá-lo em um namespace
+  compartilhado atribuído.
+- **Caminho shared-cluster:** **read-only.** Se o facilitador tiver pendurado um Argo CD na
+  sala, você pode *inspecionar* uma `Application` em execução (Steps 3–4 somente leitura), mas
+  não instalar nem provocar drift nela. Prefira o kind se puder.
+- O CLI `argocd` é **opcional** — todo passo obrigatório aqui funciona só com `kubectl`.
+- Acesso de pull à internet para as images do Argo CD e a image do guestbook
   (`gcr.io/google-samples/gb-frontend:v5`).
 
 ## Files used
 
-- `application.yaml` — the Argo CD `Application` that binds the guestbook Git source to this
-  cluster (the slide's magic-move final frame, **byte-for-byte**).
+- `application.yaml` — a `Application` do Argo CD que liga a fonte Git do guestbook a este
+  cluster (o frame final do magic-move do slide, **byte a byte**).
 
-The Application carries no extra labels — it lives in the `argocd` namespace and is cleaned up
-by name; the guestbook workloads it creates land in `default` and are pruned by Argo on delete.
+A Application não carrega labels extras — ela vive no namespace `argocd` e é limpa por nome; os
+workloads do guestbook que ela cria caem em `default` e são removidos (prune) pelo Argo no delete.
 
 ---
 
 ## Guided task
 
-Work through the steps without opening the companion unless you are blocked. The spoiler
-contains exact commands, expected state, explanations, and recovery guidance.
+Percorra os passos sem abrir o companion, a menos que fique travado. O spoiler contém os
+comandos exatos, o estado esperado, explicações e orientações de recuperação.
 
-[Spoiler: guided solutions and expected output](./21-gitops.solution.md#guided-solutions)
+[Spoiler: soluções guiadas e saída esperada](./21-gitops.solution.md#guided-solutions)
 
-### Step 0 — a cluster, and Argo CD on it
+### Step 0 — um cluster, e o Argo CD nele
 
-### kind path (do this)
+### Caminho kind (faça este)
 
 ```bash
 kind create cluster --name gitops
 kubectl create namespace argocd
 
-# server-side apply: the install manifest is too big for client-side apply
+# server-side apply: o manifesto de install é grande demais para o apply client-side
 kubectl apply -n argocd --server-side --force-conflicts \
   -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
 
-# wait for the control plane to come up (~1–2 min on a fresh kind)
+# espere o control plane subir (~1–2 min em um kind novo)
 kubectl -n argocd wait --for=condition=available deploy --all --timeout=300s
 ```
 
-**Task:** confirm the Argo CD Deployments are all Available.
+**Tarefa:** confirme que todos os Deployments do Argo CD estão Available.
 
-**Question (optional):** where's the admin password, if you want to open the UI?
+**Pergunta (opcional):** onde está a senha de admin, se você quiser abrir a UI?
 
-### shared-cluster path (read-only)
+### Caminho shared-cluster (read-only)
 
 ```bash
-# only if a facilitator Argo CD exists; you are a spectator here
+# só se existir um Argo CD do facilitador; aqui você é espectador
 kubectl config set-context --current --namespace=argocd
 kubectl get applications
 ```
 
-Skip Steps 0–2's writes; join at **Step 3** to read a running Application's status.
+Pule as escritas dos Steps 0–2; entre no **Step 3** para ler o status de uma Application em
+execução.
 
 ---
 
-### Step 1 — write the Application
+### Step 1 — escreva a Application
 
-Create `application.yaml`. This is the entire GitOps declaration: **source** (the desired state,
-in Git) + **destination** (where it lands) + **syncPolicy** (keep it matching, hands-off).
+Crie o `application.yaml`. Esta é a declaração GitOps inteira: **source** (o estado desejado, no
+Git) + **destination** (onde ele cai) + **syncPolicy** (mantenha igual, sem intervenção).
 
 ```bash
 cat > application.yaml <<'EOF'
@@ -113,7 +117,7 @@ spec:
 EOF
 ```
 
-**Task:** validate it against the server before applying (the CRD ships with Argo CD).
+**Tarefa:** valide-o contra o server antes de aplicar (o CRD vem junto com o Argo CD).
 
 ```bash
 kubectl apply --dry-run=server -f application.yaml
@@ -121,118 +125,125 @@ kubectl apply --dry-run=server -f application.yaml
 
 ---
 
-### Step 2 — apply it and watch Git pull into the cluster
+### Step 2 — aplique-a e veja o Git ser puxado para o cluster
 
-There is **no "sync" command** here — declaring the Application is enough. Because
-`syncPolicy.automated` is set, Argo CD sees the new Application, pulls the repo, and applies it.
+**Não existe comando "sync"** aqui — declarar a Application já basta. Como o
+`syncPolicy.automated` está definido, o Argo CD vê a nova Application, faz o pull do repo e o
+aplica.
 
 ```bash
 kubectl apply -f application.yaml
-kubectl -n argocd get application guestbook -w   # Ctrl-C once it reads Synced / Healthy
+kubectl -n argocd get application guestbook -w   # Ctrl-C assim que ler Synced / Healthy
 ```
 
-**Task:** watch the app reach `SYNC STATUS: Synced` and `HEALTH STATUS: Healthy`, then confirm
-the guestbook workload actually landed in `default`.
+**Tarefa:** observe a app chegar a `SYNC STATUS: Synced` e `HEALTH STATUS: Healthy`, depois
+confirme que o workload do guestbook realmente caiu em `default`.
 
 ```bash
 kubectl -n default get deploy,svc guestbook-ui
 kubectl -n default get pods -l app=guestbook-ui
 ```
 
-**Question:** you set `targetRevision: HEAD`. What does that track, and when would you change it?
+**Pergunta:** você definiu `targetRevision: HEAD`. O que isso acompanha, e quando você mudaria?
 
 ---
 
-### Step 3 — read both statuses (the two independent axes)
+### Step 3 — leia os dois statuses (os dois eixos independentes)
 
-Argo reports **two** things that move independently: is the cluster == Git (**sync**), and are the
-workloads OK (**health**)?
+O Argo reporta **duas** coisas que se movem de forma independente: o cluster == Git (**sync**) e
+os workloads estão OK (**health**)?
 
 ```bash
 kubectl -n argocd get application guestbook \
   -o custom-columns='SYNC:.status.sync.status,HEALTH:.status.health.status'
 ```
 
-**Task:** read off the sync status and the health status separately.
+**Tarefa:** leia o sync status e o health status separadamente.
 
 ---
 
-### Step 4 — break→fix: drift it by hand, watch self-heal revert
+### Step 4 — break→fix: provoque drift na mão, veja o self-heal reverter
 
-The GitOps moment. Git says `guestbook-ui` has **1** replica. Change it by hand and watch Argo
-CD notice the drift and **put it back** — no human, no `kubectl apply`.
+O momento GitOps. O Git diz que o `guestbook-ui` tem **1** réplica. Mude isso na mão e observe o
+Argo CD perceber o drift e **colocar de volta** — sem humano, sem `kubectl apply`.
 
 ```bash
 kubectl -n default scale deployment guestbook-ui --replicas=5
-kubectl -n default get deploy guestbook-ui -w    # Ctrl-C after it settles back to 1
+kubectl -n default get deploy guestbook-ui -w    # Ctrl-C depois que assentar de volta em 1
 ```
 
-**Task:** watch the replica count briefly jump toward 5, then get dragged back to **1** by Argo.
+**Tarefa:** veja a contagem de réplicas saltar brevemente em direção a 5 e depois ser arrastada
+de volta para **1** pelo Argo.
 
-**Question (required):** what would happen to that hand-scale if `selfHeal` were **off**?
+**Pergunta (obrigatória):** o que aconteceria com esse scale manual se o `selfHeal` estivesse
+**desligado**?
 
 ---
 
 ## Observe
 
-- **Pull, not push.** You applied one `Application`; Argo CD pulled the guestbook repo and
-  deployed it — you never `kubectl apply`'d the guestbook manifests yourself.
-- **Synced / Healthy are independent.** Sync = "cluster == Git?"; health = "workloads OK?" — read
-  both off `.status.sync.status` and `.status.health.status`.
-- **Self-heal reverts drift.** A hand-scale to 5 was dragged back to Git's 1, automatically.
-- **Drift detection ≠ self-heal.** With `selfHeal: false`, the same drift stays `OutOfSync` and is
-  *not* reverted — detection always runs; self-heal is the auto-fix on top.
+- **Pull, não push.** Você aplicou uma única `Application`; o Argo CD fez o pull do repo do
+  guestbook e o implantou — você nunca deu `kubectl apply` nos manifestos do guestbook.
+- **Synced / Healthy são independentes.** Sync = "cluster == Git?"; health = "workloads OK?" —
+  leia os dois em `.status.sync.status` e `.status.health.status`.
+- **O self-heal reverte o drift.** Um scale manual para 5 foi arrastado de volta para o 1 do
+  Git, automaticamente.
+- **Detecção de drift ≠ self-heal.** Com `selfHeal: false`, o mesmo drift continua `OutOfSync` e
+  *não* é revertido — a detecção sempre roda; o self-heal é a correção automática por cima.
 
 ## Challenge
 
-Guestbook shows OutOfSync after a manual scale, but replicas do not return to Git.
-Diagnose automated sync versus selfHeal, restore self-heal (or sync), and prove the live
-Deployment matches Git again.
+O guestbook mostra OutOfSync depois de um scale manual, mas as réplicas não voltam ao Git.
+Diagnostique sync automated versus selfHeal, restaure o self-heal (ou o sync) e prove que o
+Deployment vivo corresponde ao Git de novo.
 
 **Difficulty:** Intermediate
 
-**Success criteria:** Read Application .status.sync.status and .status.health.status, identify that
-selfHeal is false or automated sync is incomplete, re-enable selfHeal or sync, and show
-replicas return to the Git-desired count with Synced status.
+**Success criteria:** Leia .status.sync.status e .status.health.status da Application,
+identifique que selfHeal está false ou que o sync automated está incompleto, reative o selfHeal
+ou o sync, e prove que as réplicas voltam à contagem desejada pelo Git com status Synced.
 
-**Hints:** Inspect spec.syncPolicy.automated on the Application; compare kubectl get deploy
-replicas with the Git guestbook manifest; patch selfHeal true or run argocd/kubectl sync.
+**Hints:** Inspecione spec.syncPolicy.automated na Application; compare as réplicas de
+kubectl get deploy com o manifesto guestbook do Git; aplique patch de selfHeal true ou rode
+argocd/kubectl sync.
 
-[Spoiler: challenge solution](./21-gitops.solution.md#challenge-solution)
+[Spoiler: solução do challenge](./21-gitops.solution.md#challenge-solution)
 
 ## Verify
 
-Confirm Application evidence before cleanup.
+Confirme as evidências da Application antes do cleanup.
 
 ```bash
 kubectl -n argocd get application guestbook
 kubectl -n default get deploy,svc guestbook-ui
 ```
 
-Expected: sync/health status are still readable so self-heal behaviour can be re-checked.
+Esperado: os status de sync/health continuam legíveis, para que o comportamento de self-heal
+possa ser reverificado.
 
 ## Cleanup / reset
 
 ```bash
-# delete the Application; prune:true means Argo removes the guestbook workloads it created
+# delete a Application; prune:true significa que o Argo remove os workloads do guestbook que criou
 kubectl -n argocd delete application guestbook
-kubectl -n default get deploy,svc guestbook-ui   # expect: NotFound
+kubectl -n default get deploy,svc guestbook-ui   # esperado: NotFound
 
-# tidy local files
+# limpe os arquivos locais
 rm -f application.yaml
 ```
 
-## Stretch (optional) — change Git, watch it re-sync
+## Stretch (optional) — mude o Git, veja-o re-sincronizar
 
-This is the "Git is the source of truth" beat end-to-end — it needs a repo **you can push to**.
+Este é o momento "o Git é a fonte da verdade" de ponta a ponta — ele precisa de um repo **em que
+você consiga dar push**.
 
-1. **Fork** `https://github.com/argoproj/argocd-example-apps` on GitHub (or push a copy to any Git
-   host you control).
-2. Point the Application at your fork: edit `application.yaml`'s `repoURL` to your fork's URL and
-   `kubectl apply -f application.yaml` again.
-3. In your fork, edit `guestbook/guestbook-ui-deployment.yaml` — bump `replicas` to `2` — and
+1. Faça um **fork** de `https://github.com/argoproj/argocd-example-apps` no GitHub (ou envie uma
+   cópia para qualquer host Git que você controle).
+2. Aponte a Application para o seu fork: edite o `repoURL` do `application.yaml` para a URL do
+   seu fork e dê `kubectl apply -f application.yaml` de novo.
+3. No seu fork, edite `guestbook/guestbook-ui-deployment.yaml` — suba `replicas` para `2` — e
    `git commit && git push`.
-4. Watch Argo detect the new commit and re-sync:
+4. Observe o Argo detectar o novo commit e re-sincronizar:
 
 ```bash
 kubectl -n argocd get application guestbook -w

@@ -5,61 +5,62 @@
 | | |
 | --- | --- |
 | **Section** | S13 — Resources & limits |
-| **Environment** | namespace ✓ / kind ✓ *(no cluster-admin; a ResourceQuota/LimitRange in your own namespace needs no special rights)* |
+| **Environment** | namespace ✓ / kind ✓ *(sem cluster-admin; uma ResourceQuota/LimitRange no seu próprio namespace não exige direitos especiais)* |
 | **Estimated time** | 30 min |
 
 ## Objective
 
-Feel resource management from both ends. You will read the **QoS class** Kubernetes derives
-from your `resources` (Burstable, Guaranteed, BestEffort), force a container **past its memory
-limit** and watch it get **OOMKilled** (exit 137) and restarted, then meet the other kind of
-enforcement — a **ResourceQuota** that rejects a Pod at **admission** so it never exists. The
-whole lab turns on one contrast: **runtime** enforcement (the kubelet kills/throttles a Pod
-that misbehaves) vs **admission** enforcement (the API server refuses to create it at all).
+Sinta o gerenciamento de recursos pelas duas pontas. Você vai ler a **QoS class** que o
+Kubernetes deriva dos seus `resources` (Burstable, Guaranteed, BestEffort), forçar um container
+**para além do seu limit de memória** e vê-lo ser **OOMKilled** (exit 137) e reiniciado, e então
+conhecer o outro tipo de imposição — uma **ResourceQuota** que rejeita um Pod no **admission**,
+de modo que ele nunca chega a existir. O lab inteiro gira em torno de um contraste: imposição em
+**runtime** (o kubelet mata/estrangula um Pod que se comporta mal) vs imposição no **admission**
+(o API server se recusa a criá-lo).
 
-> **Set your namespace once.** Everything runs in your assigned namespace (or a kind cluster).
-> Set a shell variable so every command is copy-pasteable:
+> **Defina seu namespace uma vez.** Tudo roda no seu namespace atribuído (ou em um cluster
+> kind). Defina uma variável de shell para que todo comando possa ser copiado e colado:
 >
 > ```bash
-> export NS=<your-assigned-namespace>          # kind users: export NS=default
+> export NS=<your-assigned-namespace>          # usuários de kind: export NS=default
 > kubectl config set-context --current --namespace="$NS"
 > ```
 
 ## Prerequisites
 
-- Labs 05–06 concepts (Pod, Deployment). This lab **creates its own** objects and doesn't
-  depend on leftovers from earlier labs.
-- `kubectl` against your assigned namespace **or** a local kind cluster. No admin rights.
-- Internet pull access for `ghcr.io/platformrelay/workshop-web:v1` and `polinux/stress` (the classic memory-hog image).
-- Optional: a metrics pipeline (`kubectl top pods` returns data) for the CPU-throttle stretch.
-  Not required for the core lab.
+- Conceitos dos Labs 05–06 (Pod, Deployment). Este lab **cria seus próprios** objetos e não
+  depende de sobras de labs anteriores.
+- `kubectl` apontando para seu namespace atribuído **ou** um cluster kind local. Sem direitos de admin.
+- Acesso à internet para baixar `ghcr.io/platformrelay/workshop-web:v1` e `polinux/stress` (a clássica image devoradora de memória).
+- Opcional: um pipeline de métricas (`kubectl top pods` retorna dados) para o stretch de CPU throttling.
+  Não é necessário para o núcleo do lab.
 
 ## Files used
 
-- `qos-burstable.yaml` — a Pod with `requests` **and** `limits` that differ → **Burstable**.
-- `qos-guaranteed.yaml` — a Pod with `requests == limits` for both cpu & memory → **Guaranteed**.
-- `qos-besteffort.yaml` — a Pod with **no** `resources` → **BestEffort**.
-- `oom-demo.yaml` — a `polinux/stress` Pod that allocates **past** a tiny memory limit.
-- `resourcequota.yaml` — a namespace aggregate cap.
-- `quota-buster.yaml` — a Pod that requests **more than the quota allows**.
+- `qos-burstable.yaml` — um Pod com `requests` **e** `limits` diferentes → **Burstable**.
+- `qos-guaranteed.yaml` — um Pod com `requests == limits` para cpu e memória → **Guaranteed**.
+- `qos-besteffort.yaml` — um Pod **sem** `resources` → **BestEffort**.
+- `oom-demo.yaml` — um Pod `polinux/stress` que aloca **acima** de um limit de memória minúsculo.
+- `resourcequota.yaml` — um teto agregado para o namespace.
+- `quota-buster.yaml` — um Pod que faz request de **mais do que a quota permite**.
 
-Everything is labelled `app: s13` so cleanup is a single label selector.
+Tudo é rotulado com `app: s13` para que o cleanup seja um único label selector.
 
 ---
 
 ## Guided task
 
-Work through the steps without opening the companion unless you are blocked. The spoiler
-contains exact commands, expected state, explanations, and recovery guidance.
+Percorra os passos sem abrir o companion, a menos que fique travado. O spoiler
+contém os comandos exatos, o estado esperado, explicações e orientações de recuperação.
 
-[Spoiler: guided solutions and expected output](./13-resources.solution.md#guided-solutions)
+[Spoiler: soluções guiadas e saída esperada](./13-resources.solution.md#guided-solutions)
 
-### Step 0 — three Pods, three QoS classes
+### Step 0 — três Pods, três QoS classes
 
-You never type a QoS class — Kubernetes **derives** it from the `resources` you set and shows
-it in `kubectl describe pod`. Apply all three variants of the same `web` container and read the
-class off each. (They're bare Pods so each maps to exactly one class; the rule is identical
-under a Deployment.)
+Você nunca digita uma QoS class — o Kubernetes a **deriva** dos `resources` que você define e a
+mostra em `kubectl describe pod`. Aplique as três variantes do mesmo container `web` e leia a
+classe de cada uma. (São Pods avulsos, então cada um mapeia para exatamente uma classe; a regra
+é idêntica sob um Deployment.)
 
 ```bash
 cat > qos-burstable.yaml <<'EOF'
@@ -89,7 +90,7 @@ spec:
       image: ghcr.io/platformrelay/workshop-web:v1
       resources:
         requests: { cpu: 200m, memory: 128Mi }
-        limits:   { cpu: 200m, memory: 128Mi }   # request == limit, both set → Guaranteed
+        limits:   { cpu: 200m, memory: 128Mi }   # request == limit, ambos definidos → Guaranteed
 EOF
 
 cat > qos-besteffort.yaml <<'EOF'
@@ -102,14 +103,14 @@ spec:
   containers:
     - name: web
       image: ghcr.io/platformrelay/workshop-web:v1
-      # no resources block at all → BestEffort
+      # nenhum bloco resources → BestEffort
 EOF
 
 kubectl apply -f qos-burstable.yaml -f qos-guaranteed.yaml -f qos-besteffort.yaml
 kubectl get pods -l app=s13
 ```
 
-**Task:** read the QoS class of each Pod and match it to the rule.
+**Tarefa:** leia a QoS class de cada Pod e case-a com a regra.
 
 ```bash
 for p in qos-burstable qos-guaranteed qos-besteffort; do
@@ -117,17 +118,17 @@ for p in qos-burstable qos-guaranteed qos-besteffort; do
 done
 ```
 
-**Question:** if you delete the `limits` from `qos-guaranteed` but keep the `requests`, what
-QoS class does it become — and what if instead you delete the `requests` and keep only
-`limits`?
+**Pergunta:** se você deletar os `limits` de `qos-guaranteed` mas mantiver os `requests`, em que
+QoS class ele se transforma — e se, em vez disso, você deletar os `requests` e mantiver apenas
+os `limits`?
 
 ---
 
-### Step 1 — break→fix: push a container past its memory limit
+### Step 1 — break→fix: empurre um container para além do seu limit de memória
 
-Memory is **incompressible** — a container that exceeds its memory limit can't be "slowed
-down," so the kernel **kills** it. Reproduce it deliberately with `polinux/stress`, which
-allocates a fixed amount of memory on demand.
+Memória é **incompressível** — um container que excede seu limit de memória não pode ser
+"desacelerado", então o kernel o **mata**. Reproduza isso deliberadamente com `polinux/stress`,
+que aloca uma quantidade fixa de memória sob demanda.
 
 ```bash
 cat > oom-demo.yaml <<'EOF'
@@ -141,27 +142,27 @@ spec:
     - name: hog
       image: polinux/stress
       command: ["stress"]
-      args: ["--vm", "1", "--vm-bytes", "150M", "--vm-hang", "1"]   # wants ~150 MB
+      args: ["--vm", "1", "--vm-bytes", "150M", "--vm-hang", "1"]   # quer ~150 MB
       resources:
         requests: { memory: 50Mi }
-        limits:   { memory: 100Mi }        # ceiling BELOW what stress allocates
+        limits:   { memory: 100Mi }        # teto ABAIXO do que o stress aloca
 EOF
 
 kubectl apply -f oom-demo.yaml
-# watch it die and get restarted — Ctrl-C after a couple of restarts
+# observe-o morrer e ser reiniciado — Ctrl-C depois de alguns restarts
 kubectl get pod oom-demo -w
 ```
 
-**Task:** the container asks for ~150 MB but is capped at 100Mi. What does `kubectl get`
-show, and what does `describe` say killed it?
+**Tarefa:** o container pede ~150 MB mas está limitado a 100Mi. O que o `kubectl get`
+mostra, e o que o `describe` diz que o matou?
 
 ```bash
 kubectl get pod oom-demo
 kubectl describe pod oom-demo | sed -n '/State:/,/Restart Count/p'
 ```
 
-**Task:** fix it by raising the limit above what the app needs, then confirm it stays up.
-(A Pod's `resources` are immutable, so delete and recreate.)
+**Tarefa:** conserte elevando o limit acima do que a aplicação precisa, depois confirme que ele
+se mantém de pé. (Os `resources` de um Pod são imutáveis, então delete e recrie.)
 
 ```bash
 cat > oom-demo-fixed.yaml <<'EOF'
@@ -178,24 +179,24 @@ spec:
       args: ["--vm", "1", "--vm-bytes", "150M", "--vm-hang", "1"]
       resources:
         requests: { memory: 50Mi }
-        limits:   { memory: 250Mi }        # now comfortably above ~150 MB
+        limits:   { memory: 250Mi }        # agora confortavelmente acima de ~150 MB
 EOF
 
 kubectl delete pod oom-demo
 kubectl apply -f oom-demo-fixed.yaml
-kubectl get pod oom-demo -w        # Ctrl-C once it's Running and RESTARTS stops climbing
+kubectl get pod oom-demo -w        # Ctrl-C quando estiver Running e RESTARTS parar de subir
 ```
 
-**Question:** the container was `OOMKilled` but immediately came back. Which component killed
-it, and which component restarted it?
+**Pergunta:** o container foi `OOMKilled` mas voltou imediatamente. Qual componente o matou,
+e qual componente o reiniciou?
 
 ---
 
-### Step 2 — a namespace aggregate cap (ResourceQuota)
+### Step 2 — um teto agregado do namespace (ResourceQuota)
 
-A **ResourceQuota** caps the *sum* of requests/limits (and object counts) across the whole
-namespace. Clear the QoS Pods first so the used total starts from a known baseline, then apply
-the quota.
+Uma **ResourceQuota** limita a *soma* de requests/limits (e a contagem de objetos) no namespace
+inteiro. Limpe antes os Pods de QoS para que o total usado parta de uma linha de base conhecida,
+depois aplique a quota.
 
 ```bash
 kubectl delete pod qos-burstable qos-guaranteed qos-besteffort oom-demo --ignore-not-found
@@ -208,7 +209,7 @@ metadata:
   labels: { app: s13 }
 spec:
   hard:
-    requests.memory: 256Mi     # total reserved memory across all Pods
+    requests.memory: 256Mi     # memória total reservada somando todos os Pods
     limits.memory: 512Mi
     pods: "5"
 EOF
@@ -217,11 +218,11 @@ kubectl apply -f resourcequota.yaml
 kubectl describe resourcequota team-cap
 ```
 
-**Task:** read how much of the quota is used vs the hard cap.
+**Tarefa:** leia quanto da quota está em uso vs o teto hard.
 
 ---
 
-### Step 3 — break→fix: a Pod that exceeds the quota
+### Step 3 — break→fix: um Pod que excede a quota
 
 ```bash
 cat > quota-buster.yaml <<'EOF'
@@ -235,80 +236,80 @@ spec:
     - name: web
       image: ghcr.io/platformrelay/workshop-web:v1
       resources:
-        requests: { memory: 512Mi }    # 512Mi > the 256Mi requests.memory cap
+        requests: { memory: 512Mi }    # 512Mi > o teto de 256Mi de requests.memory
         limits:   { memory: 512Mi }
 EOF
 
 kubectl apply -f quota-buster.yaml
 ```
 
-**Task:** the create is **rejected**. Read the error — which resource blew the budget, and did
-the Pod get created?
+**Tarefa:** a criação é **rejeitada**. Leia o erro — qual resource estourou o orçamento, e o Pod
+chegou a ser criado?
 
-**Question:** what happens if you submit a Pod with **no** `resources` while this quota is in
-force — and how would a `LimitRange` change that?
+**Pergunta:** o que acontece se você submeter um Pod **sem** `resources` enquanto esta quota
+está em vigor — e como um `LimitRange` mudaria isso?
 
 ## Observe
 
-- QoS class is **derived**, not chosen: **Guaranteed** (all set, `request == limit`),
-  **BestEffort** (nothing set), **Burstable** (everything else). Limits-only still → Guaranteed.
-- A container over its **memory** limit is **OOMKilled** (`Exit Code 137`) and — with the
-  default `restartPolicy: Always` — restarted into **CrashLoopBackOff**.
-- The fix is a correct **limit** (or a smaller app), not removing the limit.
-- A **ResourceQuota** enforces at **admission**: a Pod exceeding it gets `exceeded quota:` and
-  is **never created**; a Pod omitting a constrained resource gets `must specify…`.
-- **Runtime** enforcement (kubelet kills/restarts a live Pod) vs **admission** enforcement (API
-  server rejects before the Pod exists) — the core mental model of the section.
+- A QoS class é **derivada**, não escolhida: **Guaranteed** (tudo definido, `request == limit`),
+  **BestEffort** (nada definido), **Burstable** (todo o resto). Só limits ainda → Guaranteed.
+- Um container acima do seu limit de **memória** é **OOMKilled** (`Exit Code 137`) e — com o
+  `restartPolicy: Always` padrão — reiniciado até cair em **CrashLoopBackOff**.
+- O conserto é um **limit** correto (ou uma aplicação menor), e não remover o limit.
+- Uma **ResourceQuota** impõe no **admission**: um Pod que a excede recebe `exceeded quota:` e
+  **nunca é criado**; um Pod que omite um resource restrito recebe `must specify…`.
+- Imposição em **runtime** (o kubelet mata/reinicia um Pod vivo) vs imposição no **admission**
+  (o API server rejeita antes de o Pod existir) — o modelo mental central da seção.
 
 ## Challenge
 
-A Pod disappears or never schedules after a memory spike. Determine whether the
-signal is OOMKilled (cgroup limit) or a ResourceQuota / scheduling rejection, then
-restore a runnable Pod in the Guaranteed or Burstable class the lab uses.
+Um Pod desaparece ou nunca é agendado depois de um pico de memória. Determine se o
+sinal é OOMKilled (limit do cgroup) ou uma rejeição de ResourceQuota / de agendamento, e então
+restaure um Pod executável na class Guaranteed ou Burstable que o lab usa.
 
 **Difficulty:** Intermediate
 
-**Success criteria:** Identify the exact reason from describe Events (OOMKilled versus quota), restore a
-Running Pod whose resources fit, and show which QoS class status the fixed Pod reports.
+**Success criteria:** Identifique a razão exata a partir dos Events do describe (OOMKilled versus quota), restaure um
+Pod Running cujos resources caibam, e mostre qual status de QoS class o Pod corrigido reporta.
 
-**Hints:** Compare kubectl describe pod last state reason with kubectl describe resourcequota;
-OOMKilled is a container exit, quota failures often reject create.
+**Hints:** Compare o last state reason do kubectl describe pod com o kubectl describe resourcequota;
+OOMKilled é uma saída de container, falhas de quota geralmente rejeitam a criação.
 
-[Spoiler: challenge solution](./13-resources.solution.md#challenge-solution)
+[Spoiler: solução do challenge](./13-resources.solution.md#challenge-solution)
 
 ## Verify
 
-Confirm QoS/quota evidence still exists before cleanup.
+Confirme que a evidência de QoS/quota ainda existe antes do cleanup.
 
 ```bash
 kubectl get pods -n "$NS" -l app=s13 -o custom-columns=NAME:.metadata.name,QOS:.status.qosClass,STATUS:.status.phase
 kubectl get resourcequota -n "$NS"
 ```
 
-Expected: you can still read QoS classes and any ResourceQuota the lab applied.
+Esperado: você ainda consegue ler as QoS classes e qualquer ResourceQuota que o lab aplicou.
 
 ## Cleanup / reset
 
 ```bash
-# scoped cleanup — everything this lab made is labelled app=s13
+# cleanup com escopo — tudo que este lab criou é rotulado com app=s13
 kubectl delete pod -l app=s13 -n "$NS" --ignore-not-found
-kubectl delete resourcequota team-cap -n "$NS" --ignore-not-found   # frees the namespace cap
+kubectl delete resourcequota team-cap -n "$NS" --ignore-not-found   # libera o teto do namespace
 rm -f qos-burstable.yaml qos-guaranteed.yaml qos-besteffort.yaml \
       oom-demo.yaml oom-demo-fixed.yaml resourcequota.yaml quota-buster.yaml
 
-# panic reset (namespace): also removes anything else left in your namespace
+# reset de pânico (namespace): também remove qualquer outra coisa que sobrou no seu namespace
 # kubectl delete pod,resourcequota,limitrange --all -n "$NS" --ignore-not-found
-# panic reset (kind): make kind-down && make kind-up   # or: kind delete cluster
+# reset de pânico (kind): make kind-down && make kind-up   # ou: kind delete cluster
 ```
 
-> **Delete the ResourceQuota when you're done.** While it exists, *every* Pod in the namespace
-> must set requests/limits — leaving it in place will make the next lab's bare Pods fail with
-> `must specify…`.
+> **Delete a ResourceQuota quando terminar.** Enquanto ela existir, *todo* Pod do namespace
+> precisa definir requests/limits — deixá-la no lugar vai fazer os Pods avulsos do próximo lab
+> falharem com `must specify…`.
 
-## Stretch (optional) — CPU throttling: slow, but never killed
+## Stretch (opcional) — CPU throttling: lento, mas nunca morto
 
-Prove the other half of the asymmetry. CPU is **compressible**, so a container over its CPU
-limit is **throttled** (capped share) rather than killed — it stays `Running`.
+Prove a outra metade da assimetria. CPU é **compressível**, então um container acima do seu
+limit de CPU é **throttled** (fatia limitada) em vez de morto — ele continua `Running`.
 
 ```bash
 cat > cpu-hog.yaml <<'EOF'
@@ -322,13 +323,13 @@ spec:
     - name: hog
       image: polinux/stress
       command: ["stress"]
-      args: ["--cpu", "2"]              # tries to burn 2 cores
+      args: ["--cpu", "2"]              # tenta queimar 2 cores
       resources:
         requests: { cpu: 100m }
-        limits:   { cpu: 200m }         # ...but capped at 0.2 core
+        limits:   { cpu: 200m }         # ...mas limitado a 0.2 core
 EOF
 
 kubectl apply -f cpu-hog.yaml
-kubectl get pod cpu-hog                 # STATUS stays Running, RESTARTS stays 0
-kubectl top pod cpu-hog                 # if metrics-server is present: ~200m, pinned at the limit
+kubectl get pod cpu-hog                 # STATUS continua Running, RESTARTS continua 0
+kubectl top pod cpu-hog                 # se o metrics-server estiver presente: ~200m, colado no limit
 ```

@@ -1,17 +1,17 @@
-# Lab 17 — Pod security (S17) — solutions
+# Lab 17 — Pod security (S17) — soluções
 
-Use this companion after attempting the participant lab. Outputs contain representative
-names, addresses, ages, and image sizes; compare the state and meaning rather than copying
-ephemeral values literally.
+Use este companion depois de tentar o lab do participante. As saídas contêm nomes, endereços,
+idades e tamanhos de image representativos; compare o estado e o significado em vez de copiar
+literalmente valores efêmeros.
 
 ## Guided solutions
 
-### Step 0 — put the `restricted` bar on your namespace
+### Step 0 — coloque a barra do `restricted` no seu namespace
 
-Pod Security Admission is configured by **labels on the Namespace object**. Which path you take
-depends on your environment.
+O Pod Security Admission é configurado por **labels no objeto Namespace**. Qual caminho você segue
+depende do seu ambiente.
 
-**kind (you own the cluster):** label your namespace yourself.
+**kind (o cluster é seu):** aplique os labels no seu namespace você mesmo.
 
 ```bash
 kubectl label --overwrite namespace "$NS" \
@@ -20,21 +20,22 @@ kubectl label --overwrite namespace "$NS" \
   pod-security.kubernetes.io/audit=restricted
 ```
 
-**Shared cluster (assigned namespace):** labelling a Namespace is a write on a **cluster-scoped**
-object, which your in-namespace role usually can't do — **so your namespace has been pre-labelled
-`restricted` for you.** Don't run the `label` command; just confirm the labels are present:
+**Cluster compartilhado (namespace designado):** aplicar label em um Namespace é uma escrita em um
+objeto **cluster-scoped**, o que a sua Role dentro do namespace normalmente não permite — **então o
+seu namespace já foi pré-labelado com `restricted` para você.** Não execute o comando `label`;
+apenas confirme que os labels estão presentes:
 
 ```bash
 kubectl get namespace "$NS" --show-labels
 ```
 
-**Task:** confirm all three PSA modes are set to `restricted` on your namespace.
+**Tarefa:** confirme que os três modos do PSA estão em `restricted` no seu namespace.
 
 ```bash
 kubectl get namespace "$NS" -o jsonpath='{.metadata.labels}' | tr ',' '\n' | grep pod-security
 ```
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ kubectl get namespace "$NS" -o jsonpath='{.metadata.labels}' | tr ',' '\n' | grep pod-security
@@ -43,18 +44,18 @@ $ kubectl get namespace "$NS" -o jsonpath='{.metadata.labels}' | tr ',' '\n' | g
 "pod-security.kubernetes.io/warn":"restricted"
 ```
 
-`enforce` is the only mode that **rejects**; `warn` returns a `Warning:` to `kubectl` and
-`audit` writes to the API audit log — both still create the Pod. We set all three so you *see*
-the violations (`warn`) as well as *hit* them (`enforce`).
+`enforce` é o único modo que **rejeita**; o `warn` devolve um `Warning:` ao `kubectl` e o
+`audit` escreve no audit log da API — os dois ainda criam o Pod. Definimos os três para que você
+*veja* as violations (`warn`) além de *bater* nelas (`enforce`).
 
-If the `label` command fails on a shared cluster with `namespaces ... is forbidden`, that's
-expected — you don't have rights on the Namespace object. Use the pre-labelled namespace, or
-switch to kind.
+Se o comando `label` falhar em um cluster compartilhado com `namespaces ... is forbidden`, isso é
+esperado — você não tem direitos sobre o objeto Namespace. Use o namespace pré-labelado, ou
+mude para o kind.
 </details>
 
 ---
 
-### Step 1 — break: the insecure Pod is refused at the door
+### Step 1 — break: o Pod inseguro é recusado na porta
 
 ```bash
 cat > pod-insecure.yaml <<'EOF'
@@ -69,20 +70,20 @@ spec:
       image: ghcr.io/platformrelay/workshop-web:v1
       ports:
         - containerPort: 8080
-      # no securityContext at all
+      # sem securityContext nenhum
 EOF
 
 kubectl apply -f pod-insecure.yaml
 ```
 
-**Task:** the apply is **rejected**. Read the error — how many rules did it break, did the Pod
-get created, and which four fields are named?
+**Tarefa:** o apply é **rejeitado**. Leia o erro — quantas regras ele quebrou, o Pod chegou a ser
+criado, e quais quatro campos são nomeados?
 
 ```bash
-kubectl get pod web        # is it there?
+kubectl get pod web        # ele está lá?
 ```
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ kubectl apply -f pod-insecure.yaml
@@ -97,34 +98,34 @@ $ kubectl get pod web
 Error from server (NotFound): pods "web" not found
 ```
 
-Four violations, listed in one message — the exact four fields `restricted` gates:
-`allowPrivilegeEscalation`, `capabilities.drop`, `runAsNonRoot`, `seccompProfile`. This is
-**admission** enforcement: the API server refused the request, so the Pod was **never created**
-(`NotFound`) — there is nothing to restart, nothing to delete. Contrast that with the OOMKill in
-Lab 13, where the Pod existed and *then* died.
+Quatro violations, listadas em uma única mensagem — exatamente os quatro campos que o `restricted`
+guarda: `allowPrivilegeEscalation`, `capabilities.drop`, `runAsNonRoot`, `seccompProfile`. Isto é
+enforcement no **admission**: o API server recusou a requisição, então o Pod **nunca foi criado**
+(`NotFound`) — não há nada para reiniciar, nada para deletar. Contraste com o OOMKill do Lab 13,
+onde o Pod existia e *depois* morreu.
 </details>
 
-**Question:** we applied a **bare Pod** and got the full violation list immediately. What would
-have happened if we'd wrapped the same container in a **Deployment**?
+**Pergunta:** aplicamos um **Pod cru** e recebemos a lista completa de violations de imediato. O
+que teria acontecido se tivéssemos embrulhado o mesmo container em um **Deployment**?
 
-<details><summary>Answer</summary>
+<details><summary>Resposta</summary>
 
-The **Deployment** would be **admitted** — PSA doesn't check the Deployment, it checks **Pods**.
-The Deployment's controller then tries to create Pods from the template, and *those* are rejected
-at admission. You'd see a healthy-looking Deployment with `0` ready replicas, and the rejection
-would only surface in `kubectl describe rs <name>` / events (`FailedCreate ... violates
-PodSecurity`), not at your `apply`. A bare Pod fails **synchronously and loudly**, which is why
-this lab uses one — but the same rules apply to every Pod a controller spawns.
+O **Deployment** seria **admitido** — o PSA não checa o Deployment, ele checa **Pods**.
+O controller do Deployment então tenta criar Pods a partir do template, e *esses* é que são
+rejeitados no admission. Você veria um Deployment de aparência saudável com `0` réplicas ready, e a
+rejeição só apareceria em `kubectl describe rs <name>` / events (`FailedCreate ... violates
+PodSecurity`), não no seu `apply`. Um Pod cru falha **de forma síncrona e barulhenta**, e é por isso
+que este lab usa um — mas as mesmas regras valem para todo Pod que um controller cria.
 </details>
 
 ---
 
-### Step 2 — fix: clear the four gates, one at a time
+### Step 2 — fix: passe pelos quatro gates, um de cada vez
 
-The Pod was never created, so each fix is just another `apply` of the same `web` Pod with one
-more field. Watch the violation list shrink by exactly one each time.
+O Pod nunca foi criado, então cada correção é apenas mais um `apply` do mesmo Pod `web` com mais um
+campo. Observe a lista de violations encolher em exatamente uma a cada vez.
 
-**2a — add `runAsNonRoot` (and a real non-root UID):**
+**2a — adicione `runAsNonRoot` (e um UID non-root de verdade):**
 
 ```bash
 cat > pod-step.yaml <<'EOF'
@@ -141,12 +142,12 @@ spec:
         - containerPort: 8080
       securityContext:
         runAsNonRoot: true
-        runAsUser: 65532          # the image's built-in non-root user (distroless "nonroot")
+        runAsUser: 65532          # o usuário non-root embutido na image (o "nonroot" do distroless)
 EOF
 kubectl apply -f pod-step.yaml
 ```
 
-<details><summary>Expected output — three left</summary>
+<details><summary>Saída esperada — restam três</summary>
 
 ```console
 Error from server (Forbidden): error when creating "pod-step.yaml": pods "web" is forbidden:
@@ -154,20 +155,21 @@ violates PodSecurity "restricted:latest": allowPrivilegeEscalation != false (...
 capabilities (...), seccompProfile (...)
 ```
 
-`runAsNonRoot != true` is gone; three violations remain. (Setting `runAsUser: 65532` isn't
-required by `restricted` — `runAsNonRoot: true` alone satisfies it — but it makes the non-root
-user explicit and guarantees a UID this image can actually run as.)
+O `runAsNonRoot != true` sumiu; restam três violations. (Definir `runAsUser: 65532` não é
+exigido pelo `restricted` — `runAsNonRoot: true` sozinho já o satisfaz — mas isso deixa o usuário
+non-root explícito e garante um UID com o qual esta image realmente consegue rodar.)
 </details>
 
-> **⚠️ Why this image?** `runAsNonRoot: true` is a *promise the image must keep*. Admission only
-> checks that the **field is set**, so it passes — but the **kubelet** checks the image's real
-> user at start. Point this Pod at an image whose effective user is **root** — most base images,
-> e.g. a stock `busybox` or `debian` — and it would be **admitted** and then fail at start with
-> `container has runAsNonRoot and image will run as root` (CreateContainerError →
-> CrashLoopBackOff). `workshop-web` ships as the distroless `nonroot` user (UID 65532), so the
-> promise holds. This is the **non-root image discipline from S02** paying off.
+> **⚠️ Por que esta image?** `runAsNonRoot: true` é uma *promessa que a image precisa cumprir*. O
+> admission só checa que o **campo está definido**, então ele passa — mas o **kubelet** checa o
+> usuário real da image na largada. Aponte este Pod para uma image cujo usuário efetivo é **root**
+> — a maioria das base images, ex.: um `busybox` ou `debian` de fábrica — e ele seria **admitido** e
+> então falharia no start com `container has runAsNonRoot and image will run as root`
+> (CreateContainerError → CrashLoopBackOff). O `workshop-web` vem com o usuário `nonroot` do
+> distroless (UID 65532), então a promessa se sustenta. Esta é a **disciplina de image non-root da
+> S02** dando retorno.
 
-**2b — add `allowPrivilegeEscalation: false`** (re-apply the whole file with one more field):
+**2b — adicione `allowPrivilegeEscalation: false`** (re-aplique o arquivo inteiro com mais um campo):
 
 ```bash
 cat > pod-step.yaml <<'EOF'
@@ -190,17 +192,17 @@ EOF
 kubectl apply -f pod-step.yaml
 ```
 
-<details><summary>Expected output — two left</summary>
+<details><summary>Saída esperada — restam duas</summary>
 
 ```console
 Error from server (Forbidden): ... violates PodSecurity "restricted:latest":
 unrestricted capabilities (...), seccompProfile (...)
 ```
 
-`allowPrivilegeEscalation != false` is cleared; two violations remain.
+O `allowPrivilegeEscalation != false` foi resolvido; restam duas violations.
 </details>
 
-**2c — drop all capabilities** (again, the full file plus one field):
+**2c — dropar todas as capabilities** (de novo, o arquivo completo mais um campo):
 
 ```bash
 cat > pod-step.yaml <<'EOF'
@@ -225,7 +227,7 @@ EOF
 kubectl apply -f pod-step.yaml
 ```
 
-<details><summary>Expected output — one left</summary>
+<details><summary>Saída esperada — resta uma</summary>
 
 ```console
 Error from server (Forbidden): ... violates PodSecurity "restricted:latest":
@@ -233,10 +235,10 @@ seccompProfile (container "web" must set securityContext.seccompProfile.type to 
 or "Localhost")
 ```
 
-Only `seccompProfile` is left — the last gate.
+Só sobrou o `seccompProfile` — o último gate.
 </details>
 
-**2d — add the seccomp profile → admitted.** Apply the complete hardened manifest:
+**2d — adicione o seccomp profile → admitido.** Aplique o manifesto hardened completo:
 
 ```bash
 cat > pod-hardened.yaml <<'EOF'
@@ -262,10 +264,10 @@ spec:
 EOF
 
 kubectl apply -f pod-hardened.yaml
-kubectl get pod web -w        # Ctrl-C once it's Running
+kubectl get pod web -w        # Ctrl-C assim que estiver Running
 ```
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ kubectl apply -f pod-hardened.yaml
@@ -276,18 +278,19 @@ NAME   READY   STATUS    RESTARTS   AGE
 web    1/1     Running   0          12s
 ```
 
-All four gates pass, PSA admits the Pod, and because the image genuinely runs as non-root the
-kubelet is happy too — `1/1 Running`. **The policy never changed; your manifest did.**
+Os quatro gates passam, o PSA admite o Pod e, como a image realmente roda como non-root, o kubelet
+também fica satisfeito — `1/1 Running`. **A policy nunca mudou; o seu manifesto mudou.**
 </details>
 
 ---
 
-### Step 3 — beyond `restricted`: a read-only root filesystem
+### Step 3 — além do `restricted`: um root filesystem read-only
 
-`readOnlyRootFilesystem: true` is **not** one of the four `restricted` gates — it's extra
-defence-in-depth (a foothold can't drop tools or rewrite binaries). But it changes runtime
-behaviour: the container can no longer write to its own filesystem, and many apps *need* a few
-writable paths. First, see what it costs a **well-built** app — nothing:
+`readOnlyRootFilesystem: true` **não** é um dos quatro gates do `restricted` — é defesa em
+profundidade extra (quem conseguiu um pé dentro não consegue largar ferramentas nem reescrever
+binários). Mas ele muda o comportamento em runtime: o container não pode mais escrever no próprio
+filesystem, e muitos apps *precisam* de alguns caminhos graváveis. Primeiro, veja o que ele custa a
+um app **bem construído** — nada:
 
 ```bash
 cat > pod-readonly.yaml <<'EOF'
@@ -312,12 +315,12 @@ spec:
 EOF
 
 kubectl apply -f pod-readonly.yaml
-kubectl get pod web-ro -w        # Ctrl-C once Running
+kubectl get pod web-ro -w        # Ctrl-C assim que estiver Running
 ```
 
-**Task:** the Pod runs — why didn't `readOnlyRootFilesystem` hurt it?
+**Tarefa:** o Pod roda — por que o `readOnlyRootFilesystem` não o machucou?
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ kubectl get pod web-ro
@@ -325,14 +328,14 @@ NAME     READY   STATUS    RESTARTS   AGE
 web-ro   1/1     Running   0          10s
 ```
 
-The demo image was **built for this**: it's distroless, logs to stdout, and keeps its state in
-memory — it never writes to its own filesystem, so mounting `/` read-only costs it nothing.
-That's the goal state for your own images. Most real-world apps aren't there yet, which is the
-next beat.
+A image de demo foi **construída para isto**: ela é distroless, loga em stdout e mantém o estado em
+memória — nunca escreve no próprio filesystem, então montar `/` como read-only não lhe custa nada.
+Esse é o estado-alvo para as suas próprias images. A maioria dos apps do mundo real ainda não está
+lá, e é justamente esse o próximo movimento.
 </details>
 
-Now the **break**: a container that writes a PID file at startup — the classic pattern that
-`readOnlyRootFilesystem` trips over.
+Agora o **break**: um container que escreve um PID file na inicialização — o padrão clássico em que
+o `readOnlyRootFilesystem` tropeça.
 
 ```bash
 cat > pod-writer-ro.yaml <<'EOF'
@@ -348,7 +351,7 @@ spec:
       command: ["sh", "-c", "echo $$ > /var/run/app.pid && sleep infinity"]
       securityContext:
         runAsNonRoot: true
-        runAsUser: 65532          # busybox ships as root — pin a non-root UID to pass the gate
+        runAsUser: 65532          # o busybox vem como root — fixe um UID non-root para passar pelo gate
         runAsGroup: 65532
         allowPrivilegeEscalation: false
         capabilities: { drop: ["ALL"] }
@@ -357,18 +360,18 @@ spec:
 EOF
 
 kubectl apply -f pod-writer-ro.yaml
-kubectl get pod writer-ro -w        # Ctrl-C after you see it fail
+kubectl get pod writer-ro -w        # Ctrl-C depois de ver a falha
 ```
 
-**Task:** this Pod is **admitted** (it satisfies `restricted`) but doesn't stay up. What does
-`kubectl logs` say?
+**Tarefa:** este Pod é **admitido** (ele satisfaz o `restricted`), mas não fica de pé. O que o
+`kubectl logs` diz?
 
 ```bash
 kubectl get pod writer-ro
 kubectl logs writer-ro --previous 2>/dev/null || kubectl logs writer-ro
 ```
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ kubectl get pod writer-ro
@@ -379,14 +382,14 @@ $ kubectl logs writer-ro
 sh: can't create /var/run/app.pid: Read-only file system
 ```
 
-The Pod **passed admission** — this is a **runtime** failure. The app needs to write its PID
-file, but with `readOnlyRootFilesystem: true` the whole root filesystem (including `/var/run`)
-is read-only, so the startup command fails → the container exits → `CrashLoopBackOff`.
-The error **names the path** it couldn't write — that's your list of what to make writable.
+O Pod **passou pelo admission** — esta é uma falha de **runtime**. O app precisa escrever o seu PID
+file, mas com `readOnlyRootFilesystem: true` o root filesystem inteiro (inclusive `/var/run`) é
+read-only, então o comando de inicialização falha → o container sai → `CrashLoopBackOff`.
+O erro **nomeia o caminho** que ele não conseguiu escrever — essa é a sua lista do que tornar gravável.
 </details>
 
-**Task:** fix it by mounting a **writable `emptyDir`** over the one path the app needs, keeping
-the root filesystem read-only everywhere else.
+**Tarefa:** conserte montando um **`emptyDir` gravável** sobre o único caminho de que o app
+precisa, mantendo o root filesystem read-only em todo o resto.
 
 ```bash
 cat > pod-writer-fixed.yaml <<'EOF'
@@ -414,12 +417,12 @@ spec:
     - { name: run, emptyDir: {} }
 EOF
 
-kubectl delete pod writer-ro --ignore-not-found  # securityContext/volumes are immutable — recreate
+kubectl delete pod writer-ro --ignore-not-found  # securityContext/volumes são imutáveis — recrie
 kubectl apply -f pod-writer-fixed.yaml
-kubectl get pod writer-ro -w        # Ctrl-C once Running
+kubectl get pod writer-ro -w        # Ctrl-C assim que estiver Running
 ```
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ kubectl get pod writer-ro
@@ -427,26 +430,26 @@ NAME        READY   STATUS    RESTARTS   AGE
 writer-ro   1/1     Running   0          15s
 ```
 
-The `emptyDir` gives the container a small **writable** scratch volume at exactly the path it
-needs, while `/` and everything else stays read-only. If an app complains about a *different*
-path, read the log line, add one more `emptyDir` mount for it, and re-apply — the method is
-always "the error names the path; mount a writable volume there." This is the answer to
-"how do I give a read-only-rootfs container a writable spot": **not** by dropping
-`readOnlyRootFilesystem`, but by carving out just the paths that must be writable.
+O `emptyDir` dá ao container um pequeno volume de rascunho **gravável** exatamente no caminho de que
+ele precisa, enquanto `/` e todo o resto continuam read-only. Se um app reclamar de um caminho
+*diferente*, leia a linha de log, adicione mais um mount `emptyDir` para ele e re-aplique — o método
+é sempre "o erro nomeia o caminho; monte um volume gravável ali". Esta é a resposta para
+"como eu dou um lugar gravável a um container com rootfs read-only": **não** é abrindo mão do
+`readOnlyRootFilesystem`, e sim recortando apenas os caminhos que precisam ser graváveis.
 </details>
 
 ---
 
-### Step 4 — observe: prove it's actually locked down
+### Step 4 — observe: prove que está realmente trancado
 
-Two proofs. First, the demo app really is non-root — its image has no shell, so attach a debug
-container that shares its PID namespace and read the process list:
+Duas provas. Primeiro, o app de demo é mesmo non-root — a image dele não tem shell, então anexe um
+debug container que compartilha o PID namespace dele e leia a lista de processos:
 
 ```bash
 kubectl debug -it web-ro --image=busybox:1.37 --target=web -- ps
 ```
 
-Second, the writer Pod (busybox — it *has* a shell) shows the read-only root and the carve-out:
+Segundo, o Pod writer (busybox — esse *tem* shell) mostra o root read-only e o recorte gravável:
 
 ```bash
 kubectl exec writer-ro -- id
@@ -454,10 +457,10 @@ kubectl exec writer-ro -- touch /nope
 kubectl exec writer-ro -- touch /var/run/ok
 ```
 
-**Question:** what UID are the processes, and why does the write to `/` fail while
-`/var/run` works?
+**Pergunta:** com qual UID os processos rodam, e por que a escrita em `/` falha enquanto
+`/var/run` funciona?
 
-<details><summary>Answer / expected output</summary>
+<details><summary>Resposta / saída esperada</summary>
 
 ```console
 $ kubectl debug -it web-ro --image=busybox:1.37 --target=web -- ps
@@ -472,30 +475,30 @@ $ kubectl exec writer-ro -- touch /nope
 touch: /nope: Read-only file system
 command terminated with exit code 1
 
-$ kubectl exec writer-ro -- touch /var/run/ok      # succeeds — the emptyDir carve-out
+$ kubectl exec writer-ro -- touch /var/run/ok      # funciona — o recorte do emptyDir
 ```
 
-`uid=65532`, not `0` — both containers are **non-root** (the `runAsNonRoot`/`runAsUser`
-promise, kept by the image in one case and by `runAsUser` in the other). The write to `/`
-fails with **`Read-only file system`** because `readOnlyRootFilesystem: true` mounts the root
-read-only; only the `emptyDir` path (`/var/run`) is writable.
+`uid=65532`, não `0` — os dois containers são **non-root** (a promessa de
+`runAsNonRoot`/`runAsUser`, cumprida pela image em um caso e pelo `runAsUser` no outro). A escrita
+em `/` falha com **`Read-only file system`** porque o `readOnlyRootFilesystem: true` monta o root
+como read-only; só o caminho do `emptyDir` (`/var/run`) é gravável.
 </details>
 
-## Stretch (optional) — soft-launch with `warn` before you `enforce`
+## Stretch (opcional) — soft-launch com `warn` antes do `enforce`
 
-In the real world you don't flip `enforce=restricted` on a busy namespace blind — you turn on
-`warn` first, see what *would* break, fix it, then enforce. Prove the difference on a scratch
-namespace (kind, or anywhere you can create namespaces).
+No mundo real você não vira o `enforce=restricted` em um namespace movimentado às cegas — você liga
+o `warn` primeiro, vê o que *quebraria*, conserta, e só então faz o enforce. Prove a diferença em um
+namespace descartável (kind, ou qualquer lugar onde você possa criar namespaces).
 
 ```bash
 kubectl create namespace psa-demo
 kubectl label namespace psa-demo pod-security.kubernetes.io/warn=restricted
-# insecure Pod is CREATED, but kubectl prints a warning for each violation:
+# o Pod inseguro É CRIADO, mas o kubectl imprime um warning para cada violation:
 kubectl run canary --image=ghcr.io/platformrelay/workshop-web:v1 -n psa-demo
 kubectl get pod canary -n psa-demo
 ```
 
-<details><summary>What you're looking at</summary>
+<details><summary>O que você está vendo</summary>
 
 ```console
 $ kubectl run canary --image=ghcr.io/platformrelay/workshop-web:v1 -n psa-demo
@@ -508,43 +511,43 @@ NAME     READY   STATUS    RESTARTS   AGE
 canary   1/1     Running   0          8s
 ```
 
-Same four violations as Step 1 — but under **`warn`** the Pod is **created anyway** and you just
-get a heads-up. That's how you migrate a namespace to `restricted` without an outage: `warn`
-(and `audit`) to discover the offenders, fix them, *then* `enforce`. Clean up:
-`kind delete cluster` (disposable) or remove the Namespace out-of-band.
+As mesmas quatro violations do Step 1 — mas sob **`warn`** o Pod é **criado assim mesmo** e você só
+recebe um aviso. É assim que se migra um namespace para `restricted` sem indisponibilidade: `warn`
+(e `audit`) para descobrir os infratores, corrigi-los e *só então* `enforce`. Para limpar:
+`kind delete cluster` (descartável) ou remova o Namespace por fora.
 </details>
 
 ## Expected state / output
 
-- **Admission** enforcement (PSA): a Pod that violates `restricted` is **rejected at `apply`**
-  and **never created** — the error lists **every** broken rule at once.
-- `restricted` gates exactly **four** fields: `runAsNonRoot`, `allowPrivilegeEscalation: false`,
-  `capabilities.drop: ["ALL"]`, `seccompProfile: RuntimeDefault|Localhost`. Set them → admitted.
-- `runAsNonRoot: true` is checked **twice**: PSA checks the *field* (admission), the kubelet
-  checks the *image's real UID* (runtime) — a root image admits then **CrashLoops**.
-- `readOnlyRootFilesystem` is **beyond** `restricted`: it's a **runtime** control, and apps that
-  write to disk need an `emptyDir` over each writable path.
-- **Admission vs runtime** is the mental model: rejected-before-it-exists vs exists-then-fails.
+- Enforcement no **admission** (PSA): um Pod que viola o `restricted` é **rejeitado no `apply`**
+  e **nunca criado** — o erro lista **todas** as regras quebradas de uma vez.
+- O `restricted` guarda exatamente **quatro** campos: `runAsNonRoot`, `allowPrivilegeEscalation: false`,
+  `capabilities.drop: ["ALL"]`, `seccompProfile: RuntimeDefault|Localhost`. Defina-os → admitido.
+- `runAsNonRoot: true` é checado **duas vezes**: o PSA checa o *campo* (admission), o kubelet
+  checa o *UID real da image* (runtime) — uma image root é admitida e depois entra em **CrashLoop**.
+- O `readOnlyRootFilesystem` está **além** do `restricted`: é um controle de **runtime**, e apps que
+  escrevem em disco precisam de um `emptyDir` sobre cada caminho gravável.
+- **Admission vs. runtime** é o modelo mental: rejeitado-antes-de-existir vs. existe-e-depois-falha.
 
-Representative statuses include Ready/Running Pods, NetworkPolicy timeouts, RBAC Forbidden,
-Helm revision history, Application Synced/Healthy, Certificate Ready, or Prometheus targets —
-compare meaning, not ephemeral names.
+Statuses representativos incluem Pods Ready/Running, timeouts de NetworkPolicy, Forbidden de RBAC,
+histórico de revisões do Helm, Application Synced/Healthy, Certificate Ready ou targets do
+Prometheus — compare o significado, não nomes efêmeros.
 
 ## Explanation
 
-PSA evaluates the Pod (or template) at admission. A non-root image alone does not
-satisfy restricted — the four securityContext fields must be declared so the API server can
-prove the contract before the Pod exists. Restoring those fields therefore admits the object
-because the gate sees an explicit least-privilege ask, not because the image happened to be safe.
+O PSA avalia o Pod (ou o template) no admission. Uma image non-root sozinha não
+satisfaz o restricted — os quatro campos de securityContext precisam ser declarados para que o API
+server consiga provar o contrato antes de o Pod existir. É por essa causa que restaurar esses campos
+admite o objeto: o gate vê um pedido explícito de least-privilege, não porque a image por acaso era segura.
 
-The guided steps above prove the control-plane behaviour for this section; read Events and
-status fields when a one-line phase is ambiguous.
+Os passos guiados acima provam o comportamento do control plane desta seção; leia os Events e os
+campos de status quando uma fase de uma linha só for ambígua.
 
 ## Troubleshooting and recovery
 
-Re-apply the lab's named manifests with `kubectl apply -f <file> -n "$NS"` after fixing the
-broken field, or delete only the labelled objects from Cleanup / reset and restart the guided
-task. Prefer `kubectl describe` Events over guessing. Do not run broad cluster deletes.
+Reaplique os manifestos nomeados do lab com `kubectl apply -f <file> -n "$NS"` depois de corrigir o
+campo quebrado, ou delete apenas os objetos labelados da seção Cleanup / reset e reinicie a tarefa
+guiada. Prefira os Events do `kubectl describe` a adivinhar. Não execute deletes amplos no cluster.
 
 ## Challenge solution
 
@@ -552,7 +555,7 @@ task. Prefer `kubectl describe` Events over guessing. Do not run broad cluster d
 
 ```bash
 kubectl apply -f pod-insecure.yaml --dry-run=server 2>&1 | head -20
-# after restoring the four restricted fields on pod-hardened.yaml:
+# depois de restaurar os quatro campos do restricted no pod-hardened.yaml:
 kubectl apply -f pod-hardened.yaml --dry-run=server
 kubectl apply -f pod-hardened.yaml
 kubectl get pod hardened -n "$NS"
@@ -560,18 +563,18 @@ kubectl get pod hardened -n "$NS"
 
 ### Expected state / output
 
-The insecure apply is rejected and lists the broken restricted rules. After the four
-fields are present, dry-run and apply succeed and the Pod reaches Running/Ready under
+O apply inseguro é rejeitado e lista as regras do restricted quebradas. Depois que os quatro
+campos estão presentes, o dry-run e o apply passam e o Pod chega a Running/Ready sob
 enforce=restricted.
 
 ### Explanation
 
-PSA evaluates the Pod (or template) at admission. A non-root image alone does not
-satisfy restricted — the four securityContext fields must be declared so the API server can
-prove the contract before the Pod exists. Restoring those fields therefore admits the object
-because the gate sees an explicit least-privilege ask, not because the image happened to be safe.
+O PSA avalia o Pod (ou o template) no admission. Uma image non-root sozinha não
+satisfaz o restricted — os quatro campos de securityContext precisam ser declarados para que o API
+server consiga provar o contrato antes de o Pod existir. É por essa causa que restaurar esses campos
+admite o objeto: o gate vê um pedido explícito de least-privilege, não porque a image por acaso era segura.
 
 ### Hints
 
-Compare the violation list to runAsNonRoot, allowPrivilegeEscalation, capabilities.drop,
-and seccompProfile; keep enforce=restricted and use kubectl apply --dry-run=server to confirm.
+Compare a lista de violations com runAsNonRoot, allowPrivilegeEscalation, capabilities.drop
+e seccompProfile; mantenha enforce=restricted e use kubectl apply --dry-run=server para confirmar.

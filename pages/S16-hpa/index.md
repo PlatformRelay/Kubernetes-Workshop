@@ -9,86 +9,92 @@ track: Workloads
 
 # Autoscaling (HPA)
 
-Let the **herd** grow and shrink with demand.
+Deixe o **rebanho** crescer e encolher com a demanda.
 
-**optional** · suggested Day 2 · Workloads track
+**optional** · sugerido para o Day 2 · trilha Workloads
 
 <!--
-Section S16 — Autoscaling (HPA). Timing: ~20 min slides + 20 min lab. Closes Day 2 (last
-section, optional tier). Follows S15. Workloads track.
-Animation: HpaScaling.vue (new, self-contained). DEVIATION from the outline's "reuse the herd
-rolling animation, scaled by load" — RollingUpdate.vue models pod REPLACEMENT (old RS drains as
-new fills), not a metric-driven COUNT change, so it doesn't fit; a focused component is the
-right call (same reasoning as S13's ResourcePressure). Step-prop pure Vue/CSS per ADR 0001.
-Outcome: learners can wire an HPA to a Deployment's CPU, know it scales on a % of the Pod's
-`requests.cpu` (no request → no HPA — the tie-back to S13), read TARGETS/REPLICAS, and know why
-scale-down lags (the stabilization window). VPA and Cluster Autoscaler named as neighbours.
-Beats: problem (a fixed replica count is wrong both ways) · mental model (HPA = a controller:
-watch a metric → compare to target → set replicas; callback to S03's reconcile loop) ·
-code-annotated (the HPA object; the "% of request" dependency) · magic-move (HPA on the `web`
-Deployment → add a load generator) · animation (gauge drives the herd) · scale behaviour
-(stabilization window + policies) · neighbours (VPA / Cluster Autoscaler) · end-of-Day-2 recap ·
-lab. CKx: CKA/CKAD autoscaling — HPA, its metrics dependency, relationship to requests.
+Seção S16 — Autoscaling (HPA). Tempo: ~20 min de slides + 20 min de lab. Fecha o Day 2 (última
+seção, tier optional). Vem depois do S15. Trilha Workloads.
+Animação: HpaScaling.vue (nova, autocontida). DESVIO do "reuse a animação do rebanho em rolling,
+escalada por carga" do outline — RollingUpdate.vue modela SUBSTITUIÇÃO de pods (o RS antigo drena
+enquanto o novo enche), não uma mudança de CONTAGEM dirigida por métrica, então não serve; um
+componente focado é a decisão certa (mesmo raciocínio do ResourcePressure do S13). Vue/CSS puro
+com prop de step conforme o ADR 0001.
+Resultado: os participantes conseguem ligar um HPA à CPU de um Deployment, sabem que ele escala
+sobre um % do `requests.cpu` do Pod (sem request → sem HPA — o gancho de volta ao S13), leem
+TARGETS/REPLICAS, e sabem por que o scale-down atrasa (a janela de estabilização). VPA e Cluster
+Autoscaler nomeados como vizinhos.
+Beats: problema (uma contagem fixa de réplicas é errada nos dois sentidos) · modelo mental (HPA =
+um controller: observar uma métrica → comparar com o alvo → definir réplicas; callback ao loop de
+reconciliação do S03) · code-annotated (o objeto HPA; a dependência do "% do request") ·
+magic-move (HPA no Deployment `web` → adicionar um gerador de carga) · animação (o medidor dirige
+o rebanho) · comportamento de escala (janela de estabilização + políticas) · vizinhos (VPA /
+Cluster Autoscaler) · recap de fim de Day 2 · lab. CKx: CKA/CKAD autoscaling — HPA, sua
+dependência de métricas, relação com os requests.
 -->
 
 ---
 layout: statement
-kicker: The problem
+kicker: O problema
 ---
 
-A **fixed** replica count is wrong **both** ways — you either pay for peak all day, or you fall over at peak.
+Uma contagem **fixa** de réplicas é errada nos **dois** sentidos — ou você paga pelo pico o dia inteiro, ou você cai no pico.
 
-Pick `replicas: 3` and you've frozen one number against a load that isn't constant. Size it for
-the **midday spike** and it idles — and bills — at 3 a.m. Size it for the **quiet hours** and the
-next traffic surge queues, times out, and drops requests. What you actually want is a controller
-that **watches demand and moves the number for you** — up when it's busy, back down when it's not.
+Escolha `replicas: 3` e você congelou um número contra uma carga que não é constante. Dimensione
+para o **pico do meio-dia** e ele fica ocioso — e cobrando — às 3 da manhã. Dimensione para as
+**horas calmas** e o próximo surto de tráfego enfileira, estoura timeout e derruba requisições. O
+que você quer de verdade é um controller que **observa a demanda e move o número por você** —
+para cima quando está ocupado, de volta para baixo quando não está.
 
 <!--
-Speaker: the "why care" beat. Every workload we've run so far has a hand-picked replicas value —
-a guess, frozen. Real load has a shape: daily peaks, weekly cycles, unpredictable spikes. A single
-static number can't be right for all of it — over-provision and you waste money holding idle Pods;
-under-provision and you drop traffic when it matters most. The fix is to stop hand-setting
-replicas and let a controller drive it from a live signal. That controller is the
-HorizontalPodAutoscaler: horizontal = more Pods (vs vertical = bigger Pods, which is VPA, later).
-Hold that framing — HPA owns the replica count so you don't have to.
+Speaker: o beat do "por que se importar". Todo workload que rodamos até agora tem um valor de
+replicas escolhido à mão — um chute, congelado. Carga real tem uma forma: picos diários, ciclos
+semanais, surtos imprevisíveis. Um único número estático não pode estar certo para tudo isso —
+superprovisione e você desperdiça dinheiro segurando Pods ociosos; subprovisione e você derruba
+tráfego quando mais importa. O conserto é parar de definir replicas à mão e deixar um controller
+dirigi-lo a partir de um sinal ao vivo. Esse controller é o HorizontalPodAutoscaler: horizontal =
+mais Pods (vs vertical = Pods maiores, que é o VPA, depois). Segure esse enquadramento — o HPA é
+dono da contagem de réplicas para você não precisar ser.
 -->
 
 ---
 
 <div class="kw-slide-dense">
 
-<span class="kw-kicker">Mental model · a controller that sets replicas from a metric</span>
+<span class="kw-kicker">Modelo mental · um controller que define réplicas a partir de uma métrica</span>
 
-# The HPA is just another reconcile loop
+# O HPA é só mais um loop de reconciliação
 
 <div class="kw-cols-2 mt-3 text-sm">
   <v-click at="1">
-    <KwCard heading="Watch → compare → act" kind="hpa" variant="ok">
-      Every ~15s the HPA reads a <strong>metric</strong> (avg CPU across the Pods), compares it to
-      your <strong>target</strong>, and writes a new <code>replicas</code> onto the Deployment.
-      Same observe → diff → act loop as every other controller — the workload's size is now the reconciled state.
+    <KwCard heading="Observar → comparar → agir" kind="hpa" variant="ok">
+      A cada ~15s o HPA lê uma <strong>métrica</strong> (CPU média entre os Pods), compara com o
+      seu <strong>alvo</strong>, e escreve um novo <code>replicas</code> no Deployment.
+      O mesmo loop observar → diff → agir de todo outro controller — o tamanho do workload agora é o estado reconciliado.
     </KwCard>
   </v-click>
   <v-click at="2">
-    <KwCard heading="The formula" icon="🧮">
-      <code>desired = ceil(current × currentUtil / targetUtil)</code>. At 2 Pods, 90% observed,
-      50% target → <code>ceil(2 × 90/50) = 4</code>. Clamped to <code>[minReplicas, maxReplicas]</code>.
+    <KwCard heading="A fórmula" icon="🧮">
+      <code>desired = ceil(current × currentUtil / targetUtil)</code>. Com 2 Pods, 90% observado,
+      alvo de 50% → <code>ceil(2 × 90/50) = 4</code>. Restrito a <code>[minReplicas, maxReplicas]</code>.
     </KwCard>
   </v-click>
 </div>
 
 <div v-click="3" class="mt-4 text-sm">
 
-<span class="kw-kicker">where the metric comes from</span>
+<span class="kw-kicker">de onde vem a métrica</span>
 
 <div class="kw-cols-2 mt-1">
-  <KwCard heading="metrics-server (the common case)" icon="📈">
-    A cluster add-on that scrapes kubelet CPU/memory and serves the
-    <strong>metrics.k8s.io</strong> API. No metrics-server → the HPA has nothing to read.
+  <KwCard heading="metrics-server (o caso comum)" icon="📈">
+    Um add-on do cluster que raspa CPU/memória do kubelet e serve a API
+    <strong>metrics.k8s.io</strong>. Sem metrics-server → o HPA não tem o que ler.
   </KwCard>
-  <KwCard heading="custom / external (a nod)" icon="🌐">
-    HPA can also scale on <strong>custom</strong> (per-Pod app metrics, e.g. requests/s) or
-    <strong>external</strong> (a queue depth) via adapters. Same loop, richer signal.
+  <KwCard heading="custom / external (uma menção)" icon="🌐">
+    O HPA também pode escalar sobre métricas <strong>custom</strong> (métricas de aplicação por
+    Pod, ex.: requisições/s) ou <strong>external</strong> (a profundidade de uma fila) via
+    adapters. O mesmo loop, sinal mais rico.
   </KwCard>
 </div>
 
@@ -97,108 +103,109 @@ Hold that framing — HPA owns the replica count so you don't have to.
 </div>
 
 <!--
-Speaker: HPA isn't magic — it's the S03 reconcile loop pointed at one field. Its desired state is
-"average CPU sits at the target"; the actuator it turns is the Deployment's replica count. The
-formula is worth putting on the board: desiredReplicas = ceil(currentReplicas × currentMetric /
-targetMetric). Two Pods running hot at 90% against a 50% target → it wants 4; the ceil and the
-min/max clamp keep it sane. The metric source matters for the lab: the default is metrics-server,
-a separate add-on that serves the metrics.k8s.io API from kubelet stats — if it isn't installed
-(or isn't Ready), `kubectl top` is empty and the HPA reports TARGETS <unknown>. Custom and
-external metrics (via the custom.metrics.k8s.io / external.metrics.k8s.io adapters) let you scale
-on app-level signals or a queue — name them so learners know CPU isn't the only axis, but we drive
-CPU today.
+Speaker: o HPA não é mágica — é o loop de reconciliação do S03 apontado para um campo. Seu estado
+desejado é "a CPU média fica no alvo"; o atuador que ele gira é a contagem de réplicas do
+Deployment. A fórmula vale ir para o quadro: desiredReplicas = ceil(currentReplicas ×
+currentMetric / targetMetric). Dois Pods quentes a 90% contra um alvo de 50% → ele quer 4; o ceil
+e a trava de min/max o mantêm são. A fonte da métrica importa para o lab: o default é o
+metrics-server, um add-on separado que serve a API metrics.k8s.io a partir das estatísticas do
+kubelet — se ele não está instalado (ou não está Ready), o `kubectl top` fica vazio e o HPA
+reporta TARGETS <unknown>. Métricas custom e external (via os adapters custom.metrics.k8s.io /
+external.metrics.k8s.io) deixam você escalar sobre sinais de aplicação ou uma fila — nomeie-as
+para os alunos saberem que CPU não é o único eixo, mas hoje dirigimos CPU.
 -->
 
 ---
 layout: code-annotated
-heading: 'The one dependency that trips everyone: % of the request'
+heading: 'A dependência que derruba todo mundo: % do request'
 compact: true
 lab: labs/day-2/16-hpa.md
 ---
 
 ```yaml {none|1-2|5-8|9-10|11-17}
-apiVersion: autoscaling/v2       # v2 — the current, GA HPA API (v1 was CPU-only)
+apiVersion: autoscaling/v2       # v2 — a API atual e GA do HPA (a v1 era só CPU)
 kind: HorizontalPodAutoscaler
 metadata: { name: web, labels: { app: s16 } }
 spec:
-  scaleTargetRef:                # WHAT it scales — a Deployment, by name
+  scaleTargetRef:                # O QUE ele escala — um Deployment, pelo nome
     apiVersion: apps/v1
     kind: Deployment
     name: web
-  minReplicas: 2                 # never below this…
-  maxReplicas: 10                # …never above this
+  minReplicas: 2                 # nunca abaixo disto…
+  maxReplicas: 10                # …nunca acima disto
   metrics:
     - type: Resource
       resource:
         name: cpu
         target:
           type: Utilization
-          averageUtilization: 50 # 50% OF EACH POD'S requests.cpu — not 50% of a core
+          averageUtilization: 50 # 50% DO requests.cpu DE CADA POD — não 50% de um core
 ```
 
 ::notes::
 
-<CodeNote at="1" label="autoscaling/v2 — use v2" variant="ok">
-The GA API. <code>v2</code> supports memory, multiple metrics, custom/external sources and
-scaling <code>behavior</code>; the old <code>v1</code> was CPU-only. Reach for v2 always.
+<CodeNote at="1" label="autoscaling/v2 — use a v2" variant="ok">
+A API GA. A <code>v2</code> suporta memória, múltiplas métricas, fontes custom/external e
+<code>behavior</code> de escala; a velha <code>v1</code> era só CPU. Recorra sempre à v2.
 </CodeNote>
 
-<CodeNote at="2" label="scaleTargetRef — the object it drives">
-The HPA owns this Deployment's <code>replicas</code>. Don't also hard-set <code>replicas</code>
-in the Deployment — the HPA will fight it. It can target any scalable workload (Deployment,
-StatefulSet, ReplicaSet).
+<CodeNote at="2" label="scaleTargetRef — o objeto que ele dirige">
+O HPA é dono do <code>replicas</code> deste Deployment. Não defina também <code>replicas</code>
+à mão no Deployment — o HPA vai brigar com ele. Ele pode mirar qualquer workload escalável
+(Deployment, StatefulSet, ReplicaSet).
 </CodeNote>
 
-<CodeNote at="3" label="min / max — the guardrails">
-The clamp on the formula. <code>minReplicas</code> keeps a floor of capacity; <code>maxReplicas</code>
-caps blast radius (and cost). The HPA never scales outside this band.
+<CodeNote at="3" label="min / max — os guarda-corpos">
+A trava sobre a fórmula. <code>minReplicas</code> mantém um piso de capacidade; <code>maxReplicas</code>
+limita o raio da explosão (e o custo). O HPA nunca escala fora desta banda.
 </CodeNote>
 
-<CodeNote at="4" label="Utilization = % of requests.cpu — the resources tie-back" variant="danger">
-<code>averageUtilization: 50</code> means "hold average CPU at <strong>50% of each Pod's
-<code>requests.cpu</code></strong>." No <code>requests.cpu</code> on the Pod → the % has no
-denominator → HPA shows <code>TARGETS &lt;unknown&gt;</code> and <strong>cannot scale</strong>.
+<CodeNote at="4" label="Utilization = % do requests.cpu — o gancho de volta aos resources" variant="danger">
+<code>averageUtilization: 50</code> significa "mantenha a CPU média em <strong>50% do
+<code>requests.cpu</code> de cada Pod</strong>". Sem <code>requests.cpu</code> no Pod → o % não
+tem denominador → o HPA mostra <code>TARGETS &lt;unknown&gt;</code> e <strong>não consegue
+escalar</strong>.
 </CodeNote>
 
 <!--
-Speaker: this is THE slide of the section — the failure mode everyone hits once. `averageUtilization`
-is a percentage OF the Pod's requests.cpu, set back in S13. So the target is relative: with
-requests.cpu: 200m and averageUtilization: 50, the HPA aims to keep each Pod near 100m of actual
-CPU. Remove the request and the percentage has no base — the HPA can't compute utilization, reports
-TARGETS <unknown>, and sits frozen at its current replica count. That's the lab's break→fix. Contrast
-Utilization with AverageValue (an absolute figure like 100m per Pod), which does NOT need a request —
-but Utilization is what people reach for and where the request dependency bites. Land it: an HPA on
-CPU utilization is only as valid as the requests underneath it. requests → scheduling (S13) AND
-autoscaling (here).
+Speaker: este é O slide da seção — o modo de falha que todo mundo acerta uma vez.
+`averageUtilization` é uma porcentagem DO requests.cpu do Pod, definido lá no S13. Então o alvo é
+relativo: com requests.cpu: 200m e averageUtilization: 50, o HPA mira manter cada Pod perto de
+100m de CPU real. Remova o request e a porcentagem fica sem base — o HPA não consegue calcular a
+utilização, reporta TARGETS <unknown>, e fica congelado na contagem atual de réplicas. Esse é o
+quebre→conserte do lab. Contraste Utilization com AverageValue (um valor absoluto tipo 100m por
+Pod), que NÃO precisa de request — mas Utilization é o que as pessoas usam e onde a dependência
+do request morde. Aterrisse: um HPA sobre utilização de CPU só é tão válido quanto os requests
+por baixo dele. requests → agendamento (S13) E autoscaling (aqui).
 -->
 
 ---
 layout: code-walkthrough
-heading: 'Wire it to the running app — then give it something to react to'
+heading: 'Ligue-o à aplicação em execução — depois dê a ele algo para reagir'
 lab: labs/day-2/16-hpa.md
 ---
 
 ````md magic-move
 ```yaml
-# 1: the target Deployment — the request is what makes it autoscalable
+# 1: o Deployment alvo — o request é o que o torna autoescalável
 apiVersion: apps/v1
 kind: Deployment
 metadata: { name: web, labels: { app: s16 } }
 spec:
-  replicas: 2                          # a starting point; the HPA takes over from here
+  replicas: 2                          # um ponto de partida; o HPA assume daqui
   selector: { matchLabels: { app: s16 } }
   template:
     metadata: { labels: { app: s16 } }
     spec:
       containers:
         - name: web
-          image: registry.k8s.io/hpa-example   # a CPU-burning demo (workshop-web barely moves)
+          image: registry.k8s.io/hpa-example   # uma demo que queima CPU (o workshop-web mal se mexe)
           resources:
-            requests: { cpu: 200m }    # <- the denominator the HPA scales against
+            requests: { cpu: 200m }    # <- o denominador contra o qual o HPA escala
 ```
 
 ```yaml
-# 2: add the HPA — it now owns replicas, driving CPU toward 50% of that 200m request
+# 2: adicione o HPA — agora ele é dono de replicas, dirigindo a CPU rumo a 50% daquele request de 200m
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata: { name: web, labels: { app: s16 } }
@@ -212,7 +219,7 @@ spec:
 ```
 
 ```yaml
-# 3: give it load — a client that hammers the Service in a tight loop
+# 3: dê carga a ele — um cliente que martela o Service num loop apertado
 apiVersion: apps/v1
 kind: Deployment
 metadata: { name: load, labels: { app: s16-load } }
@@ -225,32 +232,34 @@ spec:
       containers:
         - name: load
           image: busybox:1.37
-          # hit the web Service forever → CPU climbs → HPA scales web up
+          # acerte o Service web para sempre → a CPU sobe → o HPA escala o web para cima
           command: ["sh","-c","while true; do wget -q -O- http://web; done"]
 ```
 ````
 
 <!--
-Speaker: three frames, one wiring diagram. (1) The Deployment — note the image is the canonical
-CPU-burning demo (registry.k8s.io/hpa-example, a php-apache that does real work per request), NOT
-the workshop-web demo app from the red line: a trivial status server answers a wget in microseconds and never moves
-CPU, so the HPA would sit flat and the whole demo would silently no-op. This is the lab's target,
-and the requests.cpu: 200m is the denominator from the previous slide. (2) The HPA takes ownership
-of replicas — from here you do NOT set replicas by hand. (3) The load generator: a throwaway
-Deployment whose only job is to curl the web Service in a tight loop, driving aggregate CPU past
-the 50% target so the HPA reacts. In the lab you scale the load generator up (or run several) to
-push harder, then delete it to watch scale-down. Note the load Pods carry a DIFFERENT selector
-label (app: s16-load) so they aren't picked up by the web Service or its HPA. This is the compact
-teaching view; the lab ships the full block-style files plus the metrics-server install.
+Speaker: três quadros, um diagrama de ligação. (1) O Deployment — note que a image é a demo
+canônica de queimar CPU (registry.k8s.io/hpa-example, um php-apache que faz trabalho real por
+requisição), NÃO a aplicação de demo workshop-web da red line: um servidor de status trivial
+responde um wget em microssegundos e nunca move CPU, então o HPA ficaria parado e a demo inteira
+silenciosamente não faria nada. Este é o alvo do lab, e o requests.cpu: 200m é o denominador do
+slide anterior. (2) O HPA assume a posse de replicas — daqui em diante você NÃO define replicas
+à mão. (3) O gerador de carga: um Deployment descartável cujo único trabalho é fazer curl no
+Service web num loop apertado, empurrando a CPU agregada além do alvo de 50% para o HPA reagir.
+No lab você escala o gerador de carga para cima (ou roda vários) para empurrar mais forte, depois
+o deleta para ver o scale-down. Note que os Pods de carga carregam um label de selector DIFERENTE
+(app: s16-load) para não serem capturados pelo Service web nem pelo seu HPA. Esta é a visão
+compacta de ensino; o lab entrega os arquivos completos em estilo de bloco mais a instalação do
+metrics-server.
 -->
 
 ---
 clicks: 5
 ---
 
-<span class="kw-kicker">The control loop, made physical · load drives the herd</span>
+<span class="kw-kicker">O loop de controle, tornado físico · a carga dirige o rebanho</span>
 
-# Watch the gauge move the count
+# Veja o medidor mover a contagem
 
 <div class="mt-2">
   <HpaScaling :step="$clicks" :show-caption="false" />
@@ -259,46 +268,47 @@ clicks: 5
 <div class="mt-3 text-sm">
 <v-clicks at="1">
 
-- **Load spikes** to 90% — over the 50% target. The HPA computes `ceil(2 × 90/50) = 4`.
-- **Scaled up to 4** — the same load now spreads across more Pods, so per-Pod CPU falls back.
-- **Settled** — utilization sits at the target, desired == current, the herd holds.
-- **Load gone**, CPU drops — but replicas **hold** for the scale-down window, then shrink to min.
+- **A carga dispara** para 90% — acima do alvo de 50%. O HPA calcula `ceil(2 × 90/50) = 4`.
+- **Escalado para 4** — a mesma carga agora se espalha por mais Pods, então a CPU por Pod recua.
+- **Assentado** — a utilização fica no alvo, desired == current, o rebanho se mantém.
+- **Carga embora**, a CPU cai — mas as réplicas **seguram** pela janela de scale-down, depois encolhem até o mínimo.
 
 </v-clicks>
 </div>
 
 <!--
-Speaker: drive with clicks. (0) steady at min, gauge low. (1) load hits, gauge jumps past the
-dashed target line, the formula chip recomputes desired=4. (2) the herd grows to 4 and — key
-insight — the gauge eases back down, because the SAME total load divided over more Pods is less
-per Pod; autoscaling is negative feedback finding equilibrium. (3) it settles where per-Pod CPU ==
-target. (4) load disappears, the gauge drops, but the herd does NOT immediately shrink — it holds
-for the scaleDown stabilization window (default 300s). (5) the window elapses and it returns to
-min — pause here so the delayed shrink registers. That asymmetry is
-the next slide: scale up fast, scale down slow. This is the lab beat 3 (why did scale-down lag?).
+Speaker: conduza com os cliques. (0) estável no mínimo, medidor baixo. (1) a carga chega, o
+medidor salta além da linha tracejada do alvo, o chip da fórmula recalcula desired=4. (2) o
+rebanho cresce para 4 e — insight-chave — o medidor desce de volta, porque a MESMA carga total
+dividida por mais Pods é menos por Pod; autoscaling é feedback negativo encontrando equilíbrio.
+(3) ele assenta onde CPU por Pod == alvo. (4) a carga some, o medidor cai, mas o rebanho NÃO
+encolhe imediatamente — ele segura pela janela de estabilização de scaleDown (default 300s). (5)
+a janela passa e ele volta ao mínimo — pause aqui para o encolhimento atrasado registrar. Essa
+assimetria é o próximo slide: escalar para cima rápido, para baixo devagar. Este é o beat 3 do
+lab (por que o scale-down atrasou?).
 -->
 
 ---
 
 <div class="kw-slide-dense">
 
-<span class="kw-kicker">Scale behaviour · why up is fast and down is slow</span>
+<span class="kw-kicker">Comportamento de escala · por que subir é rápido e descer é lento</span>
 
-# Stabilization stops the flapping
+# A estabilização para o flapping
 
 <div class="mt-3 text-sm" style="display:grid;grid-template-columns:1fr 1fr;gap:0.85rem;">
   <v-click at="1">
-    <KwCard heading="Scale UP — responsive" kind="hpa" variant="ok">
-      Default <code>stabilizationWindowSeconds: 0</code> for up: react to a spike almost
-      immediately. Policies cap the <em>rate</em> (e.g. at most +100% or +4 Pods per 15s) so it
-      climbs fast but not without bound in one tick.
+    <KwCard heading="Scale UP — responsivo" kind="hpa" variant="ok">
+      Default <code>stabilizationWindowSeconds: 0</code> para cima: reaja a um pico quase
+      imediatamente. Políticas limitam a <em>taxa</em> (ex.: no máximo +100% ou +4 Pods por 15s)
+      para ele subir rápido mas não sem limite num único tick.
     </KwCard>
   </v-click>
   <v-click at="2">
-    <KwCard heading="Scale DOWN — cautious" icon="🕒">
-      Default <code>stabilizationWindowSeconds: 300</code> for down: the HPA uses the
-      <strong>highest</strong> desired count over the last 5 min. A brief dip won't shrink you —
-      it waits to be sure the lull is real.
+    <KwCard heading="Scale DOWN — cauteloso" icon="🕒">
+      Default <code>stabilizationWindowSeconds: 300</code> para baixo: o HPA usa a contagem
+      desejada <strong>mais alta</strong> dos últimos 5 min. Uma queda breve não vai encolher
+      você — ele espera ter certeza de que a calmaria é real.
     </KwCard>
   </v-click>
 </div>
@@ -306,118 +316,122 @@ the next slide: scale up fast, scale down slow. This is the lab beat 3 (why did 
 <div v-click="3" class="mt-3 text-sm">
 
 ```yaml {all}
-  behavior:                        # spec.behavior — override the defaults per direction
+  behavior:                        # spec.behavior — sobrescreva os defaults por direção
     scaleDown:
-      stabilizationWindowSeconds: 300   # ← the "why did scale-down lag?" answer
-      policies: [{ type: Pods, value: 1, periodSeconds: 60 }]   # at most -1 Pod/min
+      stabilizationWindowSeconds: 300   # ← a resposta do "por que o scale-down atrasou?"
+      policies: [{ type: Pods, value: 1, periodSeconds: 60 }]   # no máximo -1 Pod/min
 ```
 
 </div>
 
 <div v-click="4" class="mt-2 kw-muted text-sm">
 
-The asymmetry is deliberate: **under-reacting to a spike drops traffic; over-reacting to a lull
-just thrashes Pods.** So HPA errs toward capacity — quick up, patient down.
+A assimetria é deliberada: **reagir de menos a um pico derruba tráfego; reagir demais a uma
+calmaria só sacode Pods à toa.** Então o HPA erra para o lado da capacidade — sobe rápido, desce
+com paciência.
 
 </div>
 
 </div>
 
 <!--
-Speaker: this explains the animation's last step and answers the lab's headline question. HPA
-scaling is intentionally asymmetric. Scale-up stabilization defaults to 0 — a real spike should be
-met now; scale-up *policies* bound the per-interval rate so it doesn't overshoot wildly in a single
-loop. Scale-down stabilization defaults to 300s: the controller looks back over the window and
-takes the HIGHEST recommendation in it, so a momentary dip in load can't shrink the fleet — it has
-to stay low for the whole window first. You tune both under spec.behavior (v2). The mental model to
-leave them with: the cost of scaling down too eagerly is thrash (and dropped capacity right before
-the next spike); the cost of scaling up too eagerly is small. So the defaults lean toward keeping
-capacity — fast up, slow down. That 300s is exactly why, in the lab, replicas linger after you kill
-the load generator.
+Speaker: isto explica o último passo da animação e responde a manchete do lab. A escala do
+HPA é intencionalmente assimétrica. A estabilização do scale-up tem default 0 — um pico real deve
+ser atendido agora; as *políticas* de scale-up limitam a taxa por intervalo para ele não passar
+do ponto loucamente num único loop. A estabilização do scale-down tem default 300s: o controller
+olha para trás pela janela e pega a recomendação MAIS ALTA nela, então uma queda momentânea de
+carga não consegue encolher a frota — ela precisa ficar baixa pela janela inteira primeiro. Você
+ajusta os dois em spec.behavior (v2). O modelo mental para deixar com eles: o custo de descer
+cedo demais é sacudida (e capacidade derrubada logo antes do próximo pico); o custo de subir cedo
+demais é pequeno. Então os defaults pendem para manter capacidade — rápido para cima, lento para
+baixo. Esses 300s são exatamente o motivo de, no lab, as réplicas demorarem depois de você matar
+o gerador de carga.
 -->
 
 ---
 layout: comparison
-heading: 'Three autoscalers, three axes — HPA is only one'
-leftHeading: 'HPA — more Pods'
-leftBadge: 'horizontal · in scope'
+heading: 'Três autoscalers, três eixos — o HPA é só um'
+leftHeading: 'HPA — mais Pods'
+leftBadge: 'horizontal · no escopo'
 rightHeading: 'VPA & Cluster Autoscaler'
-rightBadge: 'other axes · neighbours'
+rightBadge: 'outros eixos · vizinhos'
 ---
 
-**HPA scales the workload OUT** — it changes `replicas`.
+**O HPA escala o workload PARA FORA** — ele muda `replicas`.
 
-- Reacts to live load: more Pods when busy, fewer when idle.
-- Needs a metric source (metrics-server) and `requests.cpu` to scale on utilization.
-- The right tool when your app scales by **adding identical copies**.
+- Reage à carga ao vivo: mais Pods quando ocupado, menos quando ocioso.
+- Precisa de uma fonte de métricas (metrics-server) e de `requests.cpu` para escalar por utilização.
+- A ferramenta certa quando a sua aplicação escala **adicionando cópias idênticas**.
 
 <v-clicks>
 
-- ⚠️ Doesn't help if a **single** Pod is simply under-resourced — that's a VPA job.
+- ⚠️ Não ajuda se um **único** Pod está simplesmente subdimensionado — isso é trabalho do VPA.
 
 </v-clicks>
 
 ::right::
 
-**Two adjacent tools solve different problems — named, not covered today:**
+**Duas ferramentas adjacentes resolvem problemas diferentes — nomeadas, não cobertas hoje:**
 
-- **VPA (Vertical Pod Autoscaler)** — right-sizes a Pod's `requests`/`limits` (bigger Pods, not
-  more). Useful for right-sizing; **don't run it on CPU for the same workload as an HPA** — they
-  fight over the same signal.
-- **Cluster Autoscaler** — adds/removes **nodes** when Pods can't be scheduled (or nodes sit
-  empty). HPA makes more Pods; Cluster Autoscaler makes room for them.
+- **VPA (Vertical Pod Autoscaler)** — redimensiona os `requests`/`limits` de um Pod (Pods
+  maiores, não mais Pods). Útil para right-sizing; **não o rode em CPU no mesmo workload que um
+  HPA** — eles brigam pelo mesmo sinal.
+- **Cluster Autoscaler** — adiciona/remove **nodes** quando Pods não conseguem ser agendados (ou
+  nodes ficam vazios). O HPA faz mais Pods; o Cluster Autoscaler faz espaço para eles.
 
 <v-clicks>
 
-- ✅ They compose: HPA adds Pods → they don't fit → Cluster Autoscaler adds a node.
+- ✅ Eles se compõem: o HPA adiciona Pods → eles não cabem → o Cluster Autoscaler adiciona um node.
 
 </v-clicks>
 
 <!--
-Speaker: keep the three axes straight so nobody conflates them. HPA = horizontal = more replicas,
-reacting to load — today's topic. VPA = vertical = right-size one Pod's requests/limits; great for
-"my Pod is chronically OOMKilled or over-provisioned," but the classic footgun is running VPA and
-HPA on the SAME metric (CPU) for the SAME workload — they chase each other, so pair HPA-on-CPU with
-VPA-on-memory at most, or keep them apart. Cluster Autoscaler operates on NODES, not Pods: when the
-HPA (or anything) creates Pods that can't schedule for lack of capacity, Cluster Autoscaler adds a
-node; when nodes idle, it drains and removes them. The composition is the takeaway: HPA increases
-demand for capacity, Cluster Autoscaler supplies it — and VPA tunes the size of each unit. All three
-are current CNCF-ecosystem tools; only HPA is built into core and in scope here.
+Speaker: mantenha os três eixos separados para ninguém confundi-los. HPA = horizontal = mais
+réplicas, reagindo à carga — o tópico de hoje. VPA = vertical = redimensionar os requests/limits
+de um Pod; ótimo para "meu Pod é cronicamente OOMKilled ou superprovisionado", mas o tiro no pé
+clássico é rodar VPA e HPA sobre a MESMA métrica (CPU) para o MESMO workload — eles ficam se
+perseguindo, então no máximo emparelhe HPA-em-CPU com VPA-em-memória, ou mantenha-os separados.
+O Cluster Autoscaler opera em NODES, não Pods: quando o HPA (ou qualquer coisa) cria Pods que não
+conseguem agendar por falta de capacidade, o Cluster Autoscaler adiciona um node; quando nodes
+ficam ociosos, ele os drena e remove. A composição é o aprendizado: o HPA aumenta a demanda por
+capacidade, o Cluster Autoscaler a supre — e o VPA ajusta o tamanho de cada unidade. Os três são
+ferramentas atuais do ecossistema CNCF; só o HPA é embutido no core e está no escopo aqui.
 -->
 
 ---
 layout: recap
-heading: 'Recap — and that closes Day 2'
-story: 'The herd grew from 2 to 10 under load and drifted back to 2 after the window — the replica count is no longer a number you guess, it is a signal the cluster tracks.'
-next: 'Day 3 · Pod security — lock down what a container may do at runtime'
+heading: 'Recap — e isso fecha o Day 2'
+story: 'O rebanho cresceu de 2 para 10 sob carga e voltou devagar para 2 depois da janela — a contagem de réplicas não é mais um número que você chuta, é um sinal que o cluster acompanha.'
+next: 'Day 3 · Segurança de Pods — restrinja o que um container pode fazer em runtime'
 ---
 
-- **HPA = a reconcile loop on `replicas`:** watch avg CPU → `ceil(current × util/target)` → clamp to `[min,max]`
-- **Utilization is % of `requests.cpu`** — no request → `TARGETS <unknown>` → no scaling (the resources tie-back)
-- **`autoscaling/v2`**, `scaleTargetRef` the Deployment, and **don't** also hand-set `replicas`
-- **Asymmetric by design:** scale up fast (window 0), scale **down** slow (window **300s**) — that's why the fleet lingers
-- **Neighbours:** VPA right-sizes Pods · Cluster Autoscaler adds nodes — HPA only adds Pods
+- **HPA = um loop de reconciliação sobre `replicas`:** observe a CPU média → `ceil(current × util/target)` → restrinja a `[min,max]`
+- **Utilization é % do `requests.cpu`** — sem request → `TARGETS <unknown>` → sem escala (o gancho de volta aos resources)
+- **`autoscaling/v2`**, `scaleTargetRef` no Deployment, e **não** defina também `replicas` à mão
+- **Assimétrico por design:** sobe rápido (janela 0), desce **devagar** (janela de **300s**) — é por isso que a frota demora
+- **Vizinhos:** o VPA redimensiona Pods · o Cluster Autoscaler adiciona nodes — o HPA só adiciona Pods
 
 <div class="mt-4 text-sm kw-muted">
 
-**Day 2 layered onto one running app:** Gateway API routing · ConfigMap/Secret ·
+**O Day 2 em camadas sobre uma aplicação em execução:** roteamento com Gateway API · ConfigMap/Secret ·
 storage & StatefulSet · requests/limits & QoS · probes · Jobs/CronJobs
-· **and now it autoscales**. The `web` app now routes, persists, self-heals, and
-right-sizes to load.
+· **e agora ela autoescala**. A aplicação `web` agora roteia, persiste, se autocura e se
+dimensiona pela carga.
 
 </div>
 
 <!--
-Speaker: land the section AND the day. HPA is the reconcile loop from S03 with replicas as the
-reconciled field: it reads average CPU, applies desired = ceil(current × util/target), and clamps
-to [min,max]. The one thing they must not forget: utilization is relative to requests.cpu, so an
-HPA is only valid on a Pod that declares a CPU request — the same request that drives scheduling in
-S13 now drives autoscaling. autoscaling/v2 is the API; let the HPA own replicas (setting both is a
-tug-of-war). And the asymmetry — fast up, slow down (300s default) — is why the lab's replicas don't
-snap back the instant load stops. Then zoom out: over Day 2 we took the red-line app and made it
-route with Gateway API, externalize config, persist state as a StatefulSet, declare resources and
-QoS, expose health via probes, run batch work, and now autoscale. Day 3 shifts from "run it well"
-to "run it safely" — starting with S17 Pod security.
+Speaker: aterrisse a seção E o dia. O HPA é o loop de reconciliação do S03 com replicas como o
+campo reconciliado: ele lê a CPU média, aplica desired = ceil(current × util/target), e restringe
+a [min,max]. A única coisa que eles não podem esquecer: a utilização é relativa ao requests.cpu,
+então um HPA só é válido em um Pod que declara um request de CPU — o mesmo request que dirige o
+agendamento no S13 agora dirige o autoscaling. autoscaling/v2 é a API; deixe o HPA ser dono de
+replicas (definir os dois é um cabo de guerra). E a assimetria — rápido para cima, devagar para
+baixo (default de 300s) — é o motivo de as réplicas do lab não voltarem no instante em que a
+carga para. Depois afaste o zoom: ao longo do Day 2 pegamos a aplicação da red line e a fizemos
+rotear com Gateway API, externalizar config, persistir estado como StatefulSet, declarar
+resources e QoS, expor saúde via probes, rodar trabalho batch, e agora autoescalar. O Day 3 muda
+de "rode bem" para "rode com segurança" — começando com o S17, segurança de Pods.
 -->
 
 ---
@@ -427,11 +441,11 @@ duration: 20 min
 env: kind ✓ (metrics-server) / namespace read-only
 ---
 
-## Lab 16 — Scale under load
+## Lab 16 — Escale sob carga
 
-- Confirm **metrics-server** (`kubectl top pods` returns data), apply a CPU-bound Deployment
-  **with `requests.cpu`** + an HPA (`min`/`max`, 50% target)
-- Generate load → watch `TARGETS` cross 50% and `REPLICAS` climb toward max; stop it → watch it
-  **settle back after the window**
-- **Break→fix:** remove `requests.cpu` → `TARGETS <unknown>`, HPA can't scale → restore it
-- Answer the headline: *why did scale-down lag behind the load dropping?*
+- Confirme o **metrics-server** (`kubectl top pods` retorna dados), aplique um Deployment que
+  consome CPU **com `requests.cpu`** + um HPA (`min`/`max`, alvo de 50%)
+- Gere carga → veja o `TARGETS` cruzar 50% e o `REPLICAS` subir rumo ao máximo; pare-a → veja-o
+  **assentar de volta depois da janela**
+- **Quebre→conserte:** remova o `requests.cpu` → `TARGETS <unknown>`, o HPA não consegue escalar → restaure-o
+- Responda a manchete: *por que o scale-down atrasou em relação à queda da carga?*

@@ -1,197 +1,202 @@
-# Labs — participant guide
+# Labs — guia do participante
 
-Hands-on labs for the Kubernetes Practitioner Workshop. These are the **50% practice**
-half of the workshop: every concept block in the deck is followed by a lab you run
-against your own environment.
+Labs hands-on do Kubernetes Practitioner Workshop. Eles são a metade **prática (50%)**
+do workshop: todo bloco de conceito do deck é seguido por um lab que você executa
+contra o seu próprio ambiente.
 
-Each lab is a **standalone Markdown file** you can read top to bottom and copy-paste
-your way through. You do not need the slides to run them.
+Cada lab é um **arquivo Markdown independente** que você pode ler de cima a baixo e
+percorrer copiando e colando. Você não precisa dos slides para executá-los.
 
-> **New here? Start with [`day-1/00-setup.md`](./day-1/00-setup.md).** It verifies your
-> tooling, context, and namespace before any real content — and teaches the panic reset
-> you reuse everywhere. Then work through the labs in order (each extends the previous).
+> **Chegou agora? Comece pelo [`day-1/00-setup.md`](./day-1/00-setup.md).** Ele verifica seu
+> tooling, seu context e seu namespace antes de qualquer conteúdo de verdade — e ensina o
+> panic reset que você reutiliza em todo lugar. Depois percorra os labs em ordem (cada um
+> estende o anterior).
 
-- **Schedule & section map:** [`../docs/syllabus.md`](../docs/syllabus.md)
-- **Running the workshop (facilitators):** [`../docs/facilitator-guide.md`](../docs/facilitator-guide.md)
-- **Project overview & preview:** [`../README.md`](../README.md)
+- **Cronograma e mapa de seções:** [`../docs/syllabus.md`](../docs/syllabus.md)
+- **Conduzindo o workshop (facilitadores):** [`../docs/facilitator-guide.md`](../docs/facilitator-guide.md)
+- **Visão geral do projeto e preview:** [`../README.md`](../README.md)
 
 ## Prerequisites
 
-You need a shell you are comfortable in, plus the tools below. **Versions are not
-hard-pinned** — use current releases and keep `kubectl` within one minor version of your
-cluster's API server.
+Você precisa de um shell com o qual se sinta confortável, mais as ferramentas abaixo. **As
+versões não estão fixadas rigidamente** — use releases atuais e mantenha o `kubectl` dentro de
+uma minor version do API server do seu cluster.
 
-**Core (every cluster lab):**
+**Core (todo lab de cluster):**
 
-- `kubectl` on your `PATH`, talking to a cluster (see [Your environment](#your-environment)).
-- One lab environment: an **assigned namespace** on a shared cluster, **or** a local
-  **kind** cluster.
+- `kubectl` no seu `PATH`, falando com um cluster (veja [Your environment](#your-environment)).
+- Um ambiente de lab: um **namespace atribuído** em um cluster compartilhado **ou** um cluster
+  **kind** local.
 
-**For the local kind path:**
+**Para o caminho kind local:**
 
-- [`kind`](https://kind.sigs.k8s.io) and a **container engine** (Docker or Podman).
-- You have full admin over your own cluster, so kind-only labs (add-on installs) work.
-- **One command sets this up:** [`../docs/setup.md`](../docs/setup.md) takes you from a
-  fresh laptop to a lab-ready kind cluster with `./workshop up` (engine choice incl. the
-  Docker Desktop licensing note, the pinned toolchain, and the Windows/WSL2 path).
+- [`kind`](https://kind.sigs.k8s.io) e um **container engine** (Docker ou Podman).
+- Você tem admin total sobre o seu próprio cluster, então os labs kind-only (instalação de
+  add-ons) funcionam.
+- **Um comando prepara tudo:** [`../docs/setup.md`](../docs/setup.md) leva você de um laptop
+  zerado a um cluster kind pronto para os labs com `./workshop up` (escolha do engine, incluindo
+  a nota de licenciamento do Docker Desktop, a toolchain fixada e o caminho Windows/WSL2).
 
-**For the container labs (S01/S02) — no cluster needed:**
+**Para os labs de container (S01/S02) — sem precisar de cluster:**
 
-- A **container engine**: Docker, Podman, or nerdctl (the labs use an `$ENGINE`
-  variable so any of the three works). Its daemon/machine must be running.
-- **S02 only:** a vulnerability scanner — [Trivy](https://trivy.dev) (Grype works too);
-  optionally [cosign](https://docs.sigstore.dev/) for the signing step (skippable).
+- Um **container engine**: Docker, Podman ou nerdctl (os labs usam uma variável `$ENGINE`,
+  então qualquer um dos três serve). O daemon/a máquina dele precisa estar rodando.
+- **Só no S02:** um scanner de vulnerabilidades — [Trivy](https://trivy.dev) (Grype também
+  funciona); opcionalmente [cosign](https://docs.sigstore.dev/) para o passo de assinatura
+  (pode ser pulado).
 
-**For specific Day-3 labs:**
+**Para labs específicos do Day 3:**
 
-- [`helm`](https://helm.sh) v3.8+ for the Helm lab (S20) and the Prometheus lab (S23).
-- A few labs install cluster-wide add-ons (metrics-server, an Ingress/Gateway
-  controller, a policy-capable CNI, Argo CD, a monitoring stack). These are **kind-only**
-  and self-installed by the lab, or provided for you on a shared cluster. See
-  [How the labs work](#how-the-labs-work) and the per-lab prerequisites.
+- [`helm`](https://helm.sh) v3.8+ para o lab de Helm (S20) e o lab de Prometheus (S23).
+- Alguns labs instalam add-ons cluster-wide (metrics-server, um controller de Ingress/Gateway,
+  uma CNI com suporte a policy, Argo CD, uma stack de monitoring). Eles são **kind-only** e
+  autoinstalados pelo próprio lab, ou já disponibilizados para você em um cluster compartilhado.
+  Veja [How the labs work](#how-the-labs-work) e os prerequisites de cada lab.
 
-The setup lab, [`day-1/00-setup.md`](./day-1/00-setup.md), verifies your tooling before
-any real content — start there.
+O lab de setup, [`day-1/00-setup.md`](./day-1/00-setup.md), verifica seu tooling antes de
+qualquer conteúdo de verdade — comece por ele.
 
 ## Your environment
 
-Every cluster lab runs in **one of two environments**, and both are supported
-throughout:
+Todo lab de cluster roda em **um de dois ambientes**, e os dois são suportados do início ao
+fim:
 
-| Environment | What it is | You get |
+| Ambiente | O que é | O que você ganha |
 | --- | --- | --- |
-| **Namespace** | An assigned namespace on a shared cluster your facilitator runs. | A kubeconfig + a namespace (e.g. `student-07`). **No cluster-admin.** |
-| **kind** | A local single-node cluster you create yourself. | Full admin over your own throwaway cluster. |
+| **Namespace** | Um namespace atribuído em um cluster compartilhado que seu facilitador administra. | Um kubeconfig + um namespace (ex.: `student-07`). **Sem cluster-admin.** |
+| **kind** | Um cluster local de um node só que você mesmo cria. | Admin total sobre o seu cluster descartável. |
 
-Each lab carries an **Environment badge** telling you which paths it supports:
+Cada lab carrega um **badge de Environment** dizendo quais caminhos ele suporta:
 
-- **`namespace ✓ / kind ✓`** — works in both, identically. Most core labs.
-- **`kind ✓` + `namespace: read-only`** — the full hands-on path needs cluster-admin,
-  CRDs, or host access, so it runs only on your own kind cluster, **but** these labs also
-  ship a namespace-safe read-only alternative (observe a pre-installed component) so
-  shared-cluster learners can still follow along. (S16, S18, S21, S23.)
-- **`kind-only`** — no shared-cluster path at all: the lab must run on a throwaway kind
-  cluster you own (e.g. S25 pod-escape, a controlled container escape).
-- **`local — no cluster needed`** — the container labs (S01/S02) run entirely on your
-  machine against a container engine; no Kubernetes at all.
+- **`namespace ✓ / kind ✓`** — funciona nos dois, de forma idêntica. A maioria dos labs core.
+- **`kind ✓` + `namespace: read-only`** — o caminho hands-on completo precisa de cluster-admin,
+  CRDs ou acesso ao host, então ele roda só no seu próprio cluster kind, **mas** esses labs
+  também trazem uma alternativa read-only segura para namespace (observar um componente
+  pré-instalado), para que quem está em cluster compartilhado consiga acompanhar.
+  (S16, S18, S21, S23.)
+- **`kind-only`** — sem nenhum caminho em cluster compartilhado: o lab precisa rodar em um
+  cluster kind descartável que seja seu (ex.: S25 pod-escape, um container escape controlado).
+- **`local — no cluster needed`** — os labs de container (S01/S02) rodam inteiramente na sua
+  máquina contra um container engine; nada de Kubernetes.
 
-The labs use a shell variable `$NS` for your working namespace throughout. Set it once in
-the setup lab (`export NS=<your-namespace>`; kind users use `export NS=workshop`).
+Os labs usam a variável de shell `$NS` para o seu namespace de trabalho o tempo todo. Defina-a
+uma vez no lab de setup (`export NS=<your-namespace>`; quem usa kind usa `export NS=workshop`).
 
 ## How the labs work
 
-The workshop teaches a repeatable rhythm: **explain → run → observe → break → fix →
-recap**. The labs are the "run / observe / break / fix" part. Day 1 Labs 01–08,
-Day 2 Labs 09–16, and Day 3 Labs 17–23, 25–26 are the slices enforced by
-`pnpm test:labs` (S24 kubebuilder remains deferred); they follow this shape:
+O workshop ensina um ritmo repetível: **explique → execute → observe → quebre → conserte →
+recapitule**. Os labs são a parte "execute / observe / quebre / conserte". Day 1 Labs 01–08,
+Day 2 Labs 09–16 e Day 3 Labs 17–23, 25–26 são as fatias garantidas pelo
+`pnpm test:labs` (o S24 kubebuilder continua deferred); eles seguem este formato:
 
-1. **Title & metadata** — the matching section ID, an estimated time, and the
-   Environment badge.
-2. **Objective** — one or two sentences on what you'll prove.
-3. **Prerequisites** — prior labs, any add-ons/tools needed.
-4. **Guided task** — explicit, ordered, copy-pasteable commands. No "figure it out."
-5. **Observe** — read and explain the resulting state.
-6. **Challenge** — transfer the skill to a diagnostic or changed scenario.
-7. **Verify** — prove the expected state before deleting evidence.
-8. **Cleanup / reset** — remove named/labelled lab resources or reset only the assigned
-   namespace.
+1. **Title & metadata** — o ID da seção correspondente, um tempo estimado e o
+   badge de Environment.
+2. **Objective** — uma ou duas frases sobre o que você vai provar.
+3. **Prerequisites** — labs anteriores, quaisquer add-ons/ferramentas necessários.
+4. **Guided task** — comandos explícitos, ordenados, prontos para copiar e colar. Nada de
+   "se vira".
+5. **Observe** — leia e explique o estado resultante.
+6. **Challenge** — transfira a habilidade para um cenário de diagnóstico ou modificado.
+7. **Verify** — prove o estado esperado antes de apagar as evidências.
+8. **Cleanup / reset** — remova os recursos do lab por nome/label ou resete apenas o namespace
+   atribuído.
 
-### Solutions & hints
+### Soluções e hints
 
-Contracted participant labs stay readable by keeping answers in a sibling
-`NN-topic.solution.md`. Each lab links to both required anchors:
+Os labs contratados do participante continuam legíveis porque as respostas ficam em um irmão
+`NN-topic.solution.md`. Cada lab aponta para os dois anchors obrigatórios:
 
 ```md
 [Spoiler: guided solutions](./NN-topic.solution.md#guided-solutions)
 [Spoiler: challenge solution](./NN-topic.solution.md#challenge-solution)
 ```
 
-Try each step **before** opening the companion. It contains the exact commands/manifests,
-representative expected state, why the result is correct, likely-failure recovery, and the
-challenge answer. Day 1 Labs 01–08, Day 2 Labs 09–16, and Day 3 Labs 17–23, 25–26 use this
-sibling convention. **S24** (`24-kubebuilder.md`) is a **deferred** stub outside the inventory
-— no invented Go/kubebuilder sibling solution until the toolchain lab ships.
+Tente cada passo **antes** de abrir o companion. Ele contém os comandos/manifestos exatos, o
+estado esperado representativo, por que o resultado está certo, a recuperação das falhas mais
+prováveis e a resposta do challenge.
+Day 1 Labs 01–08, Day 2 Labs 09–16 e Day 3 Labs 17–23, 25–26 usam essa convenção de irmão.
+**S24** (`24-kubebuilder.md`) é um stub **deferred** fora
+do inventário — nada de solução irmã inventada em Go/kubebuilder até o lab de toolchain sair.
 
 ## Completion matrix
 
-Contract status for the `pnpm test:labs` inventory (sibling `NN-topic.solution.md` required):
+Status do contrato para o inventário do `pnpm test:labs` (o irmão `NN-topic.solution.md` é
+obrigatório):
 
-| Lab | Sibling solution | Notes |
+| Lab | Solução irmã | Notas |
 | --- | --- | --- |
-| Day 1 · [`01`](./day-1/01-containers.md)–[`08`](./day-1/08-ingress.md) | yes | Enforced |
-| Day 2 · [`09`](./day-2/09-gateway-api.md)–[`16`](./day-2/16-hpa.md) | yes | Enforced |
-| Day 3 · [`17`](./day-3/17-pod-security.md)–[`23`](./day-3/23-prometheus.md), [`25`](./day-3/25-pod-escape.md)–[`26`](./day-3/26-capstone.md) | yes | Enforced |
-| Day 3 · [`24`](./day-3/24-kubebuilder.md) | deferred | S24 stub — reviewed exception; no sibling until the toolchain lab ships |
+| Day 1 · [`01`](./day-1/01-containers.md)–[`08`](./day-1/08-ingress.md) | sim | Obrigatório |
+| Day 2 · [`09`](./day-2/09-gateway-api.md)–[`16`](./day-2/16-hpa.md) | sim | Obrigatório |
+| Day 3 · [`17`](./day-3/17-pod-security.md)–[`23`](./day-3/23-prometheus.md), [`25`](./day-3/25-pod-escape.md)–[`26`](./day-3/26-capstone.md) | sim | Obrigatório |
+| Day 3 · [`24`](./day-3/24-kubebuilder.md) | deferred | Stub do S24 — exceção revisada; sem irmão até o lab de toolchain sair |
 
 ### Break → fix
 
-Every lab includes at least one **deliberate break**: a bad image tag, a mismatched
-selector, a failing probe, a missing resource request, a rejected Pod. You run the broken
-state, read the real error (from `describe`, `logs`, or events), then fix it. This is the
-whole point — you learn to recognise failures in a safe place so you recognise them for
-real later.
+Todo lab inclui pelo menos uma **quebra deliberada**: uma tag de image ruim, um selector que
+não casa, uma probe falhando, um resource request faltando, um Pod rejeitado. Você roda o
+estado quebrado, lê o erro real (do `describe`, dos `logs` ou dos events) e então conserta.
+Esse é o ponto todo — você aprende a reconhecer falhas em um lugar seguro para reconhecê-las
+de verdade depois.
 
-### Reset & cleanup safety
+### Segurança de reset e cleanup
 
-Every lab ends with a **Cleanup / panic reset** that returns your environment to a clean
-state:
+Todo lab termina com um **Cleanup / panic reset** que devolve seu ambiente a um estado limpo:
 
-- On a **shared namespace**, cleanup is always **scoped to your namespace** (`-n $NS`) so
-  you never touch anyone else's work. The canonical panic reset deletes the common
-  workload objects in your namespace only.
-- On **kind**, the fastest reset is to throw the cluster away and rebuild it
-  (`kind delete cluster` then re-create it — ~30 s). **Never** do the throw-away reset on
-  a shared cluster.
+- Em um **namespace compartilhado**, o cleanup é sempre **restrito ao seu namespace**
+  (`-n $NS`), então você nunca encosta no trabalho de ninguém. O panic reset canônico deleta os
+  objetos de workload comuns apenas no seu namespace.
+- No **kind**, o reset mais rápido é jogar o cluster fora e recriá-lo (`kind delete cluster` e
+  então criar de novo — ~30 s). **Nunca** faça o reset descartável em um cluster compartilhado.
 
-The setup lab defines the reusable panic reset; later labs point back to it.
+O lab de setup define o panic reset reutilizável; os labs seguintes apontam de volta para ele.
 
-## Layout
+## Estrutura
 
-Labs are grouped by their suggested day in the section manifest. The canonical
-[3-day cut](../docs/syllabus.md#the-canonical-3-day-cut) is a smaller subset; add-back
-labs remain here so facilitators can compose a longer delivery.
-The numeric prefix is the section ID (Lab `NN` ↔ section `SNN`). Every authored lab below
-is a direct link — click straight into any one:
+Os labs são agrupados pelo dia sugerido no manifesto de seções. O
+[3-day cut canônico](../docs/syllabus.md#the-canonical-3-day-cut) é um subconjunto menor; os
+labs adicionais continuam aqui para que facilitadores possam compor uma entrega mais longa.
+O prefixo numérico é o ID da seção (Lab `NN` ↔ seção `SNN`). Todo lab escrito abaixo é um link
+direto — clique direto em qualquer um:
 
-### Day 1 — Foundations, containers, core red line
+### Day 1 — Fundamentos, containers, a red line central
 
-- [`00-setup`](./day-1/00-setup.md) — verify tooling, context & namespace *(start here)*
-- [`01-containers`](./day-1/01-containers.md) · [`02-container-security`](./day-1/02-container-security.md) *(local, no cluster)*
+- [`00-setup`](./day-1/00-setup.md) — verifique tooling, context e namespace *(comece aqui)*
+- [`01-containers`](./day-1/01-containers.md) · [`02-container-security`](./day-1/02-container-security.md) *(local, sem cluster)*
 - [`03-cluster-tour`](./day-1/03-cluster-tour.md) · [`04-kubectl`](./day-1/04-kubectl.md)
 - [`05-pod`](./day-1/05-pod.md) · [`06-deployment`](./day-1/06-deployment.md) · [`07-service`](./day-1/07-service.md) · [`08-ingress`](./day-1/08-ingress.md)
 
-### Day 2 — Modern routing, running workloads well
+### Day 2 — Routing moderno, rodando workloads bem
 
 - [`09-gateway-api`](./day-2/09-gateway-api.md) · [`10-config`](./day-2/10-config.md) · [`11-storage`](./day-2/11-storage.md) · [`12-statefulset`](./day-2/12-statefulset.md)
 - [`13-resources`](./day-2/13-resources.md) · [`14-probes`](./day-2/14-probes.md) · [`15-jobs`](./day-2/15-jobs.md) · [`16-hpa`](./day-2/16-hpa.md)
 
-### Day 3 — Security, delivery, operators, best practices
+### Day 3 — Segurança, entrega, operators, boas práticas
 
 - [`17-pod-security`](./day-3/17-pod-security.md) · [`18-networkpolicy`](./day-3/18-networkpolicy.md) · [`19-rbac`](./day-3/19-rbac.md)
 - [`20-helm`](./day-3/20-helm.md) · [`21-gitops`](./day-3/21-gitops.md) · [`22-operator-concept`](./day-3/22-operator-concept.md) · [`23-prometheus`](./day-3/23-prometheus.md)
-- [`24-kubebuilder`](./day-3/24-kubebuilder.md) *(deferred stub)* · [`25-pod-escape`](./day-3/25-pod-escape.md) · [`26-capstone`](./day-3/26-capstone.md)
+- [`24-kubebuilder`](./day-3/24-kubebuilder.md) *(stub deferred)* · [`25-pod-escape`](./day-3/25-pod-escape.md) · [`26-capstone`](./day-3/26-capstone.md)
 
-Because the deck is a **superset** (more sections than fit in three days), some labs are
-outside the default 3-day cut (e.g. Jobs, HPA, RBAC). These are fully authored and
-runnable regardless — see the [syllabus](../docs/syllabus.md) for which sections a given
-delivery includes. One optional section, **S24 (kubebuilder)**, is a **deferred stub** —
-it needs a Go toolchain and is planned for a later milestone; see the
-[facilitator guide](../docs/facilitator-guide.md).
+Como o deck é um **superset** (mais seções do que cabem em três dias), alguns labs ficam fora
+do 3-day cut padrão (ex.: Jobs, HPA, RBAC). Eles estão totalmente escritos e executáveis mesmo
+assim — veja o [syllabus](../docs/syllabus.md) para saber quais seções uma dada entrega inclui.
+Uma seção opcional, **S24 (kubebuilder)**, é um stub **deferred** — ela precisa de uma toolchain
+Go e está planejada para um milestone posterior; veja o
+[guia do facilitador](../docs/facilitator-guide.md).
 
 ## How to start
 
-1. Confirm your [prerequisites](#prerequisites) and decide your
-   [environment](#your-environment) (namespace or kind).
-2. Run [`day-1/00-setup.md`](./day-1/00-setup.md) end to end. It verifies `kubectl`, your
-   context and namespace, and your permission to create workloads — and teaches the panic
-   reset you'll reuse everywhere.
-3. Work through the labs in order. Each extends the same running application (the
+1. Confirme seus [prerequisites](#prerequisites) e decida seu
+   [environment](#your-environment) (namespace ou kind).
+2. Execute o [`day-1/00-setup.md`](./day-1/00-setup.md) de ponta a ponta. Ele verifica o
+   `kubectl`, seu context e namespace e sua permissão para criar workloads — e ensina o panic
+   reset que você vai reutilizar em todo lugar.
+3. Percorra os labs em ordem. Cada um estende a mesma aplicação em execução (a
    [red line](../docs/syllabus.md#the-red-line): Pod → Deployment → Service → Ingress →
-   Gateway API), so later labs assume you completed the earlier ones.
+   Gateway API), então os labs posteriores assumem que você completou os anteriores.
 
-> **Kind rehearsal note.** The labs' manifests are validated, but not every lab has yet
-> been run end-to-end in a clean environment — a few kind-only add-on installs (timings,
-> exact controller/CRD behaviour) are pending a rehearsal pass. If a step's timing or
-> representative solution output differs, capture the real state instead of copying an
-> ephemeral value. Facilitators: see the
-> [facilitator guide](../docs/facilitator-guide.md).
+> **Nota sobre o ensaio em kind.** Os manifestos dos labs estão validados, mas nem todo lab foi
+> executado de ponta a ponta em um ambiente limpo — algumas instalações de add-on kind-only
+> (timings, comportamento exato de controller/CRD) ainda dependem de uma rodada de ensaio. Se o
+> timing de um passo ou a saída representativa da solução divergir, capture o estado real em vez
+> de copiar um valor efêmero. Facilitadores: veja o
+> [guia do facilitador](../docs/facilitator-guide.md).

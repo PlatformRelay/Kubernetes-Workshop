@@ -7,133 +7,133 @@ tier: recommended
 track: Security
 ---
 
-# Security & pod escape
+# Segurança & pod escape
 
-How weak Pod settings enable a container escape — and how to prevent it.
+Como configurações fracas de Pod habilitam um container escape — e como evitá-lo.
 
-**recommended** · suggested Day 3 · Security track
+**recommended** · sugerido para o Day 3 · trilha Security
 
 <!--
-Section S25 — Security & pod escape (offensive-then-DEFENSIVE counterpart to S17).
-Suggested Day 3 (M5, Security track). Timing: ~35 min slides + 30 min lab. This is
-DEFENSIVE security education: a controlled, kind-only demonstration of a container escape
-via dangerous Pod settings, immediately followed by the defence (restricted Pod Security
-Admission blocks the same Pod at CREATE). The framing is a hard requirement — the FIRST
-content slide after this cover is the ethics/scope statement; every attack beat is conceptual
-(diagram/cards) on the slides; the only "live" thing is a benign node-filesystem READ in the lab.
-Beats: (1) DEFENSIVE framing + ethics/scope · (2) shared-kernel threat model (containers are
-processes, not VMs) · (3) catalogue of dangerous settings · (4) conceptual escape walkthrough
-(privileged + hostPath / → node filesystem) · (5) magic-move attacker Pod → hardened Pod ·
-(6) AdmissionGate — the SAME restricted gate admitting the hardened Pod · (7) defences map
-(S02/S17/S18 + scan/detect) · (7b) live scanning — Trivy Operator as the worked open-source
-example of the scan-the-running-cluster half (net-zero add: 12 slides in 35 min stays under
-the deck's density norm; the categories slide and its endorses-none stance are unchanged) ·
-(8) NSA/CISA + MITRE ATT&CK + tool categories · (9) recap → lab.
-Trivy Operator ACCURACY LOCKS (verified against aquasecurity.github.io/trivy-operator,
-2026-08): runs IN-cluster; scans RUNNING workloads — a scan triggers when a workload
-changes AND when a report's TTL expires (default 24h), NOT on a cron schedule (say
-"as reports expire", never "nightly"); results are CRDs queryable with kubectl —
-VulnerabilityReport, ConfigAuditReport, ExposedSecretReport…; the point vs CI
-scanning: it catches CVEs disclosed AFTER an already-admitted image was deployed.
-Concepts-only: no pin, no lab step.
-Reuse AdmissionGate.vue (do NOT author a new component). NOTE: AdmissionGate renders the FOUR
-restricted fields (runAsNonRoot / allowPrivilegeEscalation / drop ALL / seccompProfile) — NOT
-privileged/hostPath. So it is narrated ONLY as "the same gate that admits the hardened Pod";
-the privileged/hostPath-specific REJECTION lives in the static cards and the lab's real output.
-CKx tie-in: CKA security & hardening (defensive).
+Seção S25 — Security & pod escape (contraparte ofensiva-e-depois-DEFENSIVA do S17).
+Sugerida para o Day 3 (M5, trilha Security). Tempo: ~35 min de slides + 30 min de lab. Isto é
+educação DEFENSIVA de segurança: uma demonstração controlada, só em kind, de um container escape
+via configurações perigosas de Pod, imediatamente seguida da defesa (o restricted Pod Security
+Admission bloqueia o mesmo Pod no CREATE). O enquadramento é um requisito rígido — o PRIMEIRO
+slide de conteúdo depois desta capa é a declaração de ética/escopo; todo beat de ataque é conceitual
+(diagrama/cards) nos slides; a única coisa "ao vivo" é uma LEITURA benigna do filesystem do node no lab.
+Beats: (1) enquadramento DEFENSIVO + ética/escopo · (2) threat model de kernel compartilhado (containers são
+processos, não VMs) · (3) catálogo de configurações perigosas · (4) walkthrough conceitual do escape
+(privileged + hostPath / → filesystem do node) · (5) magic-move do Pod atacante → Pod hardened ·
+(6) AdmissionGate — o MESMO restricted gate admitindo o Pod hardened · (7) mapa de defesas
+(S02/S17/S18 + scan/detect) · (7b) scanning ao vivo — Trivy Operator como o exemplo open-source
+trabalhado da metade "scan-do-cluster-em-execução" (adição net-zero: 12 slides em 35 min fica abaixo
+da norma de densidade do deck; o slide de categorias e sua postura de não-endossar-nada seguem inalterados) ·
+(8) NSA/CISA + MITRE ATT&CK + categorias de ferramentas · (9) recap → lab.
+Trivy Operator ACCURACY LOCKS (verificado contra aquasecurity.github.io/trivy-operator,
+2026-08): roda DENTRO do cluster; escaneia workloads EM EXECUÇÃO — um scan dispara quando um workload
+muda E quando o TTL de um report expira (padrão 24h), NÃO em um cron schedule (diga
+"conforme os reports expiram", nunca "de madrugada"); os resultados são CRDs consultáveis com kubectl —
+VulnerabilityReport, ConfigAuditReport, ExposedSecretReport…; o ponto vs scanning de CI:
+ele pega CVEs divulgados DEPOIS de uma image já admitida ter sido implantada.
+Só conceitos: sem pin, sem passo de lab.
+Reutilize AdmissionGate.vue (NÃO escreva um novo componente). NOTA: o AdmissionGate renderiza os QUATRO
+campos restricted (runAsNonRoot / allowPrivilegeEscalation / drop ALL / seccompProfile) — NÃO
+privileged/hostPath. Então ele é narrado APENAS como "o mesmo gate que admite o Pod hardened";
+a REJEIÇÃO específica de privileged/hostPath vive nos cards estáticos e na saída real do lab.
+Vínculo com CKx: CKA security & hardening (defensivo).
 -->
 
 ---
 layout: statement
-kicker: Read this first · scope & ethics
+kicker: Leia isto primeiro · escopo & ética
 ---
 
-This is **defensive** security. Everything here runs in a **throwaway kind cluster you own** —
-**never** against a shared or production cluster.
+Isto é segurança **defensiva**. Tudo aqui roda em um **kind cluster descartável que é seu** —
+**nunca** contra um cluster compartilhado ou de produção.
 
-We demonstrate one container escape **so you can recognise and block it**. The lab reads a single
-**benign** file to *prove* access, then spends the rest of its time on the defence. No credentials
-are dumped, nothing is exfiltrated, nothing is destroyed. Run the offensive step **only** on a
-cluster you created and will delete.
+Demonstramos um container escape **para que você consiga reconhecê-lo e bloqueá-lo**. O lab lê um único
+arquivo **benigno** para *provar* o acesso, depois passa o resto do tempo na defesa. Nenhuma credencial
+é despejada, nada é exfiltrado, nada é destruído. Rode o passo ofensivo **apenas** em um
+cluster que você criou e vai deletar.
 
 <!--
-Speaker: say this out loud before any attack content — it's a hard rule, not a disclaimer. Frame:
-we are learning to DEFEND, and you cannot defend a technique you have never seen. So we show ONE
-escape, in the most contained way possible: a kind cluster you spun up and will throw away. The
-lab has a context-check.sh that refuses to run unless the current context is a `kind-` context —
-that guard gates every offensive step. The "attack" itself is a single READ of /host/etc/os-release
-to prove we're touching the node's filesystem; we do NOT read Secrets, kubelet certs, or the
-runtime socket — the point is made by demonstrating ACCESS, and the danger is explained in words.
-Then we delete the Pod and spend the rest of the section blocking it. If anyone is on a shared
-cluster: watch, don't type. This is the ethics/scope contract for the whole section.
+Speaker: diga isto em voz alta antes de qualquer conteúdo de ataque — é uma regra rígida, não um aviso.
+Enquadramento: estamos aprendendo a DEFENDER, e você não consegue defender uma técnica que nunca viu. Então
+mostramos UM escape, da forma mais contida possível: um kind cluster que você subiu e vai jogar fora. O
+lab tem um context-check.sh que se recusa a rodar a menos que o contexto atual seja um contexto `kind-` —
+esse guard controla todo passo ofensivo. O "ataque" em si é uma única LEITURA de /host/etc/os-release
+para provar que estamos tocando o filesystem do node; NÃO lemos Secrets, certificados do kubelet, nem o
+runtime socket — o ponto é feito demonstrando ACESSO, e o perigo é explicado com palavras.
+Depois deletamos o Pod e passamos o resto da seção bloqueando-o. Se alguém estiver num cluster
+compartilhado: observe, não digite. Este é o contrato de ética/escopo para a seção inteira.
 -->
 
 ---
 layout: statement
-kicker: Mental model · the threat starts here
+kicker: Modelo mental · a ameaça começa aqui
 ---
 
-A container is **not a VM**. It's a **process on the host's kernel**, fenced off by namespaces and
+Um container **não é uma VM**. É um **processo no kernel do host**, cercado por namespaces e
 cgroups.
 
-That fence is a **configuration**, not a wall. Weaken the isolation — run as root, add
-capabilities, mount the host, share its namespaces — and "root in the container" moves a short step
-toward **root on the node**. Every dangerous setting on the next slide widens that gap.
+Essa cerca é uma **configuração**, não uma parede. Enfraqueça o isolamento — rode como root, adicione
+capabilities, monte o host, compartilhe seus namespaces — e "root no container" avança um pequeno passo
+rumo a **root no node**. Cada configuração perigosa no próximo slide alarga essa brecha.
 
 <!--
-Speaker: this is the whole reason the escape is possible, and it's a callback to S01/S03 (namespaces
-+ cgroups) and S17 (shared kernel, runs as root by default). A VM has its own kernel; a hypervisor
-boundary. A container shares the NODE's single kernel — isolation is Linux namespaces (pid, net,
-mnt, …) + cgroups, switched on by the container runtime. Those are knobs. Turn the wrong ones and
-the process can see the host's processes (hostPID), the host's network (hostNetwork), the host's
-filesystem (hostPath), or gain kernel-level powers (privileged, SYS_ADMIN). None of these is a
-"hack" — they're all supported Pod fields, meant for a tiny set of trusted system workloads, that
-become an escape hatch on an ordinary app Pod. Next: the specific fields that do it.
+Speaker: esta é toda a razão pela qual o escape é possível, e é um callback ao S01/S03 (namespaces
++ cgroups) e ao S17 (kernel compartilhado, roda como root por padrão). Uma VM tem seu próprio kernel; uma
+fronteira de hypervisor. Um container compartilha o único kernel do NODE — isolamento são namespaces Linux (pid, net,
+mnt, …) + cgroups, ligados pelo container runtime. São botões. Gire os errados e
+o processo consegue ver os processos do host (hostPID), a rede do host (hostNetwork), o
+filesystem do host (hostPath), ou ganhar poderes em nível de kernel (privileged, SYS_ADMIN). Nenhum deles é um
+"hack" — são todos campos suportados do Pod, destinados a um conjunto minúsculo de system workloads confiáveis, que
+viram uma escotilha de fuga num Pod comum de aplicação. A seguir: os campos específicos que fazem isso.
 -->
 
 ---
 
 <div class="kw-slide-dense">
 
-<span class="kw-kicker">The dangerous settings · each trades isolation for host access</span>
+<span class="kw-kicker">As configurações perigosas · cada uma troca isolamento por acesso ao host</span>
 
-# What weakens the fence
+# O que enfraquece a cerca
 
 <div class="kw-cols-2 mt-3 text-sm">
   <v-click at="1">
     <KwCard heading="privileged: true" icon="🔓" variant="danger">
-      Near-total power: (almost) all capabilities, device access, weakened seccomp/AppArmor. The
-      single biggest lever — most escapes start here.
+      Poder quase total: (quase) todas as capabilities, acesso a devices, seccomp/AppArmor enfraquecidos. A
+      maior alavanca de todas — a maioria dos escapes começa aqui.
     </KwCard>
   </v-click>
   <v-click at="2">
-    <KwCard heading="hostPath volume (especially /)" kind="pod" variant="danger">
-      Mounts a host directory into the Pod. Mount <code>/</code> and you can read and write the
-      <strong>node's entire filesystem</strong> from inside the container.
+    <KwCard heading="hostPath volume (especialmente /)" kind="pod" variant="danger">
+      Monta um diretório do host dentro do Pod. Monte <code>/</code> e você pode ler e escrever no
+      <strong>filesystem inteiro do node</strong> de dentro do container.
     </KwCard>
   </v-click>
   <v-click at="3">
     <KwCard heading="hostPID / hostNetwork" kind="node" variant="danger">
-      Share the node's process table or network stack — see and signal host processes, sniff host
-      traffic, reach node-local services (kubelet, metadata).
+      Compartilhe a tabela de processos ou a pilha de rede do node — veja e sinalize processos do host, fareje
+      o tráfego do host, alcance serviços locais do node (kubelet, metadata).
     </KwCard>
   </v-click>
   <v-click at="4">
-    <KwCard heading="mount the runtime socket" icon="🐳" variant="danger">
-      A <code>hostPath</code> of <code>/run/containerd/containerd.sock</code> (or the Docker socket)
-      lets the Pod start <em>new</em> privileged containers on the node — game over.
+    <KwCard heading="montar o runtime socket" icon="🐳" variant="danger">
+      Um <code>hostPath</code> de <code>/run/containerd/containerd.sock</code> (ou o socket do Docker)
+      deixa o Pod iniciar <em>novos</em> containers privilegiados no node — game over.
     </KwCard>
   </v-click>
   <v-click at="5">
     <KwCard heading="SYS_ADMIN / SYS_PTRACE caps" icon="⚙️" variant="danger">
-      Powerful capabilities without full <code>privileged</code>: mount filesystems, manipulate
-      namespaces (<code>SYS_ADMIN</code>), inspect/inject into other processes (<code>SYS_PTRACE</code>).
+      Capabilities poderosas sem o <code>privileged</code> completo: montar filesystems, manipular
+      namespaces (<code>SYS_ADMIN</code>), inspecionar/injetar em outros processos (<code>SYS_PTRACE</code>).
     </KwCard>
   </v-click>
   <v-click at="6">
-    <KwCard heading="The common thread" icon="🎯" variant="warn">
-      Each one hands the container a piece of the <strong>host</strong>. <code>restricted</code>
-      forbids <em>all</em> of them — that's the defence, later this section.
+    <KwCard heading="O fio condutor" icon="🎯" variant="warn">
+      Cada uma entrega ao container um pedaço do <strong>host</strong>. O <code>restricted</code>
+      proíbe <em>todas</em> elas — essa é a defesa, mais adiante nesta seção.
     </KwCard>
   </v-click>
 </div>
@@ -141,85 +141,85 @@ become an escape hatch on an ordinary app Pod. Next: the specific fields that do
 </div>
 
 <!--
-Speaker: this is the catalogue — name each one and what host resource it leaks. privileged is the
-headline: it's not "one capability", it's the whole set plus device nodes plus a relaxed seccomp
-profile — the runtime basically stops fencing you. hostPath is the filesystem door; hostPath of /
-is the extreme case the lab uses. hostPID/hostNetwork share the node's PID and net namespaces —
-suddenly `ps` shows host processes and you can reach 169.254.169.254 or the kubelet's port. Mounting
-the container runtime socket is the quiet catastrophe: with containerd.sock you ask the node's own
-runtime to launch a privileged container for you — you don't even need an escape, you ARE the
-control plane for that node. SYS_ADMIN/SYS_PTRACE are the "privileged-lite" caps people add without
-thinking. The point to land: none of these is exotic; they're all Pod spec fields. And every single
-one is blocked by the `restricted` Pod Security Standard from S17 — hold that thought for the fix.
+Speaker: este é o catálogo — nomeie cada uma e qual recurso do host ela vaza. privileged é a
+manchete: não é "uma capability", é o conjunto inteiro mais os device nodes mais um perfil seccomp
+relaxado — o runtime basicamente para de te cercar. hostPath é a porta do filesystem; hostPath de /
+é o caso extremo que o lab usa. hostPID/hostNetwork compartilham os namespaces de PID e net do node —
+de repente o `ps` mostra processos do host e você consegue alcançar 169.254.169.254 ou a porta do kubelet. Montar
+o socket do container runtime é a catástrofe silenciosa: com o containerd.sock você pede ao próprio
+runtime do node para lançar um container privilegiado para você — você nem precisa de um escape, você É o
+control plane daquele node. SYS_ADMIN/SYS_PTRACE são as capabilities "privileged-lite" que as pessoas adicionam sem
+pensar. O ponto a fixar: nenhuma delas é exótica; são todas campos do Pod spec. E cada uma
+é bloqueada pelo Pod Security Standard `restricted` do S17 — guarde esse pensamento para a correção.
 -->
 
 ---
 layout: statement
-kicker: Conceptual walkthrough · no live exploit here
+kicker: Walkthrough conceitual · nenhum exploit ao vivo aqui
 ---
 
-# privileged + `hostPath: /` → own the node
+# privileged + `hostPath: /` → domine o node
 
 <div class="kw-cols-2 mt-3 text-sm">
   <v-click at="1">
-    <KwCard heading="1 · Attacker gets a foothold" icon="🚪" variant="warn">
-      A compromised dependency or an over-permissive manifest lands a Pod that sets
-      <code>privileged: true</code> and mounts <code>hostPath: /</code> at <code>/host</code>.
+    <KwCard heading="1 · O atacante ganha um ponto de apoio" icon="🚪" variant="warn">
+      Uma dependência comprometida ou um manifesto permissivo demais aterrissa um Pod que define
+      <code>privileged: true</code> e monta <code>hostPath: /</code> em <code>/host</code>.
     </KwCard>
   </v-click>
   <v-click at="2">
-    <KwCard heading="2 · The host filesystem is right there" kind="node" variant="danger">
-      <code>/host</code> inside the Pod <em>is</em> the node's <code>/</code>. Read
-      <code>/host/etc/kubernetes</code>, kubelet certs, every Pod's Secrets under
+    <KwCard heading="2 · O filesystem do host está bem ali" kind="node" variant="danger">
+      <code>/host</code> dentro do Pod <em>é</em> o <code>/</code> do node. Leia
+      <code>/host/etc/kubernetes</code>, certificados do kubelet, os Secrets de todos os Pods sob
       <code>/host/var/lib/kubelet</code>…
     </KwCard>
   </v-click>
   <v-click at="3">
-    <KwCard heading="3 · Read becomes write becomes node" icon="✍️" variant="danger">
-      Writable host root means drop a static Pod into
-      <code>/host/etc/kubernetes/manifests</code>, or a cron job, or SSH keys — arbitrary code as
-      <strong>root on the node</strong>.
+    <KwCard heading="3 · Ler vira escrever vira node" icon="✍️" variant="danger">
+      Um host root gravável significa largar um static Pod em
+      <code>/host/etc/kubernetes/manifests</code>, ou um cron job, ou chaves SSH — código arbitrário como
+      <strong>root no node</strong>.
     </KwCard>
   </v-click>
   <v-click at="4">
-    <KwCard heading="4 · One node → the cluster" icon="🌐" variant="danger">
-      Node-root reads the kubelet's credentials and every Secret scheduled there. From a worker,
-      pivot toward tokens that reach the API server. Blast radius = the cluster.
+    <KwCard heading="4 · Um node → o cluster" icon="🌐" variant="danger">
+      Node-root lê as credenciais do kubelet e todo Secret agendado ali. De um worker,
+      pivote rumo a tokens que alcançam o API server. Blast radius = o cluster.
     </KwCard>
   </v-click>
 </div>
 
 <div v-click="5" class="mt-3 text-sm kw-muted">
-The lab proves step 2 with a single <strong>benign read</strong> — <code>cat
-/host/etc/os-release</code> — then stops. We demonstrate <em>access</em>; we don't exfiltrate.
+O lab prova o passo 2 com uma única <strong>leitura benigna</strong> — <code>cat
+/host/etc/os-release</code> — e então para. Demonstramos <em>acesso</em>; não exfiltramos.
 </div>
 
 <!--
-Speaker: conceptual ONLY — there is no live exploit on this slide, just the chain of reasoning, so
-learners understand why the settings matter. Walk the four cards: (1) the foothold is mundane — a
-poisoned npm/pip dependency, or a teammate who copied a "make it work" privileged manifest off the
-internet. (2) hostPath / mounted at /host means the container's /host directory is literally the
-node root inode — no exploit needed, it's a supported mount; you can now read the kubelet's client
-cert, the CA, and under /var/lib/kubelet every projected ServiceAccount token and Secret of every
-Pod on that node. (3) because it's read-WRITE, you escalate: /etc/kubernetes/manifests is the static-
-pod directory the kubelet watches — drop a manifest there and the kubelet runs it as root, no API
-server involved. (4) node compromise cascades: that node's Secrets, its kubelet identity, lateral
-movement. The lab deliberately stops at a READ of /etc/os-release — that single file proves we're
-on the node's filesystem (it's the NODE's OS, not the container image's), and the danger of
-everything else is explained in the "why dangerous" spoiler, not performed. Say it plainly: we make
-the point by showing access, not by stealing anything.
+Speaker: SÓ conceitual — não há exploit ao vivo neste slide, apenas a cadeia de raciocínio, para que
+os participantes entendam por que as configurações importam. Percorra os quatro cards: (1) o ponto de apoio é banal — uma
+dependência npm/pip envenenada, ou um colega que copiou um manifesto privileged "pra funcionar" da
+internet. (2) hostPath / montado em /host significa que o diretório /host do container é literalmente o
+inode raiz do node — não precisa de exploit, é um mount suportado; você agora consegue ler o certificado de cliente
+do kubelet, a CA, e sob /var/lib/kubelet todo ServiceAccount token projetado e Secret de todo
+Pod naquele node. (3) por ser de leitura-E-ESCRITA, você escala: /etc/kubernetes/manifests é o diretório de
+static-pod que o kubelet observa — largue um manifesto ali e o kubelet o roda como root, sem API
+server envolvido. (4) o comprometimento do node cascateia: os Secrets daquele node, sua identidade de kubelet, movimento
+lateral. O lab deliberadamente para numa LEITURA de /etc/os-release — esse único arquivo prova que estamos
+no filesystem do node (é o SO do NODE, não da container image), e o perigo de
+todo o resto é explicado no spoiler "por que é perigoso", não executado. Diga claramente: fazemos
+o ponto mostrando acesso, não roubando nada.
 -->
 
 ---
 layout: code-walkthrough
-heading: 'The attacker Pod → the manifest a restricted namespace admits'
+heading: 'O Pod atacante → o manifesto que um namespace restricted admite'
 lab: labs/day-3/25-pod-escape.md
 ---
 
 ````md magic-move
 ```yaml
-# 0: the ESCAPE Pod — privileged + the whole host filesystem at /host.
-#    A restricted namespace REJECTS this at admission (before it exists).
+# 0: o Pod de ESCAPE — privileged + o filesystem inteiro do host em /host.
+#    Um namespace restricted REJEITA isto no admission (antes de existir).
 apiVersion: v1
 kind: Pod
 metadata: { name: escape, labels: { app: s25 } }
@@ -229,16 +229,16 @@ spec:
       image: alpine:3.20
       command: ["sleep", "3600"]
       securityContext:
-        privileged: true                  # ← near-total power on the node
+        privileged: true                  # ← poder quase total no node
       volumeMounts:
-        - { name: host, mountPath: /host }  # ← node's / is now /host
+        - { name: host, mountPath: /host }  # ← o / do node agora é /host
   volumes:
     - name: host
-      hostPath: { path: / }               # ← mount the entire host root
+      hostPath: { path: / }               # ← monta o host root inteiro
 ```
 
 ```yaml
-# 1: drop privileged + the hostPath mount — the two escape levers are gone.
+# 1: remova o privileged + o mount hostPath — as duas alavancas de escape se foram.
 apiVersion: v1
 kind: Pod
 metadata: { name: escape, labels: { app: s25 } }
@@ -247,11 +247,11 @@ spec:
     - name: shell
       image: alpine:3.20
       command: ["sleep", "3600"]
-      # no privileged, no hostPath volume
+      # sem privileged, sem hostPath volume
 ```
 
 ```yaml
-# 2: +the four restricted gates (Pod security), pinned to a real non-root UID.
+# 2: +os quatro gates restricted (Pod security), fixados a um UID não-root real.
 spec:
   containers:
     - name: shell
@@ -259,14 +259,14 @@ spec:
       command: ["sleep", "3600"]
       securityContext:
         runAsNonRoot: true
-        runAsUser: 1000                   # explicit non-root UID (alpine runs at any UID)
+        runAsUser: 1000                   # UID não-root explícito (alpine roda em qualquer UID)
         allowPrivilegeEscalation: false
         capabilities: { drop: ["ALL"] }
         seccompProfile: { type: RuntimeDefault }
 ```
 
 ```yaml
-# 3: the HARDENED Pod in full — this is what `enforce: restricted` ADMITS.
+# 3: o Pod HARDENED por completo — é isto que o `enforce: restricted` ADMITE.
 apiVersion: v1
 kind: Pod
 metadata: { name: hardened, labels: { app: s25 } }
@@ -286,23 +286,23 @@ spec:
 ````
 
 <!--
-Speaker: four frames, and the boundary in the middle is the whole story. Frame 0 is the attacker's
-Pod — privileged:true plus a hostPath of / mounted at /host; those two lines ARE the escape. In a
-permissive namespace it runs; in a `restricted` namespace it is REJECTED at admission and never
-exists. Frame 1 removes exactly the two escape levers (privileged, the hostPath volume) — necessary
-but not yet sufficient: a bare Pod still fails `restricted` on the four fields from S17. Frame 2
-adds those four gates (runAsNonRoot, allowPrivilegeEscalation:false, drop ALL, seccompProfile) and
-pins runAsUser:1000 — alpine happily runs as any UID, so unlike S17's root-image landmine
-(runAsNonRoot on an image that ships as root) there's nothing for the kubelet to refuse. Frame 3 is the final hardened manifest the restricted gate admits — note runAsNonRoot /
-runAsUser / seccomp lifted to Pod level to cover the whole Pod. Same namespace, same policy; the
-manifest is what changed. This magic-move IS the lab's escape → block → harden arc.
+Speaker: quatro frames, e a fronteira no meio é toda a história. O Frame 0 é o Pod do
+atacante — privileged:true mais um hostPath de / montado em /host; essas duas linhas SÃO o escape. Num
+namespace permissivo ele roda; num namespace `restricted` ele é REJEITADO no admission e nunca
+existe. O Frame 1 remove exatamente as duas alavancas de escape (privileged, o hostPath volume) — necessário
+mas ainda não suficiente: um Pod pelado ainda falha no `restricted` nos quatro campos do S17. O Frame 2
+adiciona esses quatro gates (runAsNonRoot, allowPrivilegeEscalation:false, drop ALL, seccompProfile) e
+fixa runAsUser:1000 — o alpine roda feliz em qualquer UID, então, diferente da armadilha da root-image do S17
+(runAsNonRoot numa image que vem como root), não há nada para o kubelet recusar. O Frame 3 é o manifesto hardened final que o gate restricted admite — repare runAsNonRoot /
+runAsUser / seccomp elevados ao nível de Pod para cobrir o Pod inteiro. Mesmo namespace, mesma policy; o
+que mudou foi o manifesto. Este magic-move É o arco escape → block → harden do lab.
 -->
 
 ---
 
-<span class="kw-kicker">The same restricted gate from Pod security — now admitting the hardened Pod</span>
+<span class="kw-kicker">O mesmo gate restricted do Pod security — agora admitindo o Pod hardened</span>
 
-# The admission gate holds the line
+# O admission gate segura a linha
 
 <div class="mt-2">
   <AdmissionGate :step="$clicks" :show-caption="false" />
@@ -311,88 +311,88 @@ manifest is what changed. This magic-move IS the lab's escape → block → hard
 <div class="mt-3 text-sm">
 <v-clicks at="1">
 
-- A `restricted` violator is checked **before it's stored** — the four gates fail → **Forbidden**,
-  nothing created. (The lab's escape Pod *also* trips `privileged` + `hostPath` — real violations
-  this gate doesn't draw.)
-- Strip the escape levers, set the four fields, and re-apply the **same** workload…
-- …every gate passes → **admitted** and scheduled.
-- Same policy, same namespace — the **manifest** met the bar, not the other way round.
+- Um violador do `restricted` é verificado **antes de ser armazenado** — os quatro gates falham → **Forbidden**,
+  nada criado. (O Pod de escape do lab *também* tropeça em `privileged` + `hostPath` — violações reais
+  que este gate não desenha.)
+- Remova as alavancas de escape, defina os quatro campos, e reaplique o **mesmo** workload…
+- …todo gate passa → **admitido** e agendado.
+- Mesma policy, mesmo namespace — o **manifesto** atingiu o critério, não o contrário.
 
 </v-clicks>
 </div>
 
 <!--
-Speaker: reuse note — this is the S17 AdmissionGate, and it visualises the FOUR restricted fields
-(runAsNonRoot / allowPrivilegeEscalation / drop ALL / seccompProfile). It does NOT draw the
-privileged/hostPath check, so DON'T claim the animation shows "privileged blocked" — say that in
-words. Narrate: (bullet 1, spoken over step 0) the escape Pod would be rejected for privileged +
-hostPath — that rejection is real (you'll see it in the lab) but it's the STRING, not this diagram.
-This diagram then does the general lesson: (step 1) even the escape-levers-removed bare Pod is
-DENIED on the four fields; (step 2) re-apply hardened; (step 3) ADMITTED. The takeaway is identical
-to S17 and it's the point of the whole section: `restricted` forbids the escape settings AND
-demands least privilege — one namespace label closes the door the escape Pod walked through.
+Speaker: nota de reúso — este é o AdmissionGate do S17, e ele visualiza os QUATRO campos restricted
+(runAsNonRoot / allowPrivilegeEscalation / drop ALL / seccompProfile). Ele NÃO desenha a
+verificação de privileged/hostPath, então NÃO afirme que a animação mostra "privileged bloqueado" — diga isso com
+palavras. Narre: (bullet 1, falado durante o step 0) o Pod de escape seria rejeitado por privileged +
+hostPath — essa rejeição é real (você a verá no lab) mas é a STRING, não este diagrama.
+Este diagrama então faz a lição geral: (step 1) mesmo o Pod pelado com as alavancas de escape removidas é
+NEGADO nos quatro campos; (step 2) reaplique o hardened; (step 3) ADMITIDO. A conclusão é idêntica
+à do S17 e é o ponto da seção inteira: o `restricted` proíbe as configurações de escape E
+exige least privilege — um label de namespace fecha a porta pela qual o Pod de escape entrou.
 -->
 
 ---
 
 <div class="kw-slide-dense">
 
-<span class="kw-kicker">Defence in depth · you already have most of these</span>
+<span class="kw-kicker">Defesa em profundidade · você já tem a maioria destas</span>
 
-# The defences map
+# O mapa de defesas
 
 <div class="kw-cols-2 mt-3 text-sm">
   <v-click at="1">
-    <KwCard heading="Image hygiene" icon="📦" variant="ok">
-      Non-root <code>USER</code>, minimal base, no shell/tools to pivot with, scanned for known CVEs.
-      A smaller image is a smaller foothold.
+    <KwCard heading="Higiene de image" icon="📦" variant="ok">
+      <code>USER</code> não-root, base mínima, sem shell/ferramentas para pivotar, escaneada por CVEs conhecidos.
+      Uma image menor é um ponto de apoio menor.
     </KwCard>
   </v-click>
   <v-click at="2">
     <KwCard heading="Restricted PSS + admission" kind="ns" variant="ok">
-      <code>enforce: restricted</code> forbids <code>privileged</code>, <code>hostPath</code>, host
-      namespaces, and demands drop-ALL + non-root + seccomp. <strong>This is the primary block.</strong>
+      <code>enforce: restricted</code> proíbe <code>privileged</code>, <code>hostPath</code>, host
+      namespaces, e exige drop-ALL + não-root + seccomp. <strong>Este é o bloqueio primário.</strong>
     </KwCard>
   </v-click>
   <v-click at="3">
     <KwCard heading="NetworkPolicy" kind="netpol" variant="ok">
-      Default-deny east-west traffic so a foothold can't freely scan and pivot to other Pods or the
-      metadata endpoint.
+      Default-deny do tráfego leste-oeste para que um ponto de apoio não consiga escanear e pivotar livremente para outros Pods ou o
+      endpoint de metadata.
     </KwCard>
   </v-click>
   <v-click at="4">
-    <KwCard heading="Scan + detect" icon="🔎" variant="ok">
-      Scan images for CVEs <em>before</em> deploy; run a runtime detector to alert on the escape
-      behaviours (unexpected mounts, host access, new privileged containers) <em>after</em>.
+    <KwCard heading="Escanear + detectar" icon="🔎" variant="ok">
+      Escaneie images por CVEs <em>antes</em> do deploy; rode um runtime detector para alertar sobre os
+      comportamentos de escape (mounts inesperados, acesso ao host, novos containers privilegiados) <em>depois</em>.
     </KwCard>
   </v-click>
 </div>
 
 <div v-click="5" class="mt-3 text-sm kw-muted">
-No single control is enough — <strong>admission</strong> stops the manifest, the
-<strong>image</strong> shrinks the foothold, the <strong>network</strong> contains the blast, and
-<strong>detection</strong> catches what slips through.
+Nenhum controle isolado basta — o <strong>admission</strong> barra o manifesto, a
+<strong>image</strong> encolhe o ponto de apoio, a <strong>rede</strong> contém a explosão, e a
+<strong>detecção</strong> pega o que escapa.
 </div>
 
 </div>
 
 <!--
-Speaker: tie every earlier Day-3 security beat to this escape as a named defence — that's the payoff
-of the whole track. S02 (image hygiene): a non-root, distroless-style image with no shell gives the
-attacker far less to work with even if a Pod is over-permissioned; scanning catches the poisoned
-dependency before it ships. S17 (restricted PSS at admission) is the PRIMARY control here — it
-literally forbids every field the escape Pod needs, and it does so BEFORE the Pod exists; if you
-take one thing away, it's "label your namespaces restricted." S18 (NetworkPolicy): default-deny so a
-compromised Pod can't sweep the namespace or hit 169.254.169.254 unimpeded — it contains blast
-radius. Then two categories beyond this workshop: image scanning (shift-left, pre-deploy CVE gate)
-and runtime detection (watch syscalls/behaviour for exactly these escape patterns). Layers: no one
-of them is sufficient, all of them together shrink the problem to noise. Vendor-neutral — we name
-CATEGORIES next, not products.
+Speaker: amarre cada beat de segurança anterior do Day 3 a este escape como uma defesa nomeada — esse é o payoff
+da trilha inteira. S02 (image hygiene): uma image não-root, estilo distroless, sem shell dá ao
+atacante muito menos com que trabalhar mesmo se um Pod estiver com permissões demais; o scanning pega a
+dependência envenenada antes de ela ir para produção. S17 (restricted PSS no admission) é o controle PRIMÁRIO aqui — ele
+literalmente proíbe todo campo de que o Pod de escape precisa, e faz isso ANTES de o Pod existir; se você
+levar uma coisa, é "rotule seus namespaces como restricted". S18 (NetworkPolicy): default-deny para que um
+Pod comprometido não consiga varrer o namespace ou alcançar 169.254.169.254 sem obstáculo — contém o blast
+radius. Depois duas categorias além deste workshop: image scanning (shift-left, gate de CVE pré-deploy)
+e runtime detection (observar syscalls/comportamento exatamente por esses padrões de escape). Camadas: nenhuma
+delas é suficiente, todas juntas encolhem o problema a ruído. Vendor-neutral — nomeamos
+CATEGORIAS a seguir, não produtos.
 -->
 
 ---
 layout: code-annotated
-heading: 'The scan can''t stop at the pipeline — CVEs age in place'
+heading: 'O scan não pode parar na pipeline — CVEs envelhecem no lugar'
 compact: true
 ---
 
@@ -406,76 +406,76 @@ $ kubectl describe vulnerabilityreport replicaset-web-5d4b-web
 
 ::notes::
 
-<CodeNote at="1" label="scan the running cluster" variant="ok">
-The <strong>Trivy Operator</strong> runs <em>inside</em> the cluster and scans
-<strong>running workloads</strong> — when a workload changes, and again as each
-report expires. An image that was clean at deploy time gets re-checked against
-<em>today's</em> CVE feed.
+<CodeNote at="1" label="escaneie o cluster em execução" variant="ok">
+O <strong>Trivy Operator</strong> roda <em>dentro</em> do cluster e escaneia
+<strong>workloads em execução</strong> — quando um workload muda, e de novo conforme cada
+report expira. Uma image que estava limpa na hora do deploy é reverificada contra
+o feed de CVE de <em>hoje</em>.
 </CodeNote>
 
-<CodeNote at="2" label="findings are Kubernetes objects" variant="ok">
-Results land as CRDs — <code>VulnerabilityReport</code>,
-<code>ConfigAuditReport</code>, <code>ExposedSecretReport</code> — you query with
-plain <code>kubectl</code>. The <strong>operator pattern</strong> from the
-operators track, applied to security.
+<CodeNote at="2" label="findings são objetos Kubernetes" variant="ok">
+Os resultados aterrissam como CRDs — <code>VulnerabilityReport</code>,
+<code>ConfigAuditReport</code>, <code>ExposedSecretReport</code> — você consulta com
+<code>kubectl</code> puro. O <strong>operator pattern</strong> da
+trilha de operators, aplicado à segurança.
 </CodeNote>
 
 <!--
-Speaker: this closes the loop the S17 Trivy beat opened. The CI gate scans an image
-ONCE, at build time — but CVEs are disclosed continuously, so the fleet's risk
-drifts while the images stand still; last year's clean image is this year's
-critical finding. The Trivy Operator is the in-cluster answer and the worked
-open-source example of the defences-map "scan" card: it watches workloads, scans on
-change, and re-scans as report TTLs expire (default 24h — it's expiry-driven, not a
-nightly cron), publishing findings as CRDs per workload. Because reports are just
-Kubernetes objects, they inherit everything the workshop taught: kubectl get/
-describe, RBAC on who may read them, and watch-based tooling. Say the operator
-connection out loud — CRD + controller, exactly S22's pattern. Keep the
-vendor-neutral posture from the next slide intact: Trivy is ONE open-source example
-of the image-scanner category (the same scanner S02/S17 used), runtime behavioural
-detection is still its own category, and the workshop endorses no product. Nothing
-is installed here — concepts only; the lab stays focused on the escape/block arc.
+Speaker: isto fecha o loop que o beat do Trivy no S17 abriu. O gate de CI escaneia uma image
+UMA VEZ, na hora do build — mas CVEs são divulgados continuamente, então o risco da frota
+deriva enquanto as images ficam paradas; a image limpa do ano passado é o finding
+crítico deste ano. O Trivy Operator é a resposta in-cluster e o exemplo open-source
+trabalhado do card "scan" do mapa de defesas: ele observa workloads, escaneia na
+mudança, e reescaneia conforme os TTLs dos reports expiram (padrão 24h — é dirigido por expiração, não um
+cron de madrugada), publicando findings como CRDs por workload. Como os reports são apenas
+objetos Kubernetes, eles herdam tudo o que o workshop ensinou: kubectl get/
+describe, RBAC sobre quem pode lê-los, e tooling baseado em watch. Diga a conexão com o operator
+em voz alta — CRD + controller, exatamente o padrão do S22. Mantenha a
+postura vendor-neutral do próximo slide intacta: o Trivy é UM exemplo open-source
+da categoria image-scanner (o mesmo scanner que o S02/S17 usou), a detecção comportamental
+em runtime segue sendo sua própria categoria, e o workshop não endossa nenhum produto. Nada
+é instalado aqui — só conceitos; o lab permanece focado no arco escape/block.
 -->
 
 ---
 
 <div class="kw-slide-dense">
 
-<span class="kw-kicker">Standards & frameworks · learn from the field, name no vendor</span>
+<span class="kw-kicker">Padrões & frameworks · aprenda com o campo, não nomeie vendor</span>
 
-# Where to go deeper
+# Para onde aprofundar
 
 <div class="kw-cols-2 mt-3 text-sm">
   <v-click at="1">
     <KwCard heading="NSA/CISA Kubernetes Hardening Guidance" icon="📕" variant="ok">
-      Government-authored, vendor-neutral hardening baseline: pod security, network separation,
-      authentication, audit logging, upgrade hygiene. A checklist you can adopt wholesale.
+      Baseline de hardening vendor-neutral, escrito pelo governo: pod security, separação de rede,
+      autenticação, audit logging, higiene de upgrade. Um checklist que você pode adotar por inteiro.
     </KwCard>
   </v-click>
   <v-click at="2">
     <KwCard heading="MITRE ATT&CK for Containers" icon="🗺️" variant="ok">
-      A catalogue of real adversary techniques mapped to containers/Kubernetes —
-      <em>Escape to Host</em>, <em>privileged container</em>, credential access. Use it to reason
-      about what you're defending against.
+      Um catálogo de técnicas reais de adversário mapeadas para containers/Kubernetes —
+      <em>Escape to Host</em>, <em>privileged container</em>, credential access. Use-o para raciocinar
+      sobre contra o que você está defendendo.
     </KwCard>
   </v-click>
 </div>
 
 <div v-click="3" class="mt-3 text-sm">
 
-<span class="kw-kicker">tool categories — pick a tool per category; this workshop endorses none</span>
+<span class="kw-kicker">categorias de ferramentas — escolha uma ferramenta por categoria; este workshop não endossa nenhuma</span>
 
 <div class="mt-1" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.8rem;">
   <KwCard heading="Benchmark scanner" icon="✅" variant="ok">
-    Audits a cluster against a hardening benchmark (e.g. the CIS Kubernetes Benchmark) and reports
-    drift.
+    Audita um cluster contra um benchmark de hardening (ex.: o CIS Kubernetes Benchmark) e reporta
+    o drift.
   </KwCard>
   <KwCard heading="Image scanner" icon="🔎" variant="ok">
-    Scans images for known CVEs and misconfigurations <strong>before</strong> they're deployed.
+    Escaneia images por CVEs conhecidos e misconfigurations <strong>antes</strong> de serem implantadas.
   </KwCard>
   <KwCard heading="Runtime detector" icon="🚨" variant="ok">
-    Watches syscalls/behaviour at <strong>runtime</strong> and alerts on escape patterns as they
-    happen.
+    Observa syscalls/comportamento em <strong>runtime</strong> e alerta sobre padrões de escape conforme
+    acontecem.
   </KwCard>
 </div>
 
@@ -484,47 +484,47 @@ is installed here — concepts only; the lab stays focused on the escape/block a
 </div>
 
 <!--
-Speaker: two named references — both are standards bodies / frameworks, named without endorsement,
-which is exactly what belongs here. NSA/CISA Kubernetes Hardening Guidance is a free, government,
-vendor-neutral document — the fastest way to a defensible baseline; point people at it as required
-reading. MITRE ATT&CK for Containers is the shared vocabulary for adversary behaviour — the escape
-we did maps to its "Escape to Host" technique; it's how blue teams reason about coverage. Then the
-tool CATEGORIES, deliberately unbranded: a benchmark scanner (audits the cluster against a hardening
-benchmark such as the CIS Kubernetes Benchmark — CIS is a standard, not a product), an image scanner
-(pre-deploy CVE gate), a runtime detector (behavioural alerts). Say explicitly: pick one tool per
-category on your own criteria — this workshop endorses none. Keep it vendor-neutral out loud.
+Speaker: duas referências nomeadas — ambas são corpos de padrões / frameworks, nomeados sem endosso,
+que é exatamente o que cabe aqui. O NSA/CISA Kubernetes Hardening Guidance é um documento gratuito, governamental,
+vendor-neutral — o caminho mais rápido para uma baseline defensável; aponte as pessoas para ele como leitura
+obrigatória. O MITRE ATT&CK for Containers é o vocabulário compartilhado para comportamento de adversário — o escape
+que fizemos mapeia para a técnica "Escape to Host"; é como blue teams raciocinam sobre cobertura. Depois as
+CATEGORIAS de ferramentas, deliberadamente sem marca: um benchmark scanner (audita o cluster contra um benchmark
+de hardening como o CIS Kubernetes Benchmark — CIS é um padrão, não um produto), um image scanner
+(gate de CVE pré-deploy), um runtime detector (alertas comportamentais). Diga explicitamente: escolha uma ferramenta por
+categoria segundo seus próprios critérios — este workshop não endossa nenhuma. Mantenha vendor-neutral em voz alta.
 -->
 
 ---
 layout: recap
-heading: 'Recap — you saw the escape so you could close it'
-story: 'A privileged Pod with the host root mounted read the node''s filesystem. Then one namespace label — enforce: restricted — rejected that exact Pod at admission, before it could ever exist.'
-next: 'Day 3 security track complete — image hygiene, pod security, network policy, and the escape they defend against, all one story'
+heading: 'Recap — você viu o escape para poder fechá-lo'
+story: 'Um Pod privileged com o host root montado leu o filesystem do node. Então um label de namespace — enforce: restricted — rejeitou aquele exato Pod no admission, antes que ele pudesse sequer existir.'
+next: 'Trilha de segurança do Day 3 completa — image hygiene, pod security, network policy, e o escape contra o qual elas defendem, tudo uma só história'
 ---
 
-- A container is a **process on the host kernel**, not a VM — isolation is *configuration*, and the
-  wrong settings escape it
-- The escape levers: **`privileged`**, **`hostPath: /`**, **`hostPID`/`hostNetwork`**, the
-  **runtime socket**, **`SYS_ADMIN`/`SYS_PTRACE`** — each hands over a piece of the host
-- **`restricted` PSA is the primary block** — it forbids every one of those settings and rejects
-  the Pod **at admission, before it exists**
-- **Defence in depth:** image hygiene + restricted admission + NetworkPolicy +
-  image scanning + runtime detection — no single layer is enough
-- Go deeper with **NSA/CISA Hardening Guidance** and **MITRE ATT&CK for Containers**; the lab does
-  this **kind-only, defensively** — demonstrate access, then block it
+- Um container é um **processo no kernel do host**, não uma VM — o isolamento é *configuração*, e as
+  configurações erradas o burlam
+- As alavancas de escape: **`privileged`**, **`hostPath: /`**, **`hostPID`/`hostNetwork`**, o
+  **runtime socket**, **`SYS_ADMIN`/`SYS_PTRACE`** — cada uma entrega um pedaço do host
+- **O `restricted` PSA é o bloqueio primário** — ele proíbe cada uma dessas configurações e rejeita
+  o Pod **no admission, antes de ele existir**
+- **Defesa em profundidade:** image hygiene + restricted admission + NetworkPolicy +
+  image scanning + runtime detection — nenhuma camada isolada basta
+- Aprofunde com o **NSA/CISA Hardening Guidance** e o **MITRE ATT&CK for Containers**; o lab faz
+  isto **só em kind, defensivamente** — demonstrar acesso, depois bloqueá-lo
 
 <!--
-Speaker: land the arc. We did something scary on purpose and in a sandbox so you'd recognise it and,
-more importantly, know the one control that stops it. The mental model is the through-line: a
-container is a fenced process on a shared kernel, and dangerous Pod fields un-fence it. The five
-escape levers all give away host resources. `restricted` Pod Security Admission is the primary
-defence — it forbids ALL of them and does so at admission, so the Pod never exists (contrast: a
-runtime detector catches it AFTER, which is why you want both). Defence in depth ties the whole Day-3
-security track together: S02 shrinks the foothold, S17 blocks the manifest, S18 contains the blast,
-scanning/detection cover the gaps. Send them to NSA/CISA + MITRE ATT&CK for the real-world map. Then
-the lab: strictly kind-only, a context-check.sh gates it, we read ONE benign file to prove access,
-delete the Pod, label the namespace restricted, and watch the same Pod get rejected. Defensive from
-start to finish.
+Speaker: assente o arco. Fizemos algo assustador de propósito e num sandbox para que você o reconhecesse e,
+mais importante, conhecesse o único controle que o para. O modelo mental é o fio condutor: um
+container é um processo cercado num kernel compartilhado, e campos perigosos de Pod o descercam. As cinco
+alavancas de escape todas entregam recursos do host. O `restricted` Pod Security Admission é a defesa
+primária — ele proíbe TODAS elas e faz isso no admission, então o Pod nunca existe (contraste: um
+runtime detector o pega DEPOIS, e é por isso que você quer os dois). Defesa em profundidade amarra a trilha de
+segurança inteira do Day 3: S02 encolhe o ponto de apoio, S17 bloqueia o manifesto, S18 contém a explosão,
+scanning/detection cobrem as brechas. Mande-os para NSA/CISA + MITRE ATT&CK para o mapa do mundo real. Depois
+o lab: estritamente só em kind, um context-check.sh o controla, lemos UM arquivo benigno para provar acesso,
+deletamos o Pod, rotulamos o namespace como restricted, e vemos o mesmo Pod ser rejeitado. Defensivo do
+começo ao fim.
 -->
 
 ---
@@ -534,11 +534,11 @@ duration: 30 min
 env: kind-only · strictly defensive
 ---
 
-## Lab 25 — Escape, then block it
+## Lab 25 — Escape, depois bloqueie
 
-- **Guarded start:** `context-check.sh` refuses to run unless you're on a **kind** context
-- In a **permissive** namespace: apply a `privileged` + `hostPath: /` Pod and read **one benign
-  node file** (`/host/etc/os-release`) to prove host access — no secrets, no writes
-- **Fix:** delete the Pod, label the namespace `enforce=restricted`, **re-apply the same Pod** →
-  watch PSA **reject it at admission** with the privileged/hostPath violations
-- Apply the **hardened** manifest → admitted and running; panic-reset = **delete the kind cluster**
+- **Início protegido:** o `context-check.sh` se recusa a rodar a menos que você esteja num contexto **kind**
+- Num namespace **permissivo**: aplique um Pod `privileged` + `hostPath: /` e leia **um arquivo
+  benigno do node** (`/host/etc/os-release`) para provar acesso ao host — sem secrets, sem escritas
+- **Correção:** delete o Pod, rotule o namespace com `enforce=restricted`, **reaplique o mesmo Pod** →
+  veja o PSA **rejeitá-lo no admission** com as violações de privileged/hostPath
+- Aplique o manifesto **hardened** → admitido e rodando; reset de pânico = **delete o kind cluster**

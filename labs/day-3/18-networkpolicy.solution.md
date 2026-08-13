@@ -1,14 +1,14 @@
-# Lab 18 — NetworkPolicy (S18) — solutions
+# Lab 18 — NetworkPolicy (S18) — soluções
 
-Use this companion after attempting the participant lab. Outputs contain representative
-names, addresses, ages, and image sizes; compare the state and meaning rather than copying
-ephemeral values literally.
+Use este companion depois de tentar o lab do participante. As saídas contêm nomes, endereços,
+idades e tamanhos de image representativos; compare o estado e o significado em vez de copiar
+literalmente valores efêmeros.
 
 ## Guided solutions
 
-### Step 0 — a cluster to fence
+### Step 0 — um cluster para cercar
 
-### kind path (do this)
+### Caminho kind (faça este)
 
 ```bash
 kind create cluster --name netpol
@@ -16,7 +16,7 @@ export NS=default
 kubectl get nodes
 ```
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ kubectl get nodes
@@ -24,30 +24,31 @@ NAME                   STATUS   ROLES           AGE   VERSION
 netpol-control-plane   Ready    control-plane   40s   v1.3x.x
 ```
 
-A default kind cluster runs **kindnet**, which on current kind releases enforces NetworkPolicy
-(via kube-network-policies). Step 2's self-test confirms this on *your* version — if it turns out
-your CNI doesn't enforce, Step 2 has a Calico fallback.
+Um cluster kind padrão roda o **kindnet**, que nas releases atuais do kind aplica NetworkPolicy
+(via kube-network-policies). O self-test do Step 2 confirma isso na *sua* versão — se acontecer
+de o seu CNI não aplicar, o Step 2 tem um fallback com Calico.
 </details>
 
-### Shared-cluster path (read-only)
+### Caminho do cluster compartilhado (read-only)
 
-You can't stand up an enforcing CNI on a shared cluster, and an unenforced policy silently does
-nothing. So here you **only read** a policy your facilitator pre-applied:
+Você não consegue subir um CNI com enforcement em um cluster compartilhado, e uma policy sem
+enforcement silenciosamente não faz nada. Então aqui você **apenas lê** uma policy que seu
+facilitador pré-aplicou:
 
 ```bash
 export NS=<your-assigned-namespace>
 kubectl config set-context --current --namespace="$NS"
 kubectl get networkpolicy
-kubectl describe networkpolicy default-deny-ingress   # if one is provided
+kubectl describe networkpolicy default-deny-ingress   # se houver uma disponível
 ```
 
-Read the `PodSelector`, `PolicyTypes`, and `Allowing ingress traffic` blocks in the describe
-output, then follow the rest by reading the manifests and spoilers — the *objects* are identical;
-only enforcement differs.
+Leia os blocos `PodSelector`, `PolicyTypes` e `Allowing ingress traffic` na saída do describe,
+depois acompanhe o restante lendo os manifestos e os spoilers — os *objetos* são idênticos;
+só o enforcement difere.
 
 ---
 
-### Step 1 — the flat network: everyone reaches the backend
+### Step 1 — a rede flat: todo mundo alcança o backend
 
 ```bash
 cat > apps.yaml <<'EOF'
@@ -101,7 +102,8 @@ kubectl wait --for=condition=Ready pod/frontend pod/other pod/scanner --timeout=
 kubectl rollout status deploy/backend
 ```
 
-**Task:** from **all three** clients, curl the backend Service. All should return `200`.
+**Tarefa:** a partir dos **três** clientes, faça curl no Service do backend. Todos devem
+retornar `200`.
 
 ```bash
 for p in frontend other scanner; do
@@ -109,7 +111,7 @@ for p in frontend other scanner; do
 done
 ```
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 frontend → 200
@@ -117,14 +119,14 @@ other → 200
 scanner → 200
 ```
 
-No NetworkPolicy exists, so the network is **flat** — every Pod can reach the backend Pod's IP
-(the Service just resolves the name to that IP). This is the Kubernetes default: **allow-all**.
-`--max-time 5` matters from here on, so we use it throughout.
+Nenhuma NetworkPolicy existe, então a rede é **flat** — todo Pod consegue alcançar o IP do Pod
+do backend (o Service apenas resolve o nome para esse IP). Este é o padrão do Kubernetes:
+**allow-all**. O `--max-time 5` importa daqui em diante, então o usamos o tempo todo.
 </details>
 
 ---
 
-### Step 2 — break (and self-test): `default-deny` fences the backend
+### Step 2 — quebre (e faça o self-test): o `default-deny` cerca o backend
 
 ```bash
 cat > default-deny-ingress.yaml <<'EOF'
@@ -134,16 +136,16 @@ metadata:
   name: default-deny-ingress
   labels: { app: s18 }
 spec:
-  podSelector: {}            # selects every Pod in the namespace
+  podSelector: {}            # seleciona todos os Pods do namespace
   policyTypes:
-    - Ingress                # govern ingress; with no rules below → deny all
+    - Ingress                # governa o ingress; sem regras abaixo → nega tudo
 EOF
 
 kubectl apply -f default-deny-ingress.yaml
 ```
 
-**Task:** re-run all three curls. They now **hang** until `--max-time` fires. Capture the exit
-code — it's the tell, and it's your enforcement self-test.
+**Tarefa:** rode os três curls de novo. Agora eles **travam** até o `--max-time` disparar.
+Capture o exit code — ele é a pista, e é o seu self-test de enforcement.
 
 ```bash
 for p in frontend other scanner; do
@@ -151,7 +153,7 @@ for p in frontend other scanner; do
 done
 ```
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 frontend → 000 exit=28
@@ -159,16 +161,17 @@ other → 000 exit=28
 scanner → 000 exit=28
 ```
 
-`http_code` is `000` (no response) and curl exits **28** — *"Operation timed out"*. The
-`default-deny` selects **every** Pod (`podSelector: {}`) for **Ingress** with **no** allow rules,
-so all inbound connections are **dropped**. All three clients are cut. **This is the self-test: if
-traffic actually broke, your CNI enforces.**
+O `http_code` é `000` (nenhuma resposta) e o curl sai com **28** — *"Operation timed out"*. O
+`default-deny` seleciona **todos** os Pods (`podSelector: {}`) para **Ingress** com **nenhuma**
+regra de allow, então todas as conexões de entrada são **descartadas**. Os três clientes estão
+cortados. **Este é o self-test: se o tráfego realmente quebrou, seu CNI está aplicando.**
 </details>
 
-<details><summary>Self-test FAILED? (all three still return 200) — kind fallback</summary>
+<details><summary>Self-test FALHOU? (os três ainda retornam 200) — fallback do kind</summary>
 
-If every curl still returns `200` after applying the default-deny, your CNI is **not enforcing** —
-the policy is a silent no-op. Rebuild kind with the default CNI disabled and install Calico:
+Se todos os curls ainda retornarem `200` depois de aplicar o default-deny, seu CNI **não está
+aplicando** — a policy é um no-op silencioso. Recrie o kind com o CNI padrão desabilitado e
+instale o Calico:
 
 ```bash
 kind delete cluster --name netpol
@@ -177,37 +180,38 @@ kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
 networking:
   disableDefaultCNI: true
-  podSubnet: "192.168.0.0/16"     # Calico's default pod CIDR
+  podSubnet: "192.168.0.0/16"     # pod CIDR padrão do Calico
 EOF
 kind create cluster --name netpol --config kind-netpol.yaml
-# pin the current Calico release — verify the tag on the Calico releases page
+# fixe a release atual do Calico — verifique a tag na página de releases do Calico
 kubectl apply -f https://raw.githubusercontent.com/projectcalico/calico/v3.28.2/manifests/calico.yaml
 kubectl wait --for=condition=Ready nodes --all --timeout=180s
 ```
 
-Then re-run Step 1 (redeploy `apps.yaml`) and Step 2. On a shared cluster you can't do this — use
-the read-only path instead.
+Depois re-execute o Step 1 (reaplique o `apps.yaml`) e o Step 2. Em um cluster compartilhado
+você não pode fazer isso — use o caminho read-only.
 </details>
 
-**Question:** curl **hung and timed out** (exit 28) instead of failing instantly. Why does a
-NetworkPolicy drop look different from "connection refused"?
+**Pergunta:** o curl **travou e estourou o timeout** (exit 28) em vez de falhar na hora. Por que
+um drop de NetworkPolicy parece diferente de "connection refused"?
 
-<details><summary>Answer</summary>
+<details><summary>Resposta</summary>
 
-A NetworkPolicy drop **silently discards** the packet — the client gets *no* response, so it waits
-until its own timeout (`--max-time`) gives up: exit **28**, "timed out". "Connection **refused**"
-(curl exit 7) is different — that's the host actively returning a TCP RST because **nothing is
-listening** on that port. Refused is fast and explicit; a policy drop is slow and silent. Debugging
-rule of thumb: **hang/timeout → suspect a NetworkPolicy or firewall; refused → suspect the
-app/port.**
+Um drop de NetworkPolicy **descarta silenciosamente** o pacote — o cliente não recebe *nenhuma*
+resposta, então espera até o próprio timeout (`--max-time`) desistir: exit **28**, "timed out".
+"Connection **refused**" (curl exit 7) é diferente — é o host retornando ativamente um TCP RST
+porque **nada está escutando** naquela porta. Refused é rápido e explícito; um drop de policy é
+lento e silencioso. Regra de bolso de debugging: **trava/timeout → suspeite de NetworkPolicy ou
+firewall; refused → suspeite do app/porta.**
 </details>
 
 ---
 
-### Step 3 — fix: open one gate with an additive allow
+### Step 3 — conserte: abra um portão com um allow aditivo
 
-The `default-deny` **stays**. We **add** a policy that permits `frontend → backend:8080`.
-NetworkPolicies are **unioned** — this doesn't replace the deny, it stacks one allowed gate on top.
+O `default-deny` **fica**. Nós **adicionamos** uma policy que permite `frontend → backend:8080`.
+NetworkPolicies são **unidas (union)** — isso não substitui o deny, apenas empilha um portão
+permitido por cima.
 
 ```bash
 cat > allow-frontend-to-backend.yaml <<'EOF'
@@ -219,14 +223,14 @@ metadata:
 spec:
   podSelector:
     matchLabels:
-      app: backend           # this policy governs the backend Pods
+      app: backend           # esta policy governa os Pods do backend
   policyTypes:
     - Ingress
   ingress:
     - from:
         - podSelector:
             matchLabels:
-              app: frontend  # …only from Pods labelled app=frontend
+              app: frontend  # …apenas de Pods com o label app=frontend
       ports:
         - protocol: TCP
           port: 8080
@@ -235,7 +239,8 @@ EOF
 kubectl apply -f allow-frontend-to-backend.yaml
 ```
 
-**Task:** re-run all three curls. `frontend` gets `200`; `other` and `scanner` still time out.
+**Tarefa:** rode os três curls de novo. O `frontend` recebe `200`; `other` e `scanner` continuam
+estourando o timeout.
 
 ```bash
 for p in frontend other scanner; do
@@ -243,7 +248,7 @@ for p in frontend other scanner; do
 done
 ```
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 frontend → 200 exit=0
@@ -251,39 +256,39 @@ other → 000 exit=28
 scanner → 000 exit=28
 ```
 
-`allow-frontend-to-backend` selects the backend and permits ingress **from `app: frontend`** on
-port 8080. Because policies are **additive**, the backend now allows the **union** of what any
-policy permits — exactly the frontend gate. `other` and `scanner` were never allowed by anything,
-so the still-present `default-deny` keeps dropping them.
+O `allow-frontend-to-backend` seleciona o backend e permite ingress **de `app: frontend`** na
+porta 8080. Como as policies são **aditivas**, o backend agora permite a **união** do que
+qualquer policy permite — exatamente o portão do frontend. `other` e `scanner` nunca foram
+permitidos por nada, então o `default-deny` ainda presente continua descartando-os.
 </details>
 
-**Question:** we never deleted `default-deny-ingress`. Why did adding one allow policy change the
-`frontend` result but not `other`/`scanner`?
+**Pergunta:** nunca deletamos o `default-deny-ingress`. Por que adicionar uma policy de allow
+mudou o resultado do `frontend` mas não o de `other`/`scanner`?
 
-<details><summary>Answer</summary>
+<details><summary>Resposta</summary>
 
-There is no "override" or precedence — the effective rule is the **union** of the allow rules from
-*every* policy that selects a Pod. `allow-frontend-to-backend` adds one allowed source (`frontend`)
-to the backend; nothing adds `other` or `scanner`, so they stay dropped by the default-deny. Delete
-`allow-frontend-to-backend` and the backend has only the default-deny selecting it again → **all
-three** are cut. Delete the default-deny **too** and the Pod is selected by nothing → back to
-**allow-all**.
+Não há "override" nem precedência — a regra efetiva é a **união** das regras de allow de *todas*
+as policies que selecionam um Pod. O `allow-frontend-to-backend` adiciona uma origem permitida
+(`frontend`) ao backend; nada adiciona `other` ou `scanner`, então eles continuam descartados
+pelo default-deny. Delete o `allow-frontend-to-backend` e o backend volta a ser selecionado
+apenas pelo default-deny → **os três** ficam cortados. Delete o default-deny **também** e o Pod
+não é selecionado por nada → de volta ao **allow-all**.
 </details>
 
 ---
 
-### Step 4 — observe: ingress ≠ egress (DNS still works)
+### Step 4 — observe: ingress ≠ egress (o DNS continua funcionando)
 
-The default-deny is `policyTypes: [Ingress]` — egress, including **DNS**, was never touched. The
-proof is hiding in the exit code you already saw.
+O default-deny é `policyTypes: [Ingress]` — o egress, incluindo o **DNS**, nunca foi tocado. A
+prova está escondida no exit code que você já viu.
 
-**Question:** in Step 2, the curls exited **28** (timed out), not **6** (*"Could not resolve
-host"*). What does that tell you about DNS under our default-deny?
+**Pergunta:** no Step 2, os curls saíram com **28** (timeout), não **6** (*"Could not resolve
+host"*). O que isso te diz sobre o DNS sob o nosso default-deny?
 
-<details><summary>Answer / expected output</summary>
+<details><summary>Resposta / saída esperada</summary>
 
-To *time out on connect*, curl first had to **resolve `backend` to an IP** — so DNS **worked**. A
-blocked DNS path fails fast and differently:
+Para *estourar o timeout na conexão*, o curl primeiro teve que **resolver `backend` para um
+IP** — então o DNS **funcionou**. Um caminho de DNS bloqueado falha rápido e de forma diferente:
 
 ```console
 $ kubectl exec other -- curl -s --max-time 5 http://backend; echo "exit=$?"
@@ -291,49 +296,51 @@ curl: (6) Could not resolve host: backend
 exit=6
 ```
 
-You'd see exit **6** only if egress/DNS were blocked. We saw exit **28**, so name resolution
-succeeded and only the *inbound* connection was dropped — exactly what an **ingress-only**
-default-deny should do. This is why we deny **ingress only**: a default-deny **egress** without an
-explicit DNS allow (UDP/TCP 53 to kube-dns) breaks name resolution for the whole namespace and
-every app looks mysteriously broken (that's the stretch goal).
+Você veria exit **6** apenas se egress/DNS estivessem bloqueados. Vimos exit **28**, então a
+resolução de nome teve sucesso e apenas a conexão de *entrada* foi descartada — exatamente o que
+um default-deny **somente de ingress** deve fazer. É por isso que negamos **apenas ingress**: um
+default-deny de **egress** sem um allow explícito de DNS (UDP/TCP 53 para o kube-dns) quebra a
+resolução de nomes do namespace inteiro e todo app parece misteriosamente quebrado (esse é o
+stretch goal).
 </details>
 
 ---
 
-### Step 5 — observe: the allow rule is only a label match
+### Step 5 — observe: a regra de allow é só um label match
 
-`allow-frontend-to-backend` matches by the label `app: frontend`. Change the label and the match
-evaporates — no policy edit needed.
+O `allow-frontend-to-backend` faz match pelo label `app: frontend`. Mude o label e o match
+evapora — sem nenhuma edição de policy.
 
 ```bash
 kubectl label pod frontend app=stranger --overwrite
 kubectl exec frontend -- curl -s -o /dev/null -w "frontend → %{http_code}" --max-time 5 http://backend; echo " exit=$?"
 ```
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 frontend → 000 exit=28
 ```
 
-Same Pod, but it no longer carries `app: frontend`, so `allow-frontend-to-backend` stops selecting
-it as a permitted source — the default-deny drops it like any other. Put the label back and it
-works again:
+Mesmo Pod, mas ele não carrega mais `app: frontend`, então o `allow-frontend-to-backend` para de
+selecioná-lo como origem permitida — o default-deny o descarta como qualquer outro. Recoloque o
+label e volta a funcionar:
 
 ```bash
 kubectl label pod frontend app=frontend --overwrite
 kubectl exec frontend -- curl -s -o /dev/null -w "%{http_code}\n" --max-time 5 http://backend   # → 200
 ```
 
-**Selectors are labels** — NetworkPolicy allows by label selector, so a relabel (or a mislabel)
-silently changes who may talk to whom. It's also the #1 real-world trap: a policy that "stopped
-working" is often a Pod whose labels changed.
+**Selectors são labels** — NetworkPolicy permite por label selector, então um relabel (ou um
+label errado) muda silenciosamente quem pode falar com quem. É também a armadilha nº 1 do mundo
+real: uma policy que "parou de funcionar" costuma ser um Pod cujos labels mudaram.
 </details>
 
-## Stretch (optional) — lock egress too, and re-allow DNS
+## Stretch (opcional) — trave o egress também, e libere o DNS de novo
 
-A default-deny **egress** is the classic self-inflicted outage: block outbound and you also block
-**DNS**, so every name lookup fails. Prove it, then fix it the right way.
+Um default-deny de **egress** é a clássica indisponibilidade autoinfligida: bloqueie a saída e
+você também bloqueia o **DNS**, então toda resolução de nome falha. Prove isso, depois conserte
+do jeito certo.
 
 ```bash
 cat > default-deny-egress.yaml <<'EOF'
@@ -349,20 +356,21 @@ spec:
 EOF
 kubectl apply -f default-deny-egress.yaml
 
-# now DNS breaks — resolution fails fast (exit 6), not a timeout
+# agora o DNS quebra — a resolução falha rápido (exit 6), não é timeout
 kubectl exec frontend -- curl -s --max-time 5 http://backend; echo " exit=$?"
 ```
 
-<details><summary>What broke, and the DNS allow that fixes it</summary>
+<details><summary>O que quebrou, e o allow de DNS que conserta</summary>
 
 ```console
 curl: (6) Could not resolve host: backend
  exit=6
 ```
 
-Exit **6** now, not 28 — egress is denied, so the DNS query to kube-dns never leaves the Pod.
-Re-allow DNS (UDP **and** TCP 53) to `kube-system`, and lookups work again (the connect still
-times out at exit 28 unless you also allow egress to the backend):
+Exit **6** agora, não 28 — o egress está negado, então a query de DNS para o kube-dns nunca sai
+do Pod. Libere o DNS de novo (UDP **e** TCP 53) para o `kube-system`, e as consultas voltam a
+funcionar (a conexão ainda estoura o timeout com exit 28, a menos que você também permita egress
+para o backend):
 
 ```bash
 cat > allow-dns-egress.yaml <<'EOF'
@@ -387,43 +395,49 @@ EOF
 kubectl apply -f allow-dns-egress.yaml
 ```
 
-Lesson: `policyTypes` are independent switches, and locking egress means you **own DNS** — always
-pair a default-deny egress with an explicit DNS allow. Clean up the extra policies with
-`kubectl delete networkpolicy -l app=s18` (or leave them — the Step-6 cleanup covers them).
+Lição: os `policyTypes` são chaves independentes, e travar o egress significa que você **é dono
+do DNS** — sempre acompanhe um default-deny de egress com um allow explícito de DNS. Limpe as
+policies extras com `kubectl delete networkpolicy -l app=s18` (ou deixe-as — o cleanup do Step 6
+as cobre).
 </details>
 
 ## Expected state / output
 
-- **Default is flat/allow-all:** with no policy, every Pod reaches every Pod. Isolation is opt-in.
-- A **`default-deny` ingress** = `podSelector: {}` + `policyTypes: [Ingress]` + no rules → all
-  inbound dropped. Dropped traffic **hangs and times out** (curl exit **28**), it is **not**
-  "refused" (exit 7). That break *is* the enforcement self-test.
-- Policies are **additive/allow-only:** `allow-frontend-to-backend` opens exactly one gate;
-  `other`/`scanner` stay cut because nothing allows them. Deny = the absence of an allow.
-- **Ingress ≠ egress:** the ingress default-deny left **DNS/egress working** (exit 28, not 6).
-- **Selectors are labels:** relabeling `frontend` breaks the allow match with no policy change.
-- **Only a policy-capable CNI enforces any of this** — the same objects on a non-enforcing CNI
-  apply cleanly and do nothing.
+- **O padrão é flat/allow-all:** sem nenhuma policy, todo Pod alcança todo Pod. O isolamento é
+  opt-in.
+- Um **ingress `default-deny`** = `podSelector: {}` + `policyTypes: [Ingress]` + nenhuma regra →
+  todo o tráfego de entrada é descartado. Tráfego descartado **trava e estoura o timeout** (curl
+  exit **28**), **não** é "refused" (exit 7). Essa quebra *é* o self-test de enforcement.
+- Policies são **aditivas/allow-only:** o `allow-frontend-to-backend` abre exatamente um portão;
+  `other`/`scanner` continuam cortados porque nada os permite. Deny = a ausência de um allow.
+- **Ingress ≠ egress:** o default-deny de ingress deixou **DNS/egress funcionando** (exit 28,
+  não 6).
+- **Selectors são labels:** trocar o label do `frontend` quebra o match do allow sem nenhuma
+  mudança de policy.
+- **Só um CNI capaz de policies aplica qualquer parte disso** — os mesmos objetos em um CNI sem
+  enforcement aplicam sem erro e não fazem nada.
 
-Representative statuses include Ready/Running Pods, NetworkPolicy timeouts, RBAC Forbidden,
-Helm revision history, Application Synced/Healthy, Certificate Ready, or Prometheus targets —
-compare meaning, not ephemeral names.
+Statuses representativos incluem Pods Ready/Running, timeouts de NetworkPolicy, Forbidden de
+RBAC, histórico de revisões do Helm, Application Synced/Healthy, Certificate Ready ou targets do
+Prometheus — compare o significado, não nomes efêmeros.
 
 ## Explanation
 
-NetworkPolicies are additive allows on top of isolation. Connectivity returns only
-when some policy's podSelector and ingress.from selectors match the actual Pod labels, so a
-relabel or typo removes the allow without changing the YAML filename. Timeout (not refused) is
-the CNI drop signal that the fence is enforcing.
+NetworkPolicies são allows aditivos por cima do isolamento. A conectividade só retorna quando o
+podSelector e os seletores de ingress.from de alguma policy correspondem aos labels reais do
+Pod; por isso um relabel ou um erro de digitação remove o allow sem alterar o nome do arquivo
+YAML, causando a perda de conectividade. O timeout (e não refused) é o sinal de drop do CNI de
+que a cerca está sendo aplicada.
 
-The guided steps above prove the control-plane behaviour for this section; read Events and
-status fields when a one-line phase is ambiguous.
+Os passos guiados acima provam o comportamento do control plane para esta seção; leia os Events
+e os campos de status quando uma fase de uma linha só for ambígua.
 
 ## Troubleshooting and recovery
 
-Re-apply the lab's named manifests with `kubectl apply -f <file> -n "$NS"` after fixing the
-broken field, or delete only the labelled objects from Cleanup / reset and restart the guided
-task. Prefer `kubectl describe` Events over guessing. Do not run broad cluster deletes.
+Reaplique os manifestos nomeados do lab com `kubectl apply -f <file> -n "$NS"` depois de
+corrigir o campo quebrado, ou delete apenas os objetos com label da seção Cleanup / reset e
+reinicie o guided task. Prefira os Events do `kubectl describe` a chutar. Não rode deletes
+amplos no cluster.
 
 ## Challenge solution
 
@@ -433,24 +447,25 @@ task. Prefer `kubectl describe` Events over guessing. Do not run broad cluster d
 kubectl get networkpolicy -n "$NS" -o wide
 kubectl get pods -n "$NS" -l lab=s18 --show-labels
 kubectl exec deploy/other -n "$NS" -- wget -qO- --timeout=3 http://backend:8080 || echo "exit=$?"
-# restore frontend label match (example):
+# restaura o match do label do frontend (exemplo):
 kubectl label pod -n "$NS" -l app=frontend --overwrite role=frontend
 kubectl exec deploy/frontend -n "$NS" -- wget -qO- --timeout=3 http://backend:8080
 ```
 
 ### Expected state / output
 
-Unmatched clients hang/time out (curl/wget exit 28). After the allow selector matches
-again, frontend returns 200 while other/scanner remains timed out.
+Clientes sem match travam/estouram o timeout (curl/wget exit 28). Depois que o selector do allow
+volta a fazer match, o frontend retorna 200 enquanto other/scanner continuam em timeout.
 
 ### Explanation
 
-NetworkPolicies are additive allows on top of isolation. Connectivity returns only
-when some policy's podSelector and ingress.from selectors match the actual Pod labels, so a
-relabel or typo removes the allow without changing the YAML filename. Timeout (not refused) is
-the CNI drop signal that the fence is enforcing.
+NetworkPolicies são allows aditivos por cima do isolamento. A conectividade só retorna quando o
+podSelector e os seletores de ingress.from de alguma policy correspondem aos labels reais do
+Pod; por isso um relabel ou um erro de digitação remove o allow sem alterar o nome do arquivo
+YAML, causando a perda de conectividade. O timeout (e não refused) é o sinal de drop do CNI de
+que a cerca está sendo aplicada.
 
 ### Hints
 
-Use kubectl get networkpolicy and describe pods for lab=s18 labels; compare
-podSelector.matchLabels on the allow rule with the client Pod labels before patching.
+Use kubectl get networkpolicy e describe nos Pods com labels lab=s18; compare
+o podSelector.matchLabels da regra de allow com os labels dos Pods clientes antes de aplicar o patch.

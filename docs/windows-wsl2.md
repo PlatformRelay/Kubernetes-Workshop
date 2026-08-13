@@ -1,18 +1,18 @@
-# Windows participant setup with WSL2
+# Setup do participante no Windows com WSL2
 
-The workshop's Windows route is **WSL2**, using a Linux distribution and a
-container engine that is reachable from that distribution. This route is
-currently **partial: contract-tested, live-smoke pending**. It must not be
-advertised as officially supported until the live acceptance gate below passes.
-Native PowerShell,
-Command Prompt, Git Bash, MSYS2, and WSL1 are not supported execution
-environments for `./workshop` or the labs.
+A rota Windows do workshop é o **WSL2**, usando uma distribuição Linux e um
+container engine acessível a partir dessa distribuição. Essa rota está atualmente
+**parcial: testada por contrato, com o smoke ao vivo pendente**. Ela não deve ser
+anunciada como oficialmente suportada até que o gate de aceitação ao vivo abaixo
+passe. PowerShell nativo,
+Prompt de Comando, Git Bash, MSYS2 e WSL1 não são ambientes de execução suportados
+para o `./workshop` nem para os labs.
 
-If company policy prevents local installations, administrator privileges, or
-container-engine access, use the [assigned cloud namespace](#managed-device-route)
-instead. Do not try to work around device policy.
+Se a política da empresa impede instalações locais, privilégios de administrador ou
+acesso a container engine, use o [namespace atribuído na nuvem](#rota-para-dispositivos-gerenciados)
+em vez disso. Não tente contornar a política do dispositivo.
 
-## Recommended topology
+## Topologia recomendada
 
 ```text
 Windows host
@@ -24,38 +24,39 @@ Windows host
     └── WSL integration socket ◀─┘
 ```
 
-The bootstrap can select Podman, but the first Windows acceptance target is
-Docker Desktop with WSL integration. Treat Podman on Windows as experimental
-until it has its own live-smoke row. Check Docker Desktop's licence terms before
-using it for work.
+O bootstrap consegue selecionar o Podman, mas o primeiro alvo de aceitação no
+Windows é o Docker Desktop com WSL integration. Trate o Podman no Windows como
+experimental até que ele tenha sua própria linha de smoke ao vivo. Verifique os
+termos de licença do Docker Desktop antes de usá-lo para trabalho.
 
-## Version support policy
+## Política de suporte a versões
 
-The provisional minimum tuple for the first live acceptance is:
+A tupla mínima provisória para a primeira aceitação ao vivo é:
 
-| Component | Provisional minimum |
+| Componente | Mínimo provisório |
 | --- | --- |
 | Windows | Windows 11 23H2, build 22631 |
-| WSL package | 2.1.5, with the distribution running as generation 2 |
-| Linux distribution | Ubuntu 24.04 LTS |
-| Docker Desktop | 4.44.0 with the WSL2 backend and per-distribution integration enabled |
-| Workshop resources | 4 CPUs and 8 GiB RAM available to WSL2/containers |
+| Pacote WSL | 2.1.5, com a distribuição rodando como geração 2 |
+| Distribuição Linux | Ubuntu 24.04 LTS |
+| Docker Desktop | 4.44.0 com o backend WSL2 e a integração por distribuição habilitada |
+| Recursos do workshop | 4 CPUs e 8 GiB de RAM disponíveis para WSL2/containers |
 
-These are workshop policy floors, not a claim that every newer combination has
-already been exercised. The Windows and WSL floors align with Docker's current
-[Windows installation requirements](https://docs.docker.com/desktop/setup/install/windows-install/).
-Use `wsl --version`, `wsl --status`, and `wsl --list --verbose` as documented by
-[Microsoft's WSL command reference](https://learn.microsoft.com/en-us/windows/wsl/basic-commands).
+Esses são pisos de política do workshop, não a afirmação de que toda combinação mais
+nova já foi exercitada. Os pisos de Windows e WSL estão alinhados aos
+[requisitos de instalação no Windows](https://docs.docker.com/desktop/setup/install/windows-install/)
+atuais da Docker. Use `wsl --version`, `wsl --status` e `wsl --list --verbose`
+conforme documentado na
+[referência de comandos do WSL da Microsoft](https://learn.microsoft.com/en-us/windows/wsl/basic-commands).
 
-No live tuple has passed yet. The first successful acceptance record must state
-the exact Windows build, WSL/kernel, distribution, architecture, engine, and
-workshop commit. That tuple becomes the tested baseline; raising a minimum later
-requires another recorded smoke. Stubbed tests establish only the diagnostic
-contract.
+Nenhuma tupla ao vivo passou ainda. O primeiro registro de aceitação bem-sucedida
+precisa declarar o build exato do Windows, o WSL/kernel, a distribuição, a
+arquitetura, o engine e o commit do workshop. Essa tupla se torna a baseline testada;
+elevar um mínimo depois exige outro smoke registrado. Testes stubbed estabelecem
+apenas o contrato de diagnóstico.
 
-## One-time host setup
+## Setup único do host
 
-1. In an elevated PowerShell, install WSL and make version 2 the default:
+1. Em um PowerShell elevado, instale o WSL e torne a versão 2 o default:
 
    ```powershell
    wsl --install
@@ -65,26 +66,26 @@ contract.
    wsl --list --verbose
    ```
 
-   Confirm that the chosen distribution shows `VERSION 2`. Reboot if Windows
-   requests it. WSL2 requires hardware virtualization to be enabled; on a
-   managed laptop, IT may need to enable the Windows features or firmware
-   setting.
+   Confirme que a distribuição escolhida mostra `VERSION 2`. Reinicie se o Windows
+   pedir. O WSL2 exige que a virtualização por hardware esteja habilitada; em um
+   laptop gerenciado, o time de TI pode precisar habilitar os recursos do Windows ou
+   a configuração de firmware.
 
-2. Install and start a compatible container engine. For Docker Desktop, enable
-   its WSL2 backend and then enable **Settings > Resources > WSL integration**
-   for the chosen distribution.
+2. Instale e inicie um container engine compatível. Para o Docker Desktop, habilite
+   o backend WSL2 e depois habilite **Settings > Resources > WSL integration**
+   para a distribuição escolhida.
 
-3. Open the Linux distribution and verify the integration from its shell:
+3. Abra a distribuição Linux e verifique a integração a partir do shell dela:
 
    ```bash
    docker info
    ```
 
-   This must succeed without `sudo`. If it does not, start Docker Desktop,
-   enable the distribution integration, then run `wsl --shutdown` in
-   PowerShell and reopen the distribution.
+   Isso precisa funcionar sem `sudo`. Se não funcionar, inicie o Docker Desktop,
+   habilite a integração da distribuição, depois execute `wsl --shutdown` no
+   PowerShell e reabra a distribuição.
 
-4. Clone the repository inside the Linux filesystem, not under `/mnt/c`:
+4. Clone o repositório dentro do filesystem Linux, não sob `/mnt/c`:
 
    ```bash
    mkdir -p ~/src
@@ -95,89 +96,89 @@ contract.
    ./workshop up
    ```
 
-   A checkout under `/mnt/c` can be substantially slower and can blur Linux
-   executable-bit semantics. The bootstrap warns when it detects this layout.
+   Um checkout sob `/mnt/c` pode ser substancialmente mais lento e pode embaralhar a
+   semântica do bit de execução do Linux. O bootstrap avisa quando detecta esse layout.
 
-Do not install the Windows build of mise with `winget` for this path. The tools
-must run inside the WSL2 Linux distribution; `./workshop up` installs the Linux
-build of mise interactively when needed.
+Não instale o build Windows do mise com `winget` para este caminho. As ferramentas
+precisam rodar dentro da distribuição Linux do WSL2; `./workshop up` instala o build
+Linux do mise de forma interativa quando necessário.
 
-## Resource and network preparation
+## Preparação de recursos e de rede
 
-Allocate at least 4 CPUs and 8 GiB RAM to the combined WSL2/container-engine
-environment. The bootstrap warns below these values. Close unused local
-clusters and containers before the workshop.
+Aloque pelo menos 4 CPUs e 8 GiB de RAM para o ambiente combinado
+WSL2/container engine. O bootstrap avisa abaixo desses valores. Feche clusters e
+containers locais não utilizados antes do workshop.
 
-Corporate proxies and VPN clients can affect WSL DNS, image pulls, and access
-to the Kubernetes API:
+Proxies corporativos e clientes de VPN podem afetar o DNS do WSL, os pulls de image e
+o acesso à API do Kubernetes:
 
-- Configure the approved proxy in both the container engine and the WSL2 shell.
-  Preserve TLS verification and use the company CA bundle; do not bypass
-  certificate checks.
-- Connect the VPN before opening WSL2. If connectivity changes after a VPN
-  reconnect, run `wsl --shutdown` in PowerShell and reopen the distribution.
-- Verify `docker pull`, DNS resolution, and the target cluster before class.
-  A facilitator can pre-pull pinned workshop images when conference networking
-  is constrained.
-- Do not replace `/etc/resolv.conf` or add unapproved proxy exceptions unless
-  that is part of the organisation's supported WSL configuration.
+- Configure o proxy aprovado tanto no container engine quanto no shell do WSL2.
+  Preserve a verificação de TLS e use o CA bundle da empresa; não contorne as
+  checagens de certificado.
+- Conecte a VPN antes de abrir o WSL2. Se a conectividade mudar depois de uma
+  reconexão de VPN, execute `wsl --shutdown` no PowerShell e reabra a distribuição.
+- Verifique `docker pull`, resolução de DNS e o cluster alvo antes da aula.
+  Um facilitador pode fazer o pre-pull das images pinadas do workshop quando a rede
+  da conferência estiver limitada.
+- Não substitua o `/etc/resolv.conf` nem adicione exceções de proxy não aprovadas, a
+  menos que isso faça parte da configuração de WSL suportada pela organização.
 
-## Managed-device route
+## Rota para dispositivos gerenciados
 
-Participants who cannot or do not want to install a container engine should
-receive a kubeconfig and an assigned namespace in a facilitator-managed cloud
-cluster. They can skip local kind setup and follow the namespace path in
+Participantes que não podem ou não querem instalar um container engine devem receber
+um kubeconfig e um namespace atribuído em um cluster na nuvem gerenciado pelo
+facilitador. Eles podem pular o setup local do kind e seguir o caminho de namespace em
 [`../labs/day-1/00-setup.md`](../labs/day-1/00-setup.md).
 
-This route still requires a terminal with `kubectl` today. A literal
-zero-install, browser-only shell is future work tracked by **US-ENV-6**; do not
-promise it as part of the current workshop.
+Essa rota ainda exige, hoje, um terminal com `kubectl`. Um shell literalmente sem
+instalação, apenas no navegador, é trabalho futuro rastreado por **US-ENV-6**; não o
+prometa como parte do workshop atual.
 
-Cluster-wide exercises must provide a namespace-safe observation path. The
-facilitator, not the participant, owns shared add-on installation and
-cluster-scoped permissions.
+Exercícios cluster-wide precisam oferecer um caminho de observação seguro por
+namespace. O facilitador, e não o participante, é o dono da instalação de add-ons
+compartilhados e das permissões cluster-scoped.
 
 ## Troubleshooting
 
-| Symptom | Action |
+| Sintoma | Ação |
 | --- | --- |
-| `native Windows ... is not supported` | Open the WSL2 distribution and run the command from its Linux shell. |
-| `WSL1 is not supported` | Back up the distribution, run `wsl --set-version <DistributionName> 2` in PowerShell, and confirm `VERSION 2` with `wsl --list --verbose`. |
-| `Docker Desktop WSL integration may be disabled` | Enable integration for this distribution, restart Docker Desktop, run `wsl --shutdown`, reopen WSL2, and verify `docker info`. |
-| Repository path starts with `/mnt/c/` | Re-clone under `~/src`; do not move `node_modules` or a kind data directory across filesystems. |
-| `bad interpreter` or `$'\r': command not found` | Set `git config --global core.autocrlf input`, re-clone inside WSL2, and verify the scripts use LF endings. |
-| `Permission denied` for `./workshop` | Run `chmod +x workshop infra/bootstrap.sh infra/doctor.sh`, then check that the checkout is on the Linux filesystem. |
-| Pulls or API calls fail only on VPN | Reconnect the VPN, `wsl --shutdown`, reopen WSL2, and verify DNS/proxy/CA configuration before retrying. |
+| `native Windows ... is not supported` | Abra a distribuição WSL2 e execute o comando a partir do shell Linux dela. |
+| `WSL1 is not supported` | Faça backup da distribuição, execute `wsl --set-version <DistributionName> 2` no PowerShell e confirme `VERSION 2` com `wsl --list --verbose`. |
+| `Docker Desktop WSL integration may be disabled` | Habilite a integração para esta distribuição, reinicie o Docker Desktop, execute `wsl --shutdown`, reabra o WSL2 e verifique `docker info`. |
+| O path do repositório começa com `/mnt/c/` | Clone novamente sob `~/src`; não mova `node_modules` nem um diretório de dados do kind entre filesystems. |
+| `bad interpreter` ou `$'\r': command not found` | Defina `git config --global core.autocrlf input`, clone novamente dentro do WSL2 e verifique se os scripts usam quebras de linha LF. |
+| `Permission denied` para `./workshop` | Execute `chmod +x workshop infra/bootstrap.sh infra/doctor.sh` e depois confira se o checkout está no filesystem Linux. |
+| Pulls ou chamadas de API falham somente na VPN | Reconecte a VPN, `wsl --shutdown`, reabra o WSL2 e verifique a configuração de DNS/proxy/CA antes de tentar de novo. |
 
 ## Reproducible validation checklist
 
-Run this checklist on a host meeting the provisional tuple. Every item is a
-release gate: do not call the Windows route officially supported until all
-items pass and the exact tuple is recorded.
+Execute esta checklist em um host que atenda à tupla provisória. Cada item é um
+release gate: não chame a rota Windows de oficialmente suportada até que todos os
+itens passem e a tupla exata esteja registrada.
 
-1. Record Windows version, `wsl --version`, `wsl --list --verbose`, Linux
-   distribution/version, architecture, engine version, and available CPU/RAM.
-2. In a clean WSL2 distribution with Docker integration enabled, clone under
-   `~/src`, complete Lab 00, run `./workshop up`, then run `./workshop doctor`;
-   expect zero failures.
-3. Disable WSL integration for the distribution and run `./workshop up`; expect
-   a non-zero exit and the integration recovery instructions.
-4. Re-enable integration. Clone a disposable copy under `/mnt/c` and run
-   `./workshop up`; expect the mounted-drive warning before cluster creation.
-5. In disposable copies, introduce CRLF into `workshop` and remove its
-   executable bit. Run `bash infra/doctor.sh`; expect specific repair commands
-   and a non-zero result.
-6. Exercise representative cluster behaviour: Service/DNS networking, dynamic
-   PVC provisioning and persistence, and one canonical cluster add-on lab.
-   Record commands, timings, failures, and cleanup; a green bootstrap alone is
-   insufficient.
-7. Run the namespace path using a facilitator-provided kubeconfig without
-   Docker or kind. Confirm that namespace-scoped labs work and cluster-wide
-   steps direct the participant to the read-only alternative.
-8. Run `./workshop down --yes` for the local path and confirm the workshop kind
-   cluster is removed.
+1. Registre a versão do Windows, `wsl --version`, `wsl --list --verbose`,
+   distribuição/versão Linux, arquitetura, versão do engine e CPU/RAM disponíveis.
+2. Em uma distribuição WSL2 limpa com a integração do Docker habilitada, clone sob
+   `~/src`, conclua o Lab 00, execute `./workshop up` e depois `./workshop doctor`;
+   espere zero falhas.
+3. Desabilite a integração WSL para a distribuição e execute `./workshop up`; espere
+   uma saída diferente de zero e as instruções de recuperação da integração.
+4. Reabilite a integração. Clone uma cópia descartável sob `/mnt/c` e execute
+   `./workshop up`; espere o aviso de drive montado antes da criação do cluster.
+5. Em cópias descartáveis, introduza CRLF no `workshop` e remova o bit de execução
+   dele. Execute `bash infra/doctor.sh`; espere comandos de reparo específicos e um
+   resultado diferente de zero.
+6. Exercite comportamentos representativos do cluster: networking de Service/DNS,
+   provisionamento dinâmico de PVC e persistência, e um lab canônico de add-on de
+   cluster. Registre comandos, tempos, falhas e cleanup; um bootstrap verde sozinho
+   é insuficiente.
+7. Execute o caminho de namespace usando um kubeconfig fornecido pelo facilitador,
+   sem Docker nem kind. Confirme que os labs namespace-scoped funcionam e que os
+   passos cluster-wide direcionam o participante para a alternativa read-only.
+8. Execute `./workshop down --yes` para o caminho local e confirme que o cluster kind
+   do workshop foi removido.
 
-Until this checklist is recorded as passing, the state is `contract-tested` /
-`live-smoke pending`, the story remains partial, and release notes must not
-claim official Windows support. Automated tests reproduce detection and
-messages with stubs, but do not replace live WSL2 validation.
+Até que esta checklist seja registrada como aprovada, o estado é `contract-tested` /
+`live-smoke pending`, a story continua parcial e as release notes não podem alegar
+suporte oficial ao Windows. Testes automatizados reproduzem a detecção e as mensagens
+com stubs, mas não substituem a validação ao vivo no WSL2.

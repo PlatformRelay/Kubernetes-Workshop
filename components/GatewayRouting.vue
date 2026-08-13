@@ -46,7 +46,7 @@ const live = computed(() => props.step >= 1)
     <div class="kw-gw-flow">
       <!-- the request in flight -->
       <div class="kw-gw-req" :class="{ 'is-live': live }">
-        <div class="kw-gw-req-label">request</div>
+        <div class="kw-gw-req-label">requisição</div>
         <template v-if="request">
           <code class="kw-gw-req-line">{{ request.method }} {{ request.path }}</code>
           <code v-if="request.header" class="kw-gw-req-hdr">{{ request.header }}</code>
@@ -58,7 +58,7 @@ const live = computed(() => props.step >= 1)
 
       <!-- infra lane: the Gateway -->
       <div class="kw-gw-node kw-gw-gateway">
-        <div class="kw-gw-owner">owned by · infra / cluster-op</div>
+        <div class="kw-gw-owner">dono · infra / cluster-op</div>
         <div class="kw-kicker">Gateway · <code>web</code></div>
         <div class="kw-gw-listener">
           listener <code>http</code> · <code>:80</code> · <code>HTTP</code>
@@ -72,7 +72,7 @@ const live = computed(() => props.step >= 1)
 
       <!-- app lane: the HTTPRoute -->
       <div class="kw-gw-node kw-gw-route">
-        <div class="kw-gw-owner">owned by · app team</div>
+        <div class="kw-gw-owner">dono · time da aplicação</div>
         <div class="kw-kicker">HTTPRoute · <code>web</code></div>
         <div class="kw-gw-rule" :class="{ 'is-hot': activeRule === 'canary' }">
           <code>path /</code> + <code>x-env: canary</code>
@@ -105,19 +105,19 @@ const live = computed(() => props.step >= 1)
 
     <div class="kw-gw-caption">
       <template v-if="props.step <= 0">
-        Two owners, one stack: <strong>infra</strong> declares the
-        <strong>Gateway</strong> (listeners, ports, TLS); the <strong>app team</strong>
-        declares the <strong>HTTPRoute</strong> (paths, headers, weights) and attaches it
-        with <code>parentRefs</code>. Typed fields — no controller-specific annotations.
+        Dois donos, uma pilha: a <strong>infra</strong> declara o
+        <strong>Gateway</strong> (listeners, portas, TLS); o <strong>time da aplicação</strong>
+        declara o <strong>HTTPRoute</strong> (paths, headers, weights) e o anexa com
+        <code>parentRefs</code>. Campos tipados — nenhuma annotation específica de controller.
       </template>
       <template v-else-if="props.step === 1">
-        <code>GET /</code> hits the listener, matches the <code>path /</code> rule, and
-        routes to the <strong>web</strong> Service — the same backend the Ingress fronted.
+        <code>GET /</code> chega no listener, casa com a regra <code>path /</code> e roteia
+        para o Service <strong>web</strong> — o mesmo backend que o Ingress atendia.
       </template>
       <template v-else>
-        Add <code>x-env: canary</code> and a <strong>more specific</strong> rule wins:
-        a <strong>typed weighted split</strong> — 90/10 across <code>web</code> and
-        <code>web2</code>. That was an untyped annotation under Ingress.
+        Adicione <code>x-env: canary</code> e uma regra <strong>mais específica</strong>
+        vence: um <strong>split ponderado e tipado</strong> — 90/10 entre <code>web</code> e
+        <code>web2</code>. No Ingress isso era uma annotation sem tipo.
       </template>
     </div>
   </div>

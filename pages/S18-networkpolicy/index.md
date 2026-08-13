@@ -9,120 +9,129 @@ track: Security
 
 # NetworkPolicy
 
-Isolate workloads: default-deny, then explicit allows.
+Isole workloads: default-deny, depois allows explícitos.
 
-**recommended** · suggested Day 3 · Security track
+**recommended** · sugerido para o Day 3 · trilha Security
 
 <!--
-Section S18 — NetworkPolicy. Day 3 (M5), the network complement to S17 (which hardened what a
-Pod IS; here we control what a Pod may TALK to). Timing: ~25 min slides + 25 min lab. Outcome:
-learners can take a flat pod network, apply a default-deny ingress policy to flip selected Pods
-to deny-all, re-open a single targeted lane with an additive allow, and know the policy is a
-no-op unless a policy-capable CNI enforces it.
-Beats: problem (flat network — every Pod reaches every Pod → the S17 tie: a compromised Pod
-roams) · mental model (NetworkPolicy = selector + allow rules; no policy = allow-all; the first
-policy to select a Pod flips that direction to default-deny; policies are additive/allow-only) ·
-code-annotated (the two-line default-deny) · magic-move (build allow-frontend-to-backend field by
-field; final frame == the lab's file) · selectors (podSelector vs namespaceSelector; the AND/OR
-gotcha; ingress vs egress) · CNI caveat (unenforced = silent no-op → the lab self-tests) ·
-NetworkFence animation · recap → S25 · lab.
-Animation: NetworkFence.vue (new, self-contained) — flat → default-deny fence → one gate open.
-NOT a reuse of AdmissionGate.vue: that is admission-time (a Pod CREATE request denied before it
-exists); this is runtime pod-to-pod TRAFFIC allowed/dropped by the CNI — a different layer, so a
-distinct component (same call as S11/S12/S13/S16).
+Seção S18 — NetworkPolicy. Day 3 (M5), o complemento de rede do S17 (que aplicou hardening no
+que um Pod É; aqui controlamos com o que um Pod pode FALAR). Tempo: ~25 min de slides + 25 min
+de lab. Resultado: os participantes conseguem partir de uma rede de Pods plana, aplicar uma
+política default-deny de ingress para virar os Pods selecionados para deny-all, reabrir uma
+única via direcionada com um allow aditivo, e sabem que a política é um no-op a menos que um
+CNI capaz de políticas a imponha.
+Beats: problema (rede plana — todo Pod alcança todo Pod → a amarração com o S17: um Pod
+comprometido circula) · modelo mental (NetworkPolicy = selector + regras de allow; sem política
+= allow-all; a primeira política a selecionar um Pod vira aquela direção para default-deny;
+políticas são aditivas/allow-only) · code-annotated (o default-deny de duas linhas) ·
+magic-move (construir allow-frontend-to-backend campo a campo; frame final == o arquivo do lab)
+· selectors (podSelector vs namespaceSelector; a pegadinha do AND/OR; ingress vs egress) ·
+ressalva do CNI (sem enforcement = no-op silencioso → o lab se autotesta) · animação
+NetworkFence · recap → S25 · lab.
+Animação: NetworkFence.vue (novo, autocontido) — plano → cerca default-deny → um portão aberto.
+NÃO é reúso do AdmissionGate.vue: aquele é tempo-de-admission (um request de CREATE de Pod
+negado antes de existir); este é TRÁFEGO pod-a-pod em runtime permitido/descartado pelo CNI —
+outra camada, logo um componente distinto (mesma decisão do S11/S12/S13/S16).
 
-ACCURACY LOCKS (verified against the current NetworkPolicy docs):
-- No policy selecting a Pod = allow-all for that Pod. The FIRST policy that selects it for a
-  direction flips that direction to default-deny; only the UNION of matching allow rules passes.
-- default-deny (ingress) = `podSelector: {}` + `policyTypes: [Ingress]`, no ingress rules. Empty
-  podSelector selects EVERY Pod in the namespace.
-- Ingress and egress are INDEPENDENT. A default-deny *ingress* policy does NOT touch egress — DNS
-  still works (that is the lab's "why didn't DNS break?" question; exit 28 timeout, not exit 6).
-- Policies are ADDITIVE/ALLOW-ONLY (unioned). There is no deny rule; a Pod is default-deny for a
-  direction only because a policy selected it and nothing allowed the traffic.
-- In a `from[]` list: selectors in ONE element are AND-ed; separate elements are OR-ed.
-- Enforced by the CNI. `kubectl apply` accepts the object even if the CNI ignores it (silent
-  no-op). Enforcers: Calico, Cilium, Antrea, and modern kindnet; some managed/basic CNIs don't →
-  the lab SELF-TESTS enforcement (apply default-deny, confirm traffic breaks) before relying on it.
-CKx tie-in: CKA & CKAD Services & Networking (NetworkPolicy).
+ACCURACY LOCKS (verificados contra a documentação atual de NetworkPolicy):
+- Nenhuma política selecionando um Pod = allow-all para aquele Pod. A PRIMEIRA política que o
+  seleciona para uma direção vira aquela direção para default-deny; só a UNIÃO das regras de
+  allow correspondentes passa.
+- default-deny (ingress) = `podSelector: {}` + `policyTypes: [Ingress]`, sem regras de ingress.
+  Um podSelector vazio seleciona TODOS os Pods do namespace.
+- Ingress e egress são INDEPENDENTES. Uma política default-deny de *ingress* NÃO toca no egress
+  — o DNS continua funcionando (essa é a pergunta "por que o DNS não quebrou?" do lab; timeout
+  exit 28, não exit 6).
+- Políticas são ADITIVAS/ALLOW-ONLY (unidas por união). Não existe regra de deny; um Pod é
+  default-deny para uma direção apenas porque uma política o selecionou e nada permitiu o tráfego.
+- Numa lista `from[]`: selectors em UM elemento são unidos por AND; elementos separados, por OR.
+- Imposta pelo CNI. `kubectl apply` aceita o objeto mesmo que o CNI o ignore (no-op silencioso).
+  Enforcers: Calico, Cilium, Antrea e o kindnet moderno; alguns CNIs gerenciados/básicos não →
+  o lab AUTOTESTA o enforcement (aplica default-deny, confirma que o tráfego quebra) antes de
+  confiar nele.
+Amarração CKx: CKA e CKAD Services & Networking (NetworkPolicy).
 -->
 
 ---
 layout: statement
-kicker: The problem
+kicker: O problema
 ---
 
-By default, **every Pod can reach every other Pod** — across namespaces, no firewall between them.
+Por padrão, **todo Pod pode alcançar qualquer outro Pod** — entre namespaces, sem firewall no meio.
 
-The Kubernetes pod network is **flat**: your `frontend`, the `backend`, the database, and a Pod
-you've never heard of can all open a connection to each other. Nothing you've built so far changed
-that. So the moment **one** Pod is compromised — the exact scenario Pod security was hardening against — it
-can scan the whole cluster and talk to anything that will answer.
+A rede de Pods do Kubernetes é **plana**: seu `frontend`, o `backend`, o banco de dados e um Pod
+de que você nunca ouviu falar podem todos abrir conexão entre si. Nada do que você construiu até
+agora mudou isso. Então, no momento em que **um** Pod é comprometido — exatamente o cenário
+contra o qual a segurança de Pods fazia hardening —, ele pode varrer o cluster inteiro e falar
+com qualquer coisa que responder.
 
 <!--
-Speaker: the "why care" beat, and it deliberately continues S17. S17 shrank what a single Pod can
-DO (non-root, no caps, seccomp). But even a perfectly hardened Pod sits on a flat L3 network where
-it can reach every other Pod's IP directly — Services are just convenience names on top of that
-flat reachability. Name the blast radius: a foothold in one web Pod can port-scan the namespace,
-hit an unauthenticated internal API, reach the database. Edge firewalls do nothing about east-west
-traffic between Pods. NetworkPolicy is the in-cluster firewall: "backend only accepts traffic from
-frontend," enforced by the data plane. Default-deny then explicit-allow is the same shape as S17's
-admission ladder — start closed, open only what you need. A named defence in S25.
+Speaker: o beat do "por que se importar", e ele deliberadamente continua o S17. O S17 encolheu
+o que um único Pod pode FAZER (non-root, sem caps, seccomp). Mas mesmo um Pod perfeitamente
+endurecido está sobre uma rede L3 plana onde alcança o IP de qualquer outro Pod diretamente —
+Services são só nomes de conveniência em cima dessa alcançabilidade plana. Nomeie o blast
+radius: um invasor com pé dentro de um Pod web pode fazer port-scan no namespace, atingir uma
+API interna sem autenticação, chegar ao banco. Firewalls de borda não fazem nada pelo tráfego
+leste-oeste entre Pods. NetworkPolicy é o firewall in-cluster: "o backend só aceita tráfego do
+frontend", imposto pelo data plane. Default-deny e depois allow explícito é o mesmo formato da
+escada de admission do S17 — comece fechado, abra só o necessário. Uma defesa nomeada no S25.
 -->
 
 ---
 
 <div class="kw-slide-dense">
 
-<span class="kw-kicker">Mental model · a selector plus a list of allowed peers</span>
+<span class="kw-kicker">Modelo mental · um selector mais uma lista de pares permitidos</span>
 
-# NetworkPolicy = *pick Pods* + *allow these connections*
+# NetworkPolicy = *escolha Pods* + *permita estas conexões*
 
 <div class="kw-cols-2 mt-3 text-sm">
   <v-click at="1">
-    <KwCard heading="It selects Pods and only ALLOWS" kind="netpol" variant="ok">
-      A <code>podSelector</code> picks the Pods this policy governs. Rules list what's
-      <strong>permitted</strong> — there is <strong>no deny rule</strong>. You allow
-      <code>ingress</code> (who may connect <em>to</em> them) and/or <code>egress</code> (where
-      they may connect <em>out</em>).
+    <KwCard heading="Ela seleciona Pods e apenas PERMITE" kind="netpol" variant="ok">
+      Um <code>podSelector</code> escolhe os Pods que esta política governa. As regras listam o
+      que é <strong>permitido</strong> — <strong>não existe regra de deny</strong>. Você permite
+      <code>ingress</code> (quem pode conectar <em>até</em> eles) e/ou <code>egress</code> (para
+      onde eles podem conectar <em>saindo</em>).
     </KwCard>
   </v-click>
   <v-click at="2">
-    <KwCard heading="No policy = allow-all" icon="🌐" variant="warn">
-      A Pod that <strong>no</strong> policy selects is wide open — the flat network. There's
-      nothing to configure to be open; that's the default.
+    <KwCard heading="Sem política = allow-all" icon="🌐" variant="warn">
+      Um Pod que <strong>nenhuma</strong> política seleciona está escancarado — a rede plana.
+      Não há nada a configurar para ficar aberto; esse é o padrão.
     </KwCard>
   </v-click>
 </div>
 
 <div v-click="3" class="mt-4 text-sm">
 
-<span class="kw-kicker">the one rule that trips everyone</span>
+<span class="kw-kicker">a única regra que derruba todo mundo</span>
 
-The **first** policy that selects a Pod for a direction flips that Pod to **default-deny** for
-that direction — then only the **union** of matching allow rules gets through. So you deny by
-*selecting*, and re-open with explicit allows. Policies are **additive**: more policies can only
-*add* allowed traffic, never subtract. Ingress and egress are **independent** switches.
+A **primeira** política que seleciona um Pod para uma direção vira aquele Pod para
+**default-deny** naquela direção — depois, só a **união** das regras de allow correspondentes
+passa. Ou seja: você nega ao *selecionar*, e reabre com allows explícitos. Políticas são
+**aditivas**: mais políticas só podem *adicionar* tráfego permitido, nunca subtrair. Ingress e
+egress são interruptores **independentes**.
 
 </div>
 
 </div>
 
 <!--
-Speaker: three ideas, in order. (1) A NetworkPolicy is a selector + allow rules; it's allow-only,
-there is deliberately no deny rule (deny is a different, newer API — AdminNetworkPolicy — out of
-scope). Two independent directions: ingress = connections INTO the selected Pods, egress = OUT.
-(2) The default with zero policies is allow-all — the flat network. (3) The counter-intuitive
-part: you don't "turn on" deny. The moment ANY policy selects a Pod for ingress, that Pod's
-ingress becomes default-deny, and only what policies explicitly allow passes. Multiple policies
-selecting the same Pod are OR-ed (union of allows) — they can only widen, never narrow. That's why
-the idiom is "default-deny policy first, then add allow policies": the default-deny is just a
-policy that selects everything and allows nothing. Next: the two-line default-deny.
+Speaker: três ideias, nesta ordem. (1) Uma NetworkPolicy é selector + regras de allow; é
+allow-only, deliberadamente não existe regra de deny (deny é outra API, mais nova —
+AdminNetworkPolicy — fora de escopo). Duas direções independentes: ingress = conexões PARA os
+Pods selecionados, egress = PARA FORA. (2) O padrão com zero políticas é allow-all — a rede
+plana. (3) A parte contraintuitiva: você não "liga" o deny. No momento em que QUALQUER política
+seleciona um Pod para ingress, o ingress daquele Pod vira default-deny, e só passa o que as
+políticas permitirem explicitamente. Múltiplas políticas selecionando o mesmo Pod são unidas
+por OR (união dos allows) — só podem alargar, nunca estreitar. Por isso o idioma é "política
+default-deny primeiro, depois adicione políticas de allow": o default-deny é só uma política
+que seleciona tudo e não permite nada. A seguir: o default-deny de duas linhas.
 -->
 
 ---
 layout: code-annotated
-heading: 'Default-deny: select every Pod, allow nothing'
+heading: 'Default-deny: selecione todos os Pods, não permita nada'
 compact: true
 lab: labs/day-3/18-networkpolicy.md
 ---
@@ -134,47 +143,49 @@ metadata:
   name: default-deny-ingress
   labels: { app: s18 }
 spec:
-  podSelector: {}            # selects every Pod in the namespace
+  podSelector: {}            # seleciona todos os Pods do namespace
   policyTypes:
-    - Ingress                # govern ingress; with no rules below → deny all
+    - Ingress                # governa o ingress; sem regras abaixo → nega tudo
 ```
 
 ::notes::
 
-<CodeNote at="1" label="podSelector: {} — everything" variant="warn">
-An <strong>empty</strong> selector matches <strong>every Pod</strong> in the namespace. Now every
-Pod is "selected for ingress", so every Pod flips to default-deny.
+<CodeNote at="1" label="podSelector: {} — tudo" variant="warn">
+Um selector <strong>vazio</strong> corresponde a <strong>todos os Pods</strong> do namespace.
+Agora todo Pod está "selecionado para ingress", então todo Pod vira default-deny.
 </CodeNote>
 
-<CodeNote at="2" label="policyTypes: Ingress — one direction" variant="ok">
-We govern <strong>ingress</strong> and write <strong>no</strong> ingress rules → all incoming
-traffic denied. <code>egress</code> is <em>not</em> listed, so it stays wide open — including DNS.
+<CodeNote at="2" label="policyTypes: Ingress — uma direção" variant="ok">
+Governamos o <strong>ingress</strong> e não escrevemos <strong>nenhuma</strong> regra de
+ingress → todo tráfego de entrada negado. <code>egress</code> <em>não</em> está listado, então
+continua escancarado — inclusive o DNS.
 </CodeNote>
 
 <div v-click="3" class="mt-2 text-sm kw-muted">
-That's the whole thing: no <code>ingress:</code> key means "zero allowed sources." This one object
-takes a namespace from allow-all to <strong>deny-all inbound</strong> — the clean slate you then
-poke holes in.
+É isso: sem a chave <code>ingress:</code>, o conjunto de origens permitidas é "zero". Este único
+objeto leva um namespace de allow-all para <strong>deny-all de entrada</strong> — a lousa limpa
+na qual você depois abre furos.
 </div>
 
 <!--
-Speaker: the smallest useful policy. podSelector: {} = all Pods (an empty selector is "match
-everything", the opposite of what people expect). policyTypes names the directions this policy is
-responsible for; we list only Ingress. Because there is no `ingress:` block, the allowed-source set
-is empty → deny all inbound. Crucially we did NOT list Egress, so egress is untouched — outbound
-and DNS still work (that's the lab's "why didn't DNS break?" question). Apply this and every Pod in
-the namespace stops accepting connections; next we open exactly one path back.
+Speaker: a menor política útil. podSelector: {} = todos os Pods (um selector vazio é "casa com
+tudo", o oposto do que as pessoas esperam). policyTypes nomeia as direções pelas quais esta
+política responde; listamos apenas Ingress. Como não há bloco `ingress:`, o conjunto de origens
+permitidas é vazio → nega todo tráfego de entrada. Crucialmente, NÃO listamos Egress, então o
+egress fica intocado — saída e DNS continuam funcionando (essa é a pergunta "por que o DNS não
+quebrou?" do lab). Aplique isto e todo Pod do namespace para de aceitar conexões; a seguir
+reabrimos exatamente um caminho.
 -->
 
 ---
 layout: code-walkthrough
-heading: 'Open one gate — allow ingress from `app=frontend`'
+heading: 'Abra um portão — permita ingress vindo de `app=frontend`'
 lab: labs/day-3/18-networkpolicy.md
 ---
 
 ````md magic-move
 ```yaml
-# which Pods does THIS policy govern? → the backend
+# quais Pods ESTA política governa? → o backend
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -187,7 +198,7 @@ spec:
 ```
 
 ```yaml
-# +policyTypes — we're writing an ingress allow
+# +policyTypes — estamos escrevendo um allow de ingress
 spec:
   podSelector:
     matchLabels:
@@ -197,7 +208,7 @@ spec:
 ```
 
 ```yaml
-# +from — allow ingress only FROM Pods labelled app=frontend
+# +from — permite ingress apenas VINDO de Pods com label app=frontend
   policyTypes:
     - Ingress
   ingress:
@@ -208,7 +219,7 @@ spec:
 ```
 
 ```yaml
-# +ports — …and only to TCP 8080. Final frame == the lab's file.
+# +ports — …e apenas para TCP 8080. Frame final == o arquivo do lab.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -217,14 +228,14 @@ metadata:
 spec:
   podSelector:
     matchLabels:
-      app: backend           # this policy governs the backend Pods
+      app: backend           # esta política governa os Pods do backend
   policyTypes:
     - Ingress
   ingress:
     - from:
         - podSelector:
             matchLabels:
-              app: frontend  # …only from Pods labelled app=frontend
+              app: frontend  # …apenas de Pods com label app=frontend
       ports:
         - protocol: TCP
           port: 8080
@@ -232,114 +243,119 @@ spec:
 ````
 
 <!--
-Speaker: FOUR frames, building the allow policy that re-opens the one path we want. Frame 1:
-podSelector picks the backend — "this policy is about who may talk to the backend." Frame 2:
-policyTypes: Ingress — same as default-deny, we're governing inbound. Frame 3: the `from` list —
-allow sources whose Pods carry app=frontend. Frame 4: narrow to port 8080 (a policy with a `ports`
-list allows ONLY those ports). Two subtleties: (a) this policy and the default-deny COEXIST —
-they're additive, so the effective rule is "backend accepts 8080 from frontend, nothing else"; you
-don't delete the default-deny. (b) `from` selects the SOURCE Pods, the top `podSelector` selects
-the DESTINATION Pods — beginners mix these up. Final frame is the exact file the lab applies.
+Speaker: QUATRO frames, construindo a política de allow que reabre o único caminho que
+queremos. Frame 1: o podSelector escolhe o backend — "esta política é sobre quem pode falar com
+o backend." Frame 2: policyTypes: Ingress — igual ao default-deny, estamos governando a
+entrada. Frame 3: a lista `from` — permite origens cujos Pods carregam app=frontend. Frame 4:
+estreita para a porta 8080 (uma política com lista `ports` permite APENAS aquelas portas). Duas
+sutilezas: (a) esta política e o default-deny COEXISTEM — são aditivas, então a regra efetiva é
+"o backend aceita 8080 do frontend, e nada mais"; você não deleta o default-deny. (b) `from`
+seleciona os Pods de ORIGEM, o `podSelector` do topo seleciona os Pods de DESTINO — iniciantes
+confundem os dois. O frame final é o arquivo exato que o lab aplica.
 -->
 
 ---
 
 <div class="kw-slide-dense">
 
-<span class="kw-kicker">Selecting peers · the shapes and the gotcha</span>
+<span class="kw-kicker">Selecionando pares · os formatos e a pegadinha</span>
 
-# `podSelector`, `namespaceSelector`, and AND vs OR
+# `podSelector`, `namespaceSelector`, e AND vs OR
 
 <div class="kw-cols-2 mt-3 text-sm">
   <v-click at="1">
-    <KwCard heading="Two selector kinds" kind="netpol" variant="ok">
-      <code>podSelector</code> — peers by <strong>Pod label</strong>, same namespace by default.
-      <code>namespaceSelector</code> — peers by <strong>namespace label</strong>, any Pod in
-      matching namespaces (how you allow cross-namespace).
+    <KwCard heading="Dois tipos de selector" kind="netpol" variant="ok">
+      <code>podSelector</code> — pares por <strong>label de Pod</strong>, mesmo namespace por
+      padrão. <code>namespaceSelector</code> — pares por <strong>label de namespace</strong>,
+      qualquer Pod nos namespaces correspondentes (é assim que você permite cross-namespace).
     </KwCard>
   </v-click>
   <v-click at="2">
     <KwCard heading="Ingress vs egress" icon="↔️" variant="ok">
-      <code>ingress.from</code> = allowed <strong>sources</strong>;
-      <code>egress.to</code> = allowed <strong>destinations</strong>. Independent — set one, the
-      other, or both.
+      <code>ingress.from</code> = <strong>origens</strong> permitidas;
+      <code>egress.to</code> = <strong>destinos</strong> permitidos. Independentes — defina um,
+      o outro, ou ambos.
     </KwCard>
   </v-click>
 </div>
 
 <div v-click="3" class="mt-4 text-sm">
 
-<span class="kw-kicker">the one-dash difference that flips the meaning</span>
+<span class="kw-kicker">a diferença de um traço que inverte o significado</span>
 
-Inside a **single** `from` element, `namespaceSelector` **and** `podSelector` are **AND**-ed —
-*"frontend Pods **in** team=web namespaces."* Split them into **two** `from` elements and they're
-**OR**-ed — *"anything in team=web namespaces, **or** any frontend Pod."* Same two lines, one dash
-apart, opposite result. `egress.to` uses the exact same shapes.
+Dentro de **um único** elemento `from`, `namespaceSelector` **e** `podSelector` são unidos por
+**AND** — *"Pods frontend **em** namespaces team=web."* Separe-os em **dois** elementos `from`
+e eles viram **OR** — *"qualquer coisa em namespaces team=web, **ou** qualquer Pod frontend."*
+As mesmas duas linhas, um traço de distância, resultado oposto. `egress.to` usa exatamente os
+mesmos formatos.
 
 </div>
 
 </div>
 
 <!--
-Speaker: this is the slide that saves a debugging hour. podSelector matches peer POD labels;
-namespaceSelector matches peer NAMESPACE labels. A bare podSelector is scoped to the policy's OWN
-namespace — to allow from another namespace you need a namespaceSelector (namespaceSelector: {} =
-all namespaces). The gotcha is pure YAML list structure: two selectors in ONE `from` element are
-AND-ed ("pods matching X that also live in namespaces matching Y"); as TWO elements they're OR-ed.
-One dash, opposite meaning. Point back to our lab policy: single podSelector, same namespace, one
-source — the simplest case. Next: the catch that makes or breaks all of it.
+Speaker: este é o slide que economiza uma hora de debugging. podSelector casa com labels do POD
+par; namespaceSelector casa com labels do NAMESPACE par. Um podSelector sozinho tem escopo no
+PRÓPRIO namespace da política — para permitir de outro namespace você precisa de um
+namespaceSelector (namespaceSelector: {} = todos os namespaces). A pegadinha é pura estrutura
+de lista YAML: dois selectors em UM elemento `from` são AND ("pods casando com X que também
+vivem em namespaces casando com Y"); como DOIS elementos, viram OR. Um traço, significado
+oposto. Aponte de volta para a política do nosso lab: um único podSelector, mesmo namespace,
+uma origem — o caso mais simples. A seguir: a ressalva que faz ou desfaz tudo isso.
 -->
 
 ---
 
 <div class="kw-slide-dense">
 
-<span class="kw-kicker">The catch · a policy is only paper without an enforcer</span>
+<span class="kw-kicker">A ressalva · uma política é só papel sem um enforcer</span>
 
-# NetworkPolicy needs a **policy-capable CNI**
+# NetworkPolicy precisa de um **CNI capaz de políticas**
 
 <div class="kw-cols-2 mt-3 text-sm">
   <v-click at="1">
-    <KwCard heading="The API always accepts it" icon="⚠️" variant="danger">
-      <code>kubectl apply</code> stores the policy on <strong>any</strong> cluster — no error.
-      Whether it's <strong>enforced</strong> is entirely up to the CNI. A non-enforcing CNI makes
-      every policy a <strong>silent no-op</strong>.
+    <KwCard heading="A API sempre aceita" icon="⚠️" variant="danger">
+      <code>kubectl apply</code> armazena a política em <strong>qualquer</strong> cluster — sem
+      erro. Se ela é <strong>imposta</strong> depende inteiramente do CNI. Um CNI que não impõe
+      transforma toda política em um <strong>no-op silencioso</strong>.
     </KwCard>
   </v-click>
   <v-click at="2">
-    <KwCard heading="So: enforcers vs not" kind="netpol" variant="ok">
-      Enforce: <strong>Calico, Cilium, Antrea</strong>, and modern <strong>kindnet</strong>. May
-      not: some managed/basic CNIs. <strong>Verify by testing</strong>, never assume.
+    <KwCard heading="Logo: enforcers vs o resto" kind="netpol" variant="ok">
+      Impõem: <strong>Calico, Cilium, Antrea</strong> e o <strong>kindnet</strong> moderno.
+      Podem não impor: alguns CNIs gerenciados/básicos. <strong>Verifique testando</strong>,
+      nunca assuma.
     </KwCard>
   </v-click>
 </div>
 
 <div v-click="3" class="mt-4 text-sm kw-muted">
-This is why Lab 18 is <strong>kind ✓</strong> with an <strong>enforcement self-test</strong> first
-(apply default-deny; confirm traffic actually breaks). On a shared cluster whose CNI doesn't
-enforce, the lab has a <strong>read-only</strong> path: inspect a pre-applied policy with
-<code>kubectl describe netpol</code>.
+É por isso que o Lab 18 é <strong>kind ✓</strong> com um <strong>autoteste de enforcement</strong>
+primeiro (aplique o default-deny; confirme que o tráfego realmente quebra). Em um cluster
+compartilhado cujo CNI não impõe, o lab tem um caminho <strong>somente leitura</strong>:
+inspecionar uma política pré-aplicada com <code>kubectl describe netpol</code>.
 </div>
 
 </div>
 
 <!--
-Speaker: the operational landmine, and it's guardrail-critical (stay current). NetworkPolicy is an
-API OBJECT enforced by the DATA PLANE — the CNI. The API server happily stores a policy on a
-cluster whose CNI ignores it; you get zero feedback and zero enforcement. A green `kubectl apply`
-proves nothing. Enforcing CNIs: Calico, Cilium, Antrea, Weave — and, on recent releases, kind's
-own kindnet (via kube-network-policies). Older kind or a bare/managed CNI may not. The only safe
-move is to TEST: apply a default-deny and confirm traffic breaks; if it doesn't, your CNI isn't
-enforcing. That's exactly what the lab does up front, and why the shared-cluster path is read-only
-when the room's CNI is a no-op. DELIVERY NOTE: re-verify the room's kind version enforces before
-the session — the one fact most likely to have drifted.
+Speaker: a armadilha operacional, e é crítica de guardrail (mantenha-se atualizado).
+NetworkPolicy é um OBJETO de API imposto pelo DATA PLANE — o CNI. O API server armazena
+alegremente uma política em um cluster cujo CNI a ignora; você recebe zero feedback e zero
+enforcement. Um `kubectl apply` verde não prova nada. CNIs que impõem: Calico, Cilium, Antrea,
+Weave — e, em releases recentes, o próprio kindnet do kind (via kube-network-policies). Um kind
+mais antigo ou um CNI cru/gerenciado pode não impor. A única jogada segura é TESTAR: aplique um
+default-deny e confirme que o tráfego quebra; se não quebrar, seu CNI não está impondo. É
+exatamente o que o lab faz logo de cara, e por isso o caminho do cluster compartilhado é
+somente leitura quando o CNI da sala é um no-op. NOTA DE ENTREGA: reverifique antes da sessão
+se a versão de kind da sala impõe — é o fato com mais chance de ter mudado.
 -->
 
 ---
 
-<span class="kw-kicker">Flat → fenced → one gate open</span>
+<span class="kw-kicker">Plano → cercado → um portão aberto</span>
 
-# The fence goes up, then one gate opens
+# A cerca sobe, depois um portão abre
 
 <div class="mt-2">
   <NetworkFence :step="$clicks" :show-caption="false" />
@@ -348,50 +364,53 @@ the session — the one fact most likely to have drifted.
 <div class="mt-3 text-sm">
 <v-clicks at="1">
 
-- **No policy:** the network is flat — `frontend`, `other`, and `scanner` all reach the backend (`200`).
-- **`default-deny` ingress:** the backend is selected → **every** connection is dropped (they hang, then time out).
-- **`allow-frontend-to-backend`:** additive — exactly one gate opens. `frontend` gets through; `other` and `scanner` stay fenced out.
+- **Sem política:** a rede é plana — `frontend`, `other` e `scanner` alcançam todos o backend (`200`).
+- **`default-deny` de ingress:** o backend é selecionado → **toda** conexão é descartada (elas travam e dão timeout).
+- **`allow-frontend-to-backend`:** aditivo — exatamente um portão abre. O `frontend` passa; `other` e `scanner` continuam do lado de fora da cerca.
 
 </v-clicks>
 </div>
 
 <!--
-Speaker: drive with clicks; this is the lab as a picture, and the paddock-fence of the cover. (0)
-flat: three green lanes into the backend — the default. (1) default-deny: the fence snaps up, all
-three lanes go red — and say it: the packets are DROPPED, so the caller hangs and times out (not
-"connection refused" — there's no one saying no, the packet just vanishes; that timeout-vs-refused
-distinction is a lab question). (2) allow-frontend-to-backend: the frontend lane turns green while
-other/scanner stay red — the union of allows is exactly one source. Same backend, same clients —
-the only thing that changed is which policies select it. That's the whole loop of Lab 18.
+Speaker: conduza com os cliques; este é o lab em forma de imagem, e a cerca de pasto da capa.
+(0) plano: três vias verdes até o backend — o padrão. (1) default-deny: a cerca sobe de
+repente, as três vias ficam vermelhas — e diga: os pacotes são DESCARTADOS, então quem chama
+trava e dá timeout (não "connection refused" — não há ninguém dizendo não, o pacote simplesmente
+some; essa distinção timeout-vs-refused é uma pergunta do lab). (2) allow-frontend-to-backend:
+a via do frontend fica verde enquanto other/scanner continuam vermelhas — a união dos allows é
+exatamente uma origem. Mesmo backend, mesmos clientes — a única coisa que mudou foi quais
+políticas o selecionam. Esse é o loop inteiro do Lab 18.
 -->
 
 ---
 layout: recap
-heading: 'Recap — deny by selecting, allow on purpose'
-story: 'The flat network let everything reach the backend. One default-deny policy fenced it off — every caller timed out. A single allow-from-frontend rule opened exactly one gate, and only the frontend got back in.'
-next: 'RBAC — from "who may connect" to "who may act": identities, verbs, and least-privilege bindings'
+heading: 'Recap — negue ao selecionar, permita de propósito'
+story: 'A rede plana deixava tudo alcançar o backend. Uma política default-deny o cercou — todo chamador deu timeout. Uma única regra allow-from-frontend abriu exatamente um portão, e só o frontend voltou a entrar.'
+next: 'RBAC — de "quem pode conectar" para "quem pode agir": identidades, verbos e bindings de menor privilégio'
 ---
 
-- The pod network is **flat by default** — every Pod can reach every Pod; NetworkPolicy is the
-  in-cluster firewall
-- A policy **selects Pods and allows** ingress/egress — there is no deny rule; the **first** policy
-  to select a Pod flips it to **default-deny** for that direction
-- **default-deny + explicit allow** is the idiom; policies are **additive** (union of allows, never
-  subtract)
-- **`policyTypes` scopes the direction** — deny ingress and egress/DNS still work; lock egress and
-  you must re-allow DNS
-- Enforced by the **CNI only** — `kubectl apply` succeeds even when nothing enforces; **test it**
-- Pairs with **Pod security** (workload hardening) and is a named defence against a **pod escape**
+- A rede de Pods é **plana por padrão** — todo Pod alcança todo Pod; NetworkPolicy é o
+  firewall in-cluster
+- Uma política **seleciona Pods e permite** ingress/egress — não existe regra de deny; a
+  **primeira** política a selecionar um Pod o vira para **default-deny** naquela direção
+- **default-deny + allow explícito** é o idioma; políticas são **aditivas** (união de allows,
+  nunca subtraem)
+- **`policyTypes` delimita a direção** — negue o ingress e o egress/DNS continuam funcionando;
+  tranque o egress e você precisa reautorizar o DNS
+- Imposta **apenas pelo CNI** — `kubectl apply` funciona mesmo quando nada impõe; **teste**
+- Faz par com **segurança de Pods** (hardening de workload) e é uma defesa nomeada contra um
+  **pod escape**
 
 <!--
-Speaker: land the two-part model that carries into S25. S17 hardened what a Pod IS; S18 controls
-what a Pod may TALK to — together they shrink both the foothold and the blast radius. Four things:
-(1) flat by default; (2) you deny by SELECTING a Pod, then re-open with explicit allows, and
-policies only ever add; (3) policyTypes decides which directions you govern — a default-deny
-INGRESS leaves egress/DNS alone, usually what you want to start with; (4) none of it means anything
-unless the CNI enforces, so verify. Hand to Lab 18: deploy the apps, prove they talk, drop a
-default-deny and watch curl time out, then add one allow rule and watch exactly the frontend come
-back — with the enforcement self-test first so nobody debugs a no-op CNI for twenty minutes.
+Speaker: consolide o modelo de duas partes que segue para o S25. O S17 endureceu o que um Pod
+É; o S18 controla com o que um Pod pode FALAR — juntos, encolhem tanto o ponto de entrada
+quanto o blast radius. Quatro coisas: (1) plana por padrão; (2) você nega ao SELECIONAR um Pod,
+depois reabre com allows explícitos, e políticas só somam; (3) policyTypes decide quais
+direções você governa — um default-deny de INGRESS deixa egress/DNS em paz, geralmente o começo
+que você quer; (4) nada disso significa algo se o CNI não impõe, então verifique. Passe ao Lab
+18: faça o deploy das aplicações, prove que elas se falam, derrube um default-deny e veja o curl dar
+timeout, então adicione uma regra de allow e veja exatamente o frontend voltar — com o
+autoteste de enforcement primeiro, para ninguém debugar um CNI no-op por vinte minutos.
 -->
 
 ---
@@ -401,10 +420,10 @@ duration: 25 min
 env: 'kind ✓ (policy CNI) / namespace: read-only'
 ---
 
-## Lab 18 — Fence the traffic
+## Lab 18 — Cerque o tráfego
 
-- **Self-test:** confirm your CNI actually enforces (default-deny must break traffic)
-- Deploy `frontend`, `other`, `scanner`, and `backend`; prove all three curl the backend (`200`)
-- **Break:** apply `default-deny-ingress` → every curl **times out** (dropped, not refused)
-- **Fix:** apply `allow-frontend-to-backend` → only `frontend` gets back in; the others stay blocked
-- Observe: DNS still resolves under the ingress deny; relabel `frontend` and the allow stops matching
+- **Autoteste:** confirme que seu CNI realmente impõe (o default-deny precisa quebrar o tráfego)
+- Faça o deploy de `frontend`, `other`, `scanner` e `backend`; prove que os três fazem curl no backend (`200`)
+- **Quebre:** aplique `default-deny-ingress` → todo curl dá **timeout** (descartado, não recusado)
+- **Conserte:** aplique `allow-frontend-to-backend` → só o `frontend` volta a entrar; os outros seguem bloqueados
+- Observe: o DNS continua resolvendo sob o deny de ingress; troque o label do `frontend` e o allow para de casar

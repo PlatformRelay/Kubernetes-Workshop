@@ -9,83 +9,87 @@ track: Workloads
 
 # Jobs & CronJobs
 
-Some work is meant to **finish** — and some of it on a **timetable**.
+Algum trabalho foi feito para **terminar** — e parte dele em um **horário marcado**.
 
-**recommended** · suggested Day 2 · Workloads track
+**recommended** · sugerido para o Day 2 · trilha Workloads
 
 <!--
-Section S15 — Jobs & CronJobs. Timing: ~20 min slides + 20 min lab. Follows S14. Recommended
-tier, Workloads track. Animation: NONE (per the outline) — the state changes here (a Job going
-Complete, a CronJob firing) are read off `kubectl get`, not a component-worthy transition.
-Outcome: learners can pick run-to-completion vs run-forever, drive a Job with completions/
-parallelism/backoffLimit/activeDeadlineSeconds, wrap it in a CronJob (schedule/concurrencyPolicy/
-history limits), and know when a Job beats a Deployment.
-Beats: problem (a Deployment restarts forever — wrong for finite work) · mental model (Job =
-run-to-completion, CronJob = scheduled Jobs) · code-annotated (Job knobs, restartPolicy caveat)
-· magic-move (one-shot Job → wrap in a CronJob jobTemplate) · CronJob controls (concurrency,
-history, timeZone) · decision beat (Job vs Deployment vs CronJob) · recap → lab.
-CKx: CKAD Workloads (batch) — explicit exam item.
+Seção S15 — Jobs & CronJobs. Tempo: ~20 min de slides + 20 min de lab. Vem depois do S14. Tier
+recommended, trilha Workloads. Animação: NENHUMA (conforme o outline) — as mudanças de estado
+aqui (um Job ficando Complete, um CronJob disparando) são lidas no `kubectl get`, não uma
+transição digna de componente.
+Resultado: os participantes conseguem escolher run-to-completion vs run-forever, dirigir um Job
+com completions/parallelism/backoffLimit/activeDeadlineSeconds, envolvê-lo em um CronJob
+(schedule/concurrencyPolicy/limites de histórico), e saber quando um Job supera um Deployment.
+Beats: problema (um Deployment reinicia para sempre — errado para trabalho finito) · modelo
+mental (Job = run-to-completion, CronJob = Jobs agendados) · code-annotated (botões do Job,
+ressalva do restartPolicy) · magic-move (Job one-shot → envolver em um jobTemplate de CronJob)
+· controles do CronJob (concorrência, histórico, timeZone) · beat de decisão (Job vs Deployment
+vs CronJob) · recap → lab.
+CKx: CKAD Workloads (batch) — item explícito do exame.
 -->
 
 ---
 layout: statement
-kicker: The problem
+kicker: O problema
 ---
 
-A Deployment's whole job is to **never finish**. Some work needs the opposite.
+O trabalho inteiro de um Deployment é **nunca terminar**. Algum trabalho precisa do oposto.
 
-Everything on the red line so far — Pod, Deployment, Service — assumes a process that should
-stay up **forever**; if it exits, the Deployment restarts it. Point that at a **database
-migration**, a **nightly report**, or a **backup** and you get a disaster: the task succeeds,
-exits `0`, and Kubernetes **restarts it anyway** — running your migration in an endless loop.
-Finite work needs a controller that understands **"done."**
+Tudo na red line até agora — Pod, Deployment, Service — assume um processo que deve ficar de pé
+**para sempre**; se ele sai, o Deployment o reinicia. Aponte isso para uma **migração de banco de
+dados**, um **relatório noturno** ou um **backup** e você tem um desastre: a tarefa tem sucesso,
+sai com `0`, e o Kubernetes **a reinicia mesmo assim** — rodando a sua migração em um loop sem
+fim. Trabalho finito precisa de um controller que entenda **"pronto"**.
 
 <!--
-Speaker: the "why should I care" beat. Deployment/ReplicaSet is built around a liveness
-assumption — the desired state is "N Pods Running," so a container that exits (even
-successfully) is a deviation the controller corrects by restarting it. That's exactly wrong for
-batch work: a migration that finishes should STAY finished. Run it under a Deployment and it
-loops forever; the exit-0 success is treated as a crash. The fix is a controller whose success
-condition is "the Pod ran to completion" rather than "the Pod is up." That controller is the
-Job. Hold that: run-to-completion is the entire mental model of this section.
+Speaker: o beat do "por que eu deveria me importar". Deployment/ReplicaSet é construído em torno
+de uma suposição de vida contínua — o estado desejado é "N Pods Running", então um container que
+sai (mesmo com sucesso) é um desvio que o controller corrige reiniciando-o. Isso é exatamente o
+errado para trabalho batch: uma migração que termina deve CONTINUAR terminada. Rode-a sob um
+Deployment e ela loopa para sempre; o sucesso com exit 0 é tratado como um crash. O conserto é um
+controller cuja condição de sucesso é "o Pod rodou até completar" em vez de "o Pod está de pé".
+Esse controller é o Job. Segure isso: run-to-completion é o modelo mental inteiro desta seção.
 -->
 
 ---
 
 <div class="kw-slide-dense">
 
-<span class="kw-kicker">Mental model · two controllers built around "done"</span>
+<span class="kw-kicker">Modelo mental · dois controllers construídos em torno do "pronto"</span>
 
-# Job runs once · CronJob runs on a schedule
+# Job roda uma vez · CronJob roda num cronograma
 
 <div class="kw-cols-2 mt-3 text-sm">
   <v-click at="1">
-    <KwCard heading="Job — run to completion" kind="job" variant="ok">
-      Runs its Pod(s) until they <strong>succeed</strong>, then stops. Tracks success/failure,
-      retries on failure up to a limit, and reports <code>COMPLETIONS</code>. The right tool for
-      a migration, a batch import, a one-off script.
+    <KwCard heading="Job — rodar até completar" kind="job" variant="ok">
+      Roda seu(s) Pod(s) até eles <strong>terem sucesso</strong>, então para. Rastreia
+      sucesso/falha, tenta de novo em caso de falha até um limite, e reporta
+      <code>COMPLETIONS</code>. A ferramenta certa para uma migração, um import em batch, um
+      script pontual.
     </KwCard>
   </v-click>
   <v-click at="2">
-    <KwCard heading="CronJob — Jobs on a timetable" kind="cronjob" variant="ok">
-      A <strong>Job factory</strong>: on each cron tick it creates a fresh Job from a template.
-      The right tool for a nightly backup, an hourly report, a periodic cleanup.
+    <KwCard heading="CronJob — Jobs num horário marcado" kind="cronjob" variant="ok">
+      Uma <strong>fábrica de Jobs</strong>: a cada tick do cron ele cria um Job novo a partir de
+      um template. A ferramenta certa para um backup noturno, um relatório de hora em hora, uma
+      limpeza periódica.
     </KwCard>
   </v-click>
 </div>
 
 <div v-click="3" class="mt-4 text-sm">
 
-<span class="kw-kicker">the one distinction everything hangs off</span>
+<span class="kw-kicker">a única distinção da qual tudo depende</span>
 
 <div class="kw-cols-2 mt-1">
-  <KwCard heading="Run forever" icon="♾️">
-    Deployment / ReplicaSet / StatefulSet — desired state is <strong>N Pods up</strong>. Exit =
-    restart. <span class="kw-muted">Services, web apps, controllers.</span>
+  <KwCard heading="Rodar para sempre" icon="♾️">
+    Deployment / ReplicaSet / StatefulSet — estado desejado é <strong>N Pods de pé</strong>. Exit =
+    restart. <span class="kw-muted">Services, aplicações web, controllers.</span>
   </KwCard>
-  <KwCard heading="Run to completion" kind="job" variant="ok">
-    Job / CronJob — desired state is <strong>the work finished</strong>. Exit&nbsp;0 = success,
-    <strong>done</strong>. <span class="kw-muted">Migrations, backups, reports.</span>
+  <KwCard heading="Rodar até completar" kind="job" variant="ok">
+    Job / CronJob — estado desejado é <strong>o trabalho terminado</strong>. Exit&nbsp;0 = sucesso,
+    <strong>pronto</strong>. <span class="kw-muted">Migrações, backups, relatórios.</span>
   </KwCard>
 </div>
 
@@ -94,19 +98,19 @@ Job. Hold that: run-to-completion is the entire mental model of this section.
 </div>
 
 <!--
-Speaker: the whole section is one axis — does this workload have a natural end? A Job wraps a
-Pod spec and adds a completion contract: it watches the Pod, and when the container exits 0 the
-Job is Complete and nothing restarts. On failure it retries (bounded by backoffLimit). A CronJob
-is a thin scheduler on top: it holds a jobTemplate and, on each schedule tick, stamps out a new
-Job — so a CronJob "owns" Jobs the way a Deployment "owns" ReplicaSets. Click 3 is the sorting
-hat learners should keep: run-forever controllers (Deployment/STS) treat exit as a fault; run-to-
-completion controllers (Job/CronJob) treat exit 0 as the goal. Everything else in this section is
-the knobs on those two.
+Speaker: a seção inteira é um eixo — este workload tem um fim natural? Um Job envolve um spec de
+Pod e adiciona um contrato de conclusão: ele observa o Pod, e quando o container sai com 0 o Job
+está Complete e nada reinicia. Em caso de falha ele tenta de novo (limitado por backoffLimit). Um
+CronJob é um agendador fino por cima: ele guarda um jobTemplate e, a cada tick do cronograma,
+estampa um Job novo — então um CronJob "possui" Jobs do mesmo jeito que um Deployment "possui"
+ReplicaSets. O clique 3 é o chapéu seletor que os alunos devem guardar: controllers run-forever
+(Deployment/STS) tratam exit como falta; controllers run-to-completion (Job/CronJob) tratam
+exit 0 como a meta. Todo o restante desta seção são os botões desses dois.
 -->
 
 ---
 layout: code-annotated
-heading: 'A Job is a Pod spec plus a completion contract'
+heading: 'Um Job é um spec de Pod mais um contrato de conclusão'
 compact: true
 lab: labs/day-2/15-jobs.md
 ---
@@ -116,59 +120,60 @@ apiVersion: batch/v1
 kind: Job
 metadata: { name: greeter, labels: { app: s15 } }
 spec:
-  template:                         # <- a normal Pod template
+  template:                         # <- um template de Pod normal
     spec:
-      restartPolicy: Never          # Jobs: Never or OnFailure — NOT Always
+      restartPolicy: Never          # Jobs: Never ou OnFailure — NUNCA Always
       containers: [{ name: work, image: busybox:1.37, command: ["sh","-c","echo done"] }]
-  completions: 1                    # how many successful Pods = the Job is done
-  parallelism: 1                    # how many Pods may run at once
-  backoffLimit: 4                   # retries before the Job is marked Failed
-  activeDeadlineSeconds: 120        # hard wall-clock cap for the whole Job
+  completions: 1                    # quantos Pods com sucesso = o Job está pronto
+  parallelism: 1                    # quantos Pods podem rodar ao mesmo tempo
+  backoffLimit: 4                   # tentativas antes de o Job ser marcado Failed
+  activeDeadlineSeconds: 120        # teto duro de relógio de parede para o Job inteiro
 ```
 
 ::notes::
 
-<CodeNote at="1" label="batch/v1 — the batch API" variant="ok">
-Job and CronJob both live in <code>batch/v1</code>. The body is a Pod template you know — a Job
-is that <em>plus</em> the four knobs below.
+<CodeNote at="1" label="batch/v1 — a API de batch" variant="ok">
+Job e CronJob vivem ambos em <code>batch/v1</code>. O corpo é um template de Pod que você já
+conhece — um Job é isso <em>mais</em> os quatro botões abaixo.
 </CodeNote>
 
-<CodeNote at="2" label="restartPolicy: the one Pod field that changes" variant="danger">
-A Job's Pod <strong>must</strong> be <code>Never</code> or <code>OnFailure</code> —
-<code>Always</code> is rejected ("always restart" ⊥ "run to completion").
+<CodeNote at="2" label="restartPolicy: o único campo de Pod que muda" variant="danger">
+O Pod de um Job <strong>precisa</strong> ser <code>Never</code> ou <code>OnFailure</code> —
+<code>Always</code> é rejeitado ("sempre reiniciar" ⊥ "rodar até completar").
 </CodeNote>
 
 <CodeNote at="3" label="completions &amp; parallelism">
-<code>1</code>/<code>1</code> = run once. Raise both for a work queue —
-<code>completions: 10, parallelism: 3</code> = 10 successes, ≤3 at a time.
+<code>1</code>/<code>1</code> = rodar uma vez. Aumente os dois para uma fila de trabalho —
+<code>completions: 10, parallelism: 3</code> = 10 sucessos, ≤3 por vez.
 </CodeNote>
 
-<CodeNote at="4" label="the two ways a Job gives up" variant="warn">
-<code>backoffLimit</code> caps <strong>retries</strong> → <code>BackoffLimitExceeded</code>;
-<code>activeDeadlineSeconds</code> caps <strong>wall-clock</strong> → <code>DeadlineExceeded</code>.
+<CodeNote at="4" label="as duas formas de um Job desistir" variant="warn">
+<code>backoffLimit</code> limita as <strong>tentativas</strong> → <code>BackoffLimitExceeded</code>;
+<code>activeDeadlineSeconds</code> limita o <strong>relógio de parede</strong> → <code>DeadlineExceeded</code>.
 </CodeNote>
 
 <!--
-Speaker: read it as "Pod template + four numbers." The restartPolicy note is the one that bites
-people — copy a Deployment's Pod spec (default restartPolicy Always) into a Job and the API
-server rejects it; Jobs only allow Never or OnFailure. Never vs OnFailure matters for the lab:
-with Never each retry is a brand-new Pod (you'll see several Pods pile up); with OnFailure the
-same Pod restarts in place (restart count climbs, Pod count doesn't). completions/parallelism
-turn a single Job into a parallel work queue — completions is the finish line, parallelism the
-width. backoffLimit bounds retries (default 6); activeDeadlineSeconds is the orthogonal wall-
-clock cap — retries could each be short yet the Job hangs, so the deadline is a separate seatbelt.
-Compact teaching view; the lab ships the full applyable files.
+Speaker: leia como "template de Pod + quatro números". A nota do restartPolicy é a que morde as
+pessoas — copie o spec de Pod de um Deployment (restartPolicy Always por default) para dentro de
+um Job e o API server o rejeita; Jobs só permitem Never ou OnFailure. Never vs OnFailure importa
+para o lab: com Never cada tentativa é um Pod novinho (você verá vários Pods se acumulando); com
+OnFailure o mesmo Pod reinicia no lugar (o contador de restarts sobe, a contagem de Pods não).
+completions/parallelism transformam um Job único em uma fila de trabalho paralela — completions é
+a linha de chegada, parallelism a largura. backoffLimit limita as tentativas (default 6);
+activeDeadlineSeconds é o teto ortogonal de relógio de parede — as tentativas podem ser cada uma
+curta e mesmo assim o Job ficar pendurado, então o deadline é um cinto de segurança separado.
+Visão compacta de ensino; o lab entrega os arquivos completos aplicáveis.
 -->
 
 ---
 layout: code-walkthrough
-heading: 'Build it up — a one-shot Job, then put it on a schedule'
+heading: 'Construa passo a passo — um Job one-shot, depois coloque-o num cronograma'
 lab: labs/day-2/15-jobs.md
 ---
 
 ````md magic-move
 ```yaml
-# 1: a one-shot Job — runs once, then it's Complete
+# 1: um Job one-shot — roda uma vez, e então está Complete
 apiVersion: batch/v1
 kind: Job
 metadata: { name: report, labels: { app: s15 } }
@@ -184,13 +189,13 @@ spec:
 ```
 
 ```yaml
-# 2: wrap the SAME pod spec in a CronJob — now it runs every night at 02:00
+# 2: envolva o MESMO spec de pod em um CronJob — agora ele roda toda noite às 02:00
 apiVersion: batch/v1
 kind: CronJob
 metadata: { name: report, labels: { app: s15 } }
 spec:
-  schedule: "0 2 * * *"             # min hour dom mon dow  (02:00 daily)
-  jobTemplate:                      # <- the Job from step 1, one level deeper
+  schedule: "0 2 * * *"             # min hora dia-do-mês mês dia-da-semana  (02:00 diário)
+  jobTemplate:                      # <- o Job do passo 1, um nível mais fundo
     spec:
       backoffLimit: 4
       template:
@@ -203,17 +208,17 @@ spec:
 ```
 
 ```yaml
-# 3: add the operational controls that make a schedule safe
+# 3: adicione os controles operacionais que tornam um cronograma seguro
 apiVersion: batch/v1
 kind: CronJob
 metadata: { name: report, labels: { app: s15 } }
 spec:
   schedule: "0 2 * * *"
-  timeZone: "Europe/Berlin"         # cron ticks in THIS zone, not the cluster's UTC
-  concurrencyPolicy: Forbid         # a run still going? skip the next tick
-  startingDeadlineSeconds: 120      # missed the tick by >120s? skip it, don't backfill
-  successfulJobsHistoryLimit: 3     # keep the last 3 successful Jobs (default 3)
-  failedJobsHistoryLimit: 1         # keep the last 1 failed Job (default 1)
+  timeZone: "Europe/Berlin"         # o cron dispara NESTE fuso, não no UTC do cluster
+  concurrencyPolicy: Forbid         # uma execução ainda em andamento? pule o próximo tick
+  startingDeadlineSeconds: 120      # perdeu o tick por >120s? pule, não recupere atrasados
+  successfulJobsHistoryLimit: 3     # guarde os últimos 3 Jobs com sucesso (default 3)
+  failedJobsHistoryLimit: 1         # guarde o último 1 Job com falha (default 1)
   jobTemplate:
     spec:
       backoffLimit: 4
@@ -228,148 +233,153 @@ spec:
 ````
 
 <!--
-Speaker: three frames, one growing manifest. (1) The one-shot Job — apply it, it runs once,
-COMPLETIONS goes 0/1 → 1/1, done. (2) Wrap it: a CronJob's jobTemplate.spec IS a Job spec, so
-the whole step-1 body drops in ONE LEVEL DEEPER (spec.jobTemplate.spec.template — call the
-nesting out, it's the #1 copy-paste bug). Same Pod, now on a 5-field cron schedule. (3) The
-controls that separate a toy from a production schedule: timeZone (GA — without it cron ticks in
-UTC and your "2am" job runs at the wrong hour); concurrencyPolicy Forbid (if last night's run is
-still going, don't start a second — the alternative Allow overlaps, Replace kills the old one);
-startingDeadlineSeconds (if the controller was down and missed the window, don't stampede-backfill
-every missed run); and the two history limits (how many finished Jobs to keep for debugging —
-defaults 3 successful / 1 failed). Note this magic-move is the compact teaching view; the lab's
-files are block-style and applyable.
+Speaker: três quadros, um manifesto que cresce. (1) O Job one-shot — aplique, ele roda uma vez,
+COMPLETIONS vai de 0/1 → 1/1, pronto. (2) Envolva-o: o jobTemplate.spec de um CronJob É um spec
+de Job, então o corpo inteiro do passo 1 encaixa UM NÍVEL MAIS FUNDO
+(spec.jobTemplate.spec.template — destaque o aninhamento, é o bug de copy-paste nº 1). O mesmo
+Pod, agora num cronograma cron de 5 campos. (3) Os controles que separam um brinquedo de um
+cronograma de produção: timeZone (GA — sem ele o cron dispara em UTC e o seu job "das 2h" roda na
+hora errada); concurrencyPolicy Forbid (se a execução de ontem à noite ainda está rodando, não
+inicie uma segunda — a alternativa Allow sobrepõe, Replace mata a antiga); startingDeadlineSeconds
+(se o controller estava fora do ar e perdeu a janela, não faça um estouro de recuperação de cada
+execução perdida); e os dois limites de histórico (quantos Jobs terminados guardar para
+debugging — defaults 3 com sucesso / 1 com falha). Note que este magic-move é a visão compacta de
+ensino; os arquivos do lab são em estilo de bloco e aplicáveis.
 -->
 
 ---
 
 <div class="kw-slide-dense">
 
-<span class="kw-kicker">CronJob · what happens when a run overlaps or a tick is missed</span>
+<span class="kw-kicker">CronJob · o que acontece quando uma execução sobrepõe ou um tick é perdido</span>
 
-# Three controls keep a schedule sane
+# Três controles mantêm um cronograma são
 
 <div class="mt-3 text-sm" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.85rem;">
   <v-click at="1">
     <KwCard heading="concurrencyPolicy" kind="cronjob">
-      <strong>Allow</strong> (default) — runs may overlap.<br>
-      <strong>Forbid</strong> — skip the tick if the last run is still going.<br>
-      <strong>Replace</strong> — kill the running one, start fresh.
-      <div class="kw-muted mt-1">Slow backup + <code>Allow</code> = two backups fighting.
+      <strong>Allow</strong> (default) — execuções podem sobrepor.<br>
+      <strong>Forbid</strong> — pule o tick se a última execução ainda está rodando.<br>
+      <strong>Replace</strong> — mate a que está rodando, comece do zero.
+      <div class="kw-muted mt-1">Backup lento + <code>Allow</code> = dois backups brigando.
       Use <code>Forbid</code>.</div>
     </KwCard>
   </v-click>
   <v-click at="2">
-    <KwCard heading="history limits" icon="🧹">
+    <KwCard heading="limites de histórico" icon="🧹">
       <code>successfulJobsHistoryLimit: 3</code> · <code>failedJobsHistoryLimit: 1</code>.
-      <div class="kw-muted mt-1">Old finished Jobs (and their Pods) are garbage-collected past
-      the limit — keep enough to read logs, not enough to clog the namespace.</div>
+      <div class="kw-muted mt-1">Jobs terminados antigos (e seus Pods) sofrem garbage collection
+      além do limite — guarde o suficiente para ler logs, não o bastante para entupir o
+      namespace.</div>
     </KwCard>
   </v-click>
   <v-click at="3">
     <KwCard heading="timeZone & deadline" icon="🕑">
-      <code>timeZone</code> pins the cron clock (default is the controller's <strong>UTC</strong>).
-      <code>startingDeadlineSeconds</code> caps how late a missed run may still start.
-      <div class="kw-muted mt-1">Both guard the gap between "when I meant" and "when it fired."</div>
+      <code>timeZone</code> fixa o relógio do cron (o default é o <strong>UTC</strong> do controller).
+      <code>startingDeadlineSeconds</code> limita quão atrasada uma execução perdida ainda pode iniciar.
+      <div class="kw-muted mt-1">Os dois guardam a distância entre "quando eu quis" e "quando disparou".</div>
     </KwCard>
   </v-click>
 </div>
 
 <div v-click="4" class="mt-3 kw-muted text-sm">
 
-A CronJob is only a **scheduler** — each tick it just creates a Job and hands off. All the
-run-to-completion behaviour (retries, `completions`, `activeDeadlineSeconds`) lives in the
-`jobTemplate`, exactly as if you'd applied that Job by hand.
+Um CronJob é só um **agendador** — a cada tick ele apenas cria um Job e passa o bastão. Todo o
+comportamento de run-to-completion (tentativas, `completions`, `activeDeadlineSeconds`) vive no
+`jobTemplate`, exatamente como se você tivesse aplicado aquele Job à mão.
 
 </div>
 
 </div>
 
 <!--
-Speaker: these are the fields that separate a demo CronJob from one you'd trust in production.
-concurrencyPolicy is the big one: the default Allow lets runs overlap, which is fine for a fast
-idempotent job and catastrophic for a slow backup that now has two copies writing at once —
-that's the lab's Forbid question. history limits are housekeeping: the controller keeps the last
-N finished Jobs so you can read logs, and GCs the rest (with their Pods) — set them too high and
-a per-minute CronJob litters the namespace with hundreds of Completed Pods. timeZone (GA) fixes
-the classic "my 2am job ran at 3am" — without it the schedule is evaluated in the controller's
-timezone, historically UTC. startingDeadlineSeconds bounds recovery: if the controller was down
-across a tick, this caps how stale a run can be and still fire, preventing a backfill stampede.
-Click 4 is the framing to leave them with: CronJob schedules, Job executes — don't look for
-retry logic on the CronJob, it's all in the jobTemplate.
+Speaker: estes são os campos que separam um CronJob de demo de um em que você confiaria em
+produção. concurrencyPolicy é o grande: o default Allow deixa execuções sobreporem, o que é ok
+para um job rápido e idempotente e catastrófico para um backup lento que agora tem duas cópias
+escrevendo ao mesmo tempo — essa é a pergunta do Forbid no lab. Os limites de histórico são
+faxina: o controller guarda os últimos N Jobs terminados para você poder ler logs, e faz GC do
+resto (com seus Pods) — configure-os altos demais e um CronJob por minuto entulha o namespace com
+centenas de Pods Completed. timeZone (GA) conserta o clássico "meu job das 2h rodou às 3h" — sem
+ele o cronograma é avaliado no fuso do controller, historicamente UTC. startingDeadlineSeconds
+limita a recuperação: se o controller ficou fora do ar durante um tick, isso limita quão velha
+uma execução pode ser e ainda disparar, prevenindo um estouro de recuperação de atrasados. O
+clique 4 é o enquadramento para deixar com eles: CronJob agenda, Job executa — não procure lógica
+de retry no CronJob, está tudo no jobTemplate.
 -->
 
 ---
 layout: comparison
-heading: 'Which controller? Follow the lifetime of the work'
+heading: 'Qual controller? Siga o tempo de vida do trabalho'
 leftHeading: 'Deployment'
-leftBadge: 'runs forever'
+leftBadge: 'roda para sempre'
 rightHeading: 'Job / CronJob'
-rightBadge: 'runs to completion'
+rightBadge: 'roda até completar'
 ---
 
-**Use a Deployment when the process should stay up.**
+**Use um Deployment quando o processo deve ficar de pé.**
 
-- A server, API, or worker that should always be `Running`.
-- Exit is a **fault** → the ReplicaSet restarts it to hold `replicas`.
-- Scales for **availability & throughput**, not for "finishing."
+- Um servidor, API ou worker que deve estar sempre `Running`.
+- Exit é uma **falta** → o ReplicaSet o reinicia para manter `replicas`.
+- Escala por **disponibilidade & throughput**, não por "terminar".
 
 <v-clicks>
 
-- ❌ Wrong for a migration: succeeds, exits 0, gets **restarted forever**.
+- ❌ Errado para uma migração: tem sucesso, sai com 0, é **reiniciada para sempre**.
 
 </v-clicks>
 
 ::right::
 
-**Use a Job when the work has a natural end** — a **CronJob** if it also **repeats**.
+**Use um Job quando o trabalho tem um fim natural** — um **CronJob** se ele também **se repete**.
 
-- A migration, import, backup, report, or one-off script.
-- Exit 0 is **success** → nothing restarts; `COMPLETIONS 1/1`.
-- `Job` for run-once-now; `CronJob` for run-on-a-schedule.
+- Uma migração, import, backup, relatório ou script pontual.
+- Exit 0 é **sucesso** → nada reinicia; `COMPLETIONS 1/1`.
+- `Job` para rodar-uma-vez-agora; `CronJob` para rodar-num-cronograma.
 
 <v-clicks>
 
-- ✅ Retries on failure (`backoffLimit`), parallelises (`completions`/`parallelism`), and
-  auto-expires finished objects (`ttlSecondsAfterFinished`).
+- ✅ Tenta de novo em caso de falha (`backoffLimit`), paraleliza (`completions`/`parallelism`), e
+  auto-expira objetos terminados (`ttlSecondsAfterFinished`).
 
 </v-clicks>
 
 <!--
-Speaker: the quick chooser. The single question is "does this work have a natural end?" If no —
-it should always be up — Deployment (or StatefulSet for identity). If yes — Job; and if that
-finite work also recurs on a clock — CronJob. The trap is running batch work under a Deployment
-because that's the controller people reach for first: it "works" until you notice your migration
-has run 4,000 times. The reverse mistake is rarer but real: a long-lived server under a Job that
-keeps "completing" and getting torn down. Name-drop ttlSecondsAfterFinished as the current
-auto-cleanup knob — set it on a Job and the object (and its Pods) self-delete N seconds after
-finishing, so you don't need a CronJob's history limits or a manual sweep. Hand to the lab:
-they'll run a Job, schedule a CronJob, and force a failure into BackoffLimitExceeded.
+Speaker: o seletor rápido. A única pergunta é "este trabalho tem um fim natural?" Se não — ele
+deve estar sempre de pé — Deployment (ou StatefulSet para identidade). Se sim — Job; e se esse
+trabalho finito também recorre num relógio — CronJob. A armadilha é rodar trabalho batch sob um
+Deployment porque é o controller que as pessoas pegam primeiro: "funciona" até você notar que a
+sua migração rodou 4.000 vezes. O erro inverso é mais raro mas real: um servidor de longa duração
+sob um Job que fica "completando" e sendo derrubado. Cite ttlSecondsAfterFinished como o botão
+atual de auto-limpeza — defina-o em um Job e o objeto (e seus Pods) se auto-deleta N segundos
+depois de terminar, então você não precisa dos limites de histórico de um CronJob nem de uma
+varredura manual. Passe ao lab: eles vão rodar um Job, agendar um CronJob e forçar uma falha até
+BackoffLimitExceeded.
 -->
 
 ---
 layout: recap
-heading: 'Recap — some work is supposed to finish'
-story: 'The report Job exited 0 and stayed Complete; wrapped in a CronJob it reran every night — a Deployment would have looped it forever.'
-next: 'Autoscaling (HPA) — scale a running Deployment on live CPU demand'
+heading: 'Recap — algum trabalho deve terminar'
+story: 'O Job report saiu com 0 e ficou Complete; envolvido em um CronJob ele rerodou toda noite — um Deployment o teria loopado para sempre.'
+next: 'Autoscaling (HPA) — escale um Deployment em execução pela demanda de CPU ao vivo'
 ---
 
-- **Job** = run-to-completion: exit 0 is success, nothing restarts; **CronJob** = a Job factory on a `schedule`
-- Job Pods use `restartPolicy: Never` (retry = new Pod) or `OnFailure` (retry = same Pod) — **never `Always`**
-- Job knobs: `completions`/`parallelism` (work queue), `backoffLimit` (bounded retries → `BackoffLimitExceeded`), `activeDeadlineSeconds` (wall-clock cap)
-- CronJob knobs: `schedule` + `timeZone`, `concurrencyPolicy` (Allow/Forbid/Replace), `{successful,failed}JobsHistoryLimit`, `startingDeadlineSeconds`
-- Choose by **lifetime**: stays up → Deployment · finishes → Job · finishes on a clock → CronJob
+- **Job** = run-to-completion: exit 0 é sucesso, nada reinicia; **CronJob** = uma fábrica de Jobs num `schedule`
+- Pods de Job usam `restartPolicy: Never` (retry = Pod novo) ou `OnFailure` (retry = mesmo Pod) — **nunca `Always`**
+- Botões do Job: `completions`/`parallelism` (fila de trabalho), `backoffLimit` (tentativas limitadas → `BackoffLimitExceeded`), `activeDeadlineSeconds` (teto de relógio de parede)
+- Botões do CronJob: `schedule` + `timeZone`, `concurrencyPolicy` (Allow/Forbid/Replace), `{successful,failed}JobsHistoryLimit`, `startingDeadlineSeconds`
+- Escolha pelo **tempo de vida**: fica de pé → Deployment · termina → Job · termina num relógio → CronJob
 
 <!--
-Speaker: land the through-line. One axis decides everything: does the work end? The Job adds a
-completion contract to a Pod spec (and the restartPolicy caveat — Never for "new Pod per retry,"
-OnFailure for "restart in place," Always is illegal). The CronJob adds a clock and the overlap/
-missed-tick controls, but delegates all execution to its jobTemplate. The memorable failure modes:
-a batch task under a Deployment loops forever; an Allow-concurrency slow CronJob overlaps itself;
-a CronJob with no timeZone fires an hour off. Hand to Lab 15: run a Job to COMPLETIONS 1/1 and
-read its logs, put it on a per-minute CronJob and watch Jobs spawn and history trim, then force a
-non-zero exit and watch retries climb to BackoffLimitExceeded. Next section: HPA — scaling the
-run-forever workloads we set aside here.
+Speaker: amarre o fio condutor. Um eixo decide tudo: o trabalho termina? O Job adiciona um
+contrato de conclusão a um spec de Pod (e a ressalva do restartPolicy — Never para "Pod novo por
+tentativa", OnFailure para "reiniciar no lugar", Always é ilegal). O CronJob adiciona um relógio
+e os controles de sobreposição/tick perdido, mas delega toda a execução ao seu jobTemplate. Os
+modos de falha memoráveis: uma tarefa batch sob um Deployment loopa para sempre; um CronJob lento
+com concorrência Allow sobrepõe a si mesmo; um CronJob sem timeZone dispara uma hora fora. Passe
+o bastão para o Lab 15: rodar um Job até COMPLETIONS 1/1 e ler seus logs, colocá-lo num CronJob
+por minuto e ver Jobs surgirem e o histórico aparar, depois forçar um exit diferente de zero e
+ver as tentativas subirem até BackoffLimitExceeded. Próxima seção: HPA — escalando os workloads
+run-forever que deixamos de lado aqui.
 -->
 
 ---
@@ -379,11 +389,11 @@ duration: 20 min
 env: namespace ✓ / kind ✓
 ---
 
-## Lab 15 — Batch & schedule
+## Lab 15 — Batch & cronograma
 
-- Run a **Job** to completion → `COMPLETIONS 1/1`, read `kubectl logs job/<name>`
-- Put the same work on a **CronJob** (per-minute) → watch Jobs spawn and old ones trim
-- **Break→fix:** a Job whose command exits non-zero → retries climb to
-  **`BackoffLimitExceeded`** → fix the command and confirm completion
-- Answer the headline: *why did the failing Job stop after a handful of Pods — and why does
-  `concurrencyPolicy: Forbid` matter for a slow CronJob?*
+- Rode um **Job** até completar → `COMPLETIONS 1/1`, leia `kubectl logs job/<name>`
+- Coloque o mesmo trabalho num **CronJob** (por minuto) → veja Jobs surgirem e os antigos serem aparados
+- **Quebre→conserte:** um Job cujo comando sai com código diferente de zero → as tentativas sobem até
+  **`BackoffLimitExceeded`** → conserte o comando e confirme a conclusão
+- Responda a manchete: *por que o Job que falhava parou depois de um punhado de Pods — e
+  por que `concurrencyPolicy: Forbid` importa para um CronJob lento?*

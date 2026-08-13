@@ -1,55 +1,56 @@
-# Lab 01 — Build & inspect a container image (S01)
+# Lab 01 — Construa & inspecione uma image de container (S01)
 
 <!-- lab-contract:v1 -->
 
 | | |
 | --- | --- |
 | **Section** | S01 — Containers |
-| **Environment** | local — no cluster needed |
+| **Environment** | local — nenhum cluster necessário |
 | **Estimated time** | 25 min |
 
 ## Objective
 
-Build a container image from a Dockerfile, run it, look **inside** it, and read the **layers**
-it's made of. By the end, an image is no longer magic: it's an ordered stack of layers, run as
-an ordinary (non-root) process. You'll also feel two things beginners trip on — build **caching**
-and the `latest` **tag** — by breaking them on purpose.
+Construir uma image de container a partir de um Dockerfile, executá-la, olhar **dentro** dela e
+ler as **layers** de que ela é feita. Ao final, uma image deixa de ser mágica: é uma pilha
+ordenada de layers, executada como um processo comum (non-root). Você também vai sentir na pele
+duas coisas em que iniciantes tropeçam — o **caching** de build e a **tag** `latest` — quebrando
+as duas de propósito.
 
 ## Prerequisites
 
-- A **container engine** on your machine: Docker, Podman, or nerdctl. **No cluster, no `kubectl`.**
-- The engine's daemon/machine running (`docker info` — or `podman info` — returns without error).
-- A terminal you can copy-paste into. Lab 00 is not required for this one.
+- Um **container engine** na sua máquina: Docker, Podman ou nerdctl. **Sem cluster, sem `kubectl`.**
+- O daemon/máquina do engine rodando (`docker info` — ou `podman info` — retorna sem erro).
+- Um terminal em que você consiga copiar e colar. O Lab 00 não é necessário para este.
 
-> **Which engine?** Every command below uses `$ENGINE` so it works for all three. Set it once:
+> **Qual engine?** Todo comando abaixo usa `$ENGINE` para funcionar com os três. Defina uma vez:
 >
 > ```bash
-> export ENGINE=docker      # or: export ENGINE=podman   /   export ENGINE=nerdctl
+> export ENGINE=docker      # ou: export ENGINE=podman   /   export ENGINE=nerdctl
 > ```
 >
-> Podman and nerdctl are near drop-in replacements for the `docker` CLI used here.
+> Podman e nerdctl são substitutos quase diretos do CLI `docker` usado aqui.
 
 ## Files used
 
-All created inline in Step 1 (nothing to download):
+Todos criados inline no Step 1 (nada para baixar):
 
-- `app/main.go` — a tiny HTTP server that prints its hostname.
-- `app/go.mod` — the Go module file (stdlib only, no dependencies).
-- `app/Dockerfile` — single-stage build (matches the slide walkthrough).
-- `app/Dockerfile.multistage` — the thin, multi-stage version for Step 6.
+- `app/main.go` — um pequeno servidor HTTP que imprime seu hostname.
+- `app/go.mod` — o arquivo de módulo Go (apenas stdlib, sem dependências).
+- `app/Dockerfile` — build de estágio único (acompanha o passo a passo dos slides).
+- `app/Dockerfile.multistage` — a versão enxuta, multi-stage, para o Step 6.
 
 ---
 
 ## Guided task
 
-Work through the steps without opening the companion unless you are blocked. The spoiler
-contains exact commands, expected state, explanations, and recovery guidance.
+Percorra os passos sem abrir o companion, a menos que fique travado. O spoiler
+contém os comandos exatos, o estado esperado, explicações e orientações de recuperação.
 
-[Spoiler: guided solutions and expected output](./01-containers.solution.md#guided-solutions)
+[Spoiler: soluções guiadas e saída esperada](./01-containers.solution.md#guided-solutions)
 
-### Step 1 — create the project
+### Step 1 — crie o projeto
 
-Paste this whole block. It makes an `app/` folder with the source and both Dockerfiles.
+Cole este bloco inteiro. Ele cria uma pasta `app/` com o código-fonte e os dois Dockerfiles.
 
 ```bash
 mkdir -p app && cd app
@@ -96,14 +97,14 @@ ENTRYPOINT ["/bin/app"]
 EOF
 
 cat > Dockerfile.multistage <<'EOF'
-# stage 1: build with the full toolchain
+# stage 1: build com o toolchain completo
 FROM golang:1.24 AS build
 WORKDIR /src
 COPY . .
-# CGO_ENABLED=0 produces a static binary that runs on a minimal base
+# CGO_ENABLED=0 produz um binário estático que roda em uma base mínima
 RUN CGO_ENABLED=0 go build -o /bin/app .
 
-# stage 2: ship only the binary
+# stage 2: entregue apenas o binário
 FROM alpine:3.20
 RUN adduser -D -u 10001 app
 COPY --from=build /bin/app /bin/app
@@ -116,14 +117,14 @@ EOF
 ls
 ```
 
-**Task:** confirm all four files exist.
+**Tarefa:** confirme que os quatro arquivos existem.
 
 ---
 
-### Step 2 — build and run
+### Step 2 — faça o build e execute
 
-Build the image, tag it `demo:1`, then run it **detached** with the container port published to
-your machine.
+Faça o build da image, marque-a com a tag `demo:1`, depois execute-a **detached** com a porta do
+container publicada na sua máquina.
 
 ```bash
 $ENGINE build -t demo:1 .
@@ -132,132 +133,134 @@ $ENGINE ps
 curl -s localhost:8080
 ```
 
-**Task:** the build succeeds, `ps` shows the container `Up`, and `curl` prints a greeting.
+**Tarefa:** o build tem sucesso, o `ps` mostra o container `Up`, e o `curl` imprime uma saudação.
 
-**Question:** you published `-p 8080:8080`. Which number is the host's and which is the container's?
+**Pergunta:** você publicou `-p 8080:8080`. Qual número é do host e qual é do container?
 
 ---
 
-### Step 3 — look inside the running container
+### Step 3 — olhe dentro do container em execução
 
-You don't have to trust the Dockerfile — verify the process is really **non-root**, and inspect it
-from both inside and outside.
+Você não precisa confiar no Dockerfile — verifique que o processo é realmente **non-root**, e
+inspecione-o tanto de dentro quanto de fora.
 
 ```bash
-$ENGINE exec demo id                                     # who is the process?
-$ENGINE top demo                                         # the process, seen from the host
-$ENGINE image inspect demo:1 --format '{{.Config.User}}' # what the image declares
+$ENGINE exec demo id                                     # quem é o processo?
+$ENGINE top demo                                         # o processo, visto do host
+$ENGINE image inspect demo:1 --format '{{.Config.User}}' # o que a image declara
 ```
 
-**Task:** all three agree the app runs as UID **10001**, not root.
+**Tarefa:** os três concordam que o app roda como UID **10001**, não root.
 
-**Task (optional interactive poke):** get a shell and look around, then exit.
+**Tarefa (bisbilhotada interativa opcional):** obtenha um shell e dê uma olhada, depois saia.
 
 ---
 
-### Step 4 — read the layers, then invalidate the cache
+### Step 4 — leia as layers, depois invalide o cache
 
-An image is an ordered stack of layers. List them, then change the source and watch which layers
-**rebuild** versus come from **cache**.
+Uma image é uma pilha ordenada de layers. Liste-as, depois mude o código-fonte e observe quais
+layers são **reconstruídas** versus quais vêm do **cache**.
 
 ```bash
 $ENGINE history demo:1
 ```
 
-**Question:** which layer holds your source code?
+**Pergunta:** qual layer guarda seu código-fonte?
 
-Now change the source and rebuild:
+Agora mude o código-fonte e refaça o build:
 
 ```bash
 sed -i.bak 's/hello from/HELLO from/' main.go && rm -f main.go.bak
 $ENGINE build -t demo:2 .
 ```
 
-**Task:** in the second build, the early layers say **CACHED** but everything from `COPY . .`
-downward is rebuilt.
+**Tarefa:** no segundo build, as layers iniciais dizem **CACHED**, mas tudo de `COPY . .`
+para baixo é reconstruído.
 
 ---
 
-### Step 5 — break it on purpose: `latest` is not "newest"
+### Step 5 — quebre de propósito: `latest` não é "o mais novo"
 
-You never built a `latest` tag. Ask for one anyway and read the failure.
+Você nunca construiu uma tag `latest`. Peça por uma mesmo assim e leia a falha.
 
 ```bash
 $ENGINE run --rm demo:latest
 ```
 
-**Task:** this fails. Read the error, then fix it **two** ways.
+**Tarefa:** isto falha. Leia o erro, depois conserte de **duas** formas.
 
-**Question:** you just moved `demo:latest` to `demo:2`. If a teammate had `demo:latest` cached from
-yesterday, would they get your new image?
+**Pergunta:** você acabou de mover `demo:latest` para `demo:2`. Se um colega tivesse `demo:latest`
+em cache desde ontem, ele receberia sua image nova?
 
 ---
 
-### Step 6 — multi-stage: ship thin
+### Step 6 — multi-stage: entregue enxuto
 
-Rebuild with the multi-stage Dockerfile, which discards the toolchain, then compare sizes.
+Refaça o build com o Dockerfile multi-stage, que descarta o toolchain, e depois compare os tamanhos.
 
 ```bash
 $ENGINE build -f Dockerfile.multistage -t demo:slim .
 $ENGINE images demo
 ```
 
-**Task:** `demo:slim` is dramatically smaller than `demo:1`.
+**Tarefa:** a `demo:slim` é dramaticamente menor que a `demo:1`.
 
-**Question:** why can the builder stage be huge without bloating the final image?
+**Pergunta:** por que o estágio de builder pode ser enorme sem inflar a image final?
 
 ---
 
 ## Observe
 
-- `$ENGINE build` produces `demo:1`; the container runs and `curl localhost:8080` answers.
-- The process runs as **UID 10001**, confirmed inside (`id`), from the host (`top`), and in the
-  image config (`.Config.User`).
-- `history` shows the image as ordered layers; changing the source rebuilds **`COPY` and below**
-  while earlier layers stay **CACHED**.
-- `run demo:latest` **fails** until you tag or pin — proving `latest` guarantees nothing.
-- The multi-stage `demo:slim` is **~40× smaller** than the single-stage image.
+- `$ENGINE build` produz `demo:1`; o container roda e `curl localhost:8080` responde.
+- O processo roda como **UID 10001**, confirmado por dentro (`id`), do host (`top`) e na
+  configuração da image (`.Config.User`).
+- `history` mostra a image como layers ordenadas; mudar o código-fonte reconstrói **`COPY` e
+  abaixo**, enquanto as layers anteriores continuam **CACHED**.
+- `run demo:latest` **falha** até você criar a tag ou fazer o pin — provando que `latest` não
+  garante nada.
+- A multi-stage `demo:slim` é **~40× menor** que a image de estágio único.
 
 ---
 
 ## Challenge
 
-Prove the source really is baked into one layer: rebuild changing **only** `ENV PORT`, and confirm
-the expensive `go build` layer is reused.
+Prove que o código-fonte está realmente gravado em uma única layer: refaça o build alterando
+**apenas** `ENV PORT` e confirme que a layer cara do `go build` é reutilizada.
 
 **Difficulty:** Intermediate
 
-**Success criteria:** Build `demo:3`, show `RUN go build` is cached while only the
-metadata layer changes, and explain how Dockerfile ordering produced that result.
+**Success criteria:** Construa a `demo:3`, mostre que o passo `RUN go build` permanece
+**CACHED** enquanto apenas a layer de metadata muda, e explique como a ordem do Dockerfile
+produziu esse resultado.
 
-**Hints:** Move `ENV PORT` below `RUN go build`, then compare the second build's `COPY`
-and `RUN` lines with the first build.
+**Hints:** Mova a linha `ENV PORT` para depois de `RUN go build`, depois compare as linhas
+`COPY` e `RUN` do segundo build com as do primeiro build.
 
-[Spoiler: challenge solution](./01-containers.solution.md#challenge-solution)
+[Spoiler: solução do challenge](./01-containers.solution.md#challenge-solution)
 
 ## Verify
 
-Run these checks before removing the images. The first command proves the slim image is
-non-root; the second keeps the layer comparison visible for discussion.
+Execute estas checagens antes de remover as images. O primeiro comando prova que a image slim é
+non-root; o segundo mantém a comparação de layers visível para discussão.
 
 ```bash
 $ENGINE image inspect demo:slim --format 'user={{.Config.User}} size={{.Size}}'
 $ENGINE history demo:slim
 ```
 
-Expected: the user is `10001`, and the final image has only the runtime layers.
+Esperado: o user é `10001`, e a image final tem apenas as layers de runtime.
 
 ## Cleanup / reset
 
-Everything lived in the `app/` folder plus a few images — no cluster touched.
+Tudo viveu na pasta `app/` mais algumas images — nenhum cluster foi tocado.
 
 ```bash
-# stop & remove the running container
+# pare & remova o container em execução
 $ENGINE rm -f demo --force 2>/dev/null || true
 
-# remove the images this lab built (ignore any that aren't there)
+# remova as images que este lab construiu (ignore as que não existirem)
 $ENGINE rmi -f demo:1 demo:2 demo:slim demo:latest 2>/dev/null || true
 
-# remove the project files
+# remova os arquivos do projeto
 cd .. && rm -rf app
 ```

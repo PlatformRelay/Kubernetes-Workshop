@@ -21,7 +21,7 @@ const MAX_CODE_LINE = 64
 describe('dense code-annotated slides stay within column width', () => {
   it('CRD teaching slide has no ultra-wide yaml lines', () => {
     const src = readFileSync(join(root, 'pages/S22-operator-pattern/index.md'), 'utf8')
-    const block = yamlAfterHeading(src, 'A CRD teaches the API server a new kind')
+    const block = yamlAfterHeading(src, 'Um CRD ensina um novo kind ao API server')
     const long = block.split('\n').filter((l) => l.length > MAX_CODE_LINE)
     assert.deepEqual(long, [], `lines longer than ${MAX_CODE_LINE}:\n${long.join('\n')}`)
     assert.match(block, /openAPIV3Schema:\n/)
@@ -29,7 +29,7 @@ describe('dense code-annotated slides stay within column width', () => {
 
   it('manifest checklist slide has no ultra-wide yaml lines', () => {
     const src = readFileSync(join(root, 'pages/S26-best-practices/index.md'), 'utf8')
-    const block = yamlAfterHeading(src, 'The manifest that fails the checklist')
+    const block = yamlAfterHeading(src, 'O manifesto que reprova no checklist')
     const long = block.split('\n').filter((l) => l.length > MAX_CODE_LINE)
     assert.deepEqual(long, [], `lines longer than ${MAX_CODE_LINE}:\n${long.join('\n')}`)
     assert.doesNotMatch(block, /image:.*#/)
@@ -39,13 +39,13 @@ describe('dense code-annotated slides stay within column width', () => {
 describe('CKA design-checklist slide fits vertically', () => {
   it('uses a dense two-column grid instead of an 8-row markdown table', () => {
     const src = readFileSync(join(root, 'pages/S27-wrap-up/index.md'), 'utf8')
-    const idx = src.indexOf('The CKAD/CKA domains are really a **design checklist**')
+    const idx = src.indexOf('Os domínios do CKAD/CKA são na verdade um **checklist de design**')
     assert.ok(idx >= 0)
     const window = src.slice(idx, idx + 1200)
     assert.match(window, /kw-slide-dense/)
     assert.match(window, /grid-cols-2/)
     assert.doesNotMatch(window, /\|\s*Exam domain\s*\|/)
-    assert.match(window, /break → fix/)
+    assert.match(window, /quebrar → consertar/)
   })
 })
 

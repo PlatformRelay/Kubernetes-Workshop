@@ -43,7 +43,7 @@ const lanes = computed<Lane[]>(() => [
 const policyLabel = computed(() => {
   if (allowRule.value) return 'allow-frontend-to-backend'
   if (fenced.value) return 'default-deny · Ingress'
-  return 'no policy'
+  return 'sem policy'
 })
 </script>
 
@@ -74,22 +74,24 @@ const policyLabel = computed(() => {
       <div class="kw-nf-backend" :class="{ 'is-fenced': fenced }">
         <K8sIcon kind="pod" variant="unlabeled" size="1.7rem" />
         <div class="kw-nf-podlabel">backend</div>
-        <div class="kw-nf-select">{{ fenced ? 'podSelector: {app: backend}' : 'reachable by all' }}</div>
+        <div class="kw-nf-select">{{ fenced ? 'podSelector: {app: backend}' : 'alcançável por todos' }}</div>
       </div>
     </div>
 
     <div v-if="props.showCaption" class="kw-nf-caption">
       <template v-if="props.step <= 0">
-        Flat network: with <strong>no policy</strong>, every Pod reaches the backend —
-        <code>frontend</code>, <code>other</code>, and <code>scanner</code> all get a <code>200</code>.
+        Rede plana: <strong>sem policy</strong>, todo Pod alcança o backend —
+        <code>frontend</code>, <code>other</code> e <code>scanner</code> recebem <code>200</code>.
       </template>
       <template v-else-if="props.step === 1">
-        A <code>default-deny</code> ingress policy selects the backend → <strong>all</strong> ingress
-        is dropped. Every curl now <strong>hangs and times out</strong> — dropped, not refused.
+        Uma policy de ingress <code>default-deny</code> seleciona o backend → <strong>todo</strong>
+        ingress é descartado. Agora todo curl <strong>trava e dá timeout</strong> — descartado,
+        não recusado.
       </template>
       <template v-else>
-        <code>allow-frontend-to-backend</code> is <strong>additive</strong>: it opens only the
-        <code>frontend</code> gate. <code>other</code> and <code>scanner</code> stay cut — allow-only.
+        <code>allow-frontend-to-backend</code> é <strong>aditiva</strong>: ela abre só o portão
+        do <code>frontend</code>. <code>other</code> e <code>scanner</code> continuam cortados —
+        só allow.
       </template>
     </div>
   </div>

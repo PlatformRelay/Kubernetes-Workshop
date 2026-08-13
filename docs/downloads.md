@@ -1,59 +1,59 @@
-# Live decks & PDF downloads
+# Decks ao vivo e downloads de PDF
 
 ## Interactive Slidev decks
 
-These are the always-current GitHub Pages builds (hash-routed under `/deck/` so slide
-navigation and hard refreshes work on project Pages).
+Estes são os builds sempre atualizados do GitHub Pages (com hash routing sob `/deck/`,
+para que a navegação entre slides e os refreshes forçados funcionem no Pages de projeto).
 
 | Deck | URL |
 | --- | --- |
-| **Documentation home** (this site) | <https://platformrelay.github.io/Kubernetes-Workshop/> |
-| Full content **superset** | <https://platformrelay.github.io/Kubernetes-Workshop/deck/> |
-| Canonical **3-day cut** | <https://platformrelay.github.io/Kubernetes-Workshop/deck/3day/> |
-| **Day 1** entry | <https://platformrelay.github.io/Kubernetes-Workshop/deck/day-1/> |
-| **Day 2** entry | <https://platformrelay.github.io/Kubernetes-Workshop/deck/day-2/> |
-| **Day 3** entry | <https://platformrelay.github.io/Kubernetes-Workshop/deck/day-3/> |
-| **Template gallery** | <https://platformrelay.github.io/Kubernetes-Workshop/deck/templates/> |
+| **Home da documentação** (este site) | <https://platformrelay.github.io/Kubernetes-Workshop/> |
+| **Superset** de conteúdo completo | <https://platformrelay.github.io/Kubernetes-Workshop/deck/> |
+| **Corte canônico de 3 dias** | <https://platformrelay.github.io/Kubernetes-Workshop/deck/3day/> |
+| Entrada do **Day 1** | <https://platformrelay.github.io/Kubernetes-Workshop/deck/day-1/> |
+| Entrada do **Day 2** | <https://platformrelay.github.io/Kubernetes-Workshop/deck/day-2/> |
+| Entrada do **Day 3** | <https://platformrelay.github.io/Kubernetes-Workshop/deck/day-3/> |
+| **Galeria de templates** | <https://platformrelay.github.io/Kubernetes-Workshop/deck/templates/> |
 
-Deep-link to a slide with a hash fragment, for example
-`…/deck/day-1/#/5` for slide 5 of Day 1.
+Faça deep-link para um slide com um fragmento de hash, por exemplo
+`…/deck/day-1/#/5` para o slide 5 do Day 1.
 
-Compatibility redirects: legacy `/3day/` and `/templates/` paths forward to the `/deck/…`
-locations above.
+Redirecionamentos de compatibilidade: os paths legados `/3day/` e `/templates/`
+encaminham para os locais `/deck/…` acima.
 
 ## PDF downloads
 
-Every `v*` GitHub Release publishes PDF exports (and an offline site zip). Prefer the
-**latest release** page so links stay current across tags:
+Todo GitHub Release `v*` publica exports em PDF (e um zip do site para uso offline).
+Prefira a página do **latest release** para que os links continuem atuais entre as tags:
 
-- **All release assets:** [GitHub Releases](https://github.com/PlatformRelay/Kubernetes-Workshop/releases)
-- **Latest (may be a pre-release):** [Releases · latest](https://github.com/PlatformRelay/Kubernetes-Workshop/releases/latest)
+- **Todos os assets do release:** [GitHub Releases](https://github.com/PlatformRelay/Kubernetes-Workshop/releases)
+- **Latest (pode ser um pre-release):** [Releases · latest](https://github.com/PlatformRelay/Kubernetes-Workshop/releases/latest)
 
-Typical artifact names (tag substituted for `<tag>`):
+Nomes típicos dos artefatos (com a tag substituindo `<tag>`):
 
-| Artifact | Contents |
+| Artefato | Conteúdo |
 | --- | --- |
-| `kubernetes-workshop-day-1-<tag>.pdf` | Day 1 live entry |
-| `kubernetes-workshop-day-2-<tag>.pdf` | Day 2 live entry |
-| `kubernetes-workshop-day-3-<tag>.pdf` | Day 3 live entry |
-| `kubernetes-workshop-full-<tag>.pdf` | Compatibility superset |
-| `kubernetes-workshop-3day-<tag>.pdf` | Compatibility three-day cut |
-| `kubernetes-workshop-site-<tag>.zip` | Offline HTML bundle |
+| `kubernetes-workshop-day-1-<tag>.pdf` | Entrada ao vivo do Day 1 |
+| `kubernetes-workshop-day-2-<tag>.pdf` | Entrada ao vivo do Day 2 |
+| `kubernetes-workshop-day-3-<tag>.pdf` | Entrada ao vivo do Day 3 |
+| `kubernetes-workshop-full-<tag>.pdf` | Superset de compatibilidade |
+| `kubernetes-workshop-3day-<tag>.pdf` | Corte de três dias de compatibilidade |
+| `kubernetes-workshop-site-<tag>.zip` | Bundle HTML offline |
 
-Example pins from **`v0.6.0`**:
+Exemplos de pins da **`v0.6.0`**:
 
-- [Day 1 PDF](https://github.com/PlatformRelay/Kubernetes-Workshop/releases/download/v0.6.0/kubernetes-workshop-day-1-v0.6.0.pdf)
-- [Day 2 PDF](https://github.com/PlatformRelay/Kubernetes-Workshop/releases/download/v0.6.0/kubernetes-workshop-day-2-v0.6.0.pdf)
-- [Day 3 PDF](https://github.com/PlatformRelay/Kubernetes-Workshop/releases/download/v0.6.0/kubernetes-workshop-day-3-v0.6.0.pdf)
-- [Full / 3-day PDFs and site zip](https://github.com/PlatformRelay/Kubernetes-Workshop/releases/tag/v0.6.0)
+- [PDF do Day 1](https://github.com/PlatformRelay/Kubernetes-Workshop/releases/download/v0.6.0/kubernetes-workshop-day-1-v0.6.0.pdf)
+- [PDF do Day 2](https://github.com/PlatformRelay/Kubernetes-Workshop/releases/download/v0.6.0/kubernetes-workshop-day-2-v0.6.0.pdf)
+- [PDF do Day 3](https://github.com/PlatformRelay/Kubernetes-Workshop/releases/download/v0.6.0/kubernetes-workshop-day-3-v0.6.0.pdf)
+- [PDFs full / 3-day e zip do site](https://github.com/PlatformRelay/Kubernetes-Workshop/releases/tag/v0.6.0)
 
-Pre-release tags still prepend [known limitations](./beta-limitations.md) to the release
-notes body. How tags are cut: [release.md](./release.md).
+Tags de pre-release continuam adicionando as [limitações conhecidas](./beta-limitations.md)
+no início do corpo das release notes. Como as tags são cortadas: [release.md](./release.md).
 
-## Labs & quizzes
+## Labs e quizzes
 
-| Resource | Link |
+| Recurso | Link |
 | --- | --- |
-| Participant labs | [labs/README.md](https://github.com/PlatformRelay/Kubernetes-Workshop/tree/main/labs#readme) |
-| Lab 00 (start here) | [labs/day-1/00-setup.md](https://github.com/PlatformRelay/Kubernetes-Workshop/blob/main/labs/day-1/00-setup.md) |
-| Question bank | [quiz/README.md](https://github.com/PlatformRelay/Kubernetes-Workshop/tree/main/quiz#readme) |
+| Labs do participante | [labs/README.md](https://github.com/PlatformRelay/Kubernetes-Workshop/tree/main/labs#readme) |
+| Lab 00 (comece aqui) | [labs/day-1/00-setup.md](https://github.com/PlatformRelay/Kubernetes-Workshop/blob/main/labs/day-1/00-setup.md) |
+| Banco de questões | [quiz/README.md](https://github.com/PlatformRelay/Kubernetes-Workshop/tree/main/quiz#readme) |

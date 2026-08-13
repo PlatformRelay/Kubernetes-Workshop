@@ -12,7 +12,7 @@ const { step, playing, specImage, pods, play } = usePodReplace()
         image: {{ specImage }}
       </code>
       <button class="kw-scene-play" :disabled="playing" @click="play">
-        {{ playing ? 'playing…' : '▶ replay' }}
+        {{ playing ? 'tocando…' : '▶ repetir' }}
       </button>
     </div>
 

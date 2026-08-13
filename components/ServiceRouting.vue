@@ -38,7 +38,7 @@ const props = withDefaults(
     step: 0,
     serviceName: 'web',
     selector: 'app: web',
-    reason: 'readiness probe failing',
+    reason: 'com a readiness probe falhando',
     pods: () => [
       { name: 'web-6f8c-x2lqp', ip: '10.244.0.7' },
       { name: 'web-6f8c-7nqld', ip: '10.244.0.8' },
@@ -116,23 +116,23 @@ const endpoints = computed(() =>
 
     <div class="kw-route-caption">
       <template v-if="props.step <= 0">
-        A Service is a <strong>selector</strong>. The endpoint controller matches
-        <code>{{ props.selector }}</code> and writes each Pod's IP into the
-        <strong>EndpointSlice</strong> — the live list of who is behind the stable ClusterIP.
+        Um Service é um <strong>selector</strong>. O endpoint controller casa
+        <code>{{ props.selector }}</code> e escreve o IP de cada Pod na
+        <strong>EndpointSlice</strong> — a lista viva de quem está por trás do ClusterIP estável.
       </template>
       <template v-else-if="props.step < props.removeAt - 1">
-        A request to the ClusterIP is <strong>load-balanced</strong> across every address in
-        the slice — three Pods, three ways to answer.
+        Uma requisição ao ClusterIP faz <strong>load-balance</strong> entre todos os endereços
+        da slice — três Pods, três formas de responder.
       </template>
       <template v-else-if="props.step < props.removeAt">
-        One Pod is <strong>{{ props.reason }}</strong>: it flips to <strong>NotReady</strong> —
-        still <code>Running</code>, and for a beat its IP is still in the slice. The endpoint
-        controller hasn't reacted yet.
+        Um Pod está <strong>{{ props.reason }}</strong>: ele vira <strong>NotReady</strong> —
+        ainda <code>Running</code>, e por um instante seu IP ainda está na slice. O endpoint
+        controller ainda não reagiu.
       </template>
       <template v-else>
-        Now the endpoint controller <strong>drops the IP from the slice</strong> — traffic
-        reroutes to the healthy two, with no error to the caller.
-        <span class="kw-muted">(This is exactly the readiness behaviour S14 builds on.)</span>
+        Agora o endpoint controller <strong>remove o IP da slice</strong> — o tráfego é
+        redirecionado para os dois saudáveis, sem erro para quem chama.
+        <span class="kw-muted">(É exatamente o comportamento de readiness sobre o qual o S14 se apoia.)</span>
       </template>
     </div>
   </div>

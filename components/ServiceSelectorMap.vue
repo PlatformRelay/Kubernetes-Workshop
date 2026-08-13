@@ -36,9 +36,9 @@ const pods = [
   <div class="kw-ssm">
     <div class="kw-ssm-row">
       <div class="kw-ssm-box kw-ssm-dns" :class="{ 'is-lit': step >= 0 }">
-        <div class="kw-kicker">Cluster DNS</div>
+        <div class="kw-kicker">DNS do cluster</div>
         <code class="kw-ssm-code">{{ dns() }}</code>
-        <div class="kw-ssm-sub">short name: <code>{{ serviceName }}</code></div>
+        <div class="kw-ssm-sub">nome curto: <code>{{ serviceName }}</code></div>
       </div>
 
       <div class="kw-ssm-arrow" :class="{ 'is-lit': step >= 1 }">→</div>
@@ -49,7 +49,7 @@ const pods = [
           <span>Service</span>
         </div>
         <code class="kw-ssm-code">{{ serviceName }}</code>
-        <div class="kw-ssm-chip">ClusterIP · stable</div>
+        <div class="kw-ssm-chip">ClusterIP · estável</div>
         <div class="kw-ssm-sel">
           selector <code>{{ selector }}</code>
         </div>
@@ -65,7 +65,7 @@ const pods = [
         <div class="kw-ssm-eps-list">
           <code v-for="p in pods" :key="p.ip" class="kw-ssm-ep">{{ p.ip }}</code>
         </div>
-        <div class="kw-ssm-sub">live list — rewritten on every Pod change</div>
+        <div class="kw-ssm-sub">lista viva — reescrita a cada mudança de Pod</div>
       </div>
     </div>
 
@@ -79,16 +79,16 @@ const pods = [
 
     <p class="kw-ssm-caption">
       <template v-if="step <= 1">
-        Clients dial a <strong>stable name</strong>; the Service's
-        <code>selector</code> is a continuous label query.
+        Os clientes discam um <strong>nome estável</strong>; o <code>selector</code> do
+        Service é uma consulta contínua de labels.
       </template>
       <template v-else-if="step === 2">
-        Matching Pod IPs land in an <strong>EndpointSlice</strong> — not the legacy
-        <code>Endpoints</code> object.
+        Os IPs dos Pods que casam vão parar numa <strong>EndpointSlice</strong> — não no
+        objeto <code>Endpoints</code> legado.
       </template>
       <template v-else>
-        Pods churn beneath a fixed front door. Wrong selector → empty slice, green Service,
-        dead traffic — Lab 07's silent failure.
+        Os Pods giram embaixo de uma porta de entrada fixa. Selector errado → slice vazia,
+        Service verde, tráfego morto — a falha silenciosa do Lab 07.
       </template>
     </p>
   </div>
