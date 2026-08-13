@@ -1,22 +1,23 @@
-# Lab 25 — Security & pod escape (S25) — solutions
+# Lab 25 — Security & pod escape (S25) — soluções
 
-Use this companion after attempting the participant lab. Outputs contain representative
-names, addresses, ages, and image sizes; compare the state and meaning rather than copying
-ephemeral values literally.
+Use este companion depois de tentar o lab do participante. As saídas contêm nomes, endereços,
+idades e tamanhos de image representativos; compare o estado e o significado em vez de copiar
+literalmente valores efêmeros.
 
 ## Guided solutions
 
-### Step 0 — a throwaway cluster, and the guard that gates everything
+### Step 0 — um cluster descartável e o guard que controla tudo
 
 ```bash
 export WORKSHOP_CLUSTER_NAME=escape-lab
 kind create cluster --name "$WORKSHOP_CLUSTER_NAME"
 ```
 
-Now write the guard. Its `--claim` mode can establish the ownership marker on an existing disposable
-cluster, but only **after** the exact context, loopback API endpoint, local kind provider, and node
-metadata have all passed. The endpoint must equal the server in kind's own generated kubeconfig.
-Every later offensive step runs the stricter read-only check in the `escape` namespace.
+Agora escreva o guard. Seu modo `--claim` pode estabelecer o marcador de propriedade em um cluster
+descartável existente, mas somente **depois** que o context exato, o endpoint loopback da API, o
+provider kind local e os metadados do node tiverem todos passado. O endpoint precisa ser igual ao
+server do kubeconfig que o próprio kind gera. Todo passo ofensivo posterior roda a checagem
+read-only mais estrita no namespace `escape`.
 
 ```bash
 cat > context-check.sh <<'EOF'
@@ -144,10 +145,10 @@ kubectl get nodes
 ./context-check.sh
 ```
 
-**Task:** confirm the guard passes on your kind cluster — and understand it would **fail closed**
-anywhere else.
+**Tarefa:** confirme que o guard passa no seu cluster kind — e entenda que em qualquer outro lugar
+ele **falharia fechado** (fail closed).
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ ./context-check.sh --claim
@@ -160,24 +161,25 @@ Ownership marker created for disposable cluster 'escape-lab'.
 OK: disposable workshop kind cluster identity verified — safe to proceed.
 ```
 
-The port is assigned dynamically, so yours will differ. A name beginning with `kind-` is not enough:
-the guard also verifies the exact kubeconfig cluster and namespace, the API server from kind's own
-kubeconfig, kind's local cluster/node inventory, the node's kind provider ID, and the ownership
-marker. Any missing or ambiguous evidence prints `REFUSING…` and exits 1. The normal
-`./context-check.sh` path never creates or changes anything.
+A porta é atribuída dinamicamente, então a sua será diferente. Um nome começando com `kind-` não
+basta: o guard também verifica o cluster e o namespace exatos do kubeconfig, o API server vindo do
+próprio kubeconfig do kind, o inventário local de clusters/nodes do kind, o provider ID do node e o
+marcador de propriedade. Qualquer evidência ausente ou ambígua imprime `REFUSING…` e sai com 1. O
+caminho normal `./context-check.sh` nunca cria nem altera nada.
 </details>
 
-> **⚠️ Why this guard matters.** The next step deliberately reads the node's filesystem. That's a
-> teaching move in a cluster you'll throw away; it's a **security incident** on a shared cluster.
-> The context check is the single safety rail that keeps the offensive step where it belongs.
-> Never remove it, and never widen it to match a real cluster's context name.
+> **⚠️ Por que este guard importa.** O próximo passo lê deliberadamente o filesystem do node. Isso é
+> um recurso didático em um cluster que você vai jogar fora; em um cluster compartilhado, é um
+> **incidente de segurança**. O context check é o único trilho de segurança que mantém o passo
+> ofensivo onde ele deve ficar. Nunca o remova e nunca o alargue para casar com o nome de context de
+> um cluster real.
 
 ---
 
-### Step 1 — the permissive namespace (the door is open)
+### Step 1 — o namespace permissivo (a porta está aberta)
 
-`restricted` is opt-in. To *show* the escape first, we explicitly mark this namespace as the
-loosest standard, `privileged` — so the API server won't stop the dangerous Pod.
+O `restricted` é opt-in. Para *mostrar* o escape primeiro, marcamos explicitamente este namespace com
+o standard mais frouxo, `privileged` — assim o API server não barra o Pod perigoso.
 
 ```bash
 ./context-check.sh || { echo "guard failed — stopping"; exit 1; }
@@ -187,31 +189,31 @@ kubectl label --overwrite namespace "$NS" \
 kubectl get namespace "$NS" -o jsonpath='{.metadata.labels}' | tr ',' '\n' | grep pod-security
 ```
 
-**Task:** confirm the namespace enforces the `privileged` standard (i.e. no restrictions).
+**Tarefa:** confirme que o namespace aplica (enforce) o standard `privileged` (ou seja, nenhuma restrição).
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ kubectl get namespace "$NS" -o jsonpath='{.metadata.labels}' | tr ',' '\n' | grep pod-security
 "pod-security.kubernetes.io/enforce":"privileged"
 ```
 
-`enforce: privileged` is the **loosest** Pod Security Standard — it imposes **no** restrictions, so
-a `privileged` + `hostPath` Pod is admitted. We label it explicitly (rather than leaning on the
-default) so the contrast with `restricted` in Step 3 is unmistakable: **same namespace, one label
-changed.**
+`enforce: privileged` é o Pod Security Standard **mais frouxo** — ele impõe **nenhuma** restrição,
+então um Pod com `privileged` + `hostPath` é admitido. Nós o rotulamos explicitamente (em vez de nos
+apoiarmos no padrão) para que o contraste com o `restricted` no Step 3 seja inconfundível: **mesmo
+namespace, um label alterado.**
 </details>
 
-> **⚠️ Why this is dangerous in the real world.** A namespace with **no** enforced Pod Security
-> Standard is the default on many clusters. It means *any* Pod anyone can create — including one
-> with `privileged` + `hostPath` — is accepted. The very first hardening step on any cluster is to
-> stop leaving namespaces unlabelled.
+> **⚠️ Por que isso é perigoso no mundo real.** Um namespace **sem** nenhum Pod Security Standard
+> aplicado é o padrão em muitos clusters. Significa que *qualquer* Pod que alguém consiga criar —
+> inclusive um com `privileged` + `hostPath` — é aceito. O primeiro passo de hardening em qualquer
+> cluster é parar de deixar namespaces sem label.
 
 ---
 
-### Step 2 — the escape: read the node's filesystem from a Pod
+### Step 2 — o escape: ler o filesystem do node a partir de um Pod
 
-Run the guard, then apply the escape Pod.
+Execute o guard e depois aplique o Pod de escape.
 
 ```bash
 ./context-check.sh || { echo "guard failed — stopping"; exit 1; }
@@ -228,22 +230,22 @@ spec:
       image: alpine:3.20
       command: ["sleep", "3600"]
       securityContext:
-        privileged: true                 # near-total power on the node
+        privileged: true                 # poder quase total sobre o node
       volumeMounts:
         - name: host
-          mountPath: /host               # the node's / is now visible at /host
+          mountPath: /host               # o / do node agora fica visível em /host
   volumes:
     - name: host
       hostPath:
-        path: /                          # mount the ENTIRE host root
+        path: /                          # monta a raiz INTEIRA do host
 EOF
 
 kubectl apply -f pod-escape.yaml
 kubectl wait --for=condition=Ready pod/escape --timeout=60s
 ```
 
-**Task:** prove you're reading the **node's** filesystem — not the alpine image's — with **one
-benign read**. Compare the container's own `/etc/os-release` with the node's at `/host/etc/os-release`.
+**Tarefa:** prove que você está lendo o filesystem do **node** — e não o da image alpine — com **uma
+única leitura benigna**. Compare o `/etc/os-release` do próprio container com o do node em `/host/etc/os-release`.
 
 ```bash
 ./context-check.sh || { echo "guard failed — stopping"; exit 1; }
@@ -259,7 +261,7 @@ kubectl exec escape -- ls /host/etc/kubernetes 2>/dev/null || \
   kubectl exec escape -- ls /host/etc | head
 ```
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 == container image OS ==
@@ -279,70 +281,70 @@ pki
 scheduler.conf
 ```
 
-The container's own OS is **Alpine** (its image), but `/host/etc/os-release` reports **Debian** —
-the kind **node**'s OS. Those are two different operating systems: the second read came from the
-node's real root filesystem, mounted in by `hostPath: /`. The `ls` shows the node's
-`/etc/kubernetes` directory (kubeconfigs, the `pki` cert dir, the static-pod `manifests` dir) is
-sitting right there — **we list it to prove reach and stop; we do not open any of it.**
+O SO do próprio container é **Alpine** (a image dele), mas o `/host/etc/os-release` reporta
+**Debian** — o SO do **node** kind. São dois sistemas operacionais diferentes: a segunda leitura veio
+do filesystem raiz real do node, montado por `hostPath: /`. O `ls` mostra que o diretório
+`/etc/kubernetes` do node (kubeconfigs, o diretório de certificados `pki`, o diretório `manifests` de
+static Pods) está bem ali — **listamos apenas para provar o alcance e paramos; não abrimos nada disso.**
 </details>
 
-> **⚠️ Why this is the whole ballgame.** With `/host` = the node's `/`, this same *read-write*
-> access reaches, on a real cluster: the **kubelet's client certificate and the cluster CA**
-> (`/host/etc/kubernetes/pki`), **every Pod's projected ServiceAccount tokens and Secrets** under
-> `/host/var/lib/kubelet/pods/…`, and the **static-pod directory** `/host/etc/kubernetes/manifests`
-> — write a manifest there and the kubelet runs it **as root on the node**. `privileged` piles on
-> device access and a relaxed seccomp profile. We demonstrate the *access* with one harmless read
-> and stop; **do not** read tokens or write anything. The point is made — now we block it.
+> **⚠️ Por que aqui está o jogo inteiro.** Com `/host` = o `/` do node, esse mesmo acesso *de leitura
+> e escrita* alcança, em um cluster real: o **certificado de cliente do kubelet e a CA do cluster**
+> (`/host/etc/kubernetes/pki`), **os tokens de ServiceAccount projetados e os Secrets de todos os Pods**
+> em `/host/var/lib/kubelet/pods/…` e o **diretório de static Pods** `/host/etc/kubernetes/manifests`
+> — escreva um manifesto ali e o kubelet o executa **como root no node**. O `privileged` ainda soma
+> acesso a devices e um perfil seccomp relaxado. Demonstramos o *acesso* com uma leitura inofensiva
+> e paramos; **não** leia tokens nem escreva nada. O ponto está feito — agora vamos bloqueá-lo.
 
-**Question:** we only ran `sleep` and one `cat`. Which **single setting** most enabled this escape?
+**Pergunta:** só executamos `sleep` e um `cat`. Qual **configuração isolada** mais viabilizou esse escape?
 
-<details><summary>Answer</summary>
+<details><summary>Resposta</summary>
 
-**`hostPath: { path: / }`** is what actually exposed the node's filesystem — it's the door the read
-walked through. `privileged: true` is the bigger *capability* lever in general (device access,
-relaxed seccomp, near-all caps, and it's needed to *write* freely across the host), but for *this
-specific read* the hostPath mount is the enabler: without it there is no `/host` to read. In
-practice they travel together, and — crucially — **`restricted` forbids both.** That's why one
-policy closes the whole class of door, which is exactly Step 3.
+**`hostPath: { path: / }`** é o que de fato expôs o filesystem do node — é a porta por onde a leitura
+passou. `privileged: true` é a alavanca de *capability* maior no geral (acesso a devices, seccomp
+relaxado, quase todas as caps, e é o que se precisa para *escrever* livremente pelo host), mas para
+*esta leitura específica* o mount de hostPath é o viabilizador: sem ele não existe `/host` para ler.
+Na prática, os dois andam juntos e — crucialmente — **o `restricted` proíbe ambos.** É por isso que
+uma única policy fecha a classe inteira de porta, que é exatamente o Step 3.
 </details>
 
-> **⚠️ Why this is dangerous.** A single innocuous-looking `hostPath` line — no `privileged`
-> needed — can silently hand a Pod the node's whole disk. It's why `hostPath` is treated as a
-> `baseline`/`restricted` violation on its own: the volume type *is* the risk, regardless of what
-> the container does with it.
+> **⚠️ Por que isso é perigoso.** Uma única linha de `hostPath` de aparência inofensiva — sem
+> precisar de `privileged` — pode entregar silenciosamente ao Pod o disco inteiro do node. É por isso
+> que o `hostPath` é tratado como violação de `baseline`/`restricted` por si só: o tipo de volume *é*
+> o risco, independentemente do que o container faça com ele.
 
 ---
 
-### Step 3 — the fix: delete first, then let `restricted` reject the same Pod
+### Step 3 — o fix: delete primeiro, depois deixe o `restricted` rejeitar o mesmo Pod
 
-**Order matters.** Pod Security Admission gates Pods at **CREATE** time only. Labelling the
-namespace `restricted` does **not** evict the already-running escape Pod — so we **delete it
-first**, then tighten the namespace, then try to re-create the *identical* Pod and watch admission
-refuse it.
+**A ordem importa.** O Pod Security Admission barra Pods apenas no momento do **CREATE**. Rotular o
+namespace como `restricted` **não** despeja o Pod de escape que já está rodando — então **deletamos
+ele primeiro**, depois apertamos o namespace, e então tentamos recriar o Pod *idêntico* e observamos
+o admission recusá-lo.
 
 ```bash
 ./context-check.sh || { echo "guard failed — stopping"; exit 1; }
 
-# 1) remove the running escape Pod (admission won't touch what already exists)
+# 1) remova o Pod de escape em execução (o admission não toca no que já existe)
 kubectl delete -f pod-escape.yaml
 
-# 2) tighten the SAME namespace to the restricted standard
+# 2) aperte o MESMO namespace para o standard restricted
 kubectl label --overwrite namespace "$NS" \
   pod-security.kubernetes.io/enforce=restricted \
   pod-security.kubernetes.io/warn=restricted
 
-# 3) re-apply the EXACT SAME escape manifest
+# 3) reaplique EXATAMENTE O MESMO manifesto de escape
 kubectl apply -f pod-escape.yaml
 ```
 
-**Task:** the re-apply is **rejected**. Read the error — is the Pod created, and which dangerous
-settings are named?
+**Tarefa:** o reapply é **rejeitado**. Leia o erro — o Pod chega a ser criado e quais configurações
+perigosas são nomeadas?
 
 ```bash
-kubectl get pod escape        # is it there?
+kubectl get pod escape        # ele está lá?
 ```
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ kubectl apply -f pod-escape.yaml
@@ -359,45 +361,46 @@ $ kubectl get pod escape
 Error from server (NotFound): pods "escape" not found
 ```
 
-The **exact same manifest** that ran in Step 2 is now refused. The message names the two escape
-levers directly — **`privileged`** and **`restricted volume types … "hostPath"`** — alongside the
-four least-privilege gates from S17. This is **admission** enforcement: the API server rejected the
-request, so the Pod was **never created** (`NotFound`). One namespace label closed the door.
+O **mesmo manifesto, exatamente igual**, que rodou no Step 2 agora é recusado. A mensagem nomeia as
+duas alavancas de escape diretamente — **`privileged`** e **`restricted volume types … "hostPath"`** —
+ao lado dos quatro gates de menor privilégio do S17. Isso é enforcement de **admission**: o API
+server rejeitou a requisição, então o Pod **nunca foi criado** (`NotFound`). Um único label de
+namespace fechou a porta.
 </details>
 
-> **⚠️ Why delete-then-relabel (and not relabel-first).** PSA is an **admission** controller — it
-> only runs when an object is **created or updated**, never on objects already stored. If you label
-> the namespace `restricted` while the escape Pod is running, the Pod **keeps running** — the
-> policy doesn't retroactively kill it. That's a real operational gotcha: enforcing `restricted`
-> protects you from *new* violating Pods but doesn't remediate existing ones. So we delete first,
-> then prove the gate blocks the re-create.
+> **⚠️ Por que deletar-depois-rotular (e não rotular primeiro).** O PSA é um controller de
+> **admission** — ele só roda quando um objeto é **criado ou atualizado**, nunca sobre objetos já
+> armazenados. Se você rotular o namespace como `restricted` enquanto o Pod de escape está rodando,
+> o Pod **continua rodando** — a policy não o mata retroativamente. Essa é uma pegadinha operacional
+> real: aplicar o `restricted` protege você de Pods violadores *novos*, mas não remedia os existentes.
+> Por isso deletamos primeiro e só então provamos que o gate bloqueia a recriação.
 
-**Question:** the escape Pod named **`privileged`** and **`hostPath`**, yet the error *also* lists
-`runAsNonRoot`, `allowPrivilegeEscalation`, `capabilities`, and `seccompProfile`. Why all six?
+**Pergunta:** o Pod de escape declarou **`privileged`** e **`hostPath`**, mas o erro *também* lista
+`runAsNonRoot`, `allowPrivilegeEscalation`, `capabilities` e `seccompProfile`. Por que as seis?
 
-<details><summary>Answer</summary>
+<details><summary>Resposta</summary>
 
-`restricted` is a **superset** of `baseline`. **`baseline`** blocks the obviously-dangerous
-host-facing settings — that's where **`privileged`** and **`hostPath`** ("restricted volume types")
-come from. **`restricted`** then *adds* the four least-privilege requirements from S17
-(`runAsNonRoot`, `allowPrivilegeEscalation: false`, drop `ALL`, `seccompProfile`). The escape Pod
-sets none of the four, so it trips **all six** rules at once. Blocking the escape and demanding
-least privilege are the same policy — which is why `restricted` is the highest-leverage single
-control.
+O `restricted` é um **superset** do `baseline`. O **`baseline`** bloqueia as configurações
+obviamente perigosas voltadas ao host — é daí que vêm **`privileged`** e **`hostPath`** (“restricted
+volume types”). O **`restricted`** então *acrescenta* os quatro requisitos de menor privilégio do S17
+(`runAsNonRoot`, `allowPrivilegeEscalation: false`, drop `ALL`, `seccompProfile`). O Pod de escape
+não define nenhum dos quatro, então ele tropeça nas **seis** regras de uma vez. Bloquear o escape e
+exigir menor privilégio são a mesma policy — e é por isso que o `restricted` é o controle isolado de
+maior alavancagem.
 </details>
 
-> **⚠️ Why this matters for defence.** The escape settings (`privileged`, `hostPath`) and the
-> least-privilege settings are enforced by the **same** namespace label. You don't choose between
-> "block escapes" and "least privilege" — `restricted` gives you both, and a Pod that skips the
-> least-privilege fields is treated as just as suspect as one that mounts the host.
+> **⚠️ Por que isso importa para a defesa.** As configurações de escape (`privileged`, `hostPath`) e
+> as de menor privilégio são aplicadas pelo **mesmo** label de namespace. Você não escolhe entre
+> “bloquear escapes” e “least privilege” — o `restricted` te dá os dois, e um Pod que pula os campos
+> de menor privilégio é tratado como tão suspeito quanto um que monta o host.
 
 ---
 
-### Step 4 — the hardened Pod the gate admits
+### Step 4 — o Pod hardened que o gate admite
 
-Same workload (alpine running `sleep`), stripped of the escape levers and hardened to satisfy
-`restricted`. `alpine` runs happily at **any** UID, so `runAsUser: 1000` won't CrashLoop the way a
-root-only image would (the S17 landmine).
+O mesmo workload (alpine rodando `sleep`), sem as alavancas de escape e endurecido para satisfazer o
+`restricted`. O `alpine` roda tranquilo com **qualquer** UID, então `runAsUser: 1000` não vai
+CrashLoopar como faria uma image que só roda como root (a mina terrestre do S17).
 
 ```bash
 ./context-check.sh || { echo "guard failed — stopping"; exit 1; }
@@ -411,7 +414,7 @@ metadata:
 spec:
   securityContext:
     runAsNonRoot: true
-    runAsUser: 1000                      # explicit non-root UID (alpine runs at any UID)
+    runAsUser: 1000                      # UID non-root explícito (o alpine roda com qualquer UID)
     seccompProfile: { type: RuntimeDefault }
   containers:
     - name: shell
@@ -420,22 +423,22 @@ spec:
       securityContext:
         allowPrivilegeEscalation: false
         capabilities: { drop: ["ALL"] }
-      # no privileged, no hostPath — the escape levers are gone
+      # sem privileged, sem hostPath — as alavancas de escape sumiram
 EOF
 
 kubectl apply -f pod-hardened.yaml
-kubectl get pod hardened -w        # Ctrl-C once it's Running
+kubectl get pod hardened -w        # Ctrl-C assim que estiver Running
 ```
 
-**Task:** confirm the hardened Pod is **admitted and running**, and that it is genuinely non-root
-with no view of the host.
+**Tarefa:** confirme que o Pod hardened é **admitido e fica Running**, e que ele é genuinamente
+non-root, sem visão nenhuma do host.
 
 ```bash
 kubectl exec hardened -- id
 kubectl exec hardened -- ls /host 2>&1 || true
 ```
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ kubectl apply -f pod-hardened.yaml
@@ -453,41 +456,43 @@ ls: /host: No such file or directory
 command terminated with exit code 1
 ```
 
-The same gate that **rejected** the escape Pod **admits** this one — all six rules pass:
-`privileged` unset, no `hostPath` volume, non-root UID **1000**, no priv-esc, all caps dropped,
-`RuntimeDefault` seccomp. `id` shows **uid=1000** (not 0), and there is **no `/host`** — the host
-filesystem is gone. Same namespace, same policy; the **manifest** met the bar.
+O mesmo gate que **rejeitou** o Pod de escape **admite** este aqui — as seis regras passam:
+`privileged` não definido, nenhum volume `hostPath`, UID non-root **1000**, sem priv-esc, todas as
+caps removidas, seccomp `RuntimeDefault`. O `id` mostra **uid=1000** (não 0), e **não existe
+`/host`** — o filesystem do host sumiu. Mesmo namespace, mesma policy; foi o **manifesto** que
+atingiu o padrão.
 </details>
 
-> **⚠️ Why `runAsUser: 1000` here.** `runAsNonRoot: true` is a *promise the image must keep* (the
-> S17 landmine): admission only checks the field, but the **kubelet** refuses to start a container
-> whose image resolves to UID 0. A root-only image would admit and then **CrashLoop** with
-> `container has runAsNonRoot and image will run as root`. `alpine` runs at **any** UID, so pinning
-> `runAsUser: 1000` guarantees a non-root user the image actually supports.
+> **⚠️ Por que `runAsUser: 1000` aqui.** `runAsNonRoot: true` é uma *promessa que a image precisa
+> cumprir* (a mina terrestre do S17): o admission só checa o campo, mas o **kubelet** se recusa a
+> iniciar um container cuja image resolve para o UID 0. Uma image que só roda como root seria
+> admitida e depois entraria em **CrashLoop** com
+> `container has runAsNonRoot and image will run as root`. O `alpine` roda com **qualquer** UID,
+> então fixar `runAsUser: 1000` garante um usuário non-root que a image realmente suporta.
 
-**Question:** across the whole lab — which **single defence** was highest-leverage?
+**Pergunta:** no lab inteiro — qual **defesa isolada** teve a maior alavancagem?
 
-<details><summary>Answer</summary>
+<details><summary>Resposta</summary>
 
-**Enforcing the `restricted` Pod Security Standard on the namespace** — one label. It's the
-highest-leverage control because it blocks the *entire* class of escape at **admission**, before a
-violating Pod can exist: it forbids `privileged`, `hostPath` and host namespaces (via `baseline`)
-**and** demands least privilege (the four `restricted` fields). No image change, no code change, no
-runtime agent — a single namespace label rejected the exact Pod that had just read the node. Pair
-it with image hygiene (S02), NetworkPolicy (S18), and scanning/detection for defence in depth, but
-if you do **one** thing, label your namespaces `restricted`.
+**Aplicar o Pod Security Standard `restricted` no namespace** — um label. É o controle de maior
+alavancagem porque bloqueia a classe *inteira* de escape no **admission**, antes que um Pod violador
+possa existir: ele proíbe `privileged`, `hostPath` e os host namespaces (via `baseline`) **e** exige
+menor privilégio (os quatro campos do `restricted`). Nenhuma mudança de image, nenhuma mudança de
+código, nenhum agent de runtime — um único label de namespace rejeitou exatamente o Pod que acabara
+de ler o node. Combine isso com higiene de image (S02), NetworkPolicy (S18) e scanning/detecção para
+defesa em profundidade, mas se você fizer **uma** coisa só, rotule seus namespaces como `restricted`.
 </details>
 
-> **⚠️ Why "highest-leverage" is the point.** Runtime detection catches an escape *after* it
-> happens; image scanning catches a *known* CVE. Admission (`restricted`) is the only layer that
-> stops the dangerous Pod from **ever existing** — it's proactive, needs no agent, and covers Pods
-> you haven't even written yet. That's why it's the first thing to turn on, not the last.
+> **⚠️ Por que “maior alavancagem” é o ponto.** A detecção em runtime pega um escape *depois* que ele
+> acontece; o scanning de image pega uma CVE *conhecida*. O admission (`restricted`) é a única camada
+> que impede o Pod perigoso de **sequer existir** — é proativo, não precisa de agent e cobre Pods que
+> você nem escreveu ainda. É por isso que ele é a primeira coisa a ligar, não a última.
 
-## Stretch (optional) — soft-launch with `warn` before you `enforce`
+## Stretch (opcional) — soft-launch com `warn` antes do `enforce`
 
-On a real cluster you don't flip `enforce=restricted` on a busy namespace blind — you turn on
-**`warn`** first to discover what *would* break, fix it, then enforce. Prove the difference against
-the escape Pod on a fresh scratch namespace.
+Em um cluster real você não vira o `enforce=restricted` às cegas em um namespace movimentado — você
+liga o **`warn`** primeiro para descobrir o que *quebraria*, corrige e só então aplica o enforce.
+Prove a diferença contra o Pod de escape em um namespace de rascunho novo.
 
 ```bash
 ./context-check.sh || { echo "guard failed — stopping"; exit 1; }
@@ -497,7 +502,7 @@ kubectl apply -n s25-warn -f pod-escape.yaml
 kubectl get pod escape -n s25-warn
 ```
 
-<details><summary>What you're looking at</summary>
+<details><summary>O que você está vendo</summary>
 
 ```console
 $ kubectl apply -n s25-warn -f pod-escape.yaml
@@ -511,52 +516,53 @@ NAME     READY   STATUS    RESTARTS   AGE
 escape   1/1     Running   0          6s
 ```
 
-Under **`warn`**, the API server returns the *same* six-violation list as a **`Warning:`** — but it
-**creates the Pod anyway** (there's the escape running again). `warn` is discovery, not a block;
-only **`enforce`** rejects. That's the real-world migration play: `warn` (and `audit`) to find
-offenders across a namespace, fix them, **then** `enforce`. Because this namespace only `warn`s, the
-escape Pod runs — so tear it down: Namespace delete is forbidden here; use
-`kind delete cluster` (disposable) or remove the Namespace out-of-band.
+Sob **`warn`**, o API server devolve a *mesma* lista de seis violações como um **`Warning:`** — mas
+**cria o Pod mesmo assim** (lá está o escape rodando de novo). O `warn` é descoberta, não bloqueio;
+só o **`enforce`** rejeita. Essa é a jogada real de migração: `warn` (e `audit`) para encontrar os
+infratores em um namespace, corrigi-los e **só então** `enforce`. Como este namespace só emite
+`warn`, o Pod de escape roda — então derrube tudo: deletar Namespace é proibido aqui; use
+`kind delete cluster` (descartável) ou remova o Namespace por fora.
 </details>
 
-> **⚠️ Why the stretch stays kind-only too.** `warn` **creates** the Pod — so this scratch namespace
-> briefly runs a privileged, host-mounting Pod exactly like Step 2. That's fine in your disposable
-> kind cluster and nowhere else. Delete the namespace when done, or just `kind delete cluster`.
+> **⚠️ Por que o stretch também continua kind-only.** O `warn` **cria** o Pod — então este namespace
+> de rascunho roda por um instante um Pod privileged que monta o host, exatamente como no Step 2.
+> Isso está ok no seu cluster kind descartável e em lugar nenhum além dele. Delete o namespace quando
+> terminar, ou simplesmente rode `kind delete cluster`.
 
 ## Expected state / output
 
-- A container is a **process on the node's kernel**: `hostPath: /` handed the Pod the **node's**
-  filesystem (proved by the Debian-vs-Alpine `os-release` diff), and `privileged` handed it
-  near-total power. The escape needed **no exploit** — just two supported Pod fields.
-- **Admission gates CREATE, not existing Pods:** labelling `restricted` didn't evict the running
-  escape Pod — you had to **delete first**, which is exactly why the fix order is delete → relabel
-  → re-apply.
-- The **exact same manifest** that ran under `enforce: privileged` is **rejected** under
-  `enforce: restricted` — the error names **`privileged`** and **`hostPath`** plus the four S17
-  least-privilege gates (six rules), and the Pod is **never created**.
-- The **hardened** Pod — same workload, escape levers removed, `restricted`-compliant — is
-  **admitted** and runs as **uid 1000** with no `/host`.
-- **Highest-leverage defence:** `enforce: restricted` on the namespace, at admission. Everything
-  else is defence in depth around it.
+- Um container é um **processo no kernel do node**: `hostPath: /` entregou ao Pod o filesystem do
+  **node** (provado pelo diff de `os-release` Debian-versus-Alpine), e `privileged` lhe deu poder
+  quase total. O escape **não precisou de exploit** — apenas dois campos suportados do Pod.
+- **O admission barra o CREATE, não Pods existentes:** rotular com `restricted` não despejou o Pod de
+  escape em execução — você teve que **deletar primeiro**, e é exatamente por isso que a ordem do fix
+  é deletar → rotular → reaplicar.
+- O **mesmo manifesto, exatamente igual**, que rodou sob `enforce: privileged` é **rejeitado** sob
+  `enforce: restricted` — o erro nomeia **`privileged`** e **`hostPath`** mais os quatro gates de
+  menor privilégio do S17 (seis regras), e o Pod **nunca é criado**.
+- O Pod **hardened** — mesmo workload, alavancas de escape removidas, em conformidade com o
+  `restricted` — é **admitido** e roda como **uid 1000**, sem `/host`.
+- **Defesa de maior alavancagem:** `enforce: restricted` no namespace, no admission. Todo o resto é
+  defesa em profundidade em volta disso.
 
-Representative statuses include Ready/Running Pods, NetworkPolicy timeouts, RBAC Forbidden,
-Helm revision history, Application Synced/Healthy, Certificate Ready, or Prometheus targets —
-compare meaning, not ephemeral names.
+Os status representativos incluem Pods Ready/Running, timeouts de NetworkPolicy, Forbidden de RBAC,
+histórico de revisões do Helm, Application Synced/Healthy, Certificate Ready ou targets do
+Prometheus — compare o significado, não nomes efêmeros.
 
 ## Explanation
 
-Pod Security Admission evaluates CREATE/UPDATE, not existing Pods, so enforce
-is not a runtime kill switch. The safe remediation order is delete the dangerous workload, then
-rely on restricted to keep it from returning — which is why the lab is kind-only and disposable.
+O Pod Security Admission avalia CREATE/UPDATE, não Pods já existentes — é essa a causa de o enforce
+não ser um kill switch de runtime. A ordem segura de remediação é deletar o workload perigoso e então
+contar com o restricted para impedir que ele volte — e é por isso que o lab é kind-only e descartável.
 
-The guided steps above prove the control-plane behaviour for this section; read Events and
-status fields when a one-line phase is ambiguous.
+Os passos guiados acima provam o comportamento do control plane desta seção; leia os Events e os
+campos de status quando uma fase de uma linha só for ambígua.
 
 ## Troubleshooting and recovery
 
-Re-apply the lab's named manifests with `kubectl apply -f <file> -n "$NS"` after fixing the
-broken field, or delete only the labelled objects from Cleanup / reset and restart the guided
-task. Prefer `kubectl describe` Events over guessing. Do not run broad cluster deletes.
+Reaplique os manifestos nomeados do lab com `kubectl apply -f <file> -n "$NS"` depois de corrigir o
+campo quebrado, ou delete apenas os objetos rotulados do Cleanup / reset e recomece o guided
+task. Prefira os Events do `kubectl describe` a ficar chutando. Não execute deletes amplos no cluster.
 
 ## Challenge solution
 
@@ -566,25 +572,25 @@ task. Prefer `kubectl describe` Events over guessing. Do not run broad cluster d
 ./context-check.sh
 kubectl get pod -n "$NS" -l app=s25
 kubectl label --overwrite namespace "$NS" pod-security.kubernetes.io/enforce=restricted
-kubectl get pod -n "$NS" -l app=s25   # still Running — admission does not evict
+kubectl get pod -n "$NS" -l app=s25   # ainda Running — o admission não despeja
 kubectl delete pod -n "$NS" -l app=s25
-kubectl apply -f pod-escape.yaml      # expect REJECTED
-kubectl apply -f pod-hardened.yaml    # expect admitted
+kubectl apply -f pod-escape.yaml      # espere REJEITADO
+kubectl apply -f pod-hardened.yaml    # espere admitido
 ```
 
 ### Expected state / output
 
-The running escape Pod survives the label change. After delete, pod-escape.yaml is
-rejected naming privileged/hostPath (and related) rules; pod-hardened.yaml is created and runs
-without host mounts.
+O Pod de escape em execução (`Running`) sobrevive à mudança de label. Depois do delete, o
+pod-escape.yaml é rejeitado nomeando as regras de privileged/hostPath (e relacionadas); o
+pod-hardened.yaml é criado e roda sem mounts do host.
 
 ### Explanation
 
-Pod Security Admission evaluates CREATE/UPDATE, not existing Pods, so enforce
-is not a runtime kill switch. The safe remediation order is delete the dangerous workload, then
-rely on restricted to keep it from returning — which is why the lab is kind-only and disposable.
+O Pod Security Admission avalia CREATE/UPDATE, não Pods já existentes — é essa a causa de o enforce
+não ser um kill switch de runtime. A ordem segura de remediação é deletar o workload perigoso e então
+contar com o restricted para impedir que ele volte — e é por isso que o lab é kind-only e descartável.
 
 ### Hints
 
-Stay inside the context-check.sh guard; use kubectl get pod -w around the label
-change; compare the restricted violation list to privileged and hostPath.
+Permaneça dentro do guard context-check.sh; use kubectl get pod -w em torno da mudança de
+label; compare a lista de violações do restricted com privileged e hostPath.

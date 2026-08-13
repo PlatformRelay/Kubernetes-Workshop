@@ -1,14 +1,14 @@
-# Lab 10 — ConfigMap & Secret (S10) — solutions
+# Lab 10 — ConfigMap & Secret (S10) — soluções
 
-Use this companion after attempting the participant lab. Outputs contain representative
-names, addresses, ages, and image sizes; compare the state and meaning rather than copying
-ephemeral values literally.
+Use este companion depois de tentar o lab do participante. As saídas contêm nomes, endereços,
+idades e tamanhos de image representativos; compare o estado e o significado em vez de copiar
+literalmente valores efêmeros.
 
 ## Guided solutions
 
-### Step 1 — a ConfigMap, consumed as environment variables
+### Step 1 — um ConfigMap, consumido como variáveis de ambiente
 
-Create the ConfigMap, then a Deployment that pulls **every** key in as an env var with
+Crie o ConfigMap, depois um Deployment que puxa **todas** as chaves como env vars com
 `envFrom`.
 
 ```bash
@@ -20,7 +20,7 @@ metadata:
   labels:
     app: s10
 data:
-  VERSION: "config-v1"    # the demo app prints $VERSION in its response body
+  VERSION: "config-v1"    # o app de demo imprime $VERSION no corpo da própria resposta
   LOG_LEVEL: "info"
 EOF
 
@@ -32,7 +32,7 @@ metadata:
   labels:
     app: s10
 spec:
-  replicas: 1                      # one replica → one Pod answers every request
+  replicas: 1                      # uma réplica → um Pod responde toda request
   selector:
     matchLabels:
       app: s10
@@ -48,7 +48,7 @@ spec:
             - containerPort: 8080
           envFrom:
             - configMapRef:
-                name: web-config   # every key becomes an env var
+                name: web-config   # cada chave vira uma env var
 EOF
 
 kubectl apply -f configmap.yaml
@@ -56,16 +56,17 @@ kubectl apply -f deployment-env.yaml
 kubectl rollout status deploy/web
 ```
 
-**Task:** confirm the env vars actually reached the container. The demo app prints its
-`VERSION` env var in its own response body, so fetch it (you will reuse these two lines
-all lab — Pod IPs change on every rollout, so always re-read `POD_IP` first):
+**Tarefa:** confirme que as env vars realmente chegaram ao container. O app de demo imprime
+sua env var `VERSION` no corpo da própria resposta, então busque-a (você vai reutilizar
+estas duas linhas o lab inteiro — IPs de Pod mudam a cada rollout, então sempre releia
+`POD_IP` primeiro):
 
 ```bash
 POD_IP=$(kubectl get pod -l app=s10 -o jsonpath='{.items[0].status.podIP}')
 kubectl run tmp -i --rm --restart=Never --image=busybox:1.37 -- wget -qO- "http://$POD_IP:8080"
 ```
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ kubectl run tmp -i --rm --restart=Never --image=busybox:1.37 -- wget -qO- "http://$POD_IP:8080"
@@ -75,34 +76,35 @@ requests served: 1
 ready: true
 ```
 
-The first line says **`config-v1`** — the image was built as `v1`, but the ConfigMap's
-`VERSION` key overrode it via the environment. That one line is proof the injection worked.
-`envFrom` + `configMapRef` maps **each key** of the ConfigMap to an env var of the same
-name (so `LOG_LEVEL` is set too — `kubectl describe pod -l app=s10` shows the
-`Environment Variables from: web-config ConfigMap` wiring). Use `valueFrom` +
-`configMapKeyRef` instead when you want just one key, possibly under a different variable
-name.
+A primeira linha diz **`config-v1`** — a image foi construída como `v1`, mas a chave
+`VERSION` do ConfigMap a sobrescreveu via ambiente. Essa única linha é a prova de que a
+injeção funcionou. `envFrom` + `configMapRef` mapeia **cada chave** do ConfigMap para uma
+env var de mesmo nome (então `LOG_LEVEL` também é definida — `kubectl describe pod -l app=s10`
+mostra a fiação `Environment Variables from: web-config ConfigMap`). Use `valueFrom` +
+`configMapKeyRef` quando quiser apenas uma chave, possivelmente sob um nome de variável
+diferente.
 </details>
 
-**Question:** where do the env var **names** come from — the ConfigMap keys, or something
-you set on the container?
+**Pergunta:** de onde vêm os **nomes** das env vars — das chaves do ConfigMap, ou de algo
+que você definiu no container?
 
-<details><summary>Answer</summary>
+<details><summary>Resposta</summary>
 
-With `envFrom`, the variable names **are** the ConfigMap keys verbatim (`VERSION`,
-`LOG_LEVEL`). That's why keys meant for `envFrom` must be valid env var names. With
-`valueFrom.configMapKeyRef` you pick both the source key **and** the target variable name,
-so you can rename or expose only one key.
+Com `envFrom`, os nomes das variáveis **são** as chaves do ConfigMap ao pé da letra
+(`VERSION`, `LOG_LEVEL`). É por isso que chaves destinadas ao `envFrom` precisam ser nomes
+válidos de env var. Com `valueFrom.configMapKeyRef` você escolhe tanto a chave de origem
+**quanto** o nome da variável de destino, então pode renomear ou expor apenas uma chave.
 </details>
 
 ---
 
-### Step 2 — mount the SAME ConfigMap as files
+### Step 2 — monte o MESMO ConfigMap como arquivos
 
-The same object, a second way in. Mount it as a **whole directory** (no `subPath`) so each
-key becomes a file — and so it stays **updatable** later. The demo app's image is
-**distroless** (no shell, no `ls`/`cat`), so the manifest also adds a tiny **toolbox**
-sidecar that mounts the same volume — that is the honest way to look at mounted files.
+O mesmo objeto, uma segunda porta de entrada. Monte-o como um **diretório inteiro** (sem
+`subPath`) para que cada chave vire um arquivo — e para que ele continue **atualizável**
+mais tarde. A image do app de demo é **distroless** (sem shell, sem `ls`/`cat`), então o
+manifesto também adiciona um pequeno sidecar **toolbox** que monta o mesmo volume — essa é
+a forma honesta de olhar arquivos montados.
 
 ```bash
 cat > deployment-mounted.yaml <<'EOF'
@@ -132,9 +134,9 @@ spec:
                 name: web-config
           volumeMounts:
             - name: config
-              mountPath: /etc/web-config     # whole directory — NOT subPath
-        - name: toolbox                      # the app image has no shell —
-          image: busybox:1.37                # this sidecar is our window in
+              mountPath: /etc/web-config     # diretório inteiro — NÃO subPath
+        - name: toolbox                      # a image do app não tem shell —
+          image: busybox:1.37                # este sidecar é nossa janela para dentro
           command: ["sleep", "infinity"]
           volumeMounts:
             - name: config
@@ -149,7 +151,7 @@ kubectl apply -f deployment-mounted.yaml
 kubectl rollout status deploy/web
 ```
 
-**Task:** list the mounted files and read one — from the **toolbox** container
+**Tarefa:** liste os arquivos montados e leia um — a partir do container **toolbox**
 (`-c toolbox`).
 
 ```bash
@@ -157,7 +159,7 @@ kubectl exec deploy/web -c toolbox -- ls /etc/web-config
 kubectl exec deploy/web -c toolbox -- cat /etc/web-config/VERSION
 ```
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ kubectl exec deploy/web -c toolbox -- ls /etc/web-config
@@ -167,29 +169,29 @@ $ kubectl exec deploy/web -c toolbox -- cat /etc/web-config/VERSION
 config-v1
 ```
 
-Each ConfigMap **key** is projected as a **file** whose contents are the value. Both
-containers mount the same volume, so what the toolbox sees is exactly what the app sees.
-Because we mounted the whole directory (no `subPath`), Kubernetes keeps this directory in
-sync with the object — you'll use that in Step 4.
+Cada **chave** do ConfigMap é projetada como um **arquivo** cujo conteúdo é o valor. Os
+dois containers montam o mesmo volume, então o que o toolbox vê é exatamente o que o app
+vê. Como montamos o diretório inteiro (sem `subPath`), o Kubernetes mantém esse diretório
+em sincronia com o objeto — você vai usar isso no Step 4.
 </details>
 
-**Question:** we mounted at `/etc/web-config` without `subPath`. Why does that matter for
-what comes later?
+**Pergunta:** montamos em `/etc/web-config` sem `subPath`. Por que isso importa para o que
+vem a seguir?
 
-<details><summary>Answer</summary>
+<details><summary>Resposta</summary>
 
-A **whole-directory** ConfigMap mount is refreshed by the kubelet when the object changes
-(within ~60–90s). A **`subPath`** mount copies the file **once** at mount time and then
-**never** updates — it behaves like an env var. If you need live updates from a mounted
-file, do **not** use `subPath`.
+Um mount de ConfigMap em **diretório inteiro** é atualizado pelo kubelet quando o objeto
+muda (em ~60–90s). Um mount com **`subPath`** copia o arquivo **uma vez**, no momento do
+mount, e depois **nunca** mais atualiza — ele se comporta como uma env var. Se você precisa
+de atualizações ao vivo a partir de um arquivo montado, **não** use `subPath`.
 </details>
 
 ---
 
-### Step 3 — a Secret, consumed as an env var, then decoded
+### Step 3 — um Secret, consumido como env var, depois decodificado
 
-Sensitive values go in a Secret. Add one key to the container as `API_TOKEN`, then prove
-the value is only **base64-encoded**, not encrypted.
+Valores sensíveis vão em um Secret. Adicione uma chave ao container como `API_TOKEN`,
+depois prove que o valor é apenas **codificado em base64**, não criptografado.
 
 ```bash
 cat > secret.yaml <<'EOF'
@@ -201,7 +203,7 @@ metadata:
     app: s10
 type: Opaque
 stringData:
-  API_TOKEN: "s3cr3t"              # stringData: you write plaintext; k8s stores base64
+  API_TOKEN: "s3cr3t"              # stringData: você escreve plaintext; o k8s armazena base64
 EOF
 
 cat > deployment-secret.yaml <<'EOF'
@@ -254,18 +256,18 @@ kubectl apply -f secret.yaml
 kubectl apply -f deployment-secret.yaml
 kubectl rollout status deploy/web
 
-# the wiring, as the kubelet sees it:
+# a fiação, como o kubelet a vê:
 kubectl describe pod -l app=s10 | grep -A2 'API_TOKEN'
 ```
 
-**Task:** read the Secret straight from the API and recover the plaintext.
+**Tarefa:** leia o Secret direto da API e recupere o plaintext.
 
 ```bash
 kubectl get secret web-secret -o jsonpath='{.data.API_TOKEN}'; echo
 kubectl get secret web-secret -o jsonpath='{.data.API_TOKEN}' | base64 -d; echo
 ```
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ kubectl describe pod -l app=s10 | grep -A2 'API_TOKEN'
@@ -276,91 +278,91 @@ $ kubectl get secret web-secret -o jsonpath='{.data.API_TOKEN}' | base64 -d; ech
 s3cr3t
 ```
 
-Note what `describe` shows: the **reference** (`<set to the key … in secret …>`), never
-the value — one of the Secret's handling guarantees. But the value itself is hardly
-guarded: the stored value is `czNjcjN0` — plain **base64**, reversible by anyone with `get` on the
-Secret. A Secret is **not** encrypted at the API. Its real protections are **RBAC** (who
-may read it) and **etcd encryption-at-rest** (who may read the disk). `stringData` is a
-write-time convenience — you write plaintext, the API stores base64 under `data`.
+Note o que o `describe` mostra: a **referência** (`<set to the key … in secret …>`), nunca
+o valor — uma das garantias de manuseio do Secret. Mas o valor em si é pouco protegido: o
+valor armazenado é `czNjcjN0` — puro **base64**, reversível por qualquer um com `get` no
+Secret. Um Secret **não** é criptografado na API. Suas proteções reais são o **RBAC** (quem
+pode lê-lo) e a **criptografia at-rest do etcd** (quem pode ler o disco). `stringData` é
+uma conveniência de escrita — você escreve plaintext, a API armazena base64 sob `data`.
 </details>
 
-**Question:** so what does putting a value in a Secret (vs a ConfigMap) actually buy you?
+**Pergunta:** então o que colocar um valor em um Secret (vs. um ConfigMap) realmente te dá?
 
-<details><summary>Answer</summary>
+<details><summary>Resposta</summary>
 
-Handling, not cryptography: Secrets are gated by RBAC separately from ConfigMaps, kept out
-of most log/describe output, can be encrypted at rest in etcd, and carry a `type`
-(`Opaque`, `kubernetes.io/tls`, `kubernetes.io/dockerconfigjson`) that tells consumers what
-they hold. The value itself is still base64 — treat "can `get secrets`" as "can read every
-secret".
+Manuseio, não criptografia: Secrets são controlados por RBAC separadamente dos ConfigMaps,
+ficam fora da maior parte da saída de logs/describe, podem ser criptografados at-rest no
+etcd e carregam um `type` (`Opaque`, `kubernetes.io/tls`, `kubernetes.io/dockerconfigjson`)
+que diz aos consumidores o que eles contêm. O valor em si continua sendo base64 — trate
+"pode fazer `get secrets`" como "pode ler todos os secrets".
 </details>
 
 ---
 
-### Step 4 — rotate a value: what updates, what doesn't
+### Step 4 — rotacione um valor: o que atualiza, o que não
 
-Change the ConfigMap and watch three different outcomes from one edit. This is the whole
-point of the section.
+Mude o ConfigMap e observe três resultados diferentes a partir de uma única edição. Esse é
+o ponto central da seção.
 
 ```bash
-# change VERSION from "config-v1" to "config-v2"
+# mude VERSION de "config-v1" para "config-v2"
 kubectl patch configmap web-config --type merge -p '{"data":{"VERSION":"config-v2"}}'
 
-# (a) the env var — the app prints $VERSION in its response body; read it immediately
+# (a) a env var — o app imprime $VERSION no corpo da resposta; leia imediatamente
 POD_IP=$(kubectl get pod -l app=s10 -o jsonpath='{.items[0].status.podIP}')
 kubectl run tmp -i --rm --restart=Never --image=busybox:1.37 -- wget -qO- "http://$POD_IP:8080" | head -1
 ```
 
-**Task:** did the env var change?
+**Tarefa:** a env var mudou?
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ kubectl run tmp -i --rm --restart=Never --image=busybox:1.37 -- wget -qO- "http://$POD_IP:8080" | head -1
 workshop-web config-v1
 ```
 
-**No.** Environment variables are read **once**, when the container starts. Editing the
-ConfigMap changed the object, not the running process — the response body still says
-`config-v1`. The old value persists until the Pod is recreated.
+**Não.** Variáveis de ambiente são lidas **uma vez**, quando o container inicia. Editar o
+ConfigMap mudou o objeto, não o processo em execução — o corpo da resposta ainda diz
+`config-v1`. O valor antigo persiste até o Pod ser recriado.
 </details>
 
 ```bash
-# (b) the directory-mounted file — give the kubelet up to ~90s, then read it
+# (b) o arquivo montado como diretório — dê ao kubelet até ~90s, depois leia
 sleep 90
 kubectl exec deploy/web -c toolbox -- cat /etc/web-config/VERSION
 ```
 
-**Task:** did the mounted file change?
+**Tarefa:** o arquivo montado mudou?
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ kubectl exec deploy/web -c toolbox -- cat /etc/web-config/VERSION
 config-v2
 ```
 
-**Yes** — but not instantly. The kubelet resyncs whole-directory ConfigMap mounts on its
-own cycle (typically under ~90s). If it still shows `config-v1`, wait a little longer and
-re-run; it is **not** broken. (A `subPath` mount would have stayed `config-v1` forever.)
-So the same Pod now holds **both** truths at once: env says `config-v1`, file says
-`config-v2`.
+**Sim** — mas não instantaneamente. O kubelet ressincroniza mounts de ConfigMap em
+diretório inteiro no seu próprio ciclo (tipicamente abaixo de ~90s). Se ainda mostrar
+`config-v1`, aguarde um pouco mais e execute de novo; **não** está quebrado. (Um mount com
+`subPath` teria ficado em `config-v1` para sempre.) Então o mesmo Pod agora contém **as
+duas** verdades ao mesmo tempo: o env diz `config-v1`, o arquivo diz `config-v2`.
 </details>
 
 ```bash
-# (c) force new Pods so the ENV picks up the change — the checksum-annotation trick
+# (c) force novos Pods para o ENV pegar a mudança — o truque da annotation de checksum
 kubectl patch deploy web -p \
   '{"spec":{"template":{"metadata":{"annotations":{"checksum/config":"v2"}}}}}'
 kubectl rollout status deploy/web
 
-# new Pod → new IP → re-read it, then fetch again
+# novo Pod → novo IP → releia, depois busque de novo
 POD_IP=$(kubectl get pod -l app=s10 -o jsonpath='{.items[0].status.podIP}')
 kubectl run tmp -i --rm --restart=Never --image=busybox:1.37 -- wget -qO- "http://$POD_IP:8080" | head -1
 ```
 
-**Task:** after the rollout, what does the env var read?
+**Tarefa:** depois do rollout, o que a env var mostra?
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ kubectl patch deploy web -p '{"spec":{"template":{"metadata":{"annotations":{"checksum/config":"v2"}}}}}'
@@ -371,38 +373,39 @@ $ kubectl run tmp -i --rm --restart=Never --image=busybox:1.37 -- wget -qO- "htt
 workshop-web config-v2
 ```
 
-Changing the **pod template** (here, a `checksum/config` annotation) makes the Deployment
-roll out new Pods, and new Pods read the current ConfigMap — so the response body now says
-`config-v2`. `kubectl rollout restart deploy/web` does the same thing manually; the
-annotation is the version you can automate.
+Mudar o **pod template** (aqui, uma annotation `checksum/config`) faz o Deployment fazer o
+rollout de novos Pods, e novos Pods leem o ConfigMap atual — então o corpo da resposta
+agora diz `config-v2`. `kubectl rollout restart deploy/web` faz a mesma coisa manualmente;
+a annotation é a versão que você pode automatizar.
 </details>
 
-**Question (headline):** why did the env var not change but the mounted file did?
+**Pergunta (a principal):** por que a env var não mudou, mas o arquivo montado sim?
 
-<details><summary>Answer</summary>
+<details><summary>Resposta</summary>
 
-They have different update models. **Env vars** are materialised **once** at container
-start and never re-read — the only way to change them is to replace the Pod. A
-**whole-directory file mount** is **kept in sync** by the kubelet, so it reflects the new
-value after a short delay without any restart. (Had we used `subPath`, the file would
-behave like the env var — frozen.)
+Eles têm modelos de atualização diferentes. **Env vars** são materializadas **uma vez** no
+início do container e nunca relidas — a única forma de mudá-las é substituir o Pod. Um
+**mount de arquivo em diretório inteiro** é **mantido em sincronia** pelo kubelet, então
+reflete o novo valor após um pequeno atraso, sem nenhum restart. (Se tivéssemos usado
+`subPath`, o arquivo se comportaria como a env var — congelado.)
 </details>
 
-**Question:** in production, what would you put in that `checksum/config` annotation so a
-rollout happens automatically whenever the config changes?
+**Pergunta:** em produção, o que você colocaria naquela annotation `checksum/config` para
+que um rollout aconteça automaticamente sempre que a config mudar?
 
-<details><summary>Answer</summary>
+<details><summary>Resposta</summary>
 
-A **hash of the ConfigMap/Secret contents** (e.g. `sha256sum` of the rendered manifest).
-When the config changes, the hash changes, the pod-template annotation changes, and a
-normal rolling update ships the new value — no manual step. Helm (`checksum/config:
-{{ include ... | sha256sum }}`) and Kustomize (hashed ConfigMap names via
-`configMapGenerator`) both automate exactly this.
+Um **hash do conteúdo do ConfigMap/Secret** (ex.: `sha256sum` do manifesto renderizado).
+Quando a config muda, o hash muda, a annotation do pod template muda, e um rolling update
+normal entrega o novo valor — sem passo manual. O Helm (`checksum/config:
+{{ include ... | sha256sum }}`) e o Kustomize (nomes de ConfigMap com hash via
+`configMapGenerator`) automatizam exatamente isso.
 </details>
 
-### Stretch (optional) — an immutable ConfigMap
+### Stretch (opcional) — um ConfigMap imutável
 
-Prove that `immutable: true` blocks in-place edits, so a new value means a new object.
+Prove que `immutable: true` bloqueia edições in-place, de forma que um valor novo exige um
+objeto novo.
 
 ```bash
 cat > configmap-immutable.yaml <<'EOF'
@@ -418,11 +421,11 @@ data:
 EOF
 
 kubectl apply -f configmap-immutable.yaml
-# now try to change it in place:
+# agora tente alterá-lo in place:
 kubectl patch configmap web-config-v1 --type merge -p '{"data":{"GREETING":"nope"}}'
 ```
 
-<details><summary>Solution / what you're looking at</summary>
+<details><summary>Solução / o que você está vendo</summary>
 
 ```console
 $ kubectl patch configmap web-config-v1 --type merge -p '{"data":{"GREETING":"nope"}}'
@@ -430,45 +433,50 @@ The ConfigMap "web-config-v1" is invalid: data: Forbidden: field is immutable wh
 `immutable` is set
 ```
 
-The API **rejects** the edit — an immutable object's `data` can never change. To roll a new
-value you create `web-config-v2` and repoint the Deployment. The payoff: the kubelet stops
-watching immutable objects (less API load at scale) and no accidental edit can silently
-reconfigure live Pods. Clean up: `kubectl delete configmap web-config-v1 -n "$NS"`.
+A API **rejeita** a edição — o `data` de um objeto imutável nunca pode mudar. Para lançar
+um valor novo, você cria `web-config-v2` e reaponta o Deployment. A recompensa: o kubelet
+para de observar objetos imutáveis (menos carga na API em escala) e nenhuma edição
+acidental pode reconfigurar silenciosamente Pods em execução. Limpe com:
+`kubectl delete configmap web-config-v1 -n "$NS"`.
 </details>
 
 ## Expected state / output
 
-- `envFrom` maps every ConfigMap key to an env var; `valueFrom` maps one key. The injected
-  `VERSION` is visible in the app's own response body (`workshop-web config-v1`).
-- The same ConfigMap mounted as a **directory** projects one file per key — read through
-  the `toolbox` sidecar, because the distroless app image has no shell.
-- A Secret value read from the API is **base64** (`czNjcjN0` → `s3cr3t`) — encoding, not
-  encryption; `describe` shows only the reference, never the value.
-- Editing a ConfigMap: **env var unchanged** (body still `config-v1`), **directory-mounted
-  file updates** in ~60–90s, and a **pod-template change** (checksum annotation /
-  `rollout restart`) is what refreshes the env (body becomes `config-v2`).
+- `envFrom` mapeia cada chave do ConfigMap para uma env var; `valueFrom` mapeia uma chave.
+  A `VERSION` injetada fica visível no corpo da própria resposta do app
+  (`workshop-web config-v1`).
+- O mesmo ConfigMap montado como **diretório** projeta um arquivo por chave — leia através
+  do sidecar `toolbox`, porque a image distroless do app não tem shell.
+- Um valor de Secret lido da API é **base64** (`czNjcjN0` → `s3cr3t`) — codificação, não
+  criptografia; o `describe` mostra apenas a referência, nunca o valor.
+- Editando um ConfigMap: **env var inalterada** (o corpo ainda mostra `config-v1`), o
+  **arquivo montado como diretório atualiza** em ~60–90s, e uma **mudança no pod template**
+  (annotation de checksum / `rollout restart`) é o que atualiza o env (o corpo passa a
+  mostrar `config-v2`).
 
-Representative statuses include Running/Complete/Failed Pods, Bound PVCs, Accepted
-Gateway conditions, or numeric HPA TARGETS — compare meaning, not ephemeral names.
+Status representativos incluem Pods Running/Complete/Failed, PVCs Bound, conditions
+Accepted de Gateway ou TARGETS numéricos de HPA — compare o significado, não nomes
+efêmeros.
 
 ## Explanation
 
-Environment variables are resolved once when the container starts, so ConfigMap or
-Secret edits do not rewrite a running process's env. File mounts without subPath are
-projected and eventually refresh; subPath mounts freeze like env. A checksum annotation
-or explicit rollout recreates Pods so they pick up the new data.
+Variáveis de ambiente são resolvidas uma única vez quando o container inicia, e é essa a
+causa de edições de ConfigMap ou Secret não reescreverem o env de um processo em execução.
+Mounts de arquivo sem subPath são projetados e eventualmente se atualizam; mounts com
+subPath congelam como o env. Uma annotation de checksum ou um rollout explícito recria os
+Pods para que eles peguem os novos dados.
 
-The guided steps above prove the control-plane behaviour for this section; read Events and
-status fields when a one-line phase is ambiguous.
+Os passos guiados acima provam o comportamento do control plane para esta seção; leia os
+Events e os campos de status quando uma fase de uma linha só for ambígua.
 
 ## Troubleshooting and recovery
 
-If a rotated ConfigMap key still prints the old env value, confirm the freeze with
-`kubectl exec deploy/web -n "$NS" -- printenv`, restore the ConfigMap via
-`kubectl apply -f configmap.yaml -n "$NS"`, then force a recreate with
-`kubectl rollout restart deploy/web -n "$NS"` and wait on
-`kubectl rollout status deploy/web -n "$NS"`. Directory-mounted files without `subPath` can
-refresh without that restart; env and `subPath` mounts cannot.
+Se uma chave de ConfigMap rotacionada ainda imprime o valor antigo de env, confirme o
+congelamento com `kubectl exec deploy/web -n "$NS" -- printenv`, faça o restore do ConfigMap via
+`kubectl apply -f configmap.yaml -n "$NS"`, depois force uma recriação com
+`kubectl rollout restart deploy/web -n "$NS"` e aguarde em
+`kubectl rollout status deploy/web -n "$NS"`. Arquivos montados como diretório sem
+`subPath` podem se atualizar sem esse restart; env e mounts com `subPath` não podem.
 
 ## Challenge solution
 
@@ -484,18 +492,19 @@ kubectl get pods -n "$NS" -l app=s10
 
 ### Expected state / output
 
-The first exec prints the pre-rotation value. After rollout restart the new value is
-present in the recreated Pod. A whole-directory mounted file would refresh in place
-without recreating the Pod; env values stay frozen for the Pod lifetime.
+O primeiro exec imprime o valor de antes da rotação. Após o rollout restart, o novo valor
+está presente no Pod recriado. Um arquivo montado como diretório inteiro se atualizaria no
+lugar, sem recriar o Pod; valores de env ficam congelados pelo tempo de vida do Pod.
 
 ### Explanation
 
-Environment variables are resolved once when the container starts, so ConfigMap or
-Secret edits do not rewrite a running process's env. File mounts without subPath are
-projected and eventually refresh; subPath mounts freeze like env. A checksum annotation
-or explicit rollout recreates Pods so they pick up the new data.
+Variáveis de ambiente são resolvidas uma única vez quando o container inicia, e é essa a
+causa de edições de ConfigMap ou Secret não reescreverem o env de um processo em execução.
+Mounts de arquivo sem subPath são projetados e eventualmente se atualizam; mounts com
+subPath congelam como o env. Uma annotation de checksum ou um rollout explícito recria os
+Pods para que eles peguem os novos dados.
 
 ### Hints
 
-Compare kubectl exec printenv with a file under the ConfigMap volume; look for
-subPath in the mount and for a checksum annotation on the Pod template.
+Compare kubectl exec printenv com um arquivo sob o volume do ConfigMap; procure
+por subPath no mount e por uma annotation de checksum no template do Pod.

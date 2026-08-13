@@ -1,15 +1,15 @@
-# Lab 07 — Service (S07) — solutions
+# Lab 07 — Service (S07) — soluções
 
-Use this companion after attempting the participant lab. Outputs contain representative
-names, addresses, ages, and image sizes; compare the state and meaning rather than copying
-ephemeral values literally.
+Use este companion depois de tentar o lab do participante. As saídas contêm nomes, endereços,
+idades e tamanhos de image representativos; compare o estado e o significado em vez de copiar
+literalmente valores efêmeros.
 
 ## Guided solutions
 
-### Step 1 — expose the Deployment
+### Step 1 — exponha o Deployment
 
-The Service's `selector` is the **same label** the Deployment stamps on its Pods
-(`app: web`). That label match is the entire wiring.
+O `selector` do Service é o **mesmo label** que o Deployment carimba em seus Pods
+(`app: web`). Esse casamento de label é toda a fiação.
 
 ```bash
 cat > service.yaml <<'EOF'
@@ -21,18 +21,18 @@ metadata:
     app: web
 spec:
   selector:
-    app: web            # picks every Pod carrying this label
+    app: web            # seleciona todo Pod que carrega este label
   ports:
     - name: http
-      port: 80          # the Service port — what clients hit
-      targetPort: 8080  # the container port (containerPort in the Pod)
+      port: 80          # a porta do Service — o que os clientes acessam
+      targetPort: 8080  # a porta do container (containerPort no Pod)
 EOF
 
 kubectl apply -f service.yaml
 kubectl get service web
 ```
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ kubectl get service web
@@ -40,23 +40,23 @@ NAME   TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)   AGE
 web    ClusterIP   10.96.142.51    <none>        80/TCP    5s
 ```
 
-`ClusterIP` is the default type: a stable **in-cluster** virtual IP. It never changes even as
-the Pods behind it come and go — which is the whole reason Services exist (Pod IPs are
-ephemeral, as you saw when the ReplicaSet churned Pods in Lab 06).
+`ClusterIP` é o tipo padrão: um IP virtual estável **interno ao cluster**. Ele nunca muda,
+mesmo com os Pods atrás dele indo e vindo — que é exatamente a razão de Services existirem
+(IPs de Pod são efêmeros, como você viu quando o ReplicaSet alternou os Pods no Lab 06).
 </details>
 
 ---
 
-### Step 2 — see the endpoints the selector produced
+### Step 2 — veja os endpoints que o selector produziu
 
 ```bash
 kubectl get endpointslices -l kubernetes.io/service-name=web
 kubectl get pods -l app=web -o wide
 ```
 
-**Task:** how many endpoint addresses are there, and where do they come from?
+**Tarefa:** quantos endereços de endpoint existem, e de onde eles vêm?
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ kubectl get endpointslices -l kubernetes.io/service-name=web
@@ -64,20 +64,20 @@ NAME        ADDRESSTYPE   PORTS   ENDPOINTS                            AGE
 web-abcde   IPv4          8080    10.244.0.7,10.244.0.8,10.244.0.9     30s
 ```
 
-**Three** addresses — one per Pod. (Note the `PORTS` column says **8080**: the slice lists
-*container* ports — the Service's own `port: 80` exists only on the Service side.) The
-endpoint controller watched the Service's selector,
-found the three `app: web` Pods, and wrote their IPs into an **EndpointSlice**. Compare the
-IPs to `kubectl get pods -o wide` — they are the Pod IPs. The Service is just a stable front
-door; EndpointSlices are the live list of who is behind it.
+**Três** endereços — um por Pod. (Note que a coluna `PORTS` diz **8080**: a slice lista
+portas de *container* — a `port: 80` do próprio Service existe apenas do lado do Service.)
+O controller de endpoints observou o selector do Service,
+encontrou os três Pods `app: web` e escreveu os IPs deles em uma **EndpointSlice**. Compare
+os IPs com `kubectl get pods -o wide` — são os IPs dos Pods. O Service é apenas uma porta de
+entrada estável; EndpointSlices são a lista viva de quem está atrás dela.
 </details>
 
 ---
 
-### Step 3 — reach it by DNS from a throwaway Pod
+### Step 3 — alcance-o por DNS a partir de um Pod descartável
 
-Cluster DNS gives every Service a name. From a temporary Pod, fetch the demo app's status
-page by the Service name `web`:
+O DNS do cluster dá um nome a cada Service. A partir de um Pod temporário, busque a página
+de status da aplicação de demo pelo nome do Service `web`:
 
 ```bash
 kubectl run tmp --restart=Never --image=busybox:1.36 -- sleep 3600
@@ -85,10 +85,10 @@ kubectl wait --for=condition=Ready pod/tmp --timeout=60s
 kubectl exec tmp -- wget -qO- http://web
 ```
 
-**Task:** what did you get back, and what name resolved? Run it a few times — watch the
-`pod:` line.
+**Tarefa:** o que você recebeu de volta, e qual nome foi resolvido? Execute algumas vezes —
+observe a linha `pod:`.
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ kubectl exec tmp -- wget -qO- http://web
@@ -98,37 +98,37 @@ requests served: 1
 ready: true
 ```
 
-`http://web` resolved via cluster DNS to the Service's ClusterIP, which load-balanced to one
-of the three Pods — the `pod:` line names which one answered, so repeated runs show
-different Pods taking turns. (Note you fetched port **80**, the Service port; the Service
-forwarded to the container's **8080**.) The fully-qualified name is
-`web.<your-namespace>.svc.cluster.local`;
-inside the same namespace the short name `web` is enough. Keeping the `tmp` Pod alive makes
-the later failure and recovery checks deterministic; the lab cleanup deletes it.
+`http://web` resolveu via DNS do cluster para o ClusterIP do Service, que balanceou a carga
+para um dos três Pods — a linha `pod:` nomeia qual deles respondeu, então execuções
+repetidas mostram Pods diferentes se revezando. (Note que você buscou a porta **80**, a
+porta do Service; o Service encaminhou para a **8080** do container.) O nome totalmente
+qualificado é `web.<your-namespace>.svc.cluster.local`;
+dentro do mesmo namespace o nome curto `web` basta. Manter o Pod `tmp` vivo torna
+determinísticas as checagens posteriores de falha e recuperação; o cleanup do lab o deleta.
 </details>
 
 ---
 
-### Step 4 — break the selector (the silent failure)
+### Step 4 — quebre o selector (a falha silenciosa)
 
-Change the Service selector to a label **no Pod has**, then try again. Watch carefully: the
-Service object stays perfectly healthy.
+Mude o selector do Service para um label que **nenhum Pod tem**, depois tente de novo.
+Observe com atenção: o objeto Service permanece perfeitamente saudável.
 
 ```bash
 kubectl patch service web --type=merge -p '{"spec":{"selector":{"app":"web-oops"}}}'
-kubectl get service web                                   # still there, still has a ClusterIP
+kubectl get service web                                   # ainda está lá, ainda tem um ClusterIP
 kubectl get endpointslices -l kubernetes.io/service-name=web
 kubectl exec tmp -- wget -qO- --timeout=5 http://web ; echo "exit=$?"
 ```
 
-**Task:** the curl fails. Where is the failure visible — on the Service, or somewhere else?
+**Tarefa:** o curl falha. Onde a falha fica visível — no Service, ou em outro lugar?
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ kubectl get service web
 NAME   TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)   AGE
-web    ClusterIP   10.96.142.51    <none>        80/TCP    6m      # looks totally fine
+web    ClusterIP   10.96.142.51    <none>        80/TCP    6m      # parece totalmente normal
 
 $ kubectl get endpointslices -l kubernetes.io/service-name=web
 NAME        ADDRESSTYPE   PORTS   ENDPOINTS   AGE
@@ -139,13 +139,14 @@ wget: download timed out
 exit=1
 ```
 
-This is the classic trap: **the Service is healthy, has a ClusterIP, and reports no errors**
-— but its EndpointSlice is **empty** because the selector matches nothing, so traffic has
-nowhere to go. `kubectl describe service web` even shows `Endpoints: <none>`. The lesson:
-when a Service "doesn't work," check its **endpoints** first, not the Service object.
+Esta é a armadilha clássica: **o Service está saudável, tem um ClusterIP e não reporta
+erros** — mas sua EndpointSlice está **vazia** porque o selector não casa com nada, então o
+tráfego não tem para onde ir. `kubectl describe service web` até mostra
+`Endpoints: <none>`. A lição: quando um Service "não funciona", cheque primeiro os
+**endpoints** dele, não o objeto Service.
 </details>
 
-### Step 5 — fix it and re-verify
+### Step 5 — conserte e verifique de novo
 
 ```bash
 kubectl patch service web --type=merge -p '{"spec":{"selector":{"app":"web"}}}'
@@ -153,7 +154,7 @@ kubectl get endpointslices -l kubernetes.io/service-name=web
 kubectl exec tmp -- wget -qO- http://web | head -1
 ```
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ kubectl get endpointslices -l kubernetes.io/service-name=web
@@ -164,30 +165,33 @@ $ kubectl exec tmp -- wget -qO- http://web | head -1
 workshop-web v1
 ```
 
-Restoring `app: web` repopulates the EndpointSlice within a second and traffic flows again.
-Same manifest, one label — that is the whole difference between working and silently dead.
+Restaurar `app: web` repopula a EndpointSlice em cerca de um segundo e o tráfego volta a
+fluir. O mesmo manifesto, um label — essa é toda a diferença entre funcionar e estar
+silenciosamente morto.
 </details>
 
 ## Expected state / output
 
-- The Service gets a stable `ClusterIP`; its EndpointSlice lists **one address per Pod**.
-- `http://web` resolves via cluster DNS and returns the demo app's status body — the
-  `pod:` line rotates across the three Pods.
-- A wrong selector leaves the Service **healthy-looking but with zero endpoints**, and
-  requests time out — identically in both environments.
-- Fixing the selector repopulates endpoints and restores traffic immediately.
+- O Service ganha um `ClusterIP` estável; sua EndpointSlice lista **um endereço por Pod**.
+- `http://web` resolve via DNS do cluster e retorna o corpo de status da aplicação de demo —
+  a linha `pod:` alterna entre os três Pods.
+- Um selector errado deixa o Service com **aparência saudável, mas com zero endpoints**, e
+  as requisições estouram o timeout — de forma idêntica nos dois ambientes.
+- Consertar o selector repopula os endpoints e restaura o tráfego imediatamente.
 
 ## Explanation
 
-A Service selector produces EndpointSlice membership from Pod labels and readiness. DNS
-resolves the stable Service name, while EndpointSlices track ephemeral Pod addresses. A
-valid Service with an empty slice is therefore healthy-looking but unable to route.
+Um selector de Service produz a participação na EndpointSlice a partir dos labels e da
+readiness dos Pods. O DNS resolve o nome estável do Service, enquanto EndpointSlices
+rastreiam os endereços efêmeros dos Pods. Um Service válido com uma slice vazia tem,
+portanto, aparência saudável, mas é incapaz de rotear — a causa real vive nos endpoints, não
+no objeto Service.
 
 ## Troubleshooting and recovery
 
-If requests time out, inspect the EndpointSlice first. Restore the exact
-selector with `kubectl patch service web -n "$NS" --type=merge -p
-'{"spec":{"selector":{"app":"web"}}}'`, then wait for ready endpoints.
+Se as requisições estourarem o timeout, inspecione primeiro a EndpointSlice. Restaure o
+selector exato com `kubectl patch service web -n "$NS" --type=merge -p
+'{"spec":{"selector":{"app":"web"}}}'`, depois aguarde os endpoints ficarem ready.
 
 ## Challenge solution
 
@@ -210,16 +214,17 @@ printf 'removed=%s\ncurrent=%s\n' "$OLD_IP" "$NEW_IPS"
 
 ### Expected state / output
 
-The recorded address disappears from the EndpointSlice watch, and a replacement address appears
-after the Deployment returns to Available. The final assertion succeeds only when the old IP is no
-longer selected.
+O endereço registrado desaparece do watch da EndpointSlice, e um endereço substituto aparece
+depois que o Deployment volta a Available. A asserção final só tem sucesso quando o IP
+antigo não está mais selecionado.
 
 ### Explanation
 
-EndpointSlices track the addresses of selected, ready Pods. Deleting one exact Pod removes its
-address; the ReplicaSet then creates a replacement that joins only after it becomes Ready.
+EndpointSlices rastreiam os endereços de Pods selecionados e ready. Deletar exatamente um
+Pod remove seu endereço — é essa a causa de o endereço sair da slice; o ReplicaSet então
+cria um substituto que só entra depois de ficar Ready.
 
 ### Hints
 
-Record the chosen Pod name and IP before deletion; use the EndpointSlice watch to match the removed
-and replacement addresses.
+Registre o nome e o IP do Pod escolhido antes da deleção; use o watch da EndpointSlice e
+compare os endereços removido e substituto.

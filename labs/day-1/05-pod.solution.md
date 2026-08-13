@@ -1,14 +1,14 @@
-# Lab 05 — Pod (S05) — solutions
+# Lab 05 — Pod (S05) — soluções
 
-Use this companion after attempting the participant lab. Outputs contain representative
-names, addresses, ages, and image sizes; compare the state and meaning rather than copying
-ephemeral values literally.
+Use este companion depois de tentar o lab do participante. As saídas contêm nomes, endereços,
+idades e tamanhos de image representativos; compare o estado e o significado em vez de copiar
+literalmente valores efêmeros.
 
 ## Guided solutions
 
-### Step 1 — write the canonical Pod manifest
+### Step 1 — escreva o manifesto canônico do Pod
 
-Build `pod.yaml`. On the slides you saw this grown field by field; here is the finished base.
+Construa o `pod.yaml`. Nos slides você o viu crescer campo a campo; aqui está a base finalizada.
 
 ```bash
 cat > pod.yaml <<'EOF'
@@ -17,14 +17,14 @@ kind: Pod
 metadata:
   name: web
   labels:
-    app: web            # this label is how Lab 07's Service will find the Pod
+    app: web            # este label é como o Service do Lab 07 vai encontrar o Pod
 spec:
   containers:
     - name: web
       image: ghcr.io/platformrelay/workshop-web:v1
       ports:
         - containerPort: 8080
-      resources:        # a small "resources stub" — Lab 13 grows this into QoS
+      resources:        # um pequeno "stub de resources" — o Lab 13 expande isso em QoS
         requests:
           cpu: 50m
           memory: 64Mi
@@ -34,14 +34,14 @@ spec:
 EOF
 ```
 
-**Task:** validate the manifest **without** creating anything, then apply it.
+**Tarefa:** valide o manifesto **sem** criar nada, depois aplique-o.
 
 ```bash
-kubectl apply --dry-run=server -f pod.yaml     # server validates; no object created
+kubectl apply --dry-run=server -f pod.yaml     # o server valida; nenhum objeto é criado
 kubectl apply -f pod.yaml
 ```
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ kubectl apply --dry-run=server -f pod.yaml
@@ -51,23 +51,24 @@ $ kubectl apply -f pod.yaml
 pod/web created
 ```
 
-`--dry-run=server` sends the manifest through the API server's validation and admission
-checks but rolls back instead of persisting — the safest way to catch a bad field before it
-is real. (Offline with no cluster, use `--dry-run=client` for schema-only checks.)
+`--dry-run=server` envia o manifesto pelas checagens de validação e de admission do API
+server, mas desfaz em vez de persistir — a forma mais segura de pegar um campo ruim antes que
+ele se torne real. (Offline, sem cluster, use `--dry-run=client` para checagens apenas de
+schema.)
 </details>
 
 ---
 
-### Step 2 — watch it come alive
+### Step 2 — observe-o ganhar vida
 
 ```bash
-kubectl get pod web -w        # -w = watch; Ctrl-C to stop once it is Running
+kubectl get pod web -w        # -w = watch; Ctrl-C para parar quando estiver Running
 ```
 
-**Task:** watch the phase transitions. What phases does the Pod pass through before
+**Tarefa:** observe as transições de fase. Por quais fases o Pod passa antes de
 `Running`?
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ kubectl get pod web -w
@@ -77,34 +78,34 @@ web    0/1     ContainerCreating   0          1s
 web    1/1     Running             0          4s
 ```
 
-`Pending` (accepted, being scheduled / image pulling) → `ContainerCreating` → `Running`
-with `READY 1/1`. Press **Ctrl-C** to exit the watch. The first pull may take longer while
-the image downloads.
+`Pending` (aceito, sendo agendado / fazendo pull da image) → `ContainerCreating` → `Running`
+com `READY 1/1`. Pressione **Ctrl-C** para sair do watch. O primeiro pull pode demorar mais
+enquanto a image é baixada.
 </details>
 
 ---
 
-### Step 3 — inspect: describe, logs, debug
+### Step 3 — inspecione: describe, logs, debug
 
-Three commands you will use in every debugging session for the rest of the workshop.
+Três comandos que você vai usar em toda sessão de debugging pelo resto do workshop.
 
 ```bash
 kubectl describe pod web        # events, image, node, conditions
-kubectl logs web                # the container's stdout/stderr
-kubectl exec -it web -- sh      # try it — this one FAILS on purpose
+kubectl logs web                # o stdout/stderr do container
+kubectl exec -it web -- sh      # tente — este FALHA de propósito
 ```
 
-**Task:** `kubectl exec … sh` fails. Read the error and explain why — then get a shell
-anyway with `kubectl debug`:
+**Tarefa:** `kubectl exec … sh` falha. Leia o erro e explique por quê — depois obtenha um shell
+mesmo assim com `kubectl debug`:
 
 ```bash
 kubectl debug -it web --image=busybox:1.37 --target=web -- sh
 ```
 
-Inside the debug shell, confirm you are in the container's context (not on your host) by
-checking the process list — the demo server should be PID 1. Type `exit` to leave.
+Dentro do shell de debug, confirme que você está no contexto do container (não no seu host)
+verificando a lista de processos — o servidor de demo deve ser o PID 1. Digite `exit` para sair.
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ kubectl exec -it web -- sh
@@ -119,42 +120,43 @@ PID   USER     TIME  COMMAND
 / # exit
 ```
 
-The demo image is **distroless** — it contains the server binary and nothing else, not even
-`sh`, so there is nothing for `exec` to run. `kubectl debug` instead attaches an
-**ephemeral container** (here: busybox, which has a shell) to the running Pod;
-`--target=web` shares the app container's PID namespace, so `ps` shows `/workshop-web` as
-**PID 1** — the container has its own PID namespace, so its main process is process 1.
-`kubectl logs web` shows the server's startup line
-(`workshop-web v1 listening on :8080 …`); `describe` shows an `Events` section ending in
+A image de demo é **distroless** — contém o binário do servidor e nada mais, nem mesmo `sh`,
+então não há nada para o `exec` executar. O `kubectl debug`, em vez disso, anexa um
+**ephemeral container** (aqui: busybox, que tem um shell) ao Pod em execução;
+`--target=web` compartilha o PID namespace do container da aplicação, então o `ps` mostra
+`/workshop-web` como **PID 1** — o container tem seu próprio PID namespace, então seu processo
+principal é o processo 1. `kubectl logs web` mostra a linha de inicialização do servidor
+(`workshop-web v1 listening on :8080 …`); o `describe` mostra uma seção `Events` terminando em
 `Started container web`.
 </details>
 
-**Question:** you never installed a shell in the Pod — where does the `debug` shell run?
+**Pergunta:** você nunca instalou um shell no Pod — onde o shell do `debug` roda?
 
-<details><summary>Answer</summary>
+<details><summary>Resposta</summary>
 
-`kubectl debug` adds an **ephemeral container** to the Pod's spec via the API server; the
-**kubelet** starts it from the toolbox image you named (`busybox:1.37`) *inside the Pod's
-namespaces* and streams it back. It is not SSH and needs no extra port — and unlike a shell
-baked into the app image, it is only there while you debug. (Plain `kubectl exec` works the
-same way but can only run binaries that already exist in the container's image.)
+O `kubectl debug` adiciona um **ephemeral container** à spec do Pod via API server; o
+**kubelet** o inicia a partir da toolbox image que você indicou (`busybox:1.37`) *dentro dos
+namespaces do Pod* e transmite a sessão de volta. Não é SSH e não precisa de porta extra — e,
+ao contrário de um shell embutido na image da aplicação, ele só existe enquanto você debuga.
+(O `kubectl exec` puro funciona da mesma forma, mas só consegue executar binários que já
+existem na image do container.)
 </details>
 
 ---
 
-### Step 4 — break it: a bad image (ImagePullBackOff)
+### Step 4 — quebre: uma image ruim (ImagePullBackOff)
 
-The single most common Pod failure. Apply a Pod whose image tag does not exist (imagine a
-mistyped tag):
+A falha de Pod mais comum de todas. Aplique um Pod cuja tag de image não existe (imagine uma
+tag digitada errado):
 
 ```bash
 kubectl run web-typo --image=ghcr.io/platformrelay/workshop-web:v9.99-nope --restart=Never -n "$NS"
-kubectl get pod web-typo          # repeat a few times, or add -w
+kubectl get pod web-typo          # repita algumas vezes, ou adicione -w
 ```
 
-**Task:** the Pod never reaches `Running`. Read `describe` and name the exact reason.
+**Tarefa:** o Pod nunca chega a `Running`. Leia o `describe` e nomeie a razão exata.
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ kubectl get pod web-typo
@@ -173,25 +175,25 @@ Events:
   Warning  Failed     2s  (x2 over 27s)  kubelet  Error: ImagePullBackOff
 ```
 
-The status is **`ImagePullBackOff`**; the *events* tell you why — the tag `v9.99-nope` does
-not exist, so the pull fails and the kubelet backs off retrying. The events section, not the
-one-word status, is where the real answer always lives.
+O status é **`ImagePullBackOff`**; os *events* dizem o porquê — a tag `v9.99-nope` não
+existe, então o pull falha e o kubelet recua antes de tentar de novo. A seção de events, e não
+o status de uma palavra só, é onde a resposta real sempre vive.
 </details>
 
-### Step 5 — fix it, then meet the punchline
+### Step 5 — conserte, e conheça a punchline
 
-There is no clean way to "edit" a bare Pod's image, so delete the broken one and (for the
-punchline) delete the good one too:
+Não há forma limpa de "editar" a image de um Pod avulso, então delete o quebrado e (pela
+punchline) delete o bom também:
 
 ```bash
 kubectl delete pod web-typo
 kubectl delete pod web
-kubectl get pods            # what's left?
+kubectl get pods            # o que sobrou?
 ```
 
-**Task:** after deleting `web`, is it recreated?
+**Tarefa:** depois de deletar o `web`, ele é recriado?
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ kubectl delete pod web
@@ -200,33 +202,34 @@ $ kubectl get pods
 No resources found in <your-namespace> namespace.
 ```
 
-**Nothing recreates it.** A bare Pod has no controller watching it — delete it (or let its
-node fail) and it is simply gone. That is exactly the problem a **Deployment** solves, which
-is Lab 06. Keep your `pod.yaml`; you extend it next.
+**Nada o recria.** Um Pod avulso não tem controller observando-o — delete-o (ou deixe seu node
+falhar) e ele simplesmente some. Esse é exatamente o problema que um **Deployment** resolve, e
+esse é o Lab 06. Guarde seu `pod.yaml`; você o estende em seguida.
 </details>
 
 ## Expected state / output
 
-- `web` goes `Pending → ContainerCreating → Running` and reports `READY 1/1`.
-- `describe` and `logs` work against the running Pod; `exec … sh` fails (distroless — no
-  shell) and `kubectl debug --target` gets you a shell beside the app instead.
-- The bad-tag image sits in **`ImagePullBackOff`**, and its `Events` name the missing tag —
-  identically on kind and the shared cluster.
-- Deleting the Pod does **not** bring it back — no controller owns it.
+- O `web` vai de `Pending → ContainerCreating → Running` e reporta `READY 1/1`.
+- `describe` e `logs` funcionam contra o Pod em execução; `exec … sh` falha (distroless — sem
+  shell) e o `kubectl debug --target` te dá um shell ao lado da aplicação.
+- A image com a tag ruim fica em **`ImagePullBackOff`**, e seus `Events` nomeiam a tag
+  inexistente — de forma idêntica no kind e no cluster compartilhado.
+- Deletar o Pod **não** o traz de volta — nenhum controller é dono dele.
 
 ## Explanation
 
-A Pod groups one or more containers under one lifecycle identity. Because the kubelet owns
-container lifecycle, it can restart
-a failed container inside that Pod, but only a higher-level controller creates a replacement
-Pod after deletion. Events explain pull and scheduling failures that the phase alone hides.
+Um Pod agrupa um ou mais containers sob uma única identidade de ciclo de vida. Justamente
+porque o kubelet é dono do ciclo de vida dos containers, ele pode reiniciar
+um container que falhou dentro daquele Pod, mas apenas um controller de nível mais alto cria
+um Pod substituto após a deleção. Os Events mostram a causa de falhas de pull e de agendamento
+que a fase, sozinha, esconde.
 
 ## Troubleshooting and recovery
 
-For `ImagePullBackOff`, inspect `kubectl describe pod web-typo -n "$NS"`
-and restore the pinned image in `pod.yaml`, then run `kubectl apply -f pod.yaml -n "$NS"`.
-Remove only the named lab Pods; do not clear
-other participants' workloads.
+Para `ImagePullBackOff`, inspecione `kubectl describe pod web-typo -n "$NS"`
+e restaure a image fixada no `pod.yaml`, depois execute `kubectl apply -f pod.yaml -n "$NS"`.
+Remova apenas os Pods nomeados do lab; não apague
+os workloads de outros participantes.
 
 ## Challenge solution
 
@@ -247,15 +250,17 @@ kubectl get pod crash -n "$NS" --ignore-not-found
 
 ### Expected state / output
 
-The restart count reaches at least one while both captured UIDs remain identical. After deletion,
-the final `get` prints nothing: no controller recreates this bare Pod.
+O contador de restarts chega a pelo menos um enquanto os dois UIDs capturados permanecem
+idênticos. Após a deleção, o `get` final não imprime nada: nenhum controller recria este Pod
+avulso.
 
 ### Explanation
 
-The kubelet restarts a failed container according to the Pod's `restartPolicy`, retaining the Pod
-object and UID. Pod replacement requires a controller such as a Deployment or Job.
+O kubelet reinicia um container que falhou de acordo com o `restartPolicy` do Pod, mantendo o
+objeto Pod e o UID — é essa a causa de o UID não mudar. A substituição do Pod inteiro exige um
+controller como um Deployment ou um Job.
 
 ### Hints
 
-Capture `metadata.uid` before and after the restart; a controller changes Pod objects, while the
-kubelet restarts containers inside one Pod.
+Capture o `metadata.uid` antes e depois do restart; um controller altera objetos Pod, enquanto
+o kubelet reinicia containers dentro de um mesmo Pod.

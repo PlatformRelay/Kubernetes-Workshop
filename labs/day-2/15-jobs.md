@@ -5,57 +5,57 @@
 | | |
 | --- | --- |
 | **Section** | S15 — Jobs & CronJobs |
-| **Environment** | namespace ✓ / kind ✓ *(no cluster-admin; Jobs/CronJobs live in your own namespace)* |
+| **Environment** | namespace ✓ / kind ✓ *(sem cluster-admin; Jobs/CronJobs vivem no seu próprio namespace)* |
 | **Estimated time** | 20 min |
 
 ## Objective
 
-Run finite work the way Kubernetes means you to. You will run a **Job** to completion and read
-its logs, put the same work on a **CronJob** and watch it fire on a schedule (and trim its own
-history), then deliberately break a Job so it retries up to its **`backoffLimit`** and lands in
-**`BackoffLimitExceeded`** — the whole point being the contrast with a Deployment, which would
-restart that "finished" work **forever**.
+Executar trabalho finito do jeito que o Kubernetes espera. Você vai rodar um **Job** até a
+conclusão e ler seus logs, colocar o mesmo trabalho em um **CronJob** e observá-lo disparar em
+um schedule (e podar o próprio histórico), depois quebrar um Job de propósito para que ele tente
+de novo até seu **`backoffLimit`** e termine em **`BackoffLimitExceeded`** — sendo o ponto todo o
+contraste com um Deployment, que reiniciaria aquele trabalho "terminado" **para sempre**.
 
-> **Set your namespace once.** Everything runs in your assigned namespace (or a kind cluster).
-> Set a shell variable so every command is copy-pasteable:
+> **Defina seu namespace uma vez.** Tudo roda no seu namespace atribuído (ou em um cluster kind).
+> Defina uma variável de shell para que todo comando seja copiável e colável:
 >
 > ```bash
-> export NS=<your-assigned-namespace>          # kind users: export NS=default
+> export NS=<your-assigned-namespace>          # usuários de kind: export NS=default
 > kubectl config set-context --current --namespace="$NS"
 > ```
 
 ## Prerequisites
 
-- Labs 05–06 concepts (Pod, Deployment). This lab **creates its own** objects and doesn't
-  depend on leftovers from earlier labs.
-- `kubectl` against your assigned namespace **or** a local kind cluster. No admin rights.
-- Internet pull access for `busybox:1.37` (a tiny image; any small image works).
-- A little patience: a per-minute CronJob fires at most **once a minute**, so Step 1 involves
-  a couple of minutes of watching.
+- Conceitos dos Labs 05–06 (Pod, Deployment). Este lab **cria seus próprios** objetos e não
+  depende de sobras de labs anteriores.
+- `kubectl` apontando para seu namespace atribuído **ou** um cluster kind local. Sem direitos de admin.
+- Acesso de pull à internet para `busybox:1.37` (uma image minúscula; qualquer image pequena serve).
+- Um pouco de paciência: um CronJob por minuto dispara no máximo **uma vez por minuto**, então o
+  Step 1 envolve alguns minutos de observação.
 
 ## Files used
 
-- `job-report.yaml` — a one-shot Job that prints a line and exits `0`.
-- `cronjob-report.yaml` — the same work wrapped in a per-minute CronJob.
-- `job-failing.yaml` — a Job whose command exits non-zero, to trigger `backoffLimit`.
-- `job-fixed.yaml` — the same Job with the command corrected.
+- `job-report.yaml` — um Job de uma só execução que imprime uma linha e sai com `0`.
+- `cronjob-report.yaml` — o mesmo trabalho embrulhado em um CronJob por minuto.
+- `job-failing.yaml` — um Job cujo comando sai com código diferente de zero, para acionar o `backoffLimit`.
+- `job-fixed.yaml` — o mesmo Job com o comando corrigido.
 
-Everything is labelled `app: s15` so cleanup is a single label selector.
+Tudo é rotulado com `app: s15`, então o cleanup é um único label selector.
 
 ---
 
 ## Guided task
 
-Work through the steps without opening the companion unless you are blocked. The spoiler
-contains exact commands, expected state, explanations, and recovery guidance.
+Percorra os passos sem abrir o companion, a menos que fique travado. O spoiler
+contém os comandos exatos, o estado esperado, explicações e orientações de recuperação.
 
-[Spoiler: guided solutions and expected output](./15-jobs.solution.md#guided-solutions)
+[Spoiler: soluções guiadas e saída esperada](./15-jobs.solution.md#guided-solutions)
 
-### Step 0 — a Job that runs to completion
+### Step 0 — um Job que roda até a conclusão
 
-A **Job** wraps a Pod spec and adds a completion contract: it runs the Pod until it **succeeds**
-(exit `0`), then stops. Note the Pod's `restartPolicy: Never` — a Job may only use `Never` or
-`OnFailure`, never `Always`.
+Um **Job** embrulha uma spec de Pod e adiciona um contrato de conclusão: ele roda o Pod até que
+ele **tenha sucesso** (exit `0`), e então para. Note o `restartPolicy: Never` do Pod — um Job só
+pode usar `Never` ou `OnFailure`, nunca `Always`.
 
 ```bash
 cat > job-report.yaml <<'EOF'
@@ -78,26 +78,26 @@ spec:
 EOF
 
 kubectl apply -f job-report.yaml
-kubectl get job report -w        # wait for COMPLETIONS 1/1, then Ctrl-C
+kubectl get job report -w        # espere por COMPLETIONS 1/1, depois Ctrl-C
 ```
 
-**Task:** confirm the Job completed, then read the output from the Pod it created.
+**Tarefa:** confirme que o Job concluiu, depois leia a saída do Pod que ele criou.
 
 ```bash
 kubectl get job report
-kubectl logs job/report          # logs of the Job's Pod, by Job name
+kubectl logs job/report          # logs do Pod do Job, pelo nome do Job
 ```
 
-**Question:** the Job is `Complete`, but `kubectl get pods -l app=s15` still shows the Pod as
-`Completed`. Why does the finished Pod stick around instead of being deleted?
+**Pergunta:** o Job está `Complete`, mas o `kubectl get pods -l app=s15` ainda mostra o Pod como
+`Completed`. Por que o Pod terminado continua por ali em vez de ser deletado?
 
 ---
 
-### Step 1 — put the same work on a schedule (CronJob)
+### Step 1 — coloque o mesmo trabalho em um schedule (CronJob)
 
-A **CronJob** is a Job factory: on each cron tick it stamps out a new Job from its
-`jobTemplate`. Use a **per-minute** schedule so you don't wait long. (One minute is the finest
-cron granularity — you can't schedule faster than that.)
+Um **CronJob** é uma fábrica de Jobs: a cada tique do cron ele carimba um novo Job a partir do
+seu `jobTemplate`. Use um schedule **por minuto** para não esperar muito. (Um minuto é a
+granularidade mais fina do cron — você não consegue agendar mais rápido que isso.)
 
 ```bash
 cat > cronjob-report.yaml <<'EOF'
@@ -107,9 +107,9 @@ metadata:
   name: report
   labels: { app: s15 }
 spec:
-  schedule: "*/1 * * * *"            # every minute
-  concurrencyPolicy: Forbid         # never overlap runs
-  successfulJobsHistoryLimit: 3      # keep the last 3 successful Jobs
+  schedule: "*/1 * * * *"            # a cada minuto
+  concurrencyPolicy: Forbid         # nunca sobrepor execuções
+  successfulJobsHistoryLimit: 3      # mantenha os 3 últimos Jobs bem-sucedidos
   failedJobsHistoryLimit: 1
   jobTemplate:
     spec:
@@ -125,35 +125,37 @@ spec:
               command: ["sh", "-c", "echo 'scheduled report'; sleep 3"]
 EOF
 
-# the CronJob "report" would clash with the Step-0 Job "report" — remove that first
+# o CronJob "report" colidiria com o Job "report" do Step 0 — remova aquele primeiro
 kubectl delete job report --ignore-not-found
 kubectl apply -f cronjob-report.yaml
 ```
 
-**Task:** watch the CronJob fire. Within ~60–120s you should see `LAST SCHEDULE` populate and
-spawned Jobs appear.
+**Tarefa:** observe o CronJob disparar. Em ~60–120s você deve ver `LAST SCHEDULE` ser preenchido
+e os Jobs gerados aparecerem.
 
 ```bash
-kubectl get cronjob report                       # watch LAST SCHEDULE go from <none> to a time
+kubectl get cronjob report                       # observe LAST SCHEDULE ir de <none> para um horário
 kubectl get jobs -l app=s15 --sort-by=.metadata.creationTimestamp
 ```
 
-**Task:** let it run a few minutes, then confirm the **history limit** is trimming old Jobs —
-you should never see more than `successfulJobsHistoryLimit` (3) successful Jobs kept.
+**Tarefa:** deixe rodar alguns minutos, depois confirme que o **history limit** está podando os
+Jobs antigos — você nunca deve ver mais do que `successfulJobsHistoryLimit` (3) Jobs
+bem-sucedidos mantidos.
 
 ```bash
-# after ~4–5 minutes:
+# depois de ~4–5 minutos:
 kubectl get jobs -l app=s15
 ```
 
 ---
 
-### Step 2 — break→fix: a Job that fails until it hits `backoffLimit`
+### Step 2 — quebre→conserte: um Job que falha até bater no `backoffLimit`
 
-A Job doesn't retry forever. On failure it makes a new attempt, up to `backoffLimit` times;
-then it gives up and is marked **Failed** with reason **`BackoffLimitExceeded`**. Reproduce it
-with a command that always exits non-zero. We use `restartPolicy: Never`, so **each retry is a
-brand-new Pod** — you can literally count the attempts.
+Um Job não tenta de novo para sempre. A cada falha ele faz uma nova tentativa, até
+`backoffLimit` vezes; então desiste e é marcado como **Failed** com o motivo
+**`BackoffLimitExceeded`**. Reproduza isso com um comando que sempre sai com código diferente de
+zero. Usamos `restartPolicy: Never`, então **cada nova tentativa é um Pod novinho em folha** —
+você consegue literalmente contar as tentativas.
 
 ```bash
 cat > job-failing.yaml <<'EOF'
@@ -163,7 +165,7 @@ metadata:
   name: flaky
   labels: { app: s15 }
 spec:
-  backoffLimit: 3                    # give up after this many failed attempts
+  backoffLimit: 3                    # desiste depois desta quantidade de tentativas falhas
   template:
     metadata:
       labels: { app: s15 }
@@ -172,23 +174,23 @@ spec:
       containers:
         - name: flaky
           image: busybox:1.37
-          command: ["sh", "-c", "echo 'trying...'; exit 1"]   # always fails
+          command: ["sh", "-c", "echo 'trying...'; exit 1"]   # sempre falha
 EOF
 
 kubectl apply -f job-failing.yaml
-kubectl get job flaky -w            # wait until STATUS shows it stop retrying, then Ctrl-C
+kubectl get job flaky -w            # espere até o STATUS mostrar que ele parou de tentar, depois Ctrl-C
 ```
 
-**Task:** the Job never succeeds. How many Pods did it create, and what does `describe` say
-finally stopped it?
+**Tarefa:** o Job nunca tem sucesso. Quantos Pods ele criou, e o que o `describe` diz que
+finalmente o parou?
 
 ```bash
 kubectl get pods -l app=s15 --field-selector=status.phase=Failed
 kubectl describe job flaky | sed -n '/Events/,$p'
 ```
 
-**Task:** fix the command so the container exits `0`, and confirm the Job completes. (A Job's
-Pod template is immutable, so delete and recreate.)
+**Tarefa:** conserte o comando para que o container saia com `0`, e confirme que o Job conclui.
+(O template de Pod de um Job é imutável, então delete e recrie.)
 
 ```bash
 cat > job-fixed.yaml <<'EOF'
@@ -207,7 +209,7 @@ spec:
       containers:
         - name: flaky
           image: busybox:1.37
-          command: ["sh", "-c", "echo 'fixed — exiting 0'; exit 0"]   # succeeds
+          command: ["sh", "-c", "echo 'fixed — exiting 0'; exit 0"]   # tem sucesso
 EOF
 
 kubectl delete job flaky
@@ -215,75 +217,76 @@ kubectl apply -f job-fixed.yaml
 kubectl get job flaky            # COMPLETIONS 1/1, STATUS Complete
 ```
 
-**Question:** why did the failing Job stop after only a handful of Pods, and what would have
-been different with `restartPolicy: OnFailure`?
+**Pergunta:** por que o Job que falhava parou depois de apenas um punhado de Pods, e o que teria
+sido diferente com `restartPolicy: OnFailure`?
 
-**Question:** your nightly CronJob sometimes takes longer than a minute. With
-`concurrencyPolicy: Forbid`, what happens at the next tick — and how would `Allow` or `Replace`
-differ?
+**Pergunta:** seu CronJob noturno às vezes demora mais de um minuto. Com
+`concurrencyPolicy: Forbid`, o que acontece no próximo tique — e como `Allow` ou `Replace`
+seriam diferentes?
 
 ## Observe
 
-- A **Job** runs to completion: exit `0` → `COMPLETIONS 1/1`, `Complete`, nothing restarts.
-  Finished Pods linger (as `Completed`) for their logs until GC'd or `ttlSecondsAfterFinished`.
-- A **CronJob** creates a new Job per tick (`*/1` = every minute), tracks `LAST SCHEDULE`, and
-  trims finished Jobs past `successfulJobsHistoryLimit` / `failedJobsHistoryLimit`.
-- A failing Job retries up to **`backoffLimit`** (rate-limited with exponential backoff) then is
-  **Failed** with **`BackoffLimitExceeded`**; with `restartPolicy: Never` each retry is a new Pod.
-- `concurrencyPolicy` decides overlap: **Forbid** skips, **Allow** overlaps, **Replace** supersedes.
-- The core contrast with S06: a **Deployment** treats exit `0` as a fault and restarts forever;
-  a **Job** treats it as success and stops.
+- Um **Job** roda até a conclusão: exit `0` → `COMPLETIONS 1/1`, `Complete`, nada reinicia.
+  Os Pods terminados ficam por ali (como `Completed`) por causa dos logs, até o GC ou o
+  `ttlSecondsAfterFinished`.
+- Um **CronJob** cria um novo Job por tique (`*/1` = a cada minuto), acompanha o `LAST SCHEDULE` e
+  poda os Jobs terminados além de `successfulJobsHistoryLimit` / `failedJobsHistoryLimit`.
+- Um Job que falha tenta de novo até o **`backoffLimit`** (com rate limit e backoff exponencial) e
+  então fica **Failed** com **`BackoffLimitExceeded`**; com `restartPolicy: Never` cada tentativa é um Pod novo.
+- O `concurrencyPolicy` decide a sobreposição: **Forbid** pula, **Allow** sobrepõe, **Replace** substitui.
+- O contraste central com S06: um **Deployment** trata o exit `0` como falha e reinicia para
+  sempre; um **Job** o trata como sucesso e para.
 
 ## Challenge
 
-Predict and then prove how concurrencyPolicy Forbid behaves when a CronJob tick
-arrives while the previous Job is still Running — then contrast Allow and Replace
-without retyping the whole guided history demo.
+Preveja e depois prove como o concurrencyPolicy Forbid se comporta quando um tique do
+CronJob chega enquanto o Job anterior ainda está Running — depois contraste Allow e Replace
+sem redigitar toda a demo de histórico do guiado.
 
 **Difficulty:** Intermediate
 
-**Success criteria:** Identify from CronJob Events or Job timestamps that Forbid skips an overlapping tick,
-compare one observable signal each for Allow (concurrent Jobs present) versus Replace,
-and leave the CronJob suspended or deleted.
+**Success criteria:** Identifique pelos Events do CronJob ou pelos timestamps dos Jobs que o Forbid pula um tique
+sobreposto, compare um sinal observável para Allow (Jobs concorrentes presentes) versus
+Replace, e deixe o CronJob suspenso ou deletado.
 
-**Hints:** Suspend the CronJob when finished; inspect LAST SCHEDULE versus active Jobs; read
-concurrencyPolicy on the CronJob spec.
+**Hints:** Suspenda o CronJob ao terminar; compare o LAST SCHEDULE com os Jobs ativos; leia o
+concurrencyPolicy no spec do CronJob.
 
-[Spoiler: challenge solution](./15-jobs.solution.md#challenge-solution)
+[Spoiler: solução do challenge](./15-jobs.solution.md#challenge-solution)
 
 ## Verify
 
-Confirm Job/CronJob evidence before cleanup.
+Confirme as evidências de Job/CronJob antes do cleanup.
 
 ```bash
 kubectl get cronjob,job,pods -n "$NS" -l app=s15
 kubectl get job -n "$NS" -l app=s15 -o custom-columns=NAME:.metadata.name,STATUS:.status.conditions[*].type
 ```
 
-Expected: labelled Jobs/CronJobs still show Complete or Failed status from the guided
-steps (suspend the CronJob if it is still firing).
+Esperado: os Jobs/CronJobs rotulados ainda mostram status Complete ou Failed vindos dos passos
+guiados (suspenda o CronJob se ele ainda estiver disparando).
 
 ## Cleanup / reset
 
 ```bash
-# scoped cleanup — everything this lab made is labelled app=s15
+# cleanup com escopo — tudo que este lab criou é rotulado app=s15
 kubectl delete cronjob,job -l app=s15 -n "$NS" --ignore-not-found
-kubectl delete pod -l app=s15 -n "$NS" --ignore-not-found     # any lingering Completed/Error Pods
+kubectl delete pod -l app=s15 -n "$NS" --ignore-not-found     # quaisquer Pods Completed/Error remanescentes
 rm -f job-report.yaml cronjob-report.yaml job-failing.yaml job-fixed.yaml job-queue.yaml
 
-# panic reset (namespace): also removes anything else this lab could have left
+# reset de pânico (namespace): remove também qualquer outra coisa que este lab possa ter deixado
 # kubectl delete cronjob,job,pod --all -n "$NS" --ignore-not-found
-# panic reset (kind): make kind-down && make kind-up   # or: kind delete cluster
+# reset de pânico (kind): make kind-down && make kind-up   # ou: kind delete cluster
 ```
 
-> **Delete the CronJob when you're done.** A per-minute CronJob left running will keep spawning
-> Jobs and Pods every minute in your namespace — `kubectl delete cronjob report` stops it (or
-> `kubectl patch cronjob report -p '{"spec":{"suspend":true}}'` pauses without deleting).
+> **Delete o CronJob quando terminar.** Um CronJob por minuto deixado rodando vai continuar
+> gerando Jobs e Pods a cada minuto no seu namespace — `kubectl delete cronjob report` o para (ou
+> `kubectl patch cronjob report -p '{"spec":{"suspend":true}}'` o pausa sem deletar).
 
-## Stretch (optional) — a parallel work queue
+## Stretch (opcional) — uma fila de trabalho paralela
 
-A single Job can run many Pods. Set `completions` (how many successes finish the Job) and
-`parallelism` (how many run at once) to process a batch in parallel.
+Um único Job pode rodar muitos Pods. Defina `completions` (quantos sucessos terminam o Job) e
+`parallelism` (quantos rodam ao mesmo tempo) para processar um lote em paralelo.
 
 ```bash
 cat > job-queue.yaml <<'EOF'
@@ -293,8 +296,8 @@ metadata:
   name: batch
   labels: { app: s15 }
 spec:
-  completions: 6                     # 6 successful Pods = done
-  parallelism: 2                     # at most 2 running at a time
+  completions: 6                     # 6 Pods bem-sucedidos = pronto
+  parallelism: 2                     # no máximo 2 rodando por vez
   backoffLimit: 4
   template:
     metadata:
@@ -308,14 +311,15 @@ spec:
 EOF
 
 kubectl apply -f job-queue.yaml
-kubectl get job batch -w           # COMPLETIONS climbs 0/6 → 2/6 → 4/6 → 6/6, then Ctrl-C
+kubectl get job batch -w           # COMPLETIONS sobe 0/6 → 2/6 → 4/6 → 6/6, depois Ctrl-C
 ```
 
 ---
 
-> **Delivery note (repo convention).** Manifests here are authored against `batch/v1` and
-> `kubectl apply --dry-run=server`-validated on a live cluster, but the lab was **not executed
-> end-to-end** in the authoring environment (the only reachable cluster was a shared production
-> namespace, out of bounds for creating objects). Before rehearsal, run this once in a clean
-> **kind** cluster to confirm: the exact Pod count at `BackoffLimitExceeded`, the per-minute
-> CronJob fire cadence, and the history-limit trimming after several ticks.
+> **Nota de entrega (convenção do repo).** Os manifestos aqui foram escritos contra `batch/v1` e
+> validados com `kubectl apply --dry-run=server` em um cluster real, mas o lab **não foi executado
+> de ponta a ponta** no ambiente de autoria (o único cluster alcançável era um namespace de
+> produção compartilhado, fora dos limites para criar objetos). Antes do ensaio, rode isto uma vez
+> em um cluster **kind** limpo para confirmar: a contagem exata de Pods em
+> `BackoffLimitExceeded`, a cadência de disparo do CronJob por minuto e a poda do history limit
+> depois de vários tiques.

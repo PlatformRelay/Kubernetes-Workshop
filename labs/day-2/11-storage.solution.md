@@ -1,21 +1,22 @@
-# Lab 11 — Storage (PV/PVC/StorageClass) (S11) — solutions
+# Lab 11 — Storage (PV/PVC/StorageClass) (S11) — soluções
 
-Use this companion after attempting the participant lab. Outputs contain representative
-names, addresses, ages, and image sizes; compare the state and meaning rather than copying
-ephemeral values literally.
+Use este companion depois de tentar o lab do participante. As saídas contêm nomes, endereços,
+idades e tamanhos de image representativos; compare o estado e o significado em vez de copiar
+literalmente valores efêmeros.
 
 ## Guided solutions
 
-### Step 0 — see the default StorageClass
+### Step 0 — veja a StorageClass padrão
 
-Dynamic provisioning needs a **default** StorageClass (the one that runs when a PVC doesn't
-name one). Find it and note its reclaim policy and binding mode.
+O provisionamento dinâmico precisa de uma StorageClass **padrão** (a que entra em ação
+quando uma PVC não nomeia nenhuma). Encontre-a e anote sua reclaim policy e seu binding
+mode.
 
 ```bash
 kubectl get storageclass
 ```
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ kubectl get storageclass
@@ -23,18 +24,18 @@ NAME                 PROVISIONER             RECLAIMPOLICY   VOLUMEBINDINGMODE  
 standard (default)   rancher.io/local-path   Delete          WaitForFirstConsumer   false                  10d
 ```
 
-The `(default)` marker is the one used when a PVC omits `storageClassName`. On kind it is
-`standard` (the `local-path` provisioner); on a shared cluster the name/provisioner differ,
-but there will be exactly one default. Note two columns you'll meet again: **RECLAIMPOLICY**
-`Delete` (deleting the claim destroys the disk) and **VOLUMEBINDINGMODE**
-`WaitForFirstConsumer` (the claim won't bind until a Pod consumes it).
+O marcador `(default)` indica a classe usada quando uma PVC omite `storageClassName`. No
+kind é a `standard` (o provisioner `local-path`); em um cluster compartilhado o
+nome/provisioner mudam, mas haverá exatamente uma padrão. Note duas colunas que você vai
+reencontrar: **RECLAIMPOLICY** `Delete` (deletar a claim destrói o disco) e
+**VOLUMEBINDINGMODE** `WaitForFirstConsumer` (a claim não faz bind até um Pod consumi-la).
 </details>
 
 ---
 
-### Step 1 — apply the PVC (and understand `Pending`)
+### Step 1 — aplique a PVC (e entenda o `Pending`)
 
-Create the claim. It omits `storageClassName`, so it uses the default from Step 0.
+Crie a claim. Ela omite `storageClassName`, então usa a padrão do Step 0.
 
 ```bash
 cat > pvc.yaml <<'EOF'
@@ -45,26 +46,27 @@ metadata:
   labels:
     app: s11
 spec:
-  accessModes: ["ReadWriteOnce"]     # one node mounts it read-write
+  accessModes: ["ReadWriteOnce"]     # um node a monta em leitura e escrita
   resources:
     requests:
       storage: 1Gi
-  # storageClassName omitted → the cluster default StorageClass
+  # storageClassName omitido → a StorageClass padrão do cluster
 EOF
 
 kubectl apply -f pvc.yaml
 kubectl get pvc web-data
 ```
 
-**Task:** is the PVC `Bound` yet? Check *why* with `describe`.
+**Tarefa:** a PVC já está `Bound`? Verifique o *porquê* com `describe`.
 
 ```bash
 kubectl describe pvc web-data | sed -n '/Events/,$p'
 ```
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
-On kind (and any `WaitForFirstConsumer` default) the claim is **Pending** — on purpose:
+No kind (e em qualquer padrão `WaitForFirstConsumer`) a claim fica **Pending** — de
+propósito:
 
 ```console
 $ kubectl get pvc web-data
@@ -78,21 +80,22 @@ Events:
   Normal  WaitForFirstConsumer  3s    persistentvolume-controller  waiting for first consumer to be created before binding
 ```
 
-`waiting for first consumer` means the StorageClass defers binding until a Pod mounts the
-claim, so the disk lands on the node the Pod is scheduled to. **This Pending is expected —
-it is not a failure.** (On a cluster whose default StorageClass uses `Immediate` binding,
-you'll instead see `STATUS: Bound` right away. Either is correct.) Remember the event text
-`waiting for first consumer` — the break in Step 4 shows a *different* Pending message.
+`waiting for first consumer` significa que a StorageClass adia o bind até um Pod montar a
+claim, para que o disco caia no node em que o Pod for agendado. **Este Pending é esperado —
+não é uma falha.** (Em um cluster cuja StorageClass padrão usa binding `Immediate`, você
+verá `STATUS: Bound` de imediato. Ambos estão corretos.) Guarde o texto do event
+`waiting for first consumer` — a quebra do Step 4 mostra uma mensagem de Pending
+*diferente*.
 </details>
 
 ---
 
-### Step 2 — mount the PVC and write a sentinel
+### Step 2 — monte a PVC e escreva um sentinela
 
-Now give the claim a consumer. First show the ephemeral baseline, then the durable version.
-As in Lab 10, the demo app's image is distroless (no shell), so each Deployment carries a
-tiny **toolbox** sidecar mounting the same volume — that's the pen you write the sentinel
-with.
+Agora dê à claim um consumidor. Primeiro mostre a linha de base efêmera, depois a versão
+durável. Como no Lab 10, a image do app de demo é distroless (sem shell), então cada
+Deployment carrega um pequeno sidecar **toolbox** montando o mesmo volume — é a caneta com
+que você escreve o sentinela.
 
 ```bash
 cat > deployment-emptydir.yaml <<'EOF'
@@ -103,7 +106,7 @@ metadata:
   labels:
     app: s11
 spec:
-  replicas: 1                        # one replica → `exec` is unambiguous
+  replicas: 1                        # uma réplica → `exec` é inequívoco
   selector:
     matchLabels:
       app: s11
@@ -118,7 +121,7 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /data
-        - name: toolbox              # the app image has no shell — the sidecar is our pen
+        - name: toolbox              # a image do app não tem shell — o sidecar é nossa caneta
           image: busybox:1.37
           command: ["sleep", "infinity"]
           volumeMounts:
@@ -126,7 +129,7 @@ spec:
               mountPath: /data
       volumes:
         - name: data
-          emptyDir: {}               # ephemeral — shares the Pod's lifetime
+          emptyDir: {}               # efêmero — compartilha o ciclo de vida do Pod
 EOF
 
 cat > deployment-pvc.yaml <<'EOF'
@@ -151,7 +154,7 @@ spec:
           image: ghcr.io/platformrelay/workshop-web:v1
           volumeMounts:
             - name: data
-              mountPath: /data        # identical mount — only the volume source changes
+              mountPath: /data        # mount idêntico — só a origem do volume muda
         - name: toolbox
           image: busybox:1.37
           command: ["sleep", "infinity"]
@@ -161,25 +164,26 @@ spec:
       volumes:
         - name: data
           persistentVolumeClaim:
-            claimName: web-data        # durable, survives the Pod
+            claimName: web-data        # durável, sobrevive ao Pod
 EOF
 
-# apply the durable version and wait for it to roll out
+# aplique a versão durável e espere o rollout
 kubectl apply -f deployment-pvc.yaml
 kubectl rollout status deploy/web
 
-# the Pod is now the "first consumer" — the claim should bind
+# o Pod agora é o "first consumer" — a claim deve fazer bind
 kubectl get pvc web-data
 ```
 
-**Task:** confirm the claim is now `Bound`, then write a sentinel file into the volume.
+**Tarefa:** confirme que a claim agora está `Bound`, depois escreva um arquivo sentinela no
+volume.
 
 ```bash
 kubectl exec deploy/web -c toolbox -- sh -c 'echo "written by $(hostname) at boot" > /data/data.txt'
 kubectl exec deploy/web -c toolbox -- cat /data/data.txt
 ```
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ kubectl get pvc web-data
@@ -190,40 +194,41 @@ $ kubectl exec deploy/web -c toolbox -- cat /data/data.txt
 written by web-6f8c9b7d5-abcde at boot
 ```
 
-Scheduling the Pod triggered the provisioner: it created a **PV**, bound `web-data` to it
-(`STATUS: Bound`, and a `VOLUME` name appears), and mounted it at `/data`. The sentinel now
-lives on the PV, not on the Pod's writable layer.
+Agendar o Pod acionou o provisioner: ele criou um **PV**, fez o bind de `web-data` a ele
+(`STATUS: Bound`, e um nome de `VOLUME` aparece) e o montou em `/data`. O sentinela agora
+vive no PV, não na camada gravável do Pod.
 </details>
 
-**Question:** you never created a PersistentVolume — where did the `VOLUME` (the `pvc-…`
-name) come from?
+**Pergunta:** você nunca criou um PersistentVolume — de onde veio o `VOLUME` (o nome
+`pvc-…`)?
 
-<details><summary>Answer</summary>
+<details><summary>Resposta</summary>
 
-**Dynamic provisioning.** The default StorageClass's provisioner watched for a `Bound`-able
-claim and, once a Pod consumed `web-data`, created a PV sized to the request and bound them
-1:1. You author only the **claim**; the StorageClass mints the **volume**. (Static
-provisioning — an admin pre-creating PVs — still exists but is the exception today.)
+**Provisionamento dinâmico.** O provisioner da StorageClass padrão observou uma claim
+apta a fazer bind e, assim que um Pod consumiu `web-data`, criou um PV do tamanho do pedido
+e fez o bind 1:1 entre eles. Você escreve apenas a **claim**; a StorageClass cunha o
+**volume**. (O provisionamento estático — um admin pré-criando PVs — ainda existe, mas hoje
+é a exceção.)
 </details>
 
 ---
 
-### Step 3 — delete the Pod, prove the data survives
+### Step 3 — delete o Pod, prove que os dados sobrevivem
 
-This is the whole point of the section.
+Esse é o ponto central da seção.
 
 ```bash
-# delete the running Pod; the Deployment immediately recreates one
+# delete o Pod em execução; o Deployment recria um imediatamente
 kubectl delete pod -l app=s11
 kubectl rollout status deploy/web
 
-# read the sentinel from the BRAND-NEW Pod
+# leia o sentinela a partir do Pod NOVINHO EM FOLHA
 kubectl exec deploy/web -c toolbox -- cat /data/data.txt
 ```
 
-**Task:** did the file survive into the replacement Pod?
+**Tarefa:** o arquivo sobreviveu até o Pod substituto?
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ kubectl delete pod -l app=s11
@@ -234,29 +239,29 @@ $ kubectl exec deploy/web -c toolbox -- cat /data/data.txt
 written by web-6f8c9b7d5-abcde at boot
 ```
 
-**Yes.** The new Pod (note the *old* hostname inside the file — it wasn't rewritten)
-re-bound the **same** `web-data` PVC and the **same** PV. The PVC and PV have their own
-lifecycle, independent of any Pod, so the data outlived the delete.
+**Sim.** O novo Pod (note o hostname *antigo* dentro do arquivo — ele não foi reescrito)
+refez o bind da **mesma** PVC `web-data` e do **mesmo** PV. A PVC e o PV têm seu próprio
+ciclo de vida, independente de qualquer Pod, então os dados sobreviveram ao delete.
 </details>
 
-**Question:** the sentinel says it was written by the *old* Pod's hostname. Why is that the
-proof we wanted?
+**Pergunta:** o sentinela diz que foi escrito pelo hostname do Pod *antigo*. Por que essa é
+exatamente a prova que queríamos?
 
-<details><summary>Answer</summary>
+<details><summary>Resposta</summary>
 
-Because the file was written **once**, by the original Pod, and read back by a **different**
-Pod after a delete/recreate. If the volume were `emptyDir` (or the container's own
-filesystem), the new Pod would start with an empty `/data` and the `cat` would fail — the
-data is tied to the PVC/PV, not the Pod. (The stretch goal runs that counter-experiment.)
+Porque o arquivo foi escrito **uma vez**, pelo Pod original, e lido de volta por um Pod
+**diferente** após um delete/recriação. Se o volume fosse `emptyDir` (ou o filesystem do
+próprio container), o novo Pod começaria com um `/data` vazio e o `cat` falharia — os dados
+estão atrelados à PVC/PV, não ao Pod. (O stretch opcional executa esse contraexperimento.)
 </details>
 
 ---
 
-### Step 4 — break→fix: a StorageClass that doesn't exist
+### Step 4 — break→fix: uma StorageClass que não existe
 
-A `Pending` claim isn't always the harmless `WaitForFirstConsumer` wait. Here's the other
-cause — and how `describe` tells them apart. This claim ships **with** a consumer Pod, so
-you can see it fail even *with* a first consumer present.
+Uma claim em `Pending` nem sempre é a espera inofensiva do `WaitForFirstConsumer`. Aqui
+está a outra causa — e como o `describe` as distingue. Esta claim vem **com** um Pod
+consumidor, para você ver a falha acontecer mesmo *com* um first consumer presente.
 
 ```bash
 cat > pvc-bad-storageclass.yaml <<'EOF'
@@ -267,7 +272,7 @@ metadata:
   labels:
     app: s11
 spec:
-  storageClassName: no-such-class    # <-- nonexistent provisioner
+  storageClassName: no-such-class    # <-- provisioner inexistente
   accessModes: ["ReadWriteOnce"]
   resources:
     requests:
@@ -298,10 +303,10 @@ kubectl get pod binder
 kubectl describe pvc web-data-bad | sed -n '/Events/,$p'
 ```
 
-**Task:** the claim has a consumer (the `binder` Pod) — so why is it still `Pending`, and how
-is this different from Step 1?
+**Tarefa:** a claim tem um consumidor (o Pod `binder`) — então por que ela ainda está em
+`Pending`, e como isso é diferente do Step 1?
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ kubectl get pvc web-data-bad
@@ -319,26 +324,27 @@ Events:
   Warning  ProvisioningFailed  3s    persistentvolume-controller  storageclass.storage.k8s.io "no-such-class" not found
 ```
 
-In Step 1 the event was `waiting for first consumer` (a normal deferral). **Here** it's a
-`Warning` — `storageclass "no-such-class" not found` — and no provisioner will *ever* act,
-even though the `binder` Pod is waiting to consume it. The Pod is `Pending` too, because it
-can't start until its claim binds. **Read the events, not just the phase:** both say
-`Pending`, but only one is broken.
+No Step 1 o event era `waiting for first consumer` (um adiamento normal). **Aqui** é um
+`Warning` — `storageclass "no-such-class" not found` — e nenhum provisioner *jamais* vai
+agir, mesmo com o Pod `binder` esperando para consumi-la. O Pod também está `Pending`,
+porque não pode iniciar até a claim dele fazer bind. **Leia os events, não apenas a fase:**
+os dois dizem `Pending`, mas só um está quebrado.
 </details>
 
-**Task:** fix it. A PVC's `storageClassName` is immutable, so the claim must be recreated
-on the default class. A Pod that references a PVC pins it with a `pvc-protection`
-finalizer, so **remove the consumer first** (or the delete hangs), then recreate the claim
-**and** a fresh consumer together — `WaitForFirstConsumer` needs a Pod present to bind.
+**Tarefa:** conserte. O `storageClassName` de uma PVC é imutável, então a claim precisa
+ser recriada na classe padrão. Um Pod que referencia uma PVC a prende com um finalizer
+`pvc-protection`, então **remova o consumidor primeiro** (ou o delete trava), depois recrie
+a claim **e** um consumidor novo juntos — o `WaitForFirstConsumer` precisa de um Pod
+presente para fazer bind.
 
 ```bash
-# 1) drop the consumer first — a referenced PVC won't finish deleting while a Pod holds it
+# 1) derrube o consumidor primeiro — uma PVC referenciada não termina de deletar enquanto um Pod a segura
 kubectl delete pod binder
 
-# 2) delete the failed claim (storageClassName is immutable → recreate, don't patch)
+# 2) delete a claim que falhou (storageClassName é imutável → recrie, não faça patch)
 kubectl delete pvc web-data-bad
 
-# 3) recreate the claim on the DEFAULT class + a fresh consumer, together
+# 3) recrie a claim na classe PADRÃO + um consumidor novo, juntos
 kubectl apply -f - <<'EOF'
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -351,7 +357,7 @@ spec:
   resources:
     requests:
       storage: 1Gi
-  # storageClassName omitted → the default class
+  # storageClassName omitido → a classe padrão
 ---
 apiVersion: v1
 kind: Pod
@@ -372,11 +378,11 @@ spec:
         claimName: web-data-bad
 EOF
 
-kubectl get pvc web-data-bad -w      # Ctrl-C once it shows Bound
+kubectl get pvc web-data-bad -w      # Ctrl-C quando mostrar Bound
 kubectl get pod binder
 ```
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ kubectl get pvc web-data-bad -w
@@ -388,30 +394,30 @@ NAME     READY   STATUS    RESTARTS   AGE
 binder   1/1     Running   0          30s
 ```
 
-With a valid (default) StorageClass and a fresh `binder` Pod as the first consumer,
-provisioning succeeds: the PVC binds and the Pod schedules. Two things mattered — fixing the
-class name was the repair, and **deleting the consumer Pod first** is what let the old claim
-finish deleting (a Pod referencing a PVC holds a `pvc-protection` finalizer that blocks its
-deletion until the Pod is gone).
+Com uma StorageClass válida (a padrão) e um Pod `binder` novo como first consumer, o
+provisionamento funciona: a PVC faz bind e o Pod é agendado. Duas coisas importaram —
+corrigir o nome da classe foi o reparo, e **deletar o Pod consumidor primeiro** foi o que
+permitiu à claim antiga terminar de ser deletada (um Pod que referencia uma PVC segura um
+finalizer `pvc-protection` que bloqueia a deleção dela até o Pod sumir).
 </details>
 
 ---
 
-### Step 5 — read the reclaim policy
+### Step 5 — leia a reclaim policy
 
-The reclaim policy decides what happens to the PV (and its data) when the **claim** is
-deleted. It's stamped onto the PV from the StorageClass.
+A reclaim policy decide o que acontece com o PV (e com seus dados) quando a **claim** é
+deletada. Ela é carimbada no PV a partir da StorageClass.
 
 ```bash
-# find the PV backing web-data, then read its reclaim policy (needs cluster-scoped read)
+# encontre o PV por trás de web-data, depois leia sua reclaim policy (exige leitura cluster-scoped)
 PVNAME=$(kubectl get pvc web-data -o jsonpath='{.spec.volumeName}')
 kubectl get pv "$PVNAME" -o custom-columns=\
 NAME:.metadata.name,RECLAIM:.spec.persistentVolumeReclaimPolicy,SC:.spec.storageClassName,STATUS:.status.phase
 ```
 
-**Task:** what is the reclaim policy, and what would deleting `web-data` do to the data?
+**Tarefa:** qual é a reclaim policy, e o que deletar `web-data` faria com os dados?
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ kubectl get pv "$PVNAME" -o custom-columns=NAME:...,RECLAIM:...,SC:...,STATUS:...
@@ -419,14 +425,14 @@ NAME               RECLAIM   SC         STATUS
 pvc-3d1f...-9a2b   Delete    standard   Bound
 ```
 
-The policy is **`Delete`** (the default for dynamically-provisioned PVs). Deleting the PVC
-would release the PV and the provisioner would **destroy the underlying disk and the data**.
-A policy of **`Retain`** would instead keep the PV (and data) in a `Released` state for
-manual recovery — but it won't be reused automatically.
+A policy é **`Delete`** (o padrão para PVs provisionados dinamicamente). Deletar a PVC
+liberaria o PV e o provisioner **destruiria o disco subjacente e os dados**. Uma policy
+**`Retain`**, em vez disso, manteria o PV (e os dados) em estado `Released` para
+recuperação manual — mas ele não seria reutilizado automaticamente.
 
-**Namespace-safe alternative** (if `get pv` is forbidden for your account — PVs are
-cluster-scoped): the PV inherits the StorageClass's policy, so read it there. Substitute
-**your** default StorageClass name from Step 0 (`standard` on kind):
+**Alternativa segura por namespace** (se `get pv` for proibido para a sua conta — PVs são
+cluster-scoped): o PV herda a policy da StorageClass, então leia-a lá. Substitua pelo nome
+da **sua** StorageClass padrão do Step 0 (`standard` no kind):
 
 ```console
 $ kubectl get sc <your-default-sc> -o jsonpath='{.reclaimPolicy}'; echo
@@ -435,20 +441,20 @@ Delete
 
 </details>
 
-### Stretch (optional) — the `emptyDir` counter-experiment
+### Stretch (opcional) — o contraexperimento do `emptyDir`
 
-Prove the contrast: with `emptyDir`, the *same* delete loses the data.
+Prove o contraste: com `emptyDir`, o *mesmo* delete perde os dados.
 
 ```bash
-kubectl apply -f deployment-emptydir.yaml         # swap the PVC volume for emptyDir
+kubectl apply -f deployment-emptydir.yaml         # troque o volume PVC por emptyDir
 kubectl rollout status deploy/web
 kubectl exec deploy/web -c toolbox -- sh -c 'echo ephemeral > /data/data.txt'
-kubectl delete pod -l app=s11                     # recreate the Pod
+kubectl delete pod -l app=s11                     # recrie o Pod
 kubectl rollout status deploy/web
 kubectl exec deploy/web -c toolbox -- cat /data/data.txt || echo "FILE GONE"
 ```
 
-<details><summary>Solution / what you're looking at</summary>
+<details><summary>Solução / o que você está vendo</summary>
 
 ```console
 $ kubectl exec deploy/web -c toolbox -- cat /data/data.txt || echo "FILE GONE"
@@ -456,45 +462,50 @@ cat: /data/data.txt: No such file or directory
 FILE GONE
 ```
 
-`emptyDir` is created **empty** with each Pod and deleted with it, so the replacement Pod
-starts with an empty `/data` — the file is gone. Same delete, opposite result: durability
-comes from the PVC/PV having a lifecycle **separate** from the Pod. Re-apply
-`deployment-pvc.yaml` if you want the durable version back, or run the cleanup above.
+O `emptyDir` é criado **vazio** com cada Pod e deletado junto com ele, então o Pod
+substituto começa com um `/data` vazio — o arquivo se foi. Mesmo delete, resultado oposto:
+a durabilidade vem do fato de a PVC/PV terem um ciclo de vida **separado** do Pod.
+Reaplique `deployment-pvc.yaml` se quiser a versão durável de volta, ou rode o cleanup
+acima.
 </details>
 
 ## Expected state / output
 
-- A PVC omitting `storageClassName` uses the cluster **default** StorageClass.
-- With `WaitForFirstConsumer`, the PVC is **`Pending` until a Pod mounts it** — normal, and
-  distinguishable from a real failure only by the `describe` **events**.
-- Dynamic provisioning creates the **PV** on demand; you never wrote a PV manifest.
-- A sentinel written to a PVC-backed volume **survives a Pod delete** (the replacement Pod
-  re-binds the same claim); an `emptyDir` sentinel would not.
-- A nonexistent StorageClass yields `ProvisioningFailed … not found` and a permanently
-  `Pending` claim (and consumer Pod).
-- Dynamically-provisioned PVs default to reclaim policy **`Delete`** — deleting the claim
-  destroys the data.
+- Uma PVC que omite `storageClassName` usa a StorageClass **padrão** do cluster.
+- Com `WaitForFirstConsumer`, a PVC fica **`Pending` até um Pod montá-la** — normal, e
+  distinguível de uma falha real apenas pelos **events** do `describe`.
+- O provisionamento dinâmico cria o **PV** sob demanda; você nunca escreveu um manifesto
+  de PV.
+- Um sentinela escrito em um volume respaldado por PVC **sobrevive a um delete de Pod** (o
+  Pod substituto refaz o bind da mesma claim); um sentinela em `emptyDir` não sobreviveria.
+- Uma StorageClass inexistente gera `ProvisioningFailed … not found` e uma claim (e Pod
+  consumidor) permanentemente em `Pending`.
+- PVs provisionados dinamicamente vêm por padrão com reclaim policy **`Delete`** — deletar
+  a claim destrói os dados.
 
-Representative statuses include Running/Complete/Failed Pods, Bound PVCs, Accepted
-Gateway conditions, or numeric HPA TARGETS — compare meaning, not ephemeral names.
+Status representativos incluem Pods Running/Complete/Failed, PVCs Bound, conditions
+Accepted de Gateway ou TARGETS numéricos de HPA — compare o significado, não nomes
+efêmeros.
 
 ## Explanation
 
-Dynamic provisioning needs a real StorageClass; WaitForFirstConsumer intentionally
-keeps a PVC Pending until a Pod schedules, which looks similar until you read Events.
-Persistence comes from the PV behind the claim — deleting the Pod does not delete that
-volume unless reclaim policy says so.
+O provisionamento dinâmico precisa de uma StorageClass real; o WaitForFirstConsumer mantém
+intencionalmente uma PVC em Pending até um Pod ser agendado, e as duas situações parecem
+iguais até você ler os Events, que revelam a causa real. A persistência vem do PV por trás
+da claim — deletar o Pod não deleta esse volume, a menos que a reclaim policy determine
+isso.
 
-The guided steps above prove the control-plane behaviour for this section; read Events and
-status fields when a one-line phase is ambiguous.
+Os passos guiados acima provam o comportamento do control plane para esta seção; leia os
+Events e os campos de status quando uma fase de uma linha só for ambígua.
 
 ## Troubleshooting and recovery
 
-When a PVC stays Pending, run `kubectl describe pvc -n "$NS"` and compare Events to
-`kubectl get storageclass`. A missing StorageClass needs a corrected claim —
-`kubectl apply -f pvc.yaml -n "$NS"` after fixing `storageClassName` — while
-WaitForFirstConsumer is normal until a Pod mounts it. After a bad break→fix, remove only the
-named claim with `kubectl delete pvc <name> -n "$NS" --ignore-not-found` before re-applying.
+Quando uma PVC fica em Pending, rode `kubectl describe pvc -n "$NS"` e compare os Events
+com `kubectl get storageclass`. Uma StorageClass ausente exige uma claim corrigida —
+`kubectl apply -f pvc.yaml -n "$NS"` depois de consertar `storageClassName` — enquanto
+WaitForFirstConsumer é normal até um Pod montá-la. Após um break→fix malsucedido, remova
+apenas a claim nomeada com `kubectl delete pvc <name> -n "$NS" --ignore-not-found` antes de
+reaplicar.
 
 ## Challenge solution
 
@@ -513,18 +524,19 @@ kubectl get pods -n "$NS" -l app=s11
 
 ### Expected state / output
 
-Events name either an unknown StorageClass or waiting for a first consumer. After the
-fix, the PVC status is Bound, and the sentinel remains present after Pod recreate,
-proving the volume retained the data.
+Os Events nomeiam ou uma StorageClass desconhecida ou a espera por um first consumer. Após
+a correção, o status da PVC é Bound, e o sentinela permanece presente após a recriação do
+Pod, provando que o volume reteve os dados.
 
 ### Explanation
 
-Dynamic provisioning needs a real StorageClass; WaitForFirstConsumer intentionally
-keeps a PVC Pending until a Pod schedules, which looks similar until you read Events.
-Persistence comes from the PV behind the claim — deleting the Pod does not delete that
-volume unless reclaim policy says so.
+O provisionamento dinâmico precisa de uma StorageClass real; o WaitForFirstConsumer mantém
+intencionalmente uma PVC em Pending até um Pod ser agendado, e as duas situações parecem
+iguais até você ler os Events, que revelam a causa real. A persistência vem do PV por trás
+da claim — deletar o Pod não deleta esse volume, a menos que a reclaim policy determine
+isso.
 
 ### Hints
 
-Check kubectl describe pvc Events for StorageClass versus WaitForFirstConsumer;
-compare with kubectl get storageclass before editing the claim.
+Verifique os Events de kubectl describe pvc para distinguir StorageClass de
+WaitForFirstConsumer; compare com kubectl get storageclass antes de editar a claim.

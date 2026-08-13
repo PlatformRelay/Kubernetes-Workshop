@@ -1,63 +1,64 @@
-# Lab 02 — Scan & harden a container image (S02)
+# Lab 02 — Escaneie & endureça uma image de container (S02)
 
 <!-- lab-contract:v1 -->
 
 | | |
 | --- | --- |
 | **Section** | S02 — Container security & supply chain |
-| **Environment** | local — no cluster needed |
+| **Environment** | local — nenhum cluster necessário |
 | **Estimated time** | 25 min |
 
 ## Objective
 
-Take a deliberately careless image — fat base, running as **root**, with a **secret baked into a
-layer** — and measure how bad it is. Then harden it in one pass (minimal base + non-root +
-multi-stage), and **re-measure**: scan CVEs before/after, generate an **SBOM**, prove that a
-"deleted" secret is still recoverable, and finally **pin by digest**. By the end you can defend
-every image you ship with numbers, not vibes.
+Pegar uma image deliberadamente descuidada — base gorda, rodando como **root**, com um **secret
+gravado em uma layer** — e medir o tamanho do estrago. Depois endurecê-la em uma única passada
+(base mínima + non-root + multi-stage) e **medir de novo**: escanear CVEs antes/depois, gerar um
+**SBOM**, provar que um secret "deletado" ainda é recuperável e, por fim, **fazer o pin por
+digest**. Ao final você consegue defender cada image que entrega com números, e não com achismo.
 
-This is the build-time half of security. Day 3 (S17/S25) enforces the runtime half.
+Esta é a metade de build-time da segurança. O Day 3 (S17/S25) impõe a metade de runtime.
 
 ## Prerequisites
 
-- A **container engine**: Docker, Podman, or nerdctl. **No cluster, no `kubectl`.**
-- The engine's daemon/machine running (`docker info` returns without error).
-- A **vulnerability scanner**: [Trivy](https://trivy.dev) (`trivy version` works). Grype is a fine
-  substitute — commands are noted where they differ.
-- Internet access on first run: the engine pulls base images and Trivy downloads its CVE database.
-- **Optional** (Step 6 only): [cosign](https://docs.sigstore.dev/) for signing. Skippable.
+- Um **container engine**: Docker, Podman ou nerdctl. **Sem cluster, sem `kubectl`.**
+- O daemon/máquina do engine rodando (`docker info` retorna sem erro).
+- Um **scanner de vulnerabilidades**: [Trivy](https://trivy.dev) (`trivy version` funciona). O Grype
+  é um substituto perfeitamente válido — os comandos estão anotados onde diferem.
+- Acesso à internet na primeira execução: o engine faz pull das base images e o Trivy baixa seu
+  banco de CVEs.
+- **Opcional** (só no Step 6): [cosign](https://docs.sigstore.dev/) para assinatura. Pode ser pulado.
 
-> **Which engine?** Every command uses `$ENGINE` so it works for all three. Set it once:
+> **Qual engine?** Todo comando usa `$ENGINE` para funcionar com os três. Defina uma vez:
 >
 > ```bash
-> export ENGINE=docker      # or: export ENGINE=podman   /   export ENGINE=nerdctl
+> export ENGINE=docker      # ou: export ENGINE=podman   /   export ENGINE=nerdctl
 > ```
 >
-> `--mount=type=secret` and `--secret` (Step 3) are BuildKit features — on Docker they're on by
-> default; Podman and nerdctl support the same `--secret` flag.
+> `--mount=type=secret` e `--secret` (Step 3) são recursos do BuildKit — no Docker eles vêm
+> ligados por padrão; Podman e nerdctl suportam a mesma flag `--secret`.
 
 ## Files used
 
-All created inline in Step 1 (nothing to download):
+Todos criados inline no Step 1 (nada para baixar):
 
-- `app/main.go`, `app/go.mod` — the tiny HTTP server from Lab 01 (stdlib only).
-- `app/deploy_key` — a **fake** build secret with a searchable marker.
-- `app/Dockerfile.insecure` — fat base, root, secret COPYed into a layer.
-- `app/Dockerfile.secret-rm` — the naive "just `rm` the secret" attempt (Step 5).
-- `app/Dockerfile.hardened` — multi-stage, distroless, non-root, secret **mounted** not copied.
+- `app/main.go`, `app/go.mod` — o servidor HTTP minúsculo do Lab 01 (apenas stdlib).
+- `app/deploy_key` — um secret de build **falso**, com um marcador pesquisável.
+- `app/Dockerfile.insecure` — base gorda, root, secret COPYado para dentro de uma layer.
+- `app/Dockerfile.secret-rm` — a tentativa ingênua de "só dar `rm` no secret" (Step 5).
+- `app/Dockerfile.hardened` — multi-stage, distroless, non-root, secret **montado** em vez de copiado.
 
 ---
 
 ## Guided task
 
-Work through the steps without opening the companion unless you are blocked. The spoiler
-contains exact commands, expected state, explanations, and recovery guidance.
+Percorra os passos sem abrir o companion, a menos que fique travado. O spoiler
+contém os comandos exatos, o estado esperado, explicações e orientações de recuperação.
 
-[Spoiler: guided solutions and expected output](./02-container-security.solution.md#guided-solutions)
+[Spoiler: soluções guiadas e saída esperada](./02-container-security.solution.md#guided-solutions)
 
-### Step 1 — create the project
+### Step 1 — crie o projeto
 
-Paste this whole block. It makes an `app/` folder with the source, a fake secret, and three
+Cole este bloco inteiro. Ele cria uma pasta `app/` com o código-fonte, um secret falso e três
 Dockerfiles.
 
 ```bash
@@ -92,7 +93,7 @@ module demo
 go 1.24
 EOF
 
-# a FAKE secret — note the searchable marker; we grep for it later
+# um secret FALSO — repare no marcador pesquisável; vamos dar grep nele depois
 cat > deploy_key <<'EOF'
 -----BEGIN DEMO KEY-----
 DEPLOY-SECRET-DO-NOT-SHIP-abc123
@@ -122,14 +123,14 @@ EOF
 
 cat > Dockerfile.hardened <<'EOF'
 # syntax=docker/dockerfile:1
-# stage 1: build with the toolchain; the secret is MOUNTED, never copied to a layer
+# stage 1: build com o toolchain; o secret é MONTADO, nunca copiado para uma layer
 FROM golang:1.24 AS build
 WORKDIR /src
 COPY . .
 RUN --mount=type=secret,id=deploy_key \
     DEPLOY_KEY="$(cat /run/secrets/deploy_key)" CGO_ENABLED=0 go build -o /bin/app .
 
-# stage 2: distroless + non-root; no shell, no package manager
+# stage 2: distroless + non-root; sem shell, sem gerenciador de pacotes
 FROM gcr.io/distroless/static:nonroot
 COPY --from=build /bin/app /bin/app
 ENV PORT=8080
@@ -141,104 +142,106 @@ EOF
 ls
 ```
 
-**Task:** confirm all six files exist.
+**Tarefa:** confirme que os seis arquivos existem.
 
 ---
 
-### Step 2 — build the careless image and measure it
+### Step 2 — construa a image descuidada e meça-a
 
-Build the insecure image, confirm it runs as **root**, then scan it and **write down the numbers**.
+Faça o build da image insegura, confirme que ela roda como **root**, depois escaneie-a e **anote os
+números**.
 
 ```bash
 $ENGINE build -f Dockerfile.insecure -t demo:insecure .
-$ENGINE image inspect demo:insecure --format 'user=[{{.Config.User}}]'   # empty = root
+$ENGINE image inspect demo:insecure --format 'user=[{{.Config.User}}]'   # vazio = root
 trivy image --severity HIGH,CRITICAL demo:insecure
 ```
 
-**Task:** the `user=[]` field is empty (root). Record the HIGH and CRITICAL counts **and
-the names above each result table**. The toolchain image can report the same Go finding for
-the app, compiler, formatter, and build tools, while the OS-package table changes whenever
-the vulnerability database or base tag changes.
+**Tarefa:** o campo `user=[]` está vazio (root). Registre as contagens de HIGH e CRITICAL **e os
+nomes acima de cada tabela de resultados**. A image de toolchain pode reportar o mesmo achado de Go
+para o app, o compilador, o formatador e as ferramentas de build, enquanto a tabela de pacotes do
+SO muda sempre que o banco de vulnerabilidades ou a tag da base muda.
 
-**Question:** you wrote a tiny Go app. Why does the scanner inspect so many binaries and
-OS packages that your runtime never calls?
+**Pergunta:** você escreveu um app Go minúsculo. Por que o scanner inspeciona tantos binários e
+pacotes de SO que seu runtime nunca chama?
 
 ---
 
-### Step 3 — harden it and re-measure
+### Step 3 — endureça e meça de novo
 
-Build the hardened image. The secret is **mounted** (never written to a layer), the binary is
-**static** (`CGO_ENABLED=0`) so it runs on a tiny base, and the final stage is **distroless +
+Faça o build da image endurecida. O secret é **montado** (nunca escrito em uma layer), o binário é
+**estático** (`CGO_ENABLED=0`) para rodar em uma base minúscula, e o estágio final é **distroless +
 non-root**.
 
 ```bash
-# --secret feeds the file to the build without baking it into any layer
+# --secret entrega o arquivo ao build sem gravá-lo em nenhuma layer
 $ENGINE build -f Dockerfile.hardened --secret id=deploy_key,src=deploy_key -t demo:hardened .
 
 $ENGINE image inspect demo:hardened --format 'user=[{{.Config.User}}]'   # 65532 = non-root
-$ENGINE images demo                                                       # compare sizes
+$ENGINE images demo                                                       # compare os tamanhos
 trivy image --severity HIGH,CRITICAL demo:hardened
 ```
 
-**Task:** the hardened image runs as UID **65532**, is dramatically smaller, and Trivy now
-has far fewer components and result tables to inspect. Compare the **affected components**,
-not just the headline count: the compiled app can retain the same Go stdlib findings until
-it is rebuilt with a fixed Go release. A small image is reduced attack surface, not proof of
-zero vulnerabilities.
+**Tarefa:** a image endurecida roda como UID **65532**, é dramaticamente menor, e o Trivy agora tem
+muito menos componentes e tabelas de resultados para inspecionar. Compare os **componentes
+afetados**, e não só a contagem do topo: o app compilado pode manter os mesmos achados da stdlib do
+Go até ser reconstruído com uma release corrigida do Go. Uma image pequena é superfície de ataque
+reduzida, não prova de zero vulnerabilidades.
 
-**Question:** try to open a shell in the hardened image: `$ENGINE run --rm -it demo:hardened sh`.
-Why does it fail — and why is that a **good** thing?
+**Pergunta:** tente abrir um shell na image endurecida: `$ENGINE run --rm -it demo:hardened sh`.
+Por que isso falha — e por que isso é uma coisa **boa**?
 
 ---
 
-### Step 4 — generate an SBOM
+### Step 4 — gere um SBOM
 
-An SBOM (Software Bill of Materials) lists every component in the image. When the next big CVE
-drops, you search your SBOMs instead of rebuilding and rescanning everything.
+Um SBOM (Software Bill of Materials) lista cada componente da image. Quando o próximo CVE grande
+aparecer, você pesquisa nos seus SBOMs em vez de reconstruir e reescanear tudo.
 
 ```bash
-# Trivy can emit a CycloneDX SBOM; --format spdx-json is the SPDX alternative
+# o Trivy consegue emitir um SBOM CycloneDX; --format spdx-json é a alternativa SPDX
 trivy image --format cyclonedx --output sbom.json demo:hardened
 wc -l sbom.json
 grep -o '"name":"[^"]*"' sbom.json | head
 ```
 
-**Task:** `sbom.json` exists and lists named components. Find at least one dependency in it.
+**Tarefa:** o `sbom.json` existe e lista componentes nomeados. Encontre pelo menos uma dependência ali.
 
-**Question:** why keep an SBOM at all when you can just re-scan the image whenever you want?
+**Pergunta:** por que manter um SBOM se você pode simplesmente reescanear a image quando quiser?
 
 ---
 
-### Step 5 — break it on purpose: a "deleted" secret still ships
+### Step 5 — quebre de propósito: um secret "deletado" continua sendo entregue
 
-The naive fix for a baked-in secret is to `rm` it in a later step. Prove that doesn't work.
+O conserto ingênuo para um secret gravado na image é dar `rm` nele em um passo posterior. Prove que
+isso não funciona.
 
 ```bash
 $ENGINE build -f Dockerfile.secret-rm -t demo:secret-rm .
-$ENGINE run --rm demo:secret-rm ls /src/deploy_key   # gone from the final filesystem?
+$ENGINE run --rm demo:secret-rm ls /src/deploy_key   # sumiu do filesystem final?
 $ENGINE history --no-trunc demo:secret-rm | grep -i deploy_key
 ```
 
-**Task:** the file is absent from the running container, **but** `history` still shows the layer
-that added it.
+**Tarefa:** o arquivo está ausente do container em execução, **mas** o `history` ainda mostra a
+layer que o adicionou.
 
-Now actually recover the secret from the image — no whiteout can stop this:
+Agora recupere o secret da image de verdade — nenhum whiteout impede isto:
 
 ```bash
 mkdir -p /tmp/dig && $ENGINE save demo:secret-rm | tar -x -C /tmp/dig
-# layer blobs may be plain OR gzipped depending on the engine — handle both:
+# os blobs de layer podem estar puros OU gzipados, dependendo do engine — trate os dois casos:
 find /tmp/dig -type f -exec sh -c 'gzip -dc "$1" 2>/dev/null || cat "$1"' _ {} \; \
   | grep -a "DEPLOY-SECRET-DO-NOT-SHIP" | head -1
 ```
 
-**Task:** the marker string is recovered straight out of the saved image's layer blobs.
+**Tarefa:** a string do marcador é recuperada direto dos blobs de layer da image salva.
 
-> **Engine note:** Docker's classic image store writes **uncompressed** layer tars, so a plain
-> `grep -ra /tmp/dig` also finds it. The containerd store and `nerdctl save` may **gzip** the blobs —
-> the `gzip -dc … || cat` above handles both. If you ever see "not found" here, suspect compression,
-> not safety.
+> **Nota sobre engines:** o image store clássico do Docker grava tars de layer **não comprimidos**,
+> então um `grep -ra /tmp/dig` puro também encontra o secret. O store do containerd e o
+> `nerdctl save` podem **gzipar** os blobs — o `gzip -dc … || cat` acima cobre os dois casos. Se
+> você algum dia vir "not found" aqui, suspeite de compressão, não de segurança.
 
-Now prove the hardened image is clean — same recovery, no hit:
+Agora prove que a image endurecida está limpa — mesma recuperação, nenhum acerto:
 
 ```bash
 mkdir -p /tmp/dig2 && $ENGINE save demo:hardened | tar -x -C /tmp/dig2
@@ -246,89 +249,94 @@ find /tmp/dig2 -type f -exec sh -c 'gzip -dc "$1" 2>/dev/null || cat "$1"' _ {} 
   | grep -a "DEPLOY-SECRET-DO-NOT-SHIP" || echo "NOT FOUND — clean"
 ```
 
-**Question:** you accidentally shipped `demo:secret-rm` to a registry last week, then rebuilt it
-"clean" today. Is the secret safe now?
+**Pergunta:** você entregou `demo:secret-rm` a um registry por acidente na semana passada e hoje a
+reconstruiu "limpa". O secret está seguro agora?
 
 ---
 
-### Step 6 — (optional) sign & verify
+### Step 6 — (opcional) assine & verifique
 
-Signing lets a consumer prove an image is really yours and untampered. This needs **cosign** and a
-registry to push to; skip it if either is missing — read the expected output instead.
+Assinar permite que um consumidor prove que uma image é realmente sua e não foi adulterada. Isto
+exige o **cosign** e um registry para onde fazer push; pule se faltar algum dos dois — leia a saída
+esperada em vez disso.
 
 ```bash
-# one-time: a local registry to push to, and a keypair
+# uma vez só: um registry local para onde fazer push, e um par de chaves
 $ENGINE run -d -p 5000:5000 --name lab-registry registry:2
-cosign generate-key-pair                        # writes cosign.key / cosign.pub
+cosign generate-key-pair                        # escreve cosign.key / cosign.pub
 
 $ENGINE tag demo:hardened localhost:5000/demo:hardened
 $ENGINE push localhost:5000/demo:hardened
-# the local registry is plain HTTP, so cosign needs --allow-insecure-registry
+# o registry local é HTTP puro, então o cosign precisa de --allow-insecure-registry
 cosign sign --key cosign.key --allow-insecure-registry localhost:5000/demo:hardened
 cosign verify --key cosign.pub --allow-insecure-registry localhost:5000/demo:hardened
 ```
 
-**Task:** `verify` succeeds for the signed image; if you push a *different* image to the same tag,
-`verify` fails.
+**Tarefa:** o `verify` tem sucesso para a image assinada; se você fizer push de uma image
+*diferente* para a mesma tag, o `verify` falha.
 
-**Question (no tools needed):** the signature covers the digest, not the tag. Why does that matter?
+**Pergunta (sem precisar de ferramenta):** a assinatura cobre o digest, não a tag. Por que isso importa?
 
 ---
 
-### Step 7 — pin the final reference by digest
+### Step 7 — faça o pin da referência final por digest
 
-A tag can move; a **digest** names exact bytes. Grab the hardened image's content digest and run it
-by digest.
+Uma tag pode se mover; um **digest** nomeia bytes exatos. Pegue o digest de conteúdo da image
+endurecida e execute-a por digest.
 
 ```bash
-DIGEST=$($ENGINE image inspect demo:hardened --format '{{.Id}}')   # sha256:... (content digest)
+DIGEST=$($ENGINE image inspect demo:hardened --format '{{.Id}}')   # sha256:... (digest de conteúdo)
 echo "$DIGEST"
-$ENGINE run -d --name demo-pin -p 8080:8080 "$DIGEST"              # run it by digest, not tag
+$ENGINE run -d --name demo-pin -p 8080:8080 "$DIGEST"              # execute por digest, não por tag
 curl -s localhost:8080
 $ENGINE rm -f demo-pin
 ```
 
-**Task:** the image runs when referenced purely by its `sha256:` digest, and `curl` answers.
+**Tarefa:** a image roda quando referenciada puramente pelo seu digest `sha256:`, e o `curl` responde.
 
-**Question:** if you pin by digest in your Deployment, what do you give up compared to `image: demo:1.4`?
+**Pergunta:** se você fizer o pin por digest no seu Deployment, o que você perde em comparação com
+`image: demo:1.4`?
 
 ---
 
 ## Observe
 
-- The **insecure** image runs as **root** and makes Trivy inspect the application plus the
-  compiler, formatter, build tools, and hundreds of base packages.
-- The **hardened** image is dramatically smaller, runs as **UID 65532**, and has no shell or
-  toolchain. Its app may still report Go stdlib findings until rebuilt with a fixed compiler.
-- An **SBOM** lists real components (e.g. the Go `stdlib` version) you can grep against future CVEs.
-- A secret `rm`'d in a later layer is **still recoverable** from `demo:secret-rm`; the **mounted**
-  secret leaves **no trace** in `demo:hardened`.
-- (Optional) `cosign verify` **succeeds** for the signed digest and **fails** after tampering.
-- The hardened image runs when referenced by its **`sha256:` digest**.
+- A image **insegura** roda como **root** e faz o Trivy inspecionar a aplicação mais o compilador,
+  o formatador, as ferramentas de build e centenas de pacotes da base.
+- A image **endurecida** é dramaticamente menor, roda como **UID 65532** e não tem shell nem
+  toolchain. O app dela ainda pode reportar achados da stdlib do Go até ser reconstruído com um
+  compilador corrigido.
+- Um **SBOM** lista componentes reais (ex.: a versão da `stdlib` do Go) contra os quais você pode
+  dar grep em CVEs futuros.
+- Um secret com `rm` em uma layer posterior **continua recuperável** de `demo:secret-rm`; o secret
+  **montado** não deixa **rastro nenhum** em `demo:hardened`.
+- (Opcional) o `cosign verify` **tem sucesso** para o digest assinado e **falha** após adulteração.
+- A image endurecida roda quando referenciada pelo seu **digest `sha256:`**.
 
 ---
 
 ## Challenge
 
-The distroless base still showed a couple of components in the SBOM. Try
-`gcr.io/distroless/static-debian12:nonroot` vs building `FROM scratch` (copy only the static binary
-and a CA bundle). Scan and SBOM both — how close to a truly empty bill of materials can you get, and
-what breaks (TLS, timezones) when you go all the way to `scratch`?
+A base distroless ainda mostrou alguns componentes no SBOM. Experimente
+`gcr.io/distroless/static-debian12:nonroot` contra um build `FROM scratch` (copiando apenas o
+binário estático e um CA bundle). Escaneie e gere o SBOM dos dois — quão perto de uma bill of
+materials realmente vazia dá para chegar, e o que quebra (TLS, timezones) quando você vai até o
+fim, no `scratch`?
 
 **Difficulty:** Advanced
 
-**Success criteria:** Build both distroless and scratch variants, scan each image,
-generate an SBOM for each, run each by digest, and explain which runtime files scratch
-needs for HTTPS.
+**Success criteria:** Faça o build das variantes distroless e scratch, escaneie cada image,
+gere um SBOM para cada uma, execute cada uma por digest, e explique quais arquivos de runtime
+o scratch precisa para HTTPS.
 
-**Hints:** Reuse the existing builder stage; copy the binary and CA bundle into scratch,
-then compare `trivy image`, CycloneDX SBOM, and runtime HTTP results side by side.
+**Hints:** Reutilize o estágio de builder existente; copie o binário e o CA bundle para o
+scratch, depois compare `trivy image`, o SBOM CycloneDX e os resultados HTTP de runtime lado a lado.
 
-[Spoiler: challenge solution](./02-container-security.solution.md#challenge-solution)
+[Spoiler: solução do challenge](./02-container-security.solution.md#challenge-solution)
 
 ## Verify
 
-Prove the hardened artifact is non-root and that the fake secret is absent before cleanup.
+Prove que o artefato endurecido é non-root e que o secret falso está ausente antes da limpeza.
 
 ```bash
 $ENGINE image inspect demo:hardened --format 'user={{.Config.User}}'
@@ -343,22 +351,23 @@ fi
 trivy image --severity HIGH,CRITICAL demo:hardened
 ```
 
-Expected: user `65532`, no secret match, and far fewer installed/affected components than
-the careless image. The remaining app findings are real and must not be described as zero.
+Esperado: user `65532`, nenhum acerto do secret, e muito menos componentes instalados/afetados que
+na image descuidada. Os achados restantes do app são reais e não podem ser descritos como zero.
 
 ## Cleanup / reset
 
-Everything lived in `app/`, a few images, and (optionally) a local registry — no cluster touched.
+Tudo viveu em `app/`, mais algumas images e (opcionalmente) um registry local — nenhum cluster foi
+tocado.
 
 ```bash
-# stop & remove the optional local registry (ignore if you skipped Step 6)
+# pare & remova o registry local opcional (ignore se você pulou o Step 6)
 $ENGINE rm -f lab-registry 2>/dev/null || true
 
-# remove the images this lab built
+# remova as images que este lab construiu
 $ENGINE rmi -f demo:insecure demo:secret-rm demo:hardened demo:distroless demo:scratch \
   localhost:5000/demo:hardened 2>/dev/null || true
 
-# remove extracted layers, generated artifacts, and the project
+# remova as layers extraídas, os artefatos gerados e o projeto
 rm -f sbom.json sbom-distroless.json sbom-scratch.json
 rm -rf /tmp/dig /tmp/dig2 /tmp/hardened-layers && cd .. && rm -rf app
 ```

@@ -1,25 +1,25 @@
-# Lab 22 — The operator pattern (S22) — solutions
+# Lab 22 — O padrão operator (S22) — soluções
 
-Use this companion after attempting the participant lab. Outputs contain representative
-names, addresses, ages, and image sizes; compare the state and meaning rather than copying
-ephemeral values literally.
+Use este companion depois de tentar o lab do participante. As saídas contêm nomes, endereços,
+idades e tamanhos de image representativos; compare o estado e o significado em vez de copiar
+literalmente valores efêmeros.
 
 ## Guided solutions
 
-### Step 0 — a cluster, and the operator itself
+### Step 0 — um cluster, e o próprio operator
 
-### kind path (do this)
+### Caminho kind (faça este)
 
 ```bash
 kind create cluster --name operator
 export NS=default
 
-# install cert-manager — CRDs + controller + webhook (verified current stable: v1.21.0)
+# instale o cert-manager — CRDs + controller + webhook (stable atual verificada: v1.21.0)
 kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.21.0/cert-manager.yaml
 ```
 
-Now **wait for the controller and webhook to be ready** — creating a `Certificate` before
-the webhook is up fails with a `connection refused` error, not because your YAML is wrong.
+Agora **aguarde o controller e o webhook ficarem prontos** — criar um `Certificate` antes de
+o webhook estar de pé falha com um erro de `connection refused`, e não porque seu YAML está errado.
 
 ```bash
 kubectl wait --for=condition=Available --timeout=300s \
@@ -27,7 +27,7 @@ kubectl wait --for=condition=Available --timeout=300s \
 kubectl get pods -n cert-manager
 ```
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ kubectl wait --for=condition=Available --timeout=300s deployment --all -n cert-manager
@@ -42,43 +42,43 @@ cert-manager-cainjector-7d8b8f6c9-xxxxx    1/1     Running   0          75s
 cert-manager-webhook-6c9dd58f5-xxxxx       1/1     Running   0          75s
 ```
 
-Three Deployments make up the operator: the **controller** (runs the reconcile loop), the
-**webhook** (validates/defaults CRs — the thing that must be up before you create a CR), and
-**cainjector** (a helper). All three are ordinary Pods — an operator is just software you
-install. The image registry `quay.io/jetstack/*` is the cert-manager project's, not a
-vendor's.
+Três Deployments compõem o operator: o **controller** (roda o loop de reconciliação), o
+**webhook** (valida/aplica defaults nos CRs — a peça que precisa estar de pé antes de você criar um CR) e o
+**cainjector** (um auxiliar). Os três são Pods comuns — um operator é só software que você
+instala. O registry de images `quay.io/jetstack/*` é do projeto cert-manager, não de um
+fornecedor.
 </details>
 
-### Shared-cluster path (read-only)
+### Caminho shared-cluster (read-only)
 
-You can't do a cluster-wide install in your namespace. Instead, inspect whatever operator
-CRDs already exist on the shared cluster and read their schema — the *pattern* is identical,
-only the install differs:
+Você não consegue fazer uma instalação em escopo de cluster dentro do seu namespace. Em vez disso,
+inspecione os CRDs de operator que já existirem no cluster compartilhado e leia o schema deles — o
+*padrão* é idêntico, só a instalação difere:
 
 ```bash
 export NS=<your-assigned-namespace>
 kubectl config set-context --current --namespace="$NS"
-kubectl get crd                                  # any *.something CRDs = an installed operator
-kubectl api-resources --api-group=cert-manager.io  # empty if cert-manager isn't installed
+kubectl get crd                                  # quaisquer CRDs *.alguma-coisa = um operator instalado
+kubectl api-resources --api-group=cert-manager.io  # vazio se o cert-manager não estiver instalado
 ```
 
-If cert-manager (or any operator) is present, follow Step 1 with its CRDs. Creating CRs
-needs the operator's controller running — state that, and read the manifests + spoilers for
-the rest.
+Se o cert-manager (ou qualquer operator) estiver presente, siga o Step 1 com os CRDs dele. Criar CRs
+exige o controller do operator em execução — constate isso e leia os manifestos + spoilers para
+o resto.
 
 ---
 
-### Step 1 — inspect the API the operator added
+### Step 1 — inspecione a API que o operator adicionou
 
-Installing cert-manager registered several **CRDs**. That's the "extends the API" half of
-the operator — new kinds you can now `kubectl get` like any built-in.
+Instalar o cert-manager registrou vários **CRDs**. Essa é a metade "estende a API" do
+operator — novos kinds em que você agora pode dar `kubectl get` como em qualquer built-in.
 
 ```bash
 kubectl get crd | grep cert-manager.io
 kubectl explain certificate.spec --api-version=cert-manager.io/v1 | head -30
 ```
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ kubectl get crd | grep cert-manager.io
@@ -104,32 +104,32 @@ FIELD: spec <Object>
    ...
 ```
 
-`kubectl explain` works on `Certificate` **because the CRD ships an OpenAPI schema** — the
-same mechanism that lets `kubectl explain pod.spec` work for built-ins. The API server now
-treats `cert-manager.io/v1` kinds as first-class. Nothing has *reconciled* anything yet;
-this is purely the API surface.
+O `kubectl explain` funciona em `Certificate` **porque o CRD traz um schema OpenAPI** — o
+mesmo mecanismo que faz o `kubectl explain pod.spec` funcionar para built-ins. O API server agora
+trata os kinds de `cert-manager.io/v1` como cidadãos de primeira classe. Nada foi *reconciliado* ainda;
+isto é puramente a superfície da API.
 </details>
 
-**Question:** you just ran `kubectl explain` and `kubectl get` against a kind Kubernetes
-doesn't ship. Where did the ability to `get`/`explain`/`-w` a `Certificate` come from?
+**Pergunta:** você acabou de rodar `kubectl explain` e `kubectl get` contra um kind que o Kubernetes
+não traz de fábrica. De onde veio a capacidade de fazer `get`/`explain`/`-w` em um `Certificate`?
 
-<details><summary>Answer</summary>
+<details><summary>Resposta</summary>
 
-From the **CustomResourceDefinition**. A CRD registers a new group/version/kind plus an
-**OpenAPI v3 schema** with the API server. Once registered, the resource is stored in etcd,
-validated on apply, and exposed through the same REST/discovery machinery as built-in kinds
-— so **all** the standard verbs (`get`, `describe`, `explain`, `-o yaml`, `-w`, RBAC, ...)
-work for free. That's the "extend the API" half of an operator; the controller (Step 2+) is
-the half that makes it *do* something.
+Da **CustomResourceDefinition**. Um CRD registra um novo group/version/kind mais um
+**schema OpenAPI v3** no API server. Uma vez registrado, o recurso é armazenado no etcd,
+validado no apply e exposto pela mesma maquinaria de REST/discovery dos kinds built-in
+— então **todos** os verbos padrão (`get`, `describe`, `explain`, `-o yaml`, `-w`, RBAC, ...)
+funcionam de graça. Essa é a metade "estende a API" de um operator; o controller (Step 2 em diante) é
+a metade que faz a coisa *acontecer*.
 </details>
 
 ---
 
-### Step 2 — declare intent: an Issuer and a Certificate
+### Step 2 — declare a intenção: um Issuer e um Certificate
 
-A `Certificate` needs an **issuer** to sign it. The simplest is a **self-signed** `Issuer` —
-no CA, no ACME, nothing to reach out to. Then we declare the `Certificate` itself: *"I want
-a cert for `s22.example.com`, stored in a Secret called `s22-tls`."*
+Um `Certificate` precisa de um **issuer** para assiná-lo. O mais simples é um `Issuer` **self-signed** —
+sem CA, sem ACME, nada externo para consultar. Depois declaramos o próprio `Certificate`: *"eu quero
+um cert para `s22.example.com`, guardado em um Secret chamado `s22-tls`."*
 
 ```bash
 cat > issuer.yaml <<'EOF'
@@ -149,11 +149,11 @@ metadata:
   name: s22-cert
   labels: { app: s22 }
 spec:
-  secretName: s22-tls            # the Secret the controller will create/keep
+  secretName: s22-tls            # o Secret que o controller vai criar/manter
   secretTemplate:
-    labels: { app: s22 }         # copy our label onto the generated Secret
-  duration: 2160h                # 90 days
-  renewBefore: 360h              # renew 15 days before expiry
+    labels: { app: s22 }         # copia o nosso label para o Secret gerado
+  duration: 2160h                # 90 dias
+  renewBefore: 360h              # renova 15 dias antes de expirar
   commonName: s22.example.com
   dnsNames:
     - s22.example.com
@@ -165,14 +165,14 @@ EOF
 kubectl apply -f issuer.yaml -f certificate.yaml
 ```
 
-**Task:** watch the controller reconcile the `Certificate` into a `Secret`. Run the watch
-and stop it (`Ctrl-C`) once the Certificate is `READY=True` and the Secret exists.
+**Tarefa:** veja o controller reconciliar o `Certificate` em um `Secret`. Rode o watch
+e pare-o (`Ctrl-C`) assim que o Certificate estiver `READY=True` e o Secret existir.
 
 ```bash
 kubectl get certificate,secret -l app=s22 -w
 ```
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 NAME                                 READY   SECRET    AGE
@@ -183,40 +183,40 @@ NAME                 TYPE                DATA   AGE
 secret/s22-tls       kubernetes.io/tls   3      2s
 ```
 
-You declared a `Certificate` (desired state) and **created no Secret** — yet a
-`kubernetes.io/tls` Secret named `s22-tls` appeared, holding `tls.crt`, `tls.key`, and
-`ca.crt` (`DATA 3`). The **cert-manager controller** observed your CR, saw no matching
-Secret (the gap), signed a cert with the self-signed Issuer, and wrote the Secret — then
-flipped the Certificate to `READY=True`. That's **observe → diff → act**, over a resource
-cert-manager invented. No imperative command created the Secret.
+Você declarou um `Certificate` (estado desejado) e **não criou nenhum Secret** — e ainda assim um
+Secret `kubernetes.io/tls` chamado `s22-tls` apareceu, carregando `tls.crt`, `tls.key` e
+`ca.crt` (`DATA 3`). O **controller do cert-manager** observou o seu CR, viu que não havia Secret
+correspondente (a lacuna), assinou um cert com o Issuer self-signed e escreveu o Secret — e então
+virou o Certificate para `READY=True`. Isso é **observe → diff → aja**, sobre um recurso que o
+cert-manager inventou. Nenhum comando imperativo criou o Secret.
 </details>
 
-**Question:** you never ran a command that creates a Secret. What created `s22-tls`, and
-what does that make cert-manager?
+**Pergunta:** você nunca rodou um comando que cria um Secret. O que criou o `s22-tls`, e
+o que isso faz do cert-manager?
 
-<details><summary>Answer</summary>
+<details><summary>Resposta</summary>
 
-The **cert-manager controller** created it, by running its **reconcile loop** over your
-`Certificate`: desired = *"a valid cert in Secret `s22-tls`"*; observed = *"no such
-Secret"*; act = *sign the cert and write the Secret*. Because it (a) added a new API kind
-via a **CRD** and (b) runs a **controller** that reconciles instances of that kind using
-**domain knowledge about certificates** (issue, store as a TLS Secret, later renew before
-expiry), cert-manager is an **operator** — not just a controller. See the next step for the
-sharper controller-vs-operator answer.
+O **controller do cert-manager** o criou, rodando o **loop de reconciliação** sobre o seu
+`Certificate`: desejado = *"um cert válido no Secret `s22-tls`"*; observado = *"nenhum Secret
+desses"*; aja = *assine o cert e escreva o Secret*. Porque ele (a) adicionou um novo kind de API
+via um **CRD** e (b) roda um **controller** que reconcilia instâncias desse kind usando
+**conhecimento de domínio sobre certificados** (emitir, guardar como um Secret TLS, depois renovar antes
+de expirar), o cert-manager é um **operator** — não apenas um controller. Veja o próximo passo para a
+resposta mais afiada de controller-versus-operator.
 </details>
 
 ---
 
-### Step 3 — read the status: the controller reporting back
+### Step 3 — leia o status: o controller reportando de volta
 
-The controller doesn't just act — it **writes state back onto your CR**, so `kubectl` can
-tell you what happened. This is the `.status` sub-resource the slides described.
+O controller não apenas age — ele **escreve estado de volta no seu CR**, para que o `kubectl` possa
+te dizer o que aconteceu. Este é o sub-resource `.status` que os slides descreveram.
 
 ```bash
 kubectl get certificate s22-cert -o jsonpath='{.status.conditions}' | jq .
 ```
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 [
@@ -230,153 +230,154 @@ kubectl get certificate s22-cert -o jsonpath='{.status.conditions}' | jq .
 ]
 ```
 
-(No `jq`? Use `kubectl describe certificate s22-cert` and read the **Status → Conditions**
-block.) The `Ready=True` condition is the **controller reporting observed state back onto
-the desired-state object** — `spec` is what you asked for, `status` is what the controller
-achieved. Every well-behaved operator does this; it's how `kubectl get` can show a CR as
-healthy or not.
+(Sem `jq`? Use `kubectl describe certificate s22-cert` e leia o bloco **Status → Conditions**.)
+A condição `Ready=True` é o **controller reportando o estado observado de volta no objeto de
+estado desejado** — `spec` é o que você pediu, `status` é o que o controller alcançou.
+Todo operator bem-comportado faz isso; é assim que o `kubectl get` consegue mostrar um CR como
+saudável ou não.
 </details>
 
 ---
 
-### Step 4 — break→fix: delete the Secret, watch the loop remake it
+### Step 4 — break→fix: delete o Secret, veja o loop refazê-lo
 
-This is the reconcile loop made visible. The `Secret` is a **child** the controller
-produced from your `Certificate`. Delete it, and the loop notices the gap and closes it.
+Este é o loop de reconciliação tornado visível. O `Secret` é um **filho** que o controller
+produziu a partir do seu `Certificate`. Delete-o, e o loop nota a lacuna e a fecha.
 
 ```bash
-# in one terminal, keep watching:
+# em um terminal, siga observando:
 kubectl get secret s22-tls -w &
 
-# now delete the child the controller produced:
+# agora delete o filho que o controller produziu:
 kubectl delete secret s22-tls
 ```
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 secret/s22-tls   kubernetes.io/tls   3   90s
 secret "s22-tls" deleted
-secret/s22-tls   kubernetes.io/tls   3   0s     # ← reappears, seconds later
+secret/s22-tls   kubernetes.io/tls   3   0s     # ← reaparece, segundos depois
 ```
 
-The Secret vanishes on delete, then **the same-named Secret reappears within seconds** — you
-did nothing to recreate it. The controller's loop is always running: it re-observed the
-`Certificate` (desired: a Secret `s22-tls` with a valid cert), observed the world (Secret
-missing → drift), and **acted** (re-signed, re-wrote the Secret). Stop the background watch
-with `kill %1` when done.
+O Secret some no delete, e então **um Secret de mesmo nome reaparece em segundos** — você
+não fez nada para recriá-lo. O loop do controller está sempre rodando: ele reobservou o
+`Certificate` (desejado: um Secret `s22-tls` com um cert válido), observou o mundo (Secret
+ausente → drift) e **agiu** (reassinou, reescreveu o Secret). Pare o watch em segundo plano
+com `kill %1` quando terminar.
 </details>
 
-**Question:** the Secret came back on its own. Was that **garbage collection /
-`ownerReferences`**, or the **reconcile loop**? (They're easy to confuse.)
+**Pergunta:** o Secret voltou sozinho. Isso foi **garbage collection /
+`ownerReferences`** ou o **loop de reconciliação**? (É fácil confundir os dois.)
 
-<details><summary>Answer</summary>
+<details><summary>Resposta</summary>
 
-The **reconcile loop** — *not* ownerReferences. `ownerReferences` drive **garbage
-collection**, which only ever *deletes* children when a parent is removed; GC never
-**creates** anything. Here the *parent* Certificate still exists and its child Secret was
-deleted, so the controller **re-created** it by re-running observe → diff → act. In fact
-cert-manager does **not** set an `ownerReference` on the Secret by default
-(`--enable-certificate-owner-ref` is `false`), precisely so the TLS Secret survives if you
-delete the Certificate. Rule of thumb: **child reappears after you delete it → a controller
-is reconciling it; child disappears when you delete its parent → ownerReference GC.**
+O **loop de reconciliação** — *não* ownerReferences. `ownerReferences` movem a **garbage
+collection**, que só *deleta* filhos quando um pai é removido; a GC nunca **cria** nada.
+Aqui o Certificate *pai* ainda existe e o Secret filho dele foi deletado, então o controller
+**o recriou** rodando de novo observe → diff → aja. Na verdade, o cert-manager **não**
+coloca um `ownerReference` no Secret por padrão (`--enable-certificate-owner-ref` é `false`),
+justamente para que o Secret TLS sobreviva se você deletar o Certificate. Regra de bolso:
+**o filho reaparece depois que você o deleta → um controller está reconciliando-o; o filho some
+quando você deleta o pai dele → GC por ownerReference.**
 </details>
 
 ---
 
-### Step 5 — the payoff question: controller *or* operator?
+### Step 5 — a pergunta que fecha a conta: controller *ou* operator?
 
-**Question:** the ReplicaSet controller also recreates things you delete (delete a Pod, it
-comes back). So what makes cert-manager an **operator** and not *just* a controller?
+**Pergunta:** o controller de ReplicaSet também recria coisas que você deleta (delete um Pod, ele
+volta). Então o que faz do cert-manager um **operator** e não *apenas* um controller?
 
-<details><summary>Answer</summary>
+<details><summary>Resposta</summary>
 
-Both run the **same reconcile loop** — that's the point, an operator is not a new mechanism.
-The difference is two things:
+Os dois rodam o **mesmo loop de reconciliação** — esse é o ponto, um operator não é um mecanismo novo.
+A diferença são duas coisas:
 
-1. **What it reconciles.** A plain controller reconciles **built-in** kinds (ReplicaSet →
-   Pods). An operator reconciles a **CRD it added** (`Certificate`) — it *extended the API*.
-2. **What's in "act".** A plain controller's act is **generic** (*make N replicas*).
-   cert-manager's act is **domain knowledge**: issue an X.509 cert, store it as a
-   `kubernetes.io/tls` Secret, and **renew it before it expires**. You could not express
-   *"keep this certificate valid"* with any built-in kind — that expertise lives in the
-   controller, exposed through the `Certificate` CRD.
+1. **O que ele reconcilia.** Um controller comum reconcilia kinds **built-in** (ReplicaSet →
+   Pods). Um operator reconcilia um **CRD que ele adicionou** (`Certificate`) — ele *estendeu a API*.
+2. **O que existe no "aja".** O agir de um controller comum é **genérico** (*faça N réplicas*).
+   O agir do cert-manager é **conhecimento de domínio**: emitir um cert X.509, guardá-lo como um
+   Secret `kubernetes.io/tls` e **renová-lo antes de expirar**. Você não conseguiria expressar
+   *"mantenha este certificado válido"* com nenhum kind built-in — essa expertise vive no
+   controller, exposta através do CRD `Certificate`.
 
-So: **operator = CRD (new API) + controller with operational knowledge encoded in the loop.**
-A bare controller has no opinion about *your* domain; an operator *is* the opinion.
+Então: **operator = CRD (nova API) + controller com conhecimento operacional embutido no loop.**
+Um controller pelado não tem opinião sobre o *seu* domínio; um operator *é* a opinião.
 </details>
 
-## Stretch (optional) — see the intermediate CR, and prove it's the loop
+## Stretch (opcional) — veja o CR intermediário, e prove que é o loop
 
-cert-manager doesn't sign the cert directly from the `Certificate`; it spawns an
-intermediate **`CertificateRequest`** — another CR its controller reconciles. Peek at the
-chain, then re-run the break→fix to watch it heal a second time.
+O cert-manager não assina o cert diretamente a partir do `Certificate`; ele gera um
+**`CertificateRequest`** intermediário — outro CR que o controller dele reconcilia. Espie a
+cadeia, depois re-execute o break→fix para vê-lo curar uma segunda vez.
 
 ```bash
-# the request the Certificate spawned (a CR carrying the issued cert's status).
-# no label selector: cert-manager names the request itself and a throwaway
-# cluster has exactly one — it also doesn't copy your app=s22 label onto it.
+# o request que o Certificate gerou (um CR que carrega o status do cert emitido).
+# sem label selector: o cert-manager nomeia o request sozinho e um cluster
+# descartável tem exatamente um — ele também não copia o seu label app=s22 para ele.
 kubectl get certificaterequest
 kubectl describe certificate s22-cert | sed -n '/Events:/,$p'
 ```
 
-<details><summary>What you're looking at</summary>
+<details><summary>O que você está vendo</summary>
 
 ```console
 $ kubectl get certificaterequest
 NAME              APPROVED   DENIED   READY   ISSUER           AGE
 s22-cert-xxxxx    True                True    s22-selfsigned   3m
 
-# describe Events (abridged):
+# Events do describe (resumidos):
 #   Normal  Issuing    Issuing certificate as Secret does not exist
 #   Normal  Generated  Stored new private key in temporary Secret ...
 #   Normal  Requested  Created new CertificateRequest resource "s22-cert-xxxxx"
 #   Normal  Issuing    The certificate has been successfully issued
 ```
 
-The `Certificate` controller created a **`CertificateRequest`** (yet another CRD) to carry
-the signing request, which a second controller **Approved** and marked **Ready** — operators
-routinely reconcile *chains* of their own CRs. The **Events** are the controller narrating
-its reconcile loop: it acts *because* the Secret does not exist, and re-emits an `Issuing`
-event every time it has to close that gap. Delete `s22-tls` again and watch a fresh `Issuing`
-→ `successfully issued` pair appear — the loop, on demand.
+O controller do `Certificate` criou um **`CertificateRequest`** (mais um CRD) para carregar
+a requisição de assinatura, que um segundo controller **Approved** e marcou como **Ready** — operators
+rotineiramente reconciliam *cadeias* de CRs próprios. Os **Events** são o controller narrando
+o loop de reconciliação dele: ele age *porque* o Secret não existe, e reemite um evento `Issuing`
+toda vez que precisa fechar aquela lacuna. Delete o `s22-tls` de novo e veja aparecer um par novo de
+`Issuing` → `successfully issued` — o loop, sob demanda.
 </details>
 
 ## Expected state / output
 
-- **The operator is just software:** installing cert-manager added three ordinary Pods
-  (controller, webhook, cainjector) and several **CRDs** — new API kinds you can
-  `get`/`explain`/`-w` like built-ins.
-- **A CRD extends the API:** `kubectl explain certificate.spec` works because the CRD ships
-  an OpenAPI schema; the API server stores/validates `Certificate`s like any built-in.
-- **The controller reconciles:** you declared a `Certificate` and **created no Secret**, yet
-  the controller produced `s22-tls` and set `Ready=True` — observe → diff → act.
-- **`.status` is the report:** the controller writes `Ready=True` back onto your CR;
-  `spec` = desired, `status` = achieved.
-- **The loop, not GC:** delete the child Secret and the controller **recreates** it (the
-  parent still exists). ownerReferences would *delete* children, never recreate them — and
-  cert-manager doesn't set one on the Secret by default anyway.
-- **Operator vs controller:** same loop; the operator reconciles a **CRD it defined** with
-  **encoded domain knowledge** in the act step.
+- **O operator é só software:** instalar o cert-manager adicionou três Pods comuns
+  (controller, webhook, cainjector) e vários **CRDs** — novos kinds da API em que você pode dar
+  `get`/`explain`/`-w` como nos built-ins.
+- **Um CRD estende a API:** `kubectl explain certificate.spec` funciona porque o CRD traz
+  um schema OpenAPI; o API server armazena/valida `Certificate`s como qualquer built-in.
+- **O controller reconcilia:** você declarou um `Certificate` e **não criou nenhum Secret**, e ainda
+  assim o controller produziu o `s22-tls` e marcou `Ready=True` — observe → diff → aja.
+- **`.status` é o relatório:** o controller escreve `Ready=True` de volta no seu CR;
+  `spec` = desejado, `status` = alcançado.
+- **O loop, não GC:** delete o Secret filho e o controller **o recria** (o
+  pai ainda existe). ownerReferences *deletariam* filhos, nunca os recriariam — e
+  o cert-manager, de qualquer forma, não coloca um no Secret por padrão.
+- **Operator vs controller:** o mesmo loop; o operator reconcilia um **CRD que ele próprio definiu** com
+  **conhecimento de domínio embutido** no passo de agir.
 
-Representative statuses include Ready/Running Pods, NetworkPolicy timeouts, RBAC Forbidden,
-Helm revision history, Application Synced/Healthy, Certificate Ready, or Prometheus targets —
-compare meaning, not ephemeral names.
+Os status representativos incluem Pods Ready/Running, timeouts de NetworkPolicy, Forbidden de RBAC,
+histórico de revisões do Helm, Application Synced/Healthy, Certificate Ready ou targets do Prometheus —
+compare o significado, não os nomes efêmeros.
 
 ## Explanation
 
-Operators encode domain reconcile: observe → diff → act. ownerReferences would
-delete children when the parent goes away; they do not recreate missing children. The Secret
-returns because the Certificate still exists and the controller's act step issues it again.
+Operators codificam um reconcile de domínio: observe → diff → aja. ownerReferences
+deletariam filhos quando o pai desaparece; elas não recriam filhos ausentes. O Secret
+volta porque o Certificate ainda existe e o passo de agir do controller o emite de novo — é essa
+a causa de a lacuna ser fechada sem nenhuma intervenção humana.
 
-The guided steps above prove the control-plane behaviour for this section; read Events and
-status fields when a one-line phase is ambiguous.
+Os passos guiados acima provam o comportamento do control plane desta seção; leia os Events e os
+campos de status quando uma fase de uma linha só for ambígua.
 
 ## Troubleshooting and recovery
 
-Re-apply the lab's named manifests with `kubectl apply -f <file> -n "$NS"` after fixing the
-broken field, or delete only the labelled objects from Cleanup / reset and restart the guided
-task. Prefer `kubectl describe` Events over guessing. Do not run broad cluster deletes.
+Reaplique os manifestos nomeados do lab com `kubectl apply -f <file> -n "$NS"` depois de corrigir o
+campo quebrado, ou delete apenas os objetos com label do Cleanup / reset e recomece a guided
+task. Prefira os Events de `kubectl describe` a chutar. Não rode deletes amplos no cluster.
 
 ## Challenge solution
 
@@ -392,16 +393,17 @@ kubectl get certificate -n "$NS" -l app=s22
 
 ### Expected state / output
 
-After delete, the Secret is briefly Missing then recreated by cert-manager. The
-Certificate stays or returns Ready=True, proving the loop re-asserts desired state.
+Depois do delete, o Secret fica brevemente ausente (Missing) e então é recriado pelo cert-manager. O
+Certificate permanece ou volta a Ready=True, provando que o loop reafirma o estado desejado.
 
 ### Explanation
 
-Operators encode domain reconcile: observe → diff → act. ownerReferences would
-delete children when the parent goes away; they do not recreate missing children. The Secret
-returns because the Certificate still exists and the controller's act step issues it again.
+Operators codificam um reconcile de domínio: observe → diff → aja. ownerReferences
+deletariam filhos quando o pai desaparece; elas não recriam filhos ausentes. O Secret
+volta porque o Certificate ainda existe e o passo de agir do controller o emite de novo — é essa
+a causa de a lacuna ser fechada sem nenhuma intervenção humana.
 
 ### Hints
 
-Use kubectl delete secret on the Certificate secretName, then kubectl get secret -w
-and kubectl describe certificate; look for controller logs or Ready=True on the CR.
+Use kubectl delete secret no secretName do Certificate, depois kubectl get secret -w
+e kubectl describe certificate; procure logs do controller ou Ready=True no CR.

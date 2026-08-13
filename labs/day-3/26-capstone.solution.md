@@ -1,12 +1,12 @@
-# Lab 26 — Best practices capstone (S26) — solutions
+# Lab 26 — Capstone de best practices (S26) — soluções
 
-Use this companion after attempting the participant lab. Outputs contain representative
-names, addresses, ages, and image sizes; compare the state and meaning rather than copying
-ephemeral values literally.
+Use este companion depois de tentar o lab do participante. As saídas contêm nomes, endereços,
+idades e tamanhos de image representativos; compare o estado e o significado em vez de copiar
+literalmente valores efêmeros.
 
 ## Guided solutions
 
-### Step 0 — a namespace and the checklist you audit against
+### Step 0 — um namespace e o checklist contra o qual você audita
 
 ```bash
 export NS=s26
@@ -14,7 +14,7 @@ kubectl create namespace "$NS"
 kubectl config set-context --current --namespace="$NS"
 ```
 
-Write the checklist to keep — this is the **repo artifact** from the slides.
+Escreva o checklist para guardar — este é o **artefato de repositório** dos slides.
 
 ```bash
 cat > PRODUCTION-CHECKLIST.md <<'EOF'
@@ -45,27 +45,27 @@ EOF
 cat PRODUCTION-CHECKLIST.md
 ```
 
-**Task:** confirm the checklist is written — you'll tick these off as you fix the manifest.
+**Tarefa:** confirme que o checklist foi escrito — você vai marcando cada item conforme corrige o manifesto.
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ kubectl create namespace "$NS"
 namespace/s26 created
 ```
 
-The checklist has three groups — **availability**, **security**, **operations** — and each line
-traces to the section that taught it. This is the deliverable from the section: a
-`PRODUCTION-CHECKLIST.md` you commit next to your manifests and review every change against. For the
-rest of the lab, each fix ticks one box.
+O checklist tem três grupos — **availability**, **security**, **operations** — e cada linha remete à
+seção que a ensinou. Este é o entregável da seção: um `PRODUCTION-CHECKLIST.md` que você commita ao
+lado dos seus manifestos e contra o qual revisa cada mudança. No resto do lab, cada correção marca uma
+caixa.
 
 </details>
 
 ---
 
-### Step 1 — read the flawed manifest and audit it yourself
+### Step 1 — leia o manifesto falho e audite você mesmo
 
-Write the flawed Deployment. **Read it before you read the answer key.**
+Escreva o Deployment falho. **Leia-o antes de ler o gabarito.**
 
 ```bash
 cat > flawed-deployment.yaml <<'EOF'
@@ -95,59 +95,59 @@ EOF
 cat flawed-deployment.yaml
 ```
 
-**Task:** audit this manifest against `PRODUCTION-CHECKLIST.md`. **Write down every issue you find**
-before opening the spoiler. Aim for ten.
+**Tarefa:** audite este manifesto contra o `PRODUCTION-CHECKLIST.md`. **Anote todos os problemas que
+encontrar** antes de abrir o spoiler. Mire em dez.
 
-<details><summary>Answer key — the planted problems (~10)</summary>
+<details><summary>Gabarito — os problemas plantados (~10)</summary>
 
-Each problem maps to a checklist line and the section that taught it. Eight are **inside** the
-Deployment; two are **missing sibling objects**.
+Cada problema mapeia para uma linha do checklist e para a seção que a ensinou. Oito estão **dentro**
+do Deployment; dois são **objetos irmãos ausentes**.
 
-| # | Problem | Fix | Traces to |
+| # | Problema | Correção | Vem de |
 | --- | --- | --- | --- |
-| 1 | **No liveness/readiness/startup probes** | add all three (`httpGet` on the app's `/ready` + `/healthz`, port 8080) | S14 |
-| 2 | **No resource requests/limits** (BestEffort — first evicted) | add `requests` + `limits` | S13 |
-| 3 | **No `securityContext`** (runs default user, full caps, no seccomp) | `runAsNonRoot` + `runAsUser: 65532` + `seccompProfile` + `allowPrivilegeEscalation: false` + `drop: [ALL]` | S17 |
-| 4 | **No PodDisruptionBudget** — a drain can take it to zero | add a PDB, `minAvailable: 2` | availability |
-| 5 | **Mutable image tag** (`:v1`, no digest) — running bytes can drift | pin by digest `@sha256:…` | S02 |
-| 6 | **No NetworkPolicy** — flat network, a foothold roams | default-deny + one allow | S18 |
-| 7 | **No graceful shutdown** — dropped connections on rollout | `terminationGracePeriodSeconds` + `preStop` | graceful shutdown |
-| 8 | **Missing recommended labels** (only ad-hoc `app: web`) | add `app.kubernetes.io/*` | hygiene |
-| 9 | **`replicas: 1`** — no HA, and unspread | `replicas: 3` + `topologySpreadConstraints` | availability |
-| 10 | **No rollout strategy / `revisionHistoryLimit`** — dead ReplicaSets pile up, uncontrolled surge | `RollingUpdate` (`maxUnavailable: 0`) + `revisionHistoryLimit` | S06 / cost |
+| 1 | **Sem probes de liveness/readiness/startup** | adicione as três (`httpGet` nos `/ready` + `/healthz` da app, porta 8080) | S14 |
+| 2 | **Sem requests/limits de resources** (BestEffort — primeiro a ser despejado) | adicione `requests` + `limits` | S13 |
+| 3 | **Sem `securityContext`** (roda com o usuário padrão, capabilities completas, sem seccomp) | `runAsNonRoot` + `runAsUser: 65532` + `seccompProfile` + `allowPrivilegeEscalation: false` + `drop: [ALL]` | S17 |
+| 4 | **Sem PodDisruptionBudget** — um drain pode zerar tudo | adicione um PDB, `minAvailable: 2` | availability |
+| 5 | **Tag de image mutável** (`:v1`, sem digest) — os bytes em execução podem mudar | fixe por digest `@sha256:…` | S02 |
+| 6 | **Sem NetworkPolicy** — rede plana, um ponto de apoio circula à vontade | default-deny + um allow | S18 |
+| 7 | **Sem graceful shutdown** — conexões derrubadas durante o rollout | `terminationGracePeriodSeconds` + `preStop` | graceful shutdown |
+| 8 | **Faltam os labels recomendados** (só o `app: web` ad-hoc) | adicione `app.kubernetes.io/*` | hygiene |
+| 9 | **`replicas: 1`** — sem HA e sem spread | `replicas: 3` + `topologySpreadConstraints` | availability |
+| 10 | **Sem strategy de rollout / `revisionHistoryLimit`** — ReplicaSets mortos se acumulam, surge descontrolado | `RollingUpdate` (`maxUnavailable: 0`) + `revisionHistoryLimit` | S06 / cost |
 
-Bonus line you can't see in YAML but belongs on the checklist: **config/secret hygiene** (S11/S12) —
-this Pod has no config, but a real one keeps config in a `ConfigMap`/`Secret`, never baked in — and
-**observability** (S23): expose `/metrics` and a `ServiceMonitor`. We note them; the fix below covers
-the ten manifest-visible problems.
+Linha bônus que você não enxerga no YAML mas que pertence ao checklist: **higiene de config/secret**
+(S11/S12) — este Pod não tem config, mas um real mantém a config em um `ConfigMap`/`Secret`, nunca
+embutida — e **observability** (S23): exponha `/metrics` e um `ServiceMonitor`. Anotamos as duas; a
+correção abaixo cobre os dez problemas visíveis no manifesto.
 
 </details>
 
-> **Why audit before revealing.** The professional skill this capstone builds is *reading a manifest
-> against a checklist* — spotting the omissions. On the job nobody hands you an answer key; the
-> checklist is the answer key. Do the audit cold, then compare.
+> **Por que auditar antes de revelar.** A habilidade profissional que este capstone constrói é *ler um
+> manifesto contra um checklist* — enxergar as omissões. No trabalho ninguém te entrega um gabarito; o
+> checklist é o gabarito. Faça a auditoria no frio e só depois compare.
 
-**Question:** the flawed manifest **applies cleanly** with `kubectl apply` on a default namespace —
-so why is it "wrong"?
+**Pergunta:** o manifesto falho **aplica sem erro** com `kubectl apply` em um namespace padrão —
+então por que ele está "errado"?
 
-<details><summary>Answer</summary>
+<details><summary>Resposta</summary>
 
-Because **valid YAML and a running Pod are not the same as production-ready.** `kubectl apply`
-accepts it and a Pod comes up `Running` — but `Running` only means the process started (S14), the Pod
-is BestEffort and first-evicted (S13), it runs with default privileges (S17), a single node failure
-is a full outage (one replica, no spread, no PDB), the image can change under you (a bare tag,
-no digest), and
-nothing isolates it on the network (S18). The checklist exists precisely because the API server's bar
-("is this valid?") is far below the production bar ("will this stay up, resist compromise, and be
-operable?"). The next steps close that gap.
+Porque **YAML válido e um Pod em execução não são a mesma coisa que production-ready.** O `kubectl
+apply` aceita o manifesto e um Pod sobe `Running` — mas `Running` só significa que o processo iniciou
+(S14), o Pod é BestEffort e o primeiro a ser despejado (S13), ele roda com privilégios padrão (S17), a
+falha de um único node é uma indisponibilidade total (uma réplica, sem spread, sem PDB), a image pode
+mudar debaixo de você (uma tag pura, sem digest) e
+nada o isola na rede (S18). O checklist existe justamente porque a régua do API server
+("isto é válido?") está muito abaixo da régua de produção ("isto vai ficar no ar, resistir a
+comprometimento e ser operável?"). Os próximos passos fecham essa lacuna.
 
 </details>
 
 ---
 
-### Step 2 — fix it: the hardened Deployment (one fix per issue)
+### Step 2 — corrija: o Deployment endurecido (uma correção por problema)
 
-Write the fixed Deployment. Every field below closes exactly one audit item.
+Escreva o Deployment corrigido. Cada campo abaixo fecha exatamente um item da auditoria.
 
 ```bash
 cat > fixed-deployment.yaml <<'EOF'
@@ -156,15 +156,15 @@ kind: Deployment
 metadata:
   name: web
   labels:
-    app.kubernetes.io/name: web            # ⑧ recommended labels (hygiene)
+    app.kubernetes.io/name: web            # ⑧ labels recomendados (higiene)
     app.kubernetes.io/instance: web
     app.kubernetes.io/version: "v1"
     app.kubernetes.io/part-of: workshop
     app.kubernetes.io/managed-by: argocd
 spec:
-  replicas: 3                              # ⑨ HA — more than one replica
-  revisionHistoryLimit: 5                  # ⑩ trim old ReplicaSets
-  strategy:                                # ⑩ controlled rollout
+  replicas: 3                              # ⑨ HA — mais de uma réplica
+  revisionHistoryLimit: 5                  # ⑩ poda ReplicaSets antigos
+  strategy:                                # ⑩ rollout controlado
     type: RollingUpdate
     rollingUpdate:
       maxUnavailable: 0
@@ -175,37 +175,37 @@ spec:
   template:
     metadata:
       labels:
-        app.kubernetes.io/name: web        # matches PDB / topologySpread / NetworkPolicy selectors
+        app.kubernetes.io/name: web        # casa com os selectors do PDB / topologySpread / NetworkPolicy
         app.kubernetes.io/instance: web
         app.kubernetes.io/version: "v1"
         app.kubernetes.io/part-of: workshop
         app.kubernetes.io/managed-by: argocd
     spec:
-      terminationGracePeriodSeconds: 30    # ⑦ graceful shutdown (grace window)
-      securityContext:                     # ③ restricted — pod-level fields
+      terminationGracePeriodSeconds: 30    # ⑦ graceful shutdown (janela de graça)
+      securityContext:                     # ③ restricted — campos no nível do pod
         runAsNonRoot: true
-        runAsUser: 65532                   # the image's built-in non-root UID (distroless nonroot)
+        runAsUser: 65532                   # o UID non-root embutido na image (distroless nonroot)
         seccompProfile:
           type: RuntimeDefault
-      topologySpreadConstraints:           # ⑨ spread replicas across nodes
+      topologySpreadConstraints:           # ⑨ espalha as réplicas entre os nodes
         - maxSkew: 1
           topologyKey: kubernetes.io/hostname
-          # DoNotSchedule strands replicas on a single-node cluster (see note); use
-          # ScheduleAnyway if you run this for real on 1-node kind
+          # DoNotSchedule deixa réplicas presas em um cluster de um node só (veja a nota); use
+          # ScheduleAnyway se for rodar isto de verdade em um kind de 1 node
           whenUnsatisfiable: DoNotSchedule
           labelSelector:
             matchLabels:
               app.kubernetes.io/name: web
       containers:
         - name: web
-          # ⑤ pin by digest — dummy value; RESOLVE at rehearsal (see the note below this block)
+          # ⑤ fixe por digest — valor fictício; RESOLVA no ensaio (veja a nota abaixo deste bloco)
           image: ghcr.io/platformrelay/workshop-web:v1@sha256:0000000000000000000000000000000000000000000000000000000000000000
           ports:
             - containerPort: 8080
-          resources:                       # ② requests + limits (right-sized, S13/cost)
+          resources:                       # ② requests + limits (dimensionados, S13/custo)
             requests: { cpu: 50m, memory: 64Mi }
             limits:   { cpu: 200m, memory: 128Mi }
-          readinessProbe:                  # ① probes (S14) — the app's own endpoints
+          readinessProbe:                  # ① probes (S14) — os endpoints da própria app
             httpGet: { path: /ready, port: 8080 }
             periodSeconds: 5
           livenessProbe:
@@ -215,20 +215,20 @@ spec:
             httpGet: { path: /healthz, port: 8080 }
             periodSeconds: 3
             failureThreshold: 30
-          securityContext:                 # ③ restricted — container-level fields
+          securityContext:                 # ③ restricted — campos no nível do container
             allowPrivilegeEscalation: false
             capabilities:
               drop: ["ALL"]
-          lifecycle:                        # ⑦ graceful shutdown — drain before SIGTERM
+          lifecycle:                        # ⑦ graceful shutdown — drena antes do SIGTERM
             preStop:
-              sleep: { seconds: 5 }        # native sleep action — no shell in the image (distroless)
+              sleep: { seconds: 5 }        # sleep action nativo — sem shell na image (distroless)
 EOF
 
 cat fixed-deployment.yaml
 ```
 
-Now the two **sibling objects** — a PDB and a NetworkPolicy (⑤ ④ ⑥). They select the same
-`app.kubernetes.io/name: web` label, which is why fixing the labels first mattered.
+Agora os dois **objetos irmãos** — um PDB e uma NetworkPolicy (⑤ ④ ⑥). Eles selecionam o mesmo
+label `app.kubernetes.io/name: web`, e é por isso que corrigir os labels primeiro importava.
 
 ```bash
 cat > fixed-pdb.yaml <<'EOF'
@@ -239,14 +239,14 @@ metadata:
   labels:
     app.kubernetes.io/name: web
 spec:
-  minAvailable: 2                          # ④ keep ≥2 up through voluntary disruptions
+  minAvailable: 2                          # ④ mantém ≥2 no ar durante disruptions voluntárias
   selector:
     matchLabels:
       app.kubernetes.io/name: web
 EOF
 
 cat > fixed-netpol.yaml <<'EOF'
-# ⑥ default-deny ingress for the web Pods, then one explicit allow
+# ⑥ default-deny de ingress para os Pods web, depois um allow explícito
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -258,7 +258,7 @@ spec:
     matchLabels:
       app.kubernetes.io/name: web
   policyTypes:
-    - Ingress                              # no ingress rules → deny all inbound
+    - Ingress                              # sem regras de ingress → nega toda entrada
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -276,16 +276,16 @@ spec:
     - from:
         - podSelector:
             matchLabels:
-              app.kubernetes.io/part-of: workshop   # only in-app callers
+              app.kubernetes.io/part-of: workshop   # só chamadores de dentro da app
       ports:
         - protocol: TCP
           port: 8080
 EOF
 ```
 
-**Task:** confirm each of the ten problems now has exactly one fix in the files above.
+**Tarefa:** confirme que cada um dos dez problemas agora tem exatamente uma correção nos arquivos acima.
 
-<details><summary>Solution — problem → fix map</summary>
+<details><summary>Solução — mapa problema → correção</summary>
 
 ```text
 ① probes .............. readiness /ready + liveness/startup /healthz (port 8080)    [fixed-deployment.yaml]
@@ -301,59 +301,61 @@ EOF
 ⑩ rollout ............. strategy RollingUpdate(maxUnavailable:0) + revisionHistoryLimit [fixed-deployment.yaml]
 ```
 
-**One fix per issue** — nothing bundled, nothing missed. Note the pod/container **split** on ③: the
-`restricted` fields that are valid at pod scope (`runAsNonRoot`, `runAsUser`, `seccompProfile`) sit on
-`spec.template.spec.securityContext`; the container-only fields (`allowPrivilegeEscalation`,
-`capabilities.drop`) sit on the container. And note every sibling selector keys off the **same**
-`app.kubernetes.io/name: web` label — the PDB, the topology spread, and the NetworkPolicy all target
-it, which is why the labels fix (⑧) is a prerequisite for the others to bind.
+**Uma correção por problema** — nada agrupado, nada esquecido. Repare na **divisão** pod/container no
+③: os campos do `restricted` válidos no escopo do pod (`runAsNonRoot`, `runAsUser`, `seccompProfile`)
+ficam em `spec.template.spec.securityContext`; os campos exclusivos de container
+(`allowPrivilegeEscalation`, `capabilities.drop`) ficam no container. E repare que todo selector irmão
+se apoia no **mesmo** label `app.kubernetes.io/name: web` — o PDB, o topology spread e a NetworkPolicy
+miram nele, e é por isso que a correção dos labels (⑧) é pré-requisito para as outras se ligarem.
 
 </details>
 
-> **⚠️ Resolve the digest before you rely on it.** `@sha256:0000…0000` is a **dummy** digest —
-> valid *syntax* (64 hex chars) but not a real image. A server-side dry-run (Step 3) runs **admission
-> without pulling the image**, so the dummy still proves *restricted-compliance*. But a real
-> `kubectl apply` will **`ImagePullBackOff`** until you swap in the real digest:
+> **⚠️ Resolva o digest antes de depender dele.** `@sha256:0000…0000` é um digest **fictício** —
+> de *sintaxe* válida (64 caracteres hex), mas não é uma image real. Um dry-run server-side (Step 3)
+> roda o **admission sem fazer pull da image**, então o valor fictício ainda prova a *conformidade com
+> restricted*. Mas um `kubectl apply` de verdade vai parar em **`ImagePullBackOff`** até você trocar
+> pelo digest real:
 >
 > ```bash
-> # resolve the real digest for the tag, then edit the image line:
+> # resolva o digest real da tag, depois edite a linha da image:
 > crane digest ghcr.io/platformrelay/workshop-web:v1
-> # or: docker buildx imagetools inspect ghcr.io/platformrelay/workshop-web:v1
-> # → image: ghcr.io/platformrelay/workshop-web:v1@sha256:<the real digest>
+> # ou: docker buildx imagetools inspect ghcr.io/platformrelay/workshop-web:v1
+> # → image: ghcr.io/platformrelay/workshop-web:v1@sha256:<o digest real>
 > ```
 
-> **⚠️ `topologySpreadConstraints` on a single-node cluster.** With `whenUnsatisfiable:
-> DoNotSchedule` and `replicas: 3`, only **one** Pod schedules on a one-node kind cluster — the other
-> two stay `Pending` (you can't spread three Pods across one node). That's correct, strict behaviour.
-> If you run this for real on single-node kind and want all three up, switch to `ScheduleAnyway`
-> (best-effort spread) or add worker nodes. The admission validation below is unaffected — it never
-> schedules anything.
+> **⚠️ `topologySpreadConstraints` em um cluster de um node só.** Com `whenUnsatisfiable:
+> DoNotSchedule` e `replicas: 3`, apenas **um** Pod é agendado em um cluster kind de um node — os
+> outros dois ficam em `Pending` (não dá para espalhar três Pods por um node só). Esse é o
+> comportamento correto e estrito. Se você rodar isto de verdade em um kind de um node e quiser os
+> três no ar, troque para `ScheduleAnyway` (spread best-effort) ou adicione worker nodes. A validação
+> de admission abaixo não é afetada — ela nunca agenda nada.
 
 ---
 
-### Step 3 — validate: dry-run the set, then prove `restricted` admits the fixed Pod
+### Step 3 — valide: dry-run do conjunto e prove que o `restricted` admite o Pod corrigido
 
-First a **server-side dry-run** of the whole fixed set — this runs full admission (schema + policy)
-**without** creating anything or pulling the image. It confirms the objects are well-formed.
+Primeiro um **dry-run server-side** de todo o conjunto corrigido — ele roda o admission completo
+(schema + policy) **sem** criar nada e sem fazer pull da image. Isso confirma que os objetos estão
+bem formados.
 
 ```bash
 kubectl apply --dry-run=server -f fixed-deployment.yaml -f fixed-pdb.yaml -f fixed-netpol.yaml
 ```
 
-Now the restricted test — and here's a trap the capstone exists to teach. **PSA `enforce` gates
-*Pods*, not workload objects.** Applying a *Deployment* under `enforce=restricted` is accepted; the
-rejection happens later, when the ReplicaSet controller tries to create the *Pods* — which
-`--dry-run=server` never runs. So to see admission reject the security violations directly, we submit
-the **Pod template as a bare Pod**. (That's exactly why `enforce` alone isn't a full gate — more in
-the question below.)
+Agora o teste restricted — e aqui está uma armadilha que o capstone existe para ensinar. **O
+`enforce` do PSA barra *Pods*, não objetos de workload.** Aplicar um *Deployment* sob
+`enforce=restricted` é aceito; a rejeição acontece depois, quando o controller de ReplicaSet tenta
+criar os *Pods* — o que o `--dry-run=server` nunca executa. Então, para ver o admission rejeitar as
+violações de segurança diretamente, submetemos o **Pod template como um Pod avulso**. (É exatamente
+por isso que o `enforce` sozinho não é um gate completo — mais sobre isso na pergunta abaixo.)
 
 ```bash
 kubectl label --overwrite namespace "$NS" \
   pod-security.kubernetes.io/enforce=restricted \
   pod-security.kubernetes.io/warn=restricted
 
-# extract each Deployment's Pod template as a standalone Pod, dry-run it against enforce=restricted
-# (only the securityContext-relevant fields matter for admission; the full spec is in the *-deployment.yaml)
+# extraia o Pod template de cada Deployment como um Pod avulso e faça dry-run contra enforce=restricted
+# (só os campos ligados ao securityContext importam para o admission; o spec completo está nos *-deployment.yaml)
 cat > flawed-pod.yaml <<'EOF'
 apiVersion: v1
 kind: Pod
@@ -396,10 +398,10 @@ echo "== fixed Pod (expect ADMITTED) =="
 kubectl apply --dry-run=server -f fixed-pod.yaml
 ```
 
-**Task:** the flawed Pod is **rejected** for the four `restricted` violations; the fixed Pod is
-**admitted**. Read both outputs.
+**Tarefa:** o Pod falho é **rejeitado** pelas quatro violações do `restricted`; o Pod corrigido é
+**admitido**. Leia as duas saídas.
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ kubectl apply --dry-run=server -f fixed-deployment.yaml -f fixed-pdb.yaml -f fixed-netpol.yaml
@@ -422,86 +424,89 @@ $ kubectl apply --dry-run=server -f fixed-pod.yaml
 pod/web created (server dry run)
 ```
 
-The **flawed** Pod trips **all four** `restricted` fields — the exact same four gates from S17. The
-**fixed** Pod sets all four (split pod/container) and is **admitted**. `--dry-run=server` ran the real
-admission controllers, so `created (server dry run)` means *this would be accepted* — but nothing was
-actually created. Same namespace, same `enforce=restricted` label; only the manifest changed. (You
-can also confirm the **Deployment** path: apply the flawed Deployment for real under
-`enforce=restricted` and `kubectl describe rs` shows `FailedCreate … pods "web-…" is forbidden …` —
-the Deployment exists, its Pods don't.)
+O Pod **falho** esbarra nos **quatro** campos do `restricted` — exatamente os mesmos quatro gates do
+S17. O Pod **corrigido** define os quatro (divididos entre pod e container) e é **admitido**. O
+`--dry-run=server` rodou os admission controllers de verdade, então `created (server dry run)`
+significa *isto seria aceito* — mas nada foi realmente criado. Mesmo namespace, mesmo label
+`enforce=restricted`; só o manifesto mudou. (Você também pode confirmar o caminho do **Deployment**:
+aplique o Deployment falho de verdade sob `enforce=restricted` e o `kubectl describe rs` mostra
+`FailedCreate … pods "web-…" is forbidden …` — o Deployment existe, os Pods dele não.)
 
 </details>
 
-> **⚠️ Why the bare Pod, and why it matters.** `enforce` mode evaluates **Pods**, not Deployments,
-> ReplicaSets, or Jobs. Apply a violating *Deployment* under `enforce=restricted` and it's **created**
-> — the block only surfaces when the ReplicaSet controller tries to spawn Pods, as a
-> `FailedCreate` event, not an `apply` error. `--dry-run=server` doesn't run controllers, so it can
-> never show that. We dry-run the Pod template directly to see the gate fire. The `warn`/`audit`
-> modes *do* inspect the embedded template on the workload object (that's the Stretch) — but only
-> `enforce` blocks, and only on Pods.
+> **⚠️ Por que o Pod avulso, e por que isso importa.** O modo `enforce` avalia **Pods**, não
+> Deployments, ReplicaSets ou Jobs. Aplique um *Deployment* violador sob `enforce=restricted` e ele é
+> **criado** — o bloqueio só aparece quando o controller de ReplicaSet tenta criar Pods, como um
+> event `FailedCreate`, não como erro do `apply`. O `--dry-run=server` não executa controllers, então
+> nunca consegue mostrar isso. Fazemos o dry-run do Pod template diretamente para ver o gate disparar.
+> Os modos `warn`/`audit` *de fato* inspecionam o template embutido no objeto de workload (é o
+> Stretch) — mas só o `enforce` bloqueia, e só em Pods.
 
-> **⚠️ Dry-run admits ≠ runs.** Admission checks YAML, not the image. The dummy digest
-> (`@sha256:0000…0000`) satisfies admission, but a real `kubectl apply` of the fixed Deployment will
-> be *admitted* and then **`ImagePullBackOff`** — resolve the digest first (Step 2 note). This lab was
-> validated for **admission**; a full run-to-Running needs the real digest, a policy-enforcing CNI for
-> the NetworkPolicy, and (for the 3-replica spread) a **multi-node** cluster — see the note in Step 2.
+> **⚠️ Admitido no dry-run ≠ em execução.** O admission checa o YAML, não a image. O digest fictício
+> (`@sha256:0000…0000`) satisfaz o admission, mas um `kubectl apply` real do Deployment corrigido vai
+> ser *admitido* e depois cair em **`ImagePullBackOff`** — resolva o digest antes (nota do Step 2).
+> Este lab foi validado para **admission**; uma execução completa até Running exige o digest real, um
+> CNI que aplique policies para a NetworkPolicy e (para o spread de 3 réplicas) um cluster
+> **multi-node** — veja a nota no Step 2.
 
-**Question:** you had to submit a bare **Pod** to see `enforce` reject the security fields. So does
-`enforce=restricted` on the namespace make the fixed manifest production-ready?
+**Pergunta:** você precisou submeter um **Pod** avulso para ver o `enforce` rejeitar os campos de
+segurança. Então o `enforce=restricted` no namespace torna o manifesto corrigido production-ready?
 
-<details><summary>Answer</summary>
+<details><summary>Resposta</summary>
 
-**No — on two counts.** First, `enforce` only gates **Pods**, and it only checks the **four**
-`securityContext` fields; a Deployment with `replicas: 1`, no probes, an unpinned tag, and no NetworkPolicy
-sails through as long as its Pod template's `securityContext` is correct. Second, admission is a
-*single line* of the checklist — the security floor — enforced **for** you. It does not know or care
-whether you pinned a digest, added the recommended labels, wrote a PodDisruptionBudget, set
-probes/resources, or applied a NetworkPolicy. Those are **review discipline** — which is exactly why
-you commit `PRODUCTION-CHECKLIST.md` and gate it in CI/GitOps (S21), rather than trusting the API
-server to catch everything.
+**Não — por dois motivos.** Primeiro, o `enforce` só barra **Pods**, e só checa os **quatro** campos
+do `securityContext`; um Deployment com `replicas: 1`, sem probes, com uma tag não fixada e sem
+NetworkPolicy passa liso, desde que o `securityContext` do seu Pod template esteja correto. Segundo, o
+admission é uma *única linha* do checklist — o piso de segurança — imposta **para** você. Ele não sabe
+nem se importa se você fixou um digest, adicionou os labels recomendados, escreveu um
+PodDisruptionBudget, definiu probes/resources ou aplicou uma NetworkPolicy. Isso é **disciplina de
+review** — que é exatamente o motivo de você commitar o `PRODUCTION-CHECKLIST.md` e barrá-lo no
+CI/GitOps (S21), em vez de confiar que o API server vai pegar tudo.
 
 </details>
 
 ---
 
-### Step 4 — classify each fix: availability vs security vs cost
+### Step 4 — classifique cada correção: availability vs security vs cost
 
-**Task:** sort the ten fixes into **availability**, **security**, and **cost**, and decide which
-matter most for *this* workload (a stateless web front end).
+**Tarefa:** separe as dez correções em **availability**, **security** e **cost**, e decida quais
+importam mais para *este* workload (um web front end stateless).
 
-<details><summary>Answer</summary>
+<details><summary>Resposta</summary>
 
-| Fix | Category | Why |
+| Correção | Categoria | Por quê |
 | --- | --- | --- |
-| Probes (①) | **Availability** | readiness keeps traffic off unready Pods; liveness self-heals |
-| Resources — requests (②) | **Availability** + **Cost** | requests schedule *and* reserve (cost); a limit prevents a noisy neighbour |
-| PDB (④) | **Availability** | keeps ≥2 up through drains/upgrades |
-| Rollout + `revisionHistoryLimit` (⑩) | **Availability** + **Cost** | `maxUnavailable:0` = no capacity dip; history limit trims dead RSs (cost) |
-| Replicas + spread (⑨) | **Availability** | survive a node failure |
-| Labels (⑧) | **Security**/hygiene | selectors, dashboards, GitOps rely on them |
-| Digest pin (⑤) | **Security** | provenance — the running bytes are the scanned bytes |
-| `securityContext` (③) | **Security** | least privilege; shrinks blast radius |
-| NetworkPolicy (⑥) | **Security** | contains a foothold on a flat network |
-| Graceful shutdown (⑦) | **Availability** | zero dropped connections on rollout/scale-down |
+| Probes (①) | **Availability** | readiness mantém o tráfego longe de Pods não prontos; liveness se auto-cura |
+| Resources — requests (②) | **Availability** + **Cost** | requests agendam *e* reservam (custo); um limit evita um vizinho barulhento |
+| PDB (④) | **Availability** | mantém ≥2 no ar durante drains/upgrades |
+| Rollout + `revisionHistoryLimit` (⑩) | **Availability** + **Cost** | `maxUnavailable:0` = nenhuma queda de capacidade; o limite de histórico poda RSs mortos (custo) |
+| Réplicas + spread (⑨) | **Availability** | sobreviver à falha de um node |
+| Labels (⑧) | **Security**/higiene | selectors, dashboards e GitOps dependem deles |
+| Pin por digest (⑤) | **Security** | proveniência — os bytes em execução são os bytes escaneados |
+| `securityContext` (③) | **Security** | menor privilégio; encolhe o raio de explosão |
+| NetworkPolicy (⑥) | **Security** | contém um ponto de apoio em uma rede plana |
+| Graceful shutdown (⑦) | **Availability** | zero conexões derrubadas em rollout/scale-down |
 
-**Most important for *this* workload** — a **stateless, replicated, internet-facing web front end**:
-the **availability** set carries the most weight day-to-day (probes, >1 replica + spread, PDB,
-graceful shutdown) because the failure you'll actually hit is a rollout or a node drain, not a
-targeted attacker. But the **security floor** (`securityContext` — ③) is non-negotiable and *free*:
-it's the one line `restricted` admission will reject you for, and it costs nothing to set. **Cost**
-matters least here only because the workload is tiny — right-sizing requests (②) is where it bites at
-scale. A different workload (a database, a batch job, a Pod handling secrets) would reweight this
-table — which is the point: the checklist is universal, the **priorities are per-workload**.
+**Mais importante para *este* workload** — um **web front end stateless, replicado e exposto à
+internet**: o conjunto de **availability** pesa mais no dia a dia (probes, >1 réplica + spread, PDB,
+graceful shutdown), porque a falha que você realmente vai encontrar é um rollout ou um drain de node,
+não um atacante direcionado. Mas o **piso de segurança** (`securityContext` — ③) é inegociável e
+*grátis*: é a única linha pela qual o admission `restricted` vai te rejeitar, e não custa nada
+configurar. **Cost** importa menos aqui só porque o workload é minúsculo — dimensionar corretamente os
+requests (②) é onde isso morde em escala. Um workload diferente (um banco de dados, um batch job, um
+Pod que lida com secrets) reequilibraria esta tabela — e esse é o ponto: o checklist é universal, as
+**prioridades são por workload**.
 
 </details>
 
 ---
 
-### Step 5 — confirm full checklist coverage
+### Step 5 — confirme a cobertura completa do checklist
 
-**Task:** walk `PRODUCTION-CHECKLIST.md` line by line against the fixed manifests and tick every box.
+**Tarefa:** percorra o `PRODUCTION-CHECKLIST.md` linha a linha contra os manifestos corrigidos e marque
+cada caixa.
 
-<details><summary>Solution — coverage map</summary>
+<details><summary>Solução — mapa de cobertura</summary>
 
 ```text
 AVAILABILITY
@@ -526,20 +531,22 @@ OPERATIONS
 [x] Cost ......................... right-sized requests (50m/64Mi)           (②)
 ```
 
-**All ten manifest-visible problems are fixed.** The `[~]` lines are checklist items this minimal
-workload doesn't exercise in-manifest but that a real service must address: config/secret hygiene
-(S11/S12), the GitOps `Application` that reconciles this repo (S21 — the `managed-by: argocd` label
-declares the intent), and a `ServiceMonitor` for observability (S23). The capstone manifest is
-production-ready for its scope, and the checklist names exactly what's left for a fuller service.
+**Todos os dez problemas visíveis no manifesto estão corrigidos.** As linhas `[~]` são itens do
+checklist que este workload mínimo não exercita dentro do manifesto, mas que um serviço real precisa
+endereçar: higiene de config/secret (S11/S12), a `Application` de GitOps que reconcilia este
+repositório (S21 — o label `managed-by: argocd` declara a intenção) e um `ServiceMonitor` para
+observability (S23). O manifesto do capstone é production-ready para o seu escopo, e o checklist nomeia
+exatamente o que falta para um serviço mais completo.
 
 </details>
 
-## Stretch (optional) — make the checklist un-skippable
+## Stretch (opcional) — torne o checklist impossível de pular
 
-The slides' final point: turn checklist lines into **automated gates** so nobody skips them under a
-deadline. Prove one gate with the tools you already have — `enforce=restricted` blocks the security
-line at admission (you just saw it). For a second gate, try `warn` on a fresh namespace so a
-non-compliant Deployment is **created but flagged**, mirroring a soft CI check.
+O ponto final dos slides: transforme linhas do checklist em **gates automatizados** para que ninguém
+as pule sob pressão de prazo. Prove um gate com as ferramentas que você já tem — o
+`enforce=restricted` bloqueia a linha de segurança no admission (você acabou de ver). Para um segundo
+gate, experimente o `warn` em um namespace novo, de modo que um Deployment fora de conformidade seja
+**criado, mas sinalizado**, espelhando um check leve de CI.
 
 ```bash
 kubectl create namespace s26-warn
@@ -548,7 +555,7 @@ kubectl apply -n s26-warn -f flawed-deployment.yaml
 kubectl get deploy web -n s26-warn
 ```
 
-<details><summary>What you're looking at</summary>
+<details><summary>O que você está vendo</summary>
 
 ```console
 $ kubectl apply -n s26-warn -f flawed-deployment.yaml
@@ -561,54 +568,57 @@ NAME   READY   UP-TO-DATE   AVAILABLE   AGE
 web    1/1     1            1           5s
 ```
 
-Under **`warn`**, the API server returns the violation list as a **`Warning:`** but **creates** the
-Deployment — and note it inspects the embedded Pod **template** here (unlike `enforce`, which only
-gates the Pods themselves). It runs to `1/1`: the flawed Deployment's `:v1` tag pulls fine and it
-has no probes, so the Pod is Ready the moment it starts — a security-flagged workload happily serving
-traffic is exactly the situation `warn` is meant to surface without breaking anyone. That's discovery,
-not a block — like a non-blocking CI check that annotates a PR. The real migration play is
-`warn`/`audit` first (find offenders), fix them, **then** `enforce`. Clean up:
-`kind delete cluster` (disposable) or remove the Namespace out-of-band.
+Sob **`warn`**, o API server devolve a lista de violações como um **`Warning:`**, mas **cria** o
+Deployment — e note que aqui ele inspeciona o Pod **template** embutido (diferente do `enforce`, que
+só barra os Pods em si). Ele chega a `1/1`: a tag `:v1` do Deployment falho faz pull sem problema e
+ele não tem probes, então o Pod fica Ready no instante em que inicia — um workload sinalizado por
+segurança servindo tráfego tranquilamente é exatamente a situação que o `warn` existe para revelar sem
+quebrar ninguém. Isso é descoberta, não bloqueio — como um check de CI não bloqueante que anota um PR.
+A jogada real de migração é `warn`/`audit` primeiro (encontrar os infratores), corrigi-los, **depois**
+`enforce`. Limpeza: `kind delete cluster` (descartável) ou remova o Namespace out-of-band.
 
 </details>
 
-> **⚠️ The deeper stretch is the artifact, not the command.** Beyond admission, real gates are: a
-> policy engine (require labels/resources/probes), a linter in CI, and a GitOps sync that only applies
-> reviewed manifests (S21). The point of the capstone is that `PRODUCTION-CHECKLIST.md` becomes a set
-> of enforced checks, not a document people mean to read. That's the habit to leave with.
+> **⚠️ O stretch mais profundo é o artefato, não o comando.** Além do admission, os gates reais são:
+> um policy engine (exigir labels/resources/probes), um linter no CI e um sync GitOps que só aplica
+> manifestos revisados (S21). O ponto do capstone é que o `PRODUCTION-CHECKLIST.md` vire um conjunto de
+> checks aplicados, e não um documento que as pessoas pretendem ler. Esse é o hábito para levar daqui.
 
 ## Expected state / output
 
-- **Valid ≠ ready.** The flawed Deployment applies cleanly and runs — yet fails a dozen checklist
-  lines: BestEffort, no probes, default privileges, one replica, an unpinned tag, no isolation.
-- **One fix per line.** Each of the ten problems maps to exactly one field or object; nothing bundled.
-- **Selectors converge on one label.** The PDB, topology spread, and NetworkPolicy all select
-  `app.kubernetes.io/name: web` — fixing labels first is what lets the rest bind.
-- **`restricted` admits the fixed Deployment, rejects the flawed one** — the same four gates from S17,
-  proven by `--dry-run=server` in an `enforce=restricted` namespace.
-- **Admission is one line, not the checklist.** It enforces the security floor; labels, digest, PDB,
-  NetworkPolicy, HA, and right-sizing are review discipline — so the checklist ships as a repo
-  artifact and is gated in CI/GitOps.
+- **Válido ≠ pronto.** O Deployment falho aplica sem erro e roda — e ainda assim falha uma dúzia de
+  linhas do checklist: BestEffort, sem probes, privilégios padrão, uma réplica, uma tag não fixada,
+  nenhum isolamento.
+- **Uma correção por linha.** Cada um dos dez problemas mapeia para exatamente um campo ou objeto;
+  nada agrupado.
+- **Os selectors convergem para um label.** O PDB, o topology spread e a NetworkPolicy selecionam
+  todos `app.kubernetes.io/name: web` — corrigir os labels primeiro é o que permite que o resto se
+  ligue.
+- **O `restricted` admite o Deployment corrigido e rejeita o falho** — os mesmos quatro gates do S17,
+  provados por `--dry-run=server` em um namespace com `enforce=restricted`.
+- **Admission é uma linha, não o checklist.** Ele impõe o piso de segurança; labels, digest, PDB,
+  NetworkPolicy, HA e o dimensionamento correto são disciplina de review — por isso o checklist é
+  entregue como artefato de repositório e barrado no CI/GitOps.
 
-Representative statuses include Ready/Running Pods, NetworkPolicy timeouts, RBAC Forbidden,
-Helm revision history, Application Synced/Healthy, Certificate Ready, or Prometheus targets —
-compare meaning, not ephemeral names.
+Status representativos incluem Pods Ready/Running, timeouts de NetworkPolicy, Forbidden de RBAC,
+histórico de revisões do Helm, Application Synced/Healthy, Certificate Ready ou targets do
+Prometheus — compare o significado, não nomes efêmeros.
 
 ## Explanation
 
-Apply success only means the API accepted the object schema and current
-admission plugins — not that the workload meets production readiness. restricted enforces the
-security floor at admission; availability and cost items remain review/CI discipline, which is
-why the checklist is the capstone artifact.
+O sucesso do apply significa apenas que a API aceitou o schema do objeto e os plugins de
+admission atuais — não que o workload atenda à production readiness. O restricted impõe o piso de
+segurança no admission; itens de availability e de custo seguem sendo disciplina de review/CI, e essa
+é a causa de o checklist ser o artefato do capstone.
 
-The guided steps above prove the control-plane behaviour for this section; read Events and
-status fields when a one-line phase is ambiguous.
+Os passos guiados acima provam o comportamento do control plane desta seção; leia os Events e os
+campos de status quando uma fase de uma linha só for ambígua.
 
 ## Troubleshooting and recovery
 
-Re-apply the lab's named manifests with `kubectl apply -f <file> -n "$NS"` after fixing the
-broken field, or delete only the labelled objects from Cleanup / reset and restart the guided
-task. Prefer `kubectl describe` Events over guessing. Do not run broad cluster deletes.
+Reaplique os manifestos nomeados do lab com `kubectl apply -f <file> -n "$NS"` depois de corrigir o
+campo quebrado, ou faça o delete apenas dos objetos com label listados em Cleanup / reset e reinicie o
+guided task. Prefira os Events de `kubectl describe` a chutar. Não rode deletes amplos no cluster.
 
 ## Challenge solution
 
@@ -623,18 +633,20 @@ kubectl apply -f fixed-pdb.yaml -f fixed-netpol.yaml --dry-run=server
 
 ### Expected state / output
 
-Flawed dry-run fails (or warns/rejects) under restricted; fixed Deployment/PDB/NetPol
-dry-run succeeds. Your notes name ≥3 checklist gaps with availability/security labels tied to
-real fields (probes, requests/limits, securityContext, replicas, NetworkPolicy, etc.).
+O dry-run do falho falha (ou avisa/rejeita) sob restricted; o dry-run do Deployment/PDB/NetPol
+corrigido tem sucesso. Suas anotações nomeiam ≥3 lacunas do checklist com labels de
+availability/security ligadas a fields reais (probes, requests/limits, securityContext, replicas,
+NetworkPolicy, etc.).
 
 ### Explanation
 
-Apply success only means the API accepted the object schema and current
-admission plugins — not that the workload meets production readiness. restricted enforces the
-security floor at admission; availability and cost items remain review/CI discipline, which is
-why the checklist is the capstone artifact.
+O sucesso do apply significa apenas que a API aceitou o schema do objeto e os plugins de
+admission atuais — não que o workload atenda à production readiness. O restricted impõe o piso de
+segurança no admission; itens de availability e de custo seguem sendo disciplina de review/CI, e essa
+é a causa de o checklist ser o artefato do capstone.
 
 ### Hints
 
-Use kubectl apply --dry-run=server -f flawed-deployment.yaml in a restricted
-namespace; compare fixed-deployment.yaml; keep PRODUCTION-CHECKLIST.md open while you classify.
+Use kubectl apply --dry-run=server -f flawed-deployment.yaml em um namespace
+restricted; compare com o fixed-deployment.yaml; mantenha o PRODUCTION-CHECKLIST.md aberto enquanto
+classifica.

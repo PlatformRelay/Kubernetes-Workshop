@@ -1,104 +1,104 @@
-# Lab 21 — GitOps with Flux (S21)
+# Lab 21 — GitOps com Flux (S21)
 
 <!-- lab-contract:v1 -->
 
 | | |
 | --- | --- |
-| **Section** | S21 — GitOps with Flux |
-| **Environment** | **kind ✓** (installs Flux) / shared namespace: **read-only** |
+| **Section** | S21 — GitOps com Flux |
+| **Environment** | **kind ✓** (instala o Flux) / namespace compartilhado: **read-only** |
 | **Estimated time** | 25 min |
 
 ## Objective
 
-Install **Flux** (the GitOps Toolkit) on a throwaway kind cluster, hand it a
-**`GitRepository`** + **`Kustomization`** that point at a public Git repo, and watch
-them **pull** that repo into the cluster — going **Ready** on their own. Then feel
-the part that makes GitOps different from `kubectl apply`: **drift** a managed
-resource by hand and watch Flux **reconcile** it back to Git. Finally **suspend**
-the Kustomization (the `selfHeal: false` analog) and prove the same drift **stays**.
+Instalar o **Flux** (o GitOps Toolkit) em um cluster kind descartável, entregar a ele um
+**`GitRepository`** + **`Kustomization`** que apontam para um repo Git público e observá-los
+fazer **pull** desse repo para dentro do cluster — ficando **Ready** por conta própria. Depois,
+sentir a parte que torna o GitOps diferente do `kubectl apply`: provocar **drift** em um recurso
+gerenciado, na mão, e observar o Flux **reconciliá-lo** de volta ao Git. Por fim, **suspender**
+a Kustomization (o análogo de `selfHeal: false`) e provar que, com suspend, o mesmo **drift permanece**.
 
-The whole lab turns on one idea: **Git is the desired state, and an in-cluster agent
-continuously reconciles the cluster toward it** — the S03 reconcile loop, with Git as `spec`.
+O lab inteiro gira em torno de uma ideia: **Git é o estado desejado, e um agente dentro do cluster
+reconcilia continuamente o cluster em direção a ele** — o loop de reconciliação da S03, com o Git como `spec`.
 
-> **Why not the `web` app?** Every other Day-1/2 lab extends the `web` Deployment. This one
-> deliberately uses the canonical public repo **`argoproj/argocd-example-apps` / `guestbook`**
-> so it runs on kind with **nothing to host** (same hostless source as the Argo CD variant).
-> The one beat that needs a *writable* repo (change Git → re-reconcile) is the optional
-> **Stretch** at the end; the required drift break→fix needs no Git write at all.
+> **Por que não a app `web`?** Todos os outros labs dos Dias 1/2 estendem o Deployment `web`. Este
+> usa deliberadamente o repo público canônico **`argoproj/argocd-example-apps` / `guestbook`**
+> para rodar no kind **sem nada para hospedar** (a mesma fonte sem host da variante Argo CD).
+> O único momento que precisa de um repo *gravável* (mudar o Git → re-reconciliar) é o
+> **Stretch** opcional no final; o break→fix de drift obrigatório não exige nenhuma escrita no Git.
 
 ## Prerequisites
 
-- **kind path (do this):** Docker + `kind` + `kubectl`, and rights to create a local cluster.
-  You'll make a throwaway cluster named `gitops`. Flux runs cluster-wide, so this is
-  **kind-only** — you can't install it into a shared assigned namespace.
-- **Shared-cluster path:** **read-only.** If the facilitator has hung Flux in the room,
-  you can *inspect* a running `GitRepository` / `Kustomization` (Steps 3–4 read-only) but
-  not install or drift them. Prefer kind if you can.
-- The `flux` CLI is **optional** — every required step here works with `kubectl` alone.
-- Internet pull access for the Flux controller images and the guestbook image
+- **Caminho kind (faça este):** Docker + `kind` + `kubectl`, e permissão para criar um cluster local.
+  Você vai criar um cluster descartável chamado `gitops`. O Flux roda em escopo de cluster, então este lab é
+  **kind-only** — você não pode instalá-lo em um namespace compartilhado atribuído.
+- **Caminho shared-cluster:** **read-only.** Se o facilitador tiver pendurado um Flux na sala,
+  você pode *inspecionar* um `GitRepository` / `Kustomization` em execução (Steps 3–4 somente leitura),
+  mas não instalar nem provocar drift neles. Prefira o kind se puder.
+- O CLI `flux` é **opcional** — todo passo obrigatório aqui funciona só com `kubectl`.
+- Acesso de pull à internet para as images dos controllers do Flux e a image do guestbook
   (`gcr.io/google-samples/gb-frontend:v5`).
 
 ## Files used
 
-- `gitrepository.yaml` — Flux `GitRepository` that polls the guestbook Git source.
-- `kustomization.yaml` — Flux `Kustomization` that builds/applies that path and keeps
-  the cluster matching Git (`prune: true`, short `interval` for the lab).
+- `gitrepository.yaml` — `GitRepository` do Flux que consulta a fonte Git do guestbook.
+- `kustomization.yaml` — `Kustomization` do Flux que faz o build/apply desse path e mantém
+  o cluster igual ao Git (`prune: true`, `interval` curto para o lab).
 
-The CRs live in `flux-system` and are cleaned up by name; the guestbook workloads they
-create land in `default` and are pruned by Flux on delete when `prune: true`.
+Os CRs vivem em `flux-system` e são limpos por nome; os workloads do guestbook que eles
+criam caem em `default` e são removidos (prune) pelo Flux no delete quando `prune: true`.
 
 ---
 
 ## Guided task
 
-Work through the steps without opening the companion unless you are blocked. The spoiler
-contains exact commands, expected state, explanations, and recovery guidance.
+Percorra os passos sem abrir o companion, a menos que fique travado. O spoiler
+contém os comandos exatos, o estado esperado, explicações e orientações de recuperação.
 
-[Spoiler: guided solutions and expected output](./21-gitops-flux.solution.md#guided-solutions)
+[Spoiler: soluções guiadas e saída esperada](./21-gitops-flux.solution.md#guided-solutions)
 
-### Step 0 — a cluster, and Flux on it
+### Step 0 — um cluster, e o Flux nele
 
-### kind path (do this)
+### Caminho kind (faça este)
 
 ```bash
 kind create cluster --name gitops
 
-# Flux "dev install": controllers only (no bootstrap / no Git-managed Flux itself)
-# server-side apply: the install manifest is large
+# "dev install" do Flux: apenas os controllers (sem bootstrap / sem Flux gerenciado por Git)
+# server-side apply: o manifesto de instalação é grande
 kubectl apply --server-side --force-conflicts \
   -f https://github.com/fluxcd/flux2/releases/latest/download/install.yaml
 
-# latest install.yaml may also ship image-* / source-watcher — park them on kind
+# o install.yaml mais recente pode trazer também image-* / source-watcher — estacione-os no kind
 kubectl -n flux-system scale deploy/image-automation-controller \
   deploy/image-reflector-controller deploy/source-watcher --replicas=0 2>/dev/null || true
 
-# wait for the four controllers this lab uses (~1–2 min on a fresh kind)
+# aguarde os quatro controllers que este lab usa (~1–2 min em um kind recém-criado)
 kubectl -n flux-system wait --for=condition=available --timeout=300s \
   deploy/source-controller deploy/kustomize-controller \
   deploy/helm-controller deploy/notification-controller
 ```
 
-**Task:** confirm those four Flux Deployments in `flux-system` are Available.
+**Tarefa:** confirme que esses quatro Deployments do Flux em `flux-system` estão Available.
 
-**Question (optional):** which four controllers does this lab actually wait on, and what do
-the optional ones do?
+**Pergunta (opcional):** em quais quatro controllers este lab realmente espera, e o que fazem
+os opcionais?
 
-### shared-cluster path (read-only)
+### Caminho shared-cluster (read-only)
 
 ```bash
-# only if a facilitator Flux exists; you are a spectator here
+# somente se existir um Flux do facilitador; aqui você é um espectador
 kubectl config set-context --current --namespace=flux-system
 kubectl get gitrepositories,kustomizations
 ```
 
-Skip Steps 0–2's writes; join at **Step 3** to read a running Kustomization's status.
+Pule as escritas dos Steps 0–2; entre no **Step 3** para ler o status de uma Kustomization em execução.
 
 ---
 
-### Step 1 — write the GitRepository and Kustomization
+### Step 1 — escreva o GitRepository e a Kustomization
 
-Create two files. Together they are the entire GitOps declaration: **source** (the desired
-state, in Git) + **apply pipeline** (where it lands, how often, whether to prune).
+Crie dois arquivos. Juntos, eles são a declaração GitOps inteira: **fonte** (o estado
+desejado, em Git) + **pipeline de apply** (onde ele cai, com que frequência, se faz prune).
 
 ```bash
 cat > gitrepository.yaml <<'EOF'
@@ -131,7 +131,7 @@ spec:
 EOF
 ```
 
-**Task:** validate both against the server before applying (the CRDs ship with Flux).
+**Tarefa:** valide os dois contra o server antes de aplicar (os CRDs vêm com o Flux).
 
 ```bash
 kubectl apply --dry-run=server -f gitrepository.yaml -f kustomization.yaml
@@ -139,35 +139,35 @@ kubectl apply --dry-run=server -f gitrepository.yaml -f kustomization.yaml
 
 ---
 
-### Step 2 — apply them and watch Git pull into the cluster
+### Step 2 — aplique-os e veja o Git ser puxado para o cluster
 
-There is **no separate "sync" command** here — declaring the CRs is enough. The
-source-controller fetches the repo; the kustomize-controller builds `./guestbook` and
-applies it on every `interval`.
+Não existe **nenhum comando separado de "sync"** aqui — declarar os CRs basta. O
+source-controller busca o repo; o kustomize-controller faz o build de `./guestbook` e
+o aplica a cada `interval`.
 
 ```bash
 kubectl apply -f gitrepository.yaml -f kustomization.yaml
 kubectl -n flux-system get gitrepository,kustomization guestbook -w
-# Ctrl-C once both show READY=True
+# Ctrl-C quando os dois mostrarem READY=True
 ```
 
-**Task:** watch both reach `READY=True`, then confirm the guestbook workload landed in
-`default`.
+**Tarefa:** observe os dois chegarem a `READY=True`, depois confirme que o workload do guestbook
+caiu em `default`.
 
 ```bash
 kubectl -n default get deploy,svc guestbook-ui
 kubectl -n default get pods -l app=guestbook-ui
 ```
 
-**Question:** you set `ref.branch: master`. What does that track, and when would you pin a
-tag or commit SHA instead?
+**Pergunta:** você definiu `ref.branch: master`. O que isso acompanha, e quando você fixaria uma
+tag ou um commit SHA em vez disso?
 
 ---
 
-### Step 3 — read Ready conditions (source vs apply)
+### Step 3 — leia as condições Ready (source vs apply)
 
-Flux reports readiness on **each** object. The GitRepository answers "did we fetch Git?";
-the Kustomization answers "did we apply that artifact successfully?"
+O Flux reporta prontidão em **cada** objeto. O GitRepository responde "buscamos o Git?";
+a Kustomization responde "aplicamos aquele artifact com sucesso?"
 
 ```bash
 kubectl -n flux-system get gitrepository guestbook \
@@ -176,35 +176,35 @@ kubectl -n flux-system get kustomization guestbook \
   -o custom-columns='READY:.status.conditions[?(@.type=="Ready")].status,MESSAGE:.status.conditions[?(@.type=="Ready")].message'
 ```
 
-**Task:** read off Ready for source and Kustomization separately.
+**Tarefa:** leia o Ready da fonte e o da Kustomization separadamente.
 
 ---
 
-### Step 4 — break→fix: drift it by hand, watch reconcile revert
+### Step 4 — break→fix: provoque drift na mão, veja o reconcile reverter
 
-The GitOps moment. Git says `guestbook-ui` has **1** replica. Change it by hand and watch
-Flux notice the drift on the next reconcile and **put it back** — no human, no
-`kubectl apply` of the guestbook.
+O momento GitOps. O Git diz que o `guestbook-ui` tem **1** réplica. Mude isso na mão e veja
+o Flux notar o drift no próximo reconcile e **colocar de volta** — sem humano, sem
+`kubectl apply` do guestbook.
 
 ```bash
 kubectl -n default scale deployment guestbook-ui --replicas=5
-kubectl -n default get deploy guestbook-ui -w    # Ctrl-C after it settles back to 1
+kubectl -n default get deploy guestbook-ui -w    # Ctrl-C depois que estabilizar de volta em 1
 ```
 
-**Task:** watch the replica count briefly jump toward 5, then get dragged back to **1** by Flux
-(within ~30s — the Kustomization `interval`).
+**Tarefa:** veja a contagem de réplicas saltar brevemente em direção a 5 e então ser arrastada
+de volta para **1** pelo Flux (em ~30s — o `interval` da Kustomization).
 
-**Question (required):** what would happen to that hand-scale if the Kustomization were
-**suspended** (`spec.suspend: true` — the `selfHeal: false` analog)?
+**Pergunta (obrigatória):** o que aconteceria com esse scale manual se a Kustomization estivesse
+**suspensa** (`spec.suspend: true` — o análogo de `selfHeal: false`)?
 
-Prove it:
+Prove:
 
 ```bash
-# suspend reconciliation (detection/apply stops acting on the cluster)
+# suspenda a reconciliação (a detecção/apply deixa de agir sobre o cluster)
 kubectl -n flux-system patch kustomization guestbook --type merge \
   -p '{"spec":{"suspend":true}}'
 
-# drift it again
+# provoque o drift de novo
 kubectl -n default scale deployment guestbook-ui --replicas=5
 sleep 40
 kubectl -n flux-system get kustomization guestbook \
@@ -212,78 +212,79 @@ kubectl -n flux-system get kustomization guestbook \
 kubectl -n default get deploy guestbook-ui
 ```
 
-Expected: replicas **stay at 5** while suspended. Resume and watch Flux heal:
+Esperado: as réplicas **permanecem em 5** enquanto suspenso. Retome e veja o Flux curar:
 
 ```bash
 kubectl -n flux-system patch kustomization guestbook --type merge \
   -p '{"spec":{"suspend":false}}'
-kubectl -n default get deploy guestbook-ui -w    # back to 1
+kubectl -n default get deploy guestbook-ui -w    # de volta a 1
 ```
 
 ---
 
 ## Observe
 
-- **Pull, not push.** You applied a `GitRepository` + `Kustomization`; Flux pulled the
-  guestbook repo and deployed it — you never `kubectl apply`'d the guestbook manifests yourself.
-- **Source Ready ≠ Apply Ready.** Fetch success and apply success are separate conditions —
-  read both.
-- **Reconcile reverts drift.** A hand-scale to 5 was dragged back to Git's 1, automatically.
-- **Suspend ≠ drift detection forever-on.** With `suspend: true`, Flux **stops applying** —
-  the same drift stays (the Argo `selfHeal: false` analog). Resume and it heals again.
+- **Pull, não push.** Você aplicou um `GitRepository` + `Kustomization`; o Flux puxou o
+  repo do guestbook e fez o deploy — você nunca rodou `kubectl apply` nos manifestos do guestbook.
+- **Source Ready ≠ Apply Ready.** Sucesso de fetch e sucesso de apply são condições separadas —
+  leia as duas.
+- **O reconcile reverte drift.** Um scale manual para 5 foi arrastado de volta ao 1 do Git, automaticamente.
+- **Suspend ≠ detecção de drift sempre ligada.** Com `suspend: true`, o Flux **para de aplicar** — o mesmo drift permanece
+  (o análogo do `selfHeal: false` do Argo). Retome e ele cura de novo.
 
 ## Challenge
 
-Guestbook replicas stay drifted after a manual scale, and the Kustomization no longer
-corrects them. Diagnose suspend versus a failed Ready condition, resume (or fix), and prove
-the live Deployment matches Git again.
+As réplicas do guestbook permanecem em drift depois de um scale manual, e a Kustomization
+não as corrige mais. Diagnostique suspend versus uma condição Ready com falha, retome (ou
+corrija), e prove que o Deployment vivo volta a corresponder ao Git.
 
 **Difficulty:** Intermediate
 
-**Success criteria:** Read Kustomization `.spec.suspend` and Ready condition, identify that
-suspend is true or apply is failing, clear the block, and show replicas return to the
-Git-desired count with Ready=True.
+**Success criteria:** Leia o .spec.suspend e a condição Ready da Kustomization, identifique que
+suspend está true ou que o apply está falhando, remova o bloqueio e prove que as réplicas
+retornam à contagem desejada no Git com Ready=True.
 
-**Hints:** Inspect spec.suspend and status.conditions on the Kustomization; compare kubectl
-get deploy replicas with the Git guestbook manifest; patch suspend false or fix the Ready
-message.
+**Hints:** Inspecione spec.suspend e status.conditions na Kustomization; compare as réplicas de
+kubectl get deploy com o manifesto do guestbook no Git; aplique patch de suspend para false ou
+corrija a mensagem de Ready.
 
-[Spoiler: challenge solution](./21-gitops-flux.solution.md#challenge-solution)
+[Spoiler: solução do challenge](./21-gitops-flux.solution.md#challenge-solution)
 
 ## Verify
 
-Confirm Flux evidence before cleanup.
+Confirme as evidências do Flux antes do cleanup.
 
 ```bash
 kubectl -n flux-system get gitrepository,kustomization guestbook
 kubectl -n default get deploy,svc guestbook-ui
 ```
 
-Expected: Ready status is still readable so suspend / reconcile behaviour can be re-checked.
+Esperado: o status Ready continua legível para que o comportamento de suspend / reconcile
+possa ser reverificado.
 
 ## Cleanup / reset
 
 ```bash
-# delete the Kustomization first; prune:true means Flux removes the guestbook workloads
+# delete a Kustomization primeiro; prune:true faz o Flux remover os workloads do guestbook
 kubectl -n flux-system delete kustomization guestbook
-kubectl -n default get deploy,svc guestbook-ui   # expect: NotFound
+kubectl -n default get deploy,svc guestbook-ui   # esperado: NotFound
 kubectl -n flux-system delete gitrepository guestbook
 
-# tidy local files
+# limpe os arquivos locais
 rm -f gitrepository.yaml kustomization.yaml
 ```
 
-## Stretch (optional) — change Git, watch it re-reconcile
+## Stretch (optional) — mude o Git, veja-o re-reconciliar
 
-This is the "Git is the source of truth" beat end-to-end — it needs a repo **you can push to**.
+Este é o momento "o Git é a fonte da verdade" de ponta a ponta — ele precisa de um repo em que **você possa fazer push**.
 
-1. **Fork** `https://github.com/argoproj/argocd-example-apps` on GitHub (or push a copy to any Git
-   host you control).
-2. Point the GitRepository at your fork: edit `gitrepository.yaml`'s `url` to your fork's URL and
-   `kubectl apply -f gitrepository.yaml` again.
-3. In your fork, edit `guestbook/guestbook-ui-deployment.yaml` — bump `replicas` to `2` — and
+1. Faça um **fork** de `https://github.com/argoproj/argocd-example-apps` no GitHub (ou faça push de uma
+   cópia para qualquer host Git que você controle).
+2. Aponte o GitRepository para o seu fork: edite a `url` do `gitrepository.yaml` para a URL do seu fork e
+   rode `kubectl apply -f gitrepository.yaml` de novo.
+3. No seu fork, edite `guestbook/guestbook-ui-deployment.yaml` — suba `replicas` para `2` — e
    `git commit && git push`.
-4. Watch Flux detect the new commit and re-reconcile:
+4. Veja o Flux detectar o novo commit e re-reconciliar:
 
 ```bash
 kubectl -n flux-system get gitrepository,kustomization guestbook -w
