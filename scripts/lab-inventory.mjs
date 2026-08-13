@@ -78,7 +78,7 @@ export function classifyAutomationTier(row) {
   if (/local\s*[—–-]\s*no cluster/i.test(row.environment)) return 'local-container';
   // Strip markdown emphasis so `**None** — …` counts as no cluster add-on.
   const addons = (row.addons ?? '').trim().replace(/\*+/g, '');
-  if (addons && !/^none\b/i.test(addons)) return 'kind-addon';
+  if (addons && !/^(?:none|nenhum)\b/i.test(addons)) return 'kind-addon';
   return 'kind-cluster';
 }
 

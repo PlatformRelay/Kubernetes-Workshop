@@ -297,7 +297,7 @@ describe('deck manifest validation', () => {
     const markdown = renderDeck([
       section('S24', { status: 'deferred' }),
     ], { title: 'Optional', description: 'Optional material' })
-    assert.match(markdown, /S24.*deferred.*not schedulable/i)
+    assert.match(markdown, /S24.*deferred.*(?:not schedulable|fora de agenda)/i)
   })
 
   it('derives deck status through deferred and authored transitions', () => {
@@ -308,9 +308,9 @@ describe('deck manifest validation', () => {
       { title: 'Optional', description: 'Advanced material' },
     )
 
-    assert.match(deferred, /S24.*deferred.*not schedulable/i)
-    assert.doesNotMatch(deferred, /all selected sections are authored/i)
-    assert.match(authored, /all selected sections are authored/i)
+    assert.match(deferred, /S24.*deferred.*(?:not schedulable|fora de agenda)/i)
+    assert.doesNotMatch(deferred, /all selected sections are authored|todas as seções selecionadas estão escritas/i)
+    assert.match(authored, /all selected sections are authored|todas as seções selecionadas estão escritas/i)
     assert.doesNotMatch(authored, /S24.*deferred/i)
   })
 
@@ -786,7 +786,7 @@ describe('S21 GitOps Flux section variant (US-GITOPS-CHOICE-B)', () => {
       )
     }
 
-    const onSlideClaim = /CLI verbs used on-slide:([\s\S]*?)(?:Speaker-notes-only|\n- |\n\n)/
+    const onSlideClaim = /(?:CLI verbs used on-slide|Verbos de CLI usados no slide):([\s\S]*?)(?:Speaker-notes-only|Só nas speaker notes|\n- |\n\n)/
       .exec(flux)?.[1] ?? ''
     assert.notEqual(onSlideClaim, '', 'ACCURACY LOCKS must keep the on-slide CLI verbs claim')
     assert.doesNotMatch(
@@ -796,7 +796,7 @@ describe('S21 GitOps Flux section variant (US-GITOPS-CHOICE-B)', () => {
     )
     assert.match(
       flux,
-      /(speaker-)?notes-only:.*`flux bootstrap`.*`flux resume`/is,
+      /(?:(?:speaker-)?notes-only|só nas speaker notes):.*`flux bootstrap`.*`flux resume`/is,
       'ACCURACY LOCKS must name bootstrap/resume as notes-only verbs',
     )
   })
@@ -866,10 +866,10 @@ describe('S23 OpenTelemetry concept coda (ADR 0013)', () => {
     const coda = stripHtmlComments(codaSlides.map((slide) => slide.content).join('\n'))
     assert.match(coda, /OpenTelemetry/, 'the coda must name OpenTelemetry on-slide')
     assert.match(coda, /OTLP/, 'OTLP must be named on-slide as the wire protocol')
-    assert.match(coda, /wire protocol/i, 'OTLP must be framed as a wire protocol')
+    assert.match(coda, /(?:wire protocol|protocolo de transporte)/i, 'OTLP must be framed as a wire protocol')
     assert.match(
       coda,
-      /receive → process → export/,
+      /receive → process →\s+export/,
       'the collector must be framed as the receive → process → export pipeline shape',
     )
     assert.match(coda, /\btraces?\b/i, 'traces must be named as a signal type')
@@ -1125,7 +1125,7 @@ describe('operator-requested section extensions (US-FIX-CONTENT-GAPS)', () => {
       assert.match(visible, /kind: Certificate/, 'the Certificate resource must be shown as YAML')
       assert.match(visible, /ClusterIssuer/, 'the ClusterIssuer must be named on-slide')
       assert.match(visible, /ACME/, 'the ACME issuance flow must be named on-slide')
-      assert.match(visible, /renew/i, 'automatic renewal must be claimed on-slide')
+      assert.match(visible, /renov|renew/i, 'automatic renewal must be claimed on-slide')
     })
 
     it('ties the Certificate to the ingress.yaml web-tls Secret from the magic-move', () => {
@@ -1181,7 +1181,7 @@ describe('operator-requested section extensions (US-FIX-CONTENT-GAPS)', () => {
       )
       assert.match(
         card('TCPRoute / UDPRoute'),
-        /experimental/i,
+        /experimenta(?:l|is)/i,
         'TCPRoute/UDPRoute must be marked experimental at the pinned v1.5 channel',
       )
     })
@@ -1293,7 +1293,7 @@ describe('operator-requested section extensions (US-FIX-CONTENT-GAPS)', () => {
     })
 
     it('S25 keeps the no-endorsement stance alongside the worked example', () => {
-      assert.match(visibleOf(s25), /endorses none/)
+      assert.match(visibleOf(s25), /endorses none|não endossa nenhuma/)
     })
 
     it('holds Day 3 at net-zero: S17 stays [30, 25] and S25 stays [35, 30]', () => {
@@ -1466,7 +1466,7 @@ describe('S07/S14 — the NotReady beat precedes the reroute (US-FIX-REMOVEAT-BE
       const visible = visibleOf(rel)
       assert.match(
         visible,
-        /NotReady[\s\S]*?still in the slice[\s\S]*?drops it from the (?:Endpoint)?[Ss]lice/,
+        /NotReady[\s\S]*?(?:still in the slice|ainda está n[ao] slice)[\s\S]*?(?:drops it from the|o remove d[ao]) (?:Endpoint)?[Ss]lice/,
         'the NotReady beat (endpoint still listed) must come before the reroute beat on-slide',
       )
     })
