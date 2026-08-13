@@ -7,178 +7,188 @@ tier: recommended
 track: Operators
 ---
 
-# The operator pattern
+# O padrão operator
 
-Encode operational knowledge behind your own API: a CRD plus a controller.
+Codifique conhecimento operacional atrás da sua própria API: um CRD mais um controller.
 
-**recommended** · suggested Day 3 · Operators track
+**recommended** · sugerido para o Day 3 · trilha Operators
 
 <!--
-Section S22 — The operator pattern. Recommended, Day 3, Operators track.
-Timing: ~25 min slides + 15 min lab.
-Outcome: learners can define "operator = CRD (extends the API) + custom controller (the
-reconcile loop)"; distinguish a plain controller (reconciles built-in objects) from an
-operator (packages domain/operational knowledge behind a CRD); read a CRD + a sample CR +
-conceptual reconcile pseudo-code; place a project on the CNCF Capability Levels (1 Basic
-Install → 5 Auto Pilot); and, in the lab, install cert-manager (a no-code operator),
-inspect its CRDs, create an Issuer + Certificate, and watch the controller reconcile them
-into a Secret — deleting the Secret to watch the loop recreate it.
-Beats: problem (some ops tasks — backup, failover, upgrades — can't be a built-in
-resource) · recap the S03 control loop (observe → diff → act) as the foundation · mental
-model (CRD + custom controller = operator) · code-annotated (a raw CRD registers a new
-kind) · magic-move (CRD definition → sample CR → conceptual reconcile pseudo-code acting
-on it) · controller vs operator (operator = encoded operational knowledge) · CNCF
-Capability Levels 1→5 (conceptual, NO vendor names) · reconcile-loop animation driving a
-custom resource (reuse ReconcileLoop) · recap → lab.
+Seção S22 — O padrão operator. Recommended, Day 3, trilha Operators.
+Tempo: ~25 min de slides + 15 min de lab.
+Resultado: os participantes conseguem definir "operator = CRD (estende a API) + controller
+customizado (o loop de reconciliação)"; distinguir um controller comum (reconcilia objetos
+nativos) de um operator (empacota conhecimento de domínio/operacional atrás de um CRD);
+ler um CRD + um CR de exemplo + pseudocódigo conceitual de reconcile; posicionar um
+projeto nos Capability Levels da CNCF (1 Basic Install → 5 Auto Pilot); e, no lab,
+instalar o cert-manager (um operator sem código), inspecionar seus CRDs, criar um Issuer +
+Certificate, e ver o controller reconciliá-los num Secret — deletando o Secret para ver o
+loop recriá-lo.
+Beats: problema (algumas tarefas de operação — backup, failover, upgrades — não cabem num
+recurso nativo) · recap do control loop do S03 (observar → diffar → agir) como fundação ·
+modelo mental (CRD + controller customizado = operator) · code-annotated (um CRD cru
+registra um novo kind) · magic-move (definição do CRD → CR de exemplo → pseudocódigo
+conceitual de reconcile agindo sobre ele) · controller vs operator (operator =
+conhecimento operacional codificado) · CNCF Capability Levels 1→5 (conceitual, SEM nomes
+de vendors) · animação do loop de reconciliação dirigindo um recurso customizado
+(reutiliza ReconcileLoop) · recap → lab.
 
-Animation: REUSE ReconcileLoop (US-X1, built in S03; S21 reuses it for GitOps). Here pass
-controller="Backup operator", resource="Backup", desired=1, desiredSource="spec (your CR)",
-observedSource="cluster". This is the reuse guardrail: an operator's controller IS the S03
-loop, watching a CUSTOM resource instead of a built-in one. No new component.
+Animação: REUTILIZAR ReconcileLoop (US-X1, construído no S03; o S21 o reutiliza para
+GitOps). Aqui passe controller="Backup operator", resource="Backup", desired=1,
+desiredSource="spec (your CR)", observedSource="cluster". Este é o guardrail de reuso: o
+controller de um operator É o loop do S03, observando um recurso CUSTOMIZADO em vez de um
+nativo. Nenhum componente novo.
 
-ILLUSTRATIVE vs LAB (post-red-line, per outline): the slide magic-move teaches with a
-clean illustrative `Backup`/`Database` CRD so the pattern is obvious; the LAB uses concrete
-cert-manager (Issuer/Certificate/Secret). Byte-for-byte parity is NOT required here (this
-is a conceptual section, not a Day-1 red-line resource).
+ILUSTRATIVO vs LAB (pós-red-line, conforme o outline): o magic-move do slide ensina com um
+CRD ilustrativo limpo `Backup`/`Database` para o padrão ficar óbvio; o LAB usa o
+cert-manager concreto (Issuer/Certificate/Secret). Paridade byte a byte NÃO é exigida aqui
+(esta é uma seção conceitual, não um recurso da red line do Day 1).
 
-ACCURACY LOCKS (web-verified 2026-07-10):
-- CRD = apiextensions.k8s.io/v1, kind CustomResourceDefinition. Registers a new
-  group/version/kind + scope (Namespaced/Cluster) + an OpenAPI v3 schema; kubectl then
-  treats the new kind like any built-in (get/describe/explain/-w).
-- Operator = CRD (extends the API) + a custom controller (runs the reconcile loop over
-  instances of that CRD). A plain controller reconciles BUILT-IN objects (ReplicaSet →
-  Pods); an operator packages domain/day-2 knowledge (backup, failover, upgrade) behind a
-  CRD, so a human declares intent and the controller executes the runbook.
-- CNCF Operator "Capability Levels" (from the Operator Framework / operatorhub maturity
-  model): L1 Basic Install · L2 Seamless Upgrades · L3 Full Lifecycle · L4 Deep Insights ·
-  L5 Auto Pilot. Conceptual only — NO vendor/product names (guardrail).
-- Lab uses cert-manager v1.21.0 (current stable, verified). It is a no-code operator: the
-  Certificate controller reconciles a Certificate CR into a Secret and RECREATES the Secret
-  if deleted (the reconcile loop). NOTE: the Secret does NOT carry an ownerReference by
-  default (--enable-certificate-owner-ref defaults to false) — recreation is the LOOP, not
-  GC. The slide does not claim otherwise.
-CKx tie-in: CRDs/operators are CKA *extension* topics (cluster architecture / API
-extension) — a one-liner on the recap; not a hard CKAD domain.
+ACCURACY LOCKS (verificados na web em 2026-07-10):
+- CRD = apiextensions.k8s.io/v1, kind CustomResourceDefinition. Registra um novo
+  group/version/kind + scope (Namespaced/Cluster) + um schema OpenAPI v3; o kubectl então
+  trata o novo kind como qualquer nativo (get/describe/explain/-w).
+- Operator = CRD (estende a API) + um controller customizado (roda o loop de reconciliação
+  sobre instâncias desse CRD). Um controller comum reconcilia objetos NATIVOS (ReplicaSet →
+  Pods); um operator empacota conhecimento de domínio/day-2 (backup, failover, upgrade)
+  atrás de um CRD, de modo que um humano declara a intenção e o controller executa o
+  runbook.
+- CNCF Operator "Capability Levels" (do modelo de maturidade do Operator Framework /
+  operatorhub): L1 Basic Install · L2 Seamless Upgrades · L3 Full Lifecycle · L4 Deep
+  Insights · L5 Auto Pilot. Conceitual apenas — SEM nomes de vendors/produtos (guardrail).
+- O lab usa cert-manager v1.21.0 (estável atual, verificado). É um operator sem código: o
+  controller de Certificate reconcilia um CR Certificate num Secret e RECRIA o Secret se
+  deletado (o loop de reconciliação). NOTA: o Secret NÃO carrega ownerReference por
+  default (--enable-certificate-owner-ref default é false) — a recriação é o LOOP, não
+  GC. O slide não afirma o contrário.
+Amarração CKx: CRDs/operators são tópicos de *extensão* da CKA (arquitetura de cluster /
+extensão da API) — uma linha no recap; não é um domínio duro da CKAD.
 -->
 
 ---
 layout: statement
-kicker: The problem
+kicker: O problema
 ---
 
-Some operational jobs — **back up this database, fail it over, upgrade it in place** — can't be expressed by any built-in resource.
+Alguns trabalhos operacionais — **fazer backup deste banco, fazer failover dele, atualizá-lo no lugar** — não podem ser expressos por nenhum recurso nativo.
 
-A `Deployment` keeps *N* replicas of a stateless Pod running. But *"take a consistent backup every night, and restore from the latest one if the primary dies"* isn't a field on any built-in kind — it's a **runbook**: a sequence of steps that needs **domain knowledge** about *this* piece of software. You could run that runbook by hand, or bury it in a CI pipeline — but then nothing is **continuously** making the cluster match your intent. What if you could teach the cluster the runbook, declare *"I want a backup"*, and let a **loop** carry it out?
+Um `Deployment` mantém *N* réplicas de um Pod stateless rodando. Mas *"tire um backup consistente toda noite, e restaure a partir do mais recente se o primário morrer"* não é um campo de nenhum kind nativo — é um **runbook**: uma sequência de passos que precisa de **conhecimento de domínio** sobre *este* software específico. Você poderia rodar esse runbook na mão, ou enterrá-lo num pipeline de CI — mas aí nada estaria **continuamente** fazendo o cluster corresponder à sua intenção. E se você pudesse ensinar o runbook ao cluster, declarar *"eu quero um backup"*, e deixar um **loop** executá-lo?
 
 <!--
-Speaker: the "why operators exist" beat. Built-in resources cover generic patterns:
-Deployment = keep N stateless replicas; StatefulSet = ordered stateful Pods with stable
-identity; Job = run to completion. But day-2 operations for a SPECIFIC system — a
-database's backup/restore/failover, a message broker's rebalancing, a certificate's
-renewal — encode expertise that no generic controller has. Today you'd write a runbook and
-run it by hand (error-prone, not continuous) or script it in CI (fire-and-forget, no drift
-correction — exactly the S21 GitOps complaint one level down). The operator idea: capture
-that expertise IN a controller, expose intent as a new API resource, and let the reconcile
-loop run the runbook forever. Next: recall the loop that makes this possible.
+Speaker: o beat do "por que operators existem". Recursos nativos cobrem padrões genéricos:
+Deployment = manter N réplicas stateless; StatefulSet = Pods stateful ordenados com
+identidade estável; Job = rodar até completar. Mas as operações day-2 de um sistema
+ESPECÍFICO — backup/restore/failover de um banco, rebalanceamento de um message broker,
+renovação de um certificado — codificam expertise que nenhum controller genérico tem.
+Hoje você escreveria um runbook e o rodaria na mão (sujeito a erro, não contínuo) ou o
+scriptaria no CI (fire-and-forget, sem correção de drift — exatamente a reclamação do
+GitOps do S21, um nível abaixo). A ideia do operator: capturar essa expertise DENTRO de um
+controller, expor a intenção como um novo recurso da API, e deixar o loop de reconciliação
+rodar o runbook para sempre. A seguir: relembrar o loop que torna isso possível.
 -->
 
 ---
 
-<span class="kw-kicker">Recall from the mental model · the one loop everything runs on</span>
+<span class="kw-kicker">Relembrando o modelo mental · o único loop sobre o qual tudo roda</span>
 
-# The control loop is the foundation: observe → diff → act
+# O control loop é a fundação: observar → diffar → agir
 
 <div class="kw-cols-2 mt-3 text-sm">
   <v-click at="1">
-    <KwCard heading="What you already know" kind="deploy" variant="ok">
-      A built-in controller watches a resource, compares <strong>desired</strong>
-      (<code>spec</code>) against <strong>observed</strong> (the real world), and acts to
-      close the gap — then repeats, forever. Delete a Pod and the ReplicaSet remakes it.
+    <KwCard heading="O que você já sabe" kind="deploy" variant="ok">
+      Um controller nativo observa um recurso, compara o <strong>desejado</strong>
+      (<code>spec</code>) com o <strong>observado</strong> (o mundo real), e age para
+      fechar a lacuna — depois repete, para sempre. Delete um Pod e o ReplicaSet o refaz.
     </KwCard>
   </v-click>
   <v-click at="2">
-    <KwCard heading="The leap" icon="💡" variant="ok">
-      Nothing about that loop is special to <em>Pods</em>. Point the same
-      <strong>observe → diff → act</strong> at a resource <strong>you invented</strong>,
-      and put <em>your</em> operational knowledge in the "act" step. That's an operator.
+    <KwCard heading="O salto" icon="💡" variant="ok">
+      Nada nesse loop é específico de <em>Pods</em>. Aponte o mesmo
+      <strong>observar → diffar → agir</strong> para um recurso que <strong>você
+      inventou</strong>, e coloque o <em>seu</em> conhecimento operacional no passo de
+      "agir". Isso é um operator.
     </KwCard>
   </v-click>
 </div>
 
 <div v-click="3" class="mt-4 text-sm">
 
-**Kubernetes is already a platform of reconcile loops** — the mental model taught the shape, GitOps reused
-it with **Git** in the desired slot. This section reuses it a third time with **your own
-resource** in the desired slot. Same loop; new state to reconcile.
+**O Kubernetes já é uma plataforma de loops de reconciliação** — o modelo mental ensinou a
+forma, o GitOps a reutilizou com o **Git** no slot de desejado. Esta seção a reutiliza uma
+terceira vez com **o seu próprio recurso** no slot de desejado. Mesmo loop; novo estado a
+reconciliar.
 
 </div>
 
 <!--
-Speaker: anchor hard on S03. The reconciliation loop — observe desired vs observed, diff,
-act to converge, repeat — is THE Kubernetes idea. Built-in controllers apply it to
-built-in kinds (ReplicaSet→Pods, Deployment→ReplicaSets). The whole trick of the operator
-pattern is that the loop is kind-agnostic: give Kubernetes a new kind and a controller that
-runs observe→diff→act over instances of it, and you've extended the platform. Point back to
-S21: GitOps was the same loop with Git as the desired state. Now it's the same loop with a
-custom resource as the desired state. Repetition is the pedagogy — this is the third time
-they meet this loop, and that's the point. Next: name the two ingredients precisely.
+Speaker: ancore firme no S03. O loop de reconciliação — observar desejado vs observado,
+diffar, agir para convergir, repetir — é A ideia do Kubernetes. Controllers nativos o
+aplicam a kinds nativos (ReplicaSet→Pods, Deployment→ReplicaSets). O truque inteiro do
+padrão operator é que o loop é agnóstico de kind: dê ao Kubernetes um novo kind e um
+controller que roda observar→diffar→agir sobre instâncias dele, e você estendeu a
+plataforma. Aponte de volta ao S21: GitOps era o mesmo loop com o Git como estado
+desejado. Agora é o mesmo loop com um recurso customizado como estado desejado. A
+repetição é a pedagogia — esta é a terceira vez que eles encontram este loop, e esse é o
+ponto. A seguir: nomear os dois ingredientes com precisão.
 -->
 
 ---
 
 <div class="kw-slide-dense">
 
-<span class="kw-kicker">Mental model · two ingredients, one word</span>
+<span class="kw-kicker">Modelo mental · dois ingredientes, uma palavra</span>
 
-# Operator = **CRD** (extends the API) + **custom controller** (the loop)
+# Operator = **CRD** (estende a API) + **controller customizado** (o loop)
 
 <div class="kw-cols-2 mt-3 text-sm">
   <v-click at="1">
-    <KwCard heading="CRD — extend the API" kind="crd" variant="ok">
-      A <strong>CustomResourceDefinition</strong> registers a brand-new
-      <code>kind</code> (say <code>Backup</code>) with its own schema. After it's applied,
-      <code>kubectl get backup</code> works exactly like <code>kubectl get pod</code> — the
-      API server stores and validates your resource like any built-in.
+    <KwCard heading="CRD — estenda a API" kind="crd" variant="ok">
+      Uma <strong>CustomResourceDefinition</strong> registra um <code>kind</code>
+      novinho em folha (digamos <code>Backup</code>) com seu próprio schema. Depois de
+      aplicada, <code>kubectl get backup</code> funciona exatamente como
+      <code>kubectl get pod</code> — o API server armazena e valida seu recurso como
+      qualquer nativo.
     </KwCard>
   </v-click>
   <v-click at="2">
-    <KwCard heading="Custom controller — run the loop" icon="⚙️" variant="ok">
-      A Pod running in the cluster that <strong>watches</strong> instances of that kind and
-      <strong>reconciles</strong> them: observe the CR's <code>spec</code>, diff against the
-      world, and <strong>act</strong> — using the domain knowledge you coded in.
+    <KwCard heading="Controller customizado — rode o loop" icon="⚙️" variant="ok">
+      Um Pod rodando no cluster que <strong>observa</strong> instâncias desse kind e as
+      <strong>reconcilia</strong>: observar o <code>spec</code> do CR, diffar contra o
+      mundo, e <strong>agir</strong> — usando o conhecimento de domínio que você
+      programou.
     </KwCard>
   </v-click>
 </div>
 
 <div v-click="3" class="mt-4 text-sm">
 
-<span class="kw-kicker">the definition to remember</span>
+<span class="kw-kicker">a definição para lembrar</span>
 
-**A CRD without a controller is just inert data** — the API server stores your `Backup`
-objects but nothing ever *happens*. **A controller without a CRD** is just a plain
-controller over built-in kinds. **Together**, they're an **operator**: a new API *plus* the
-software that makes it real.
+**Um CRD sem controller é só dado inerte** — o API server armazena seus objetos `Backup`,
+mas nada nunca *acontece*. **Um controller sem CRD** é só um controller comum sobre kinds
+nativos. **Juntos**, eles são um **operator**: uma nova API *mais* o software que a torna
+real.
 
 </div>
 
 </div>
 
 <!--
-Speaker: the load-bearing slide — say the equation and make them repeat it. CRD =
-CustomResourceDefinition = the API extension: it teaches the API server a new kind
-(group/version/kind + schema + scope). Once registered, your kind is a first-class citizen:
-kubectl get/describe/explain/-w, RBAC, etcd storage, admission — all free. But a CRD is
-PASSIVE; it only stores data. The custom controller is the ACTIVE half: a Pod (usually a
-Deployment) that watches your CRs and runs observe→diff→act on them, with your operational
-logic in "act." Neither alone is an operator: CRD-only = inert data; controller-only over
-built-ins = a plain controller. Operator = both. The lab makes this concrete: cert-manager
-IS a CRD (Certificate) + a controller Pod that reconciles Certificates into Secrets. Next:
-what a CRD actually looks like.
+Speaker: o slide que carrega o peso — diga a equação e faça-os repetir. CRD =
+CustomResourceDefinition = a extensão da API: ela ensina ao API server um novo kind
+(group/version/kind + schema + scope). Uma vez registrado, seu kind é cidadão de primeira
+classe: kubectl get/describe/explain/-w, RBAC, armazenamento no etcd, admission — tudo de
+graça. Mas um CRD é PASSIVO; ele só armazena dados. O controller customizado é a metade
+ATIVA: um Pod (normalmente um Deployment) que observa seus CRs e roda observar→diffar→agir
+sobre eles, com a sua lógica operacional no "agir". Nenhum dos dois sozinho é um operator:
+só-CRD = dado inerte; só-controller sobre nativos = um controller comum. Operator = os
+dois. O lab torna isso concreto: o cert-manager É um CRD (Certificate) + um Pod controller
+que reconcilia Certificates em Secrets. A seguir: como um CRD realmente se parece.
 -->
 
 ---
 layout: code-annotated
-heading: 'A CRD teaches the API server a new kind'
+heading: 'Um CRD ensina um novo kind ao API server'
 compact: true
 lab: labs/day-3/22-operator-concept.md
 ---
@@ -191,14 +201,14 @@ metadata:
 spec:
   group: example.com
   names:
-    kind: Backup                 # new kind for `kubectl get`
+    kind: Backup                 # novo kind p/ `kubectl get`
     plural: backups
   scope: Namespaced
   versions:
     - name: v1
       served: true
       storage: true
-      schema:                    # OpenAPI v3 validation
+      schema:                    # validação OpenAPI v3
         openAPIV3Schema:
           type: object
           properties:
@@ -208,49 +218,50 @@ spec:
 ::notes::
 
 <CodeNote at="1" label="name = plural.group" variant="ok">
-The CRD's own name must be <code>&lt;plural&gt;.&lt;group&gt;</code>. This registers the
-resource path <code>/apis/example.com/v1/backups</code> in the API server.
+O próprio nome do CRD deve ser <code>&lt;plural&gt;.&lt;group&gt;</code>. Isso registra o
+caminho do recurso <code>/apis/example.com/v1/backups</code> no API server.
 </CodeNote>
 
 <CodeNote at="2" label="names + scope" variant="ok">
-<code>names.kind</code> is what you'll type (<code>Backup</code>); <code>scope</code> decides
-whether instances live <strong>in a namespace</strong> or are cluster-wide — just like
-built-in kinds.
+<code>names.kind</code> é o que você vai digitar (<code>Backup</code>); <code>scope</code>
+decide se as instâncias vivem <strong>num namespace</strong> ou são de todo o cluster —
+exatamente como os kinds nativos.
 </CodeNote>
 
 <CodeNote at="3" label="versions[].schema" variant="warn">
-Each version carries an <strong>OpenAPI v3 schema</strong>. The API server uses it to
-<strong>validate and store</strong> your resource — so a malformed <code>Backup</code> is
-rejected at <code>apply</code> time, no controller needed.
+Cada versão carrega um <strong>schema OpenAPI v3</strong>. O API server o usa para
+<strong>validar e armazenar</strong> seu recurso — então um <code>Backup</code> malformado é
+rejeitado na hora do <code>apply</code>, sem precisar de controller.
 </CodeNote>
 
 <div v-click="4" class="mt-2 text-sm kw-muted">
-Apply this and <code>kubectl get backup</code>, <code>kubectl explain backup.spec</code>,
-and <code>-w</code> all light up — but nothing <em>reconciles</em> a <code>Backup</code>
-yet. The CRD is the API; the controller is still missing.
+Aplique isto e <code>kubectl get backup</code>, <code>kubectl explain backup.spec</code>
+e <code>-w</code> se acendem — mas nada <em>reconcilia</em> um <code>Backup</code>
+ainda. O CRD é a API; o controller ainda está faltando.
 </div>
 
 <!--
-Speaker: this is the API-extension half made concrete. A CustomResourceDefinition is itself
-a built-in resource (apiextensions.k8s.io/v1) whose job is to register ANOTHER kind. Walk
-the highlights: name must be plural.group (it's a discovery path, not arbitrary); group +
-versions + names.kind define the new API surface; scope = Namespaced or Cluster; the
-openAPIV3Schema is what makes kubectl explain work and what validates/rejects bad specs at
-apply time. The punchline (click 4): after applying JUST the CRD, all the kubectl verbs
-work — get, describe, explain, watch — but nothing HAPPENS to a Backup, because there's no
-controller. That's the setup for the magic-move: CRD → an instance → the loop that acts on
-it. (Schema trimmed for the slide; real CRDs spell out spec fields.) Next: build all three.
+Speaker: esta é a metade da extensão da API tornada concreta. Uma CustomResourceDefinition
+é ela mesma um recurso nativo (apiextensions.k8s.io/v1) cujo trabalho é registrar OUTRO
+kind. Percorra os highlights: name deve ser plural.group (é um caminho de discovery, não
+arbitrário); group + versions + names.kind definem a nova superfície de API; scope =
+Namespaced ou Cluster; o openAPIV3Schema é o que faz o kubectl explain funcionar e o que
+valida/rejeita specs ruins na hora do apply. A punchline (clique 4): depois de aplicar SÓ
+o CRD, todos os verbos do kubectl funcionam — get, describe, explain, watch — mas nada
+ACONTECE com um Backup, porque não existe controller. Essa é a preparação para o
+magic-move: CRD → uma instância → o loop que age sobre ela. (Schema encurtado para o
+slide; CRDs reais detalham os campos do spec.) A seguir: construir os três.
 -->
 
 ---
 layout: code-walkthrough
-heading: 'From API to intent to action, in three frames'
+heading: 'Da API à intenção à ação, em três frames'
 lab: labs/day-3/22-operator-concept.md
 ---
 
 ````md magic-move
 ```yaml
-# 1 — THE CRD: register a new kind (the API extension)
+# 1 — O CRD: registrar um novo kind (a extensão da API)
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -270,224 +281,233 @@ spec:
             spec:
               type: object
               properties:
-                database: { type: string }   # which DB to back up
-                schedule: { type: string }   # cron-ish intent
+                database: { type: string }   # qual DB deve receber backup
+                schedule: { type: string }   # intenção estilo cron
 ```
 
 ```yaml
-# 2 — A CUSTOM RESOURCE: one instance = your declared intent
+# 2 — UM CUSTOM RESOURCE: uma instância = a sua intenção declarada
 apiVersion: example.com/v1
 kind: Backup
 metadata:
   name: nightly-orders
   labels: { app: s22 }
 spec:
-  database: orders            # DESIRED state, in YOUR words
-  schedule: "0 2 * * *"       # "back up orders, nightly at 02:00"
+  database: orders            # estado DESEJADO, nas SUAS palavras
+  schedule: "0 2 * * *"       # "backup de orders, toda noite às 02:00"
 ```
 
 ```yaml
-# 3 — THE CONTROLLER (pseudo-code): observe → diff → act, forever
+# 3 — O CONTROLLER (pseudocódigo): observar → diffar → agir, para sempre
 for each Backup cr in watch("example.com/v1", "Backup"):
-    desired  = cr.spec                       # observe intent
+    desired  = cr.spec                       # observar a intenção
     observed = find_snapshots(cr.spec.database)
 
-    if not due(cr.spec.schedule, observed):  # diff
+    if not due(cr.spec.schedule, observed):  # diffar
         continue
 
-    snapshot = take_snapshot(cr.spec.database)   # ACT — encoded domain knowledge
+    snapshot = take_snapshot(cr.spec.database)   # AGIR — conhecimento de domínio codificado
     upload(snapshot); prune_old(observed)
 
-    cr.status.lastBackup = now()             # report state back onto the CR
+    cr.status.lastBackup = now()             # reportar o estado de volta no CR
     cr.status.conditions = [{type: "Ready", status: "True"}]
 ```
 ````
 
 <!--
-Speaker: THE core slide — three frames, three ideas. Frame 1: the CRD, the API extension
-(now with real spec fields — database + schedule — so the schema means something). Frame 2:
-a single Backup instance — this is a user DECLARING INTENT in domain terms ("back up the
-orders DB nightly"); it's just YAML you kubectl apply, and it's the DESIRED state. Frame 3:
-the controller as pseudo-code, and deliberately in the SAME observe→diff→act shape as S03:
-watch Backup objects → read spec (observe intent) → check what snapshots exist (observe
-world) → diff (is a backup due?) → ACT (take/upload/prune — THIS is the encoded operational
-knowledge, the runbook a human used to run) → write status back onto the CR so `kubectl get
-backup` shows Ready and lastBackup. Land it: frames 1+3 together are the operator; frame 2
-is what a user does with it. The lab swaps this illustrative Backup for real cert-manager,
-but the shape is identical. Next: why isn't a plain controller already an operator?
+Speaker: O slide central — três frames, três ideias. Frame 1: o CRD, a extensão da API
+(agora com campos de spec reais — database + schedule — para o schema significar algo).
+Frame 2: uma única instância de Backup — isto é um usuário DECLARANDO INTENÇÃO em termos
+de domínio ("backup do DB orders toda noite"); é só YAML que você aplica com kubectl, e é
+o estado DESEJADO. Frame 3: o controller como pseudocódigo, deliberadamente na MESMA forma
+observar→diffar→agir do S03: watch nos objetos Backup → ler o spec (observar a intenção) →
+checar quais snapshots existem (observar o mundo) → diffar (tem backup vencendo?) → AGIR
+(tirar/subir/podar — ISTO é o conhecimento operacional codificado, o runbook que um humano
+costumava rodar) → escrever o status de volta no CR para o `kubectl get backup` mostrar
+Ready e lastBackup. Aterrisse: os frames 1+3 juntos são o operator; o frame 2 é o que um
+usuário faz com ele. O lab troca este Backup ilustrativo pelo cert-manager real, mas a
+forma é idêntica. A seguir: por que um controller comum já não é um operator?
 -->
 
 ---
 layout: comparison
-heading: 'Same loop — the difference is what it knows'
-leftHeading: 'Plain controller'
-leftBadge: 'built-in'
+heading: 'Mesmo loop — a diferença é o que ele sabe'
+leftHeading: 'Controller comum'
+leftBadge: 'nativo'
 rightHeading: 'Operator'
-rightBadge: 'built-in + domain'
+rightBadge: 'nativo + domínio'
 ---
 
-Reconciles **built-in** objects with **generic** logic:
+Reconcilia objetos **nativos** com lógica **genérica**:
 
-- ReplicaSet controller → keep *N* Pods
-- Deployment controller → roll ReplicaSets
-- Job controller → run Pods to completion
+- ReplicaSet controller → manter *N* Pods
+- Deployment controller → rolar ReplicaSets
+- Job controller → rodar Pods até completar
 
-The "act" step is **general-purpose** — *make N of a thing*. It knows nothing about *your*
-database, broker, or certificates.
+O passo de "agir" é de **propósito geral** — *fazer N de uma coisa*. Ele não sabe nada
+sobre o *seu* banco, broker ou certificados.
 
-<div class="mt-3 text-sm kw-muted">Ships <strong>with</strong> Kubernetes. No new API.</div>
+<div class="mt-3 text-sm kw-muted">Vem <strong>com</strong> o Kubernetes. Nenhuma API nova.</div>
 
 ::right::
 
-Reconciles a **CRD you defined**, with **domain** logic:
+Reconcilia um **CRD que você definiu**, com lógica de **domínio**:
 
-- `Backup` controller → snapshot, upload, prune, restore-on-failover
-- A cert controller → issue, store, and **renew** certificates
-- A DB controller → seed, fail over, run version upgrades
+- Um controller de `Backup` → snapshot, upload, prune, restore-em-failover
+- Um controller de certificados → emitir, armazenar e **renovar** certificados
+- Um controller de DB → semear, fazer failover, rodar upgrades de versão
 
-The "act" step is a **runbook** — the day-2 expertise a human operator used to carry, now
-**encoded** and run continuously.
+O passo de "agir" é um **runbook** — a expertise day-2 que um operador humano costumava
+carregar, agora **codificada** e executada continuamente.
 
-<div class="mt-3 text-sm kw-muted">Ships <strong>as software you install</strong>. New API + new behaviour.</div>
+<div class="mt-3 text-sm kw-muted">Vem <strong>como software que você instala</strong>. Nova API + novo comportamento.</div>
 
 <!--
-Speaker: the distinction the lab's required question hangs on ("what makes this an operator
-and not just a controller?"). Both are the SAME reconcile loop — that's the point, don't let
-them think an operator is a new mechanism. The difference is entirely in two places: (1) WHAT
-it reconciles — a plain controller drives built-in kinds; an operator drives a CRD you added;
-(2) WHAT'S IN "act" — a plain controller's act is generic ("make N replicas"); an operator's
-act is a domain runbook (take a consistent DB snapshot; fail over to a replica; renew a cert
-before expiry). The phrase to leave them with: an operator is OPERATIONAL KNOWLEDGE ENCODED
-behind an API. A plain controller has no opinion about your software; an operator IS the
-opinion. cert-manager (the lab) is the clean example: nobody could express "keep this TLS
-cert valid, renewing before it expires" with built-in kinds — that expertise lives in the
-cert-manager controller, exposed as the Certificate CRD. Next: how "mature" can an operator be?
+Speaker: a distinção da qual a pergunta obrigatória do lab depende ("o que torna isto um
+operator e não só um controller?"). Ambos são o MESMO loop de reconciliação — esse é o
+ponto, não deixe que pensem que um operator é um mecanismo novo. A diferença está
+inteiramente em dois lugares: (1) O QUE ele reconcilia — um controller comum dirige kinds
+nativos; um operator dirige um CRD que você adicionou; (2) O QUE ESTÁ NO "agir" — o agir de
+um controller comum é genérico ("fazer N réplicas"); o agir de um operator é um runbook de
+domínio (tirar um snapshot consistente do DB; fazer failover para uma réplica; renovar um
+certificado antes de expirar). A frase para deixar com eles: um operator é CONHECIMENTO
+OPERACIONAL CODIFICADO atrás de uma API. Um controller comum não tem opinião sobre o seu
+software; um operator É a opinião. O cert-manager (o lab) é o exemplo limpo: ninguém
+conseguiria expressar "mantenha este certificado TLS válido, renovando antes de expirar"
+com kinds nativos — essa expertise vive no controller do cert-manager, exposta como o CRD
+Certificate. A seguir: quão "maduro" um operator pode ser?
 -->
 
 ---
 
 <div class="kw-slide-dense">
 
-<span class="kw-kicker">CNCF capability levels · how much can it do for you?</span>
+<span class="kw-kicker">Capability levels da CNCF · quanto ele consegue fazer por você?</span>
 
-# Operators come in maturity levels: Basic Install → Auto Pilot
+# Operators vêm em níveis de maturidade: Basic Install → Auto Pilot
 
 <div class="mt-3 text-sm" style="display:grid;grid-template-columns:repeat(5,1fr);gap:0.6rem;">
   <v-click at="1">
     <KwCard heading="L1 · Basic Install" icon="📦" variant="ok">
-      Provisions the app from a CR. You declare it; the operator stands it up.
+      Provisiona a app a partir de um CR. Você declara; o operator a coloca de pé.
     </KwCard>
   </v-click>
   <v-click at="2">
     <KwCard heading="L2 · Seamless Upgrades" icon="⬆️" variant="ok">
-      Upgrades the app <em>and itself</em> without hand-holding or downtime surprises.
+      Atualiza a app <em>e a si mesmo</em> sem acompanhamento manual nem surpresas de downtime.
     </KwCard>
   </v-click>
   <v-click at="3">
     <KwCard heading="L3 · Full Lifecycle" icon="🔁" variant="ok">
-      Day-2 ops: backups, restores, failover, scaling — the runbook, automated.
+      Operações day-2: backups, restores, failover, escala — o runbook, automatizado.
     </KwCard>
   </v-click>
   <v-click at="4">
     <KwCard heading="L4 · Deep Insights" icon="📈" variant="ok">
-      Ships metrics, alerts, and health so the app explains itself.
+      Entrega métricas, alertas e saúde para a app se explicar sozinha.
     </KwCard>
   </v-click>
   <v-click at="5">
     <KwCard heading="L5 · Auto Pilot" icon="🛰️" variant="ok">
-      Auto-scales, auto-tunes, auto-remediates, auto-schedules — hands off.
+      Auto-escala, auto-ajusta, auto-remedia, auto-agenda — mãos fora.
     </KwCard>
   </v-click>
 </div>
 
 <div v-click="6" class="mt-4 text-sm kw-muted">
 
-The ladder answers *how much operational knowledge is encoded.* L1 just installs; L5 runs
-the system so you don't have to. Most real operators sit around **L2–L3** — and that's
-often plenty. **More levels = more of the runbook moved from your head into the loop.**
+A escada responde *quanto conhecimento operacional está codificado.* O L1 só instala; o L5
+opera o sistema para você não precisar. A maioria dos operators reais fica em torno de
+**L2–L3** — e isso costuma ser suficiente. **Mais níveis = mais do runbook movido da sua
+cabeça para o loop.**
 
 </div>
 
 </div>
 
 <!--
-Speaker: the CNCF Operator Capability Levels (from the Operator Framework maturity model) —
-a conceptual yardstick for "how much does this operator actually do?" Five rungs: L1 Basic
-Install (provision from a CR); L2 Seamless Upgrades (upgrade the workload AND the operator
-itself cleanly); L3 Full Lifecycle (day-2: backup/restore, failover, scaling — the runbook);
-L4 Deep Insights (metrics, alerts, workload+operator observability); L5 Auto Pilot
-(auto-scaling/tuning/remediation — the system runs itself). Frame it as a spectrum of
-ENCODED KNOWLEDGE, not a quality score: a great L1 operator can be exactly right for a
-simple app. Reality check: most production operators live at L2–L3; L5 is rare and
-hard-won. GUARDRAIL: keep this vendor-neutral — describe the levels, name NO products, even
-though learners will know examples. Next: watch the loop drive a custom resource, then the lab.
+Speaker: os CNCF Operator Capability Levels (do modelo de maturidade do Operator
+Framework) — uma régua conceitual para "quanto este operator realmente faz?" Cinco
+degraus: L1 Basic Install (provisionar a partir de um CR); L2 Seamless Upgrades (atualizar
+o workload E o próprio operator de forma limpa); L3 Full Lifecycle (day-2:
+backup/restore, failover, escala — o runbook); L4 Deep Insights (métricas, alertas,
+observabilidade do workload+operator); L5 Auto Pilot (auto-escala/ajuste/remediação — o
+sistema opera a si mesmo). Enquadre como um espectro de CONHECIMENTO CODIFICADO, não uma
+nota de qualidade: um ótimo operator L1 pode ser exatamente o certo para uma app simples.
+Checagem de realidade: a maioria dos operators de produção vive em L2–L3; L5 é raro e
+duramente conquistado. GUARDRAIL: mantenha isto neutro de vendor — descreva os níveis, não
+nomeie NENHUM produto, mesmo que os participantes conheçam exemplos. A seguir: ver o loop
+dirigir um recurso customizado, depois o lab.
 -->
 
 ---
 
-<span class="kw-kicker">The one loop everything runs on — a third time, with your CR</span>
+<span class="kw-kicker">O único loop sobre o qual tudo roda — uma terceira vez, com o seu CR</span>
 
-# An operator is reconciliation with **your resource** as `spec`
+# Um operator é reconciliação com **o seu recurso** como `spec`
 
 <div class="mt-2">
-  <ReconcileLoop :step="$clicks" :desired="1" controller="Backup operator" resource="Backup" desiredSource="spec (your CR)" observedSource="cluster" />
+  <ReconcileLoop :step="$clicks" :desired="1" controller="Backup operator" resource="Backup" desiredSource="spec (seu CR)" observedSource="cluster" />
 </div>
 
 <div class="mt-6 text-sm">
 <v-clicks>
 
-- **You applied a `Backup` CR; the operator observes it.** Desired = 1 backup for today; observed = 0. That's the gap — exactly the reconcile loop, but the kind is *yours*.
-- **Diff → act.** The controller runs its runbook: take the snapshot, upload it, prune old ones. Nobody ran a script by hand — the loop did.
-- **It never stops.** Delete the resulting artefact and the loop notices the gap and remakes it. In the lab you'll delete a cert-manager **Secret** and watch it reappear.
+- **Você aplicou um CR `Backup`; o operator o observa.** Desejado = 1 backup para hoje; observado = 0. Essa é a lacuna — exatamente o loop de reconciliação, mas o kind é *seu*.
+- **Diff → agir.** O controller roda seu runbook: tirar o snapshot, subi-lo, podar os antigos. Ninguém rodou um script na mão — o loop rodou.
+- **Ele nunca para.** Delete o artefato resultante e o loop percebe a lacuna e o refaz. No lab você vai deletar um **Secret** do cert-manager e vê-lo reaparecer.
 
 </v-clicks>
 </div>
 
 <!--
-Speaker: the SAME ReconcileLoop component from S03/S21 (reuse guardrail — no new animation),
-now with a CUSTOM resource in the desired slot: controller="Backup operator",
-resource="Backup", desired=1, desiredSource="spec (your CR)", observedSource="cluster". So
-it reads "desired 1, observed 0 → create 1 Backup." Click through: Observe (your CR wants a
-backup today; none exists) → Diff (desired 1 ≠ observed 0) → Act (run the runbook — snapshot,
-upload, prune) → Repeat (in sync, keep watching, remake anything that vanishes). Land the
-through-line out loud: S03 = built-in loop; S21 = same loop with Git; S22 = same loop with
-YOUR CRD. One mechanism, three desired-state sources. Forward pointer straight into the lab:
-cert-manager is exactly this — its controller reconciles a Certificate into a Secret, and if
-you delete the Secret the loop recreates it. Next: recap, then go feel it.
+Speaker: o MESMO componente ReconcileLoop do S03/S21 (guardrail de reuso — nenhuma
+animação nova), agora com um recurso CUSTOMIZADO no slot de desejado: controller="Backup
+operator", resource="Backup", desired=1, desiredSource="spec (seu CR)",
+observedSource="cluster". Então ele lê "desejado 1, observado 0 → criar 1 Backup". Clique
+por clique: Observe (seu CR quer um backup hoje; nenhum existe) → Diff (desejado 1 ≠
+observado 0) → Act (rodar o runbook — snapshot, upload, prune) → Repeat (em sincronia,
+seguir observando, refazer qualquer coisa que suma). Aterrisse o fio condutor em voz alta:
+S03 = loop nativo; S21 = mesmo loop com o Git; S22 = mesmo loop com o SEU CRD. Um
+mecanismo, três fontes de estado desejado. Ponteiro direto para o lab: o cert-manager é
+exatamente isto — seu controller reconcilia um Certificate num Secret, e se você deletar o
+Secret o loop o recria. A seguir: recap, depois ir sentir.
 -->
 
 ---
 layout: recap
-heading: 'Recap — extend the API, then let the loop run your runbook'
-story: 'Some day-2 jobs — backup, failover, upgrade — aren''t any built-in kind; they''re a runbook that needs domain knowledge. An operator captures that: a CRD extends the API with a new kind, and a custom controller runs the reconcile loop over instances of it, with your operational expertise in the "act" step. Same loop as the mental model and GitOps — new desired state.'
-next: 'A production operator in the wild — the same pattern, shipped and battle-tested'
+heading: 'Recap — estenda a API, depois deixe o loop rodar o seu runbook'
+story: 'Alguns trabalhos day-2 — backup, failover, upgrade — não são nenhum kind nativo; são um runbook que precisa de conhecimento de domínio. Um operator captura isso: um CRD estende a API com um novo kind, e um controller customizado roda o loop de reconciliação sobre instâncias dele, com a sua expertise operacional no passo de "agir". O mesmo loop do modelo mental e do GitOps — novo estado desejado.'
+next: 'Um operator de produção na natureza — o mesmo padrão, empacotado e testado em batalha'
 ---
 
-- **Why operators exist:** built-in kinds cover generic patterns; **domain runbooks**
-  (backup, failover, upgrade) need encoded expertise a generic controller doesn't have
-- **The equation:** **operator = CRD** (extends the API with a new `kind` + schema) **+
-  custom controller** (a Pod running the observe → diff → act loop over your CRs)
-- **CRD alone = inert data; controller-over-built-ins = a plain controller** — you need
-  **both**, and *your* knowledge in the **act** step
-- **Controller vs operator:** same loop; the operator reconciles a **CRD you defined** with
-  **domain logic** — *operational knowledge encoded behind an API*
-- **Maturity is a spectrum:** CNCF **capability levels L1 Basic Install → L5 Auto Pilot**;
-  more levels = more of the runbook moved into the loop
-- **CKx tie-in:** CRDs/operators are CKA **extension** topics (API extension / cluster
-  architecture), not a hard CKAD domain — but the reconcile loop is core
+- **Por que operators existem:** kinds nativos cobrem padrões genéricos; **runbooks de
+  domínio** (backup, failover, upgrade) precisam de expertise codificada que um controller
+  genérico não tem
+- **A equação:** **operator = CRD** (estende a API com um novo `kind` + schema) **+
+  controller customizado** (um Pod rodando o loop observar → diffar → agir sobre seus CRs)
+- **CRD sozinho = dado inerte; controller-sobre-nativos = um controller comum** — você
+  precisa dos **dois**, e do *seu* conhecimento no passo de **agir**
+- **Controller vs operator:** o mesmo loop; o operator reconcilia um **CRD que você
+  definiu** com **lógica de domínio** — *conhecimento operacional codificado atrás de uma API*
+- **Maturidade é um espectro:** os **capability levels da CNCF, L1 Basic Install → L5 Auto
+  Pilot**; mais níveis = mais do runbook movido para o loop
+- **Amarração CKx:** CRDs/operators são tópicos de **extensão** da CKA (extensão da API /
+  arquitetura de cluster), não um domínio duro da CKAD — mas o loop de reconciliação é núcleo
 
 <!--
-Speaker: tie the bow. The problem: day-2 operational tasks aren't built-in resources —
-they're runbooks needing domain expertise. The answer: operator = CRD (new API) + custom
-controller (the reconcile loop with your runbook in "act"). Four facts to leave them with:
-(1) the equation, and that BOTH halves are required (CRD-only is inert, controller-over-
-built-ins is just a plain controller); (2) the controller-vs-operator distinction = encoded
-operational knowledge, not a new mechanism; (3) the capability-level spectrum L1→L5 as "how
-much runbook is automated"; (4) it's the S03 loop a third time (after S21's GitOps) — one
-mechanism, three desired-state sources. Hand to Lab 22: install cert-manager (a real no-code
-operator), inspect its CRDs with get crd / explain, create a self-signed Issuer + a
-Certificate, watch the controller reconcile them into a Secret, then delete the Secret and
-watch the loop put it back — the operator pattern you can see in ~15 minutes.
+Speaker: feche o laço. O problema: tarefas operacionais day-2 não são recursos nativos —
+são runbooks que precisam de expertise de domínio. A resposta: operator = CRD (nova API) +
+controller customizado (o loop de reconciliação com o seu runbook no "agir"). Quatro fatos
+para deixar com eles: (1) a equação, e que AMBAS as metades são obrigatórias (só-CRD é
+inerte, controller-sobre-nativos é só um controller comum); (2) a distinção
+controller-vs-operator = conhecimento operacional codificado, não um mecanismo novo; (3) o
+espectro de capability levels L1→L5 como "quanto do runbook está automatizado"; (4) é o
+loop do S03 uma terceira vez (depois do GitOps do S21) — um mecanismo, três fontes de
+estado desejado. Passe para o Lab 22: instalar o cert-manager (um operator sem código de
+verdade), inspecionar seus CRDs com get crd / explain, criar um Issuer self-signed + um
+Certificate, ver o controller reconciliá-los num Secret, então deletar o Secret e ver o
+loop colocá-lo de volta — o padrão operator que dá para ver em ~15 minutos.
 -->
 
 ---
@@ -497,10 +517,10 @@ duration: 15 min
 env: namespace ✓ (read-only) / kind ✓ (self-install)
 ---
 
-## Lab 22 — Meet a real operator
+## Lab 22 — Conheça um operator de verdade
 
-- Install **cert-manager** (a no-code operator: CRDs + a controller) and inspect its CRDs with `kubectl get crd` / `kubectl explain`
-- Create a self-signed **`Issuer`** and a **`Certificate`**; watch the controller reconcile them into a **`Secret`** (`kubectl get certificate,secret -w`)
-- Read the CR's **`.status`** (`Ready=True`) — the controller reporting back
-- **Break→fix:** `kubectl delete secret …` → the controller **recreates it** (the reconcile loop, *not* garbage collection)
-- Answer: *what makes this an operator and not just a controller?* → **encoded operational knowledge behind a CRD**
+- Instale o **cert-manager** (um operator sem código: CRDs + um controller) e inspecione seus CRDs com `kubectl get crd` / `kubectl explain`
+- Crie um **`Issuer`** self-signed e um **`Certificate`**; veja o controller reconciliá-los num **`Secret`** (`kubectl get certificate,secret -w`)
+- Leia o **`.status`** do CR (`Ready=True`) — o controller reportando de volta
+- **Quebre→conserte:** `kubectl delete secret …` → o controller o **recria** (o loop de reconciliação, *não* garbage collection)
+- Responda: *o que torna isto um operator e não só um controller?* → **conhecimento operacional codificado atrás de um CRD**

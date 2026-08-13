@@ -9,97 +9,99 @@ track: Workloads
 
 # Resources & limits
 
-Reserve what you need, cap what you use — and know **how** each cap is enforced.
+Reserve o que você precisa, limite o que você usa — e saiba **como** cada teto é aplicado.
 
-**core** · suggested Day 2 · Workloads track
+**core** · sugerido para o Day 2 · trilha Workloads
 
 <!--
-Section S13 — Resources & limits. Timing: ~35 min slides + 30 min lab. Follows S12.
-Outcome: learners can state what requests vs limits do (scheduling vs enforcement), the
-CPU-throttle vs memory-OOMKill asymmetry, the three QoS classes by their EXACT rules,
-how to right-size from observed usage (kubectl top → request ≈ steady state, limit =
-burst headroom; VPA recommends at scale), and
-how LimitRange (per-object defaults/bounds) and ResourceQuota (namespace aggregate cap)
-constrain a namespace.
-Beats: problem (no resources → contention + unschedulable) · mental model (requests drive
-scheduling, limits drive enforcement) · code-annotated (the requests/limits block on the web
-Deployment) · magic-move (no resources → +requests → +limits) · ResourcePressure animation
-(throttle vs OOMKill asymmetry) · QoS classes (Guaranteed/Burstable/BestEffort, precise
-rules) · right-sizing (RightSizing usage-graph animation + the kubectl top observation
-loop) · namespace guardrails (LimitRange vs ResourceQuota) · recap → lab.
-Animations: ResourcePressure.vue and RightSizing.vue (both self-contained). DEVIATION from
-the story's suggested "scheduling fits/doesn't-fit" animation: the memorable state
-transition in S13 is the throttle-vs-kill asymmetry, not scheduling — so the first
-animation illustrates that instead. RightSizing.vue rationale: right-sizing is a
-time-series story (usage vs request vs limit reference lines), a genuinely new
-transition no existing component draws.
-Right-sizing ACCURACY LOCKS: kubectl top needs metrics-server (the S16 add-back
-installs it on kind — say so, don't imply it's built in); VPA (VerticalPodAutoscaler)
-is an install-yourself autoscaler that recommends/applies request updates from observed
-usage — keep it named-concept-only, no install surface; HPA (S16) scales out while VPA
-sizes the Pod — the caution is not to let both act on the same resource dimension.
+Seção S13 — Resources & limits. Tempo: ~35 min de slides + 30 min de lab. Vem depois do S12.
+Resultado: os participantes conseguem dizer o que requests vs limits fazem (agendamento vs
+enforcement), a assimetria CPU-throttle vs memory-OOMKill, as três classes de QoS pelas suas
+regras EXATAS, como fazer right-sizing a partir do uso observado (kubectl top → request ≈
+steady state, limit = folga de burst; o VPA recomenda em escala), e
+como LimitRange (defaults/limites por objeto) e ResourceQuota (teto agregado do namespace)
+restringem um namespace.
+Beats: problema (sem resources → contenção + inagendável) · modelo mental (requests dirigem o
+agendamento, limits dirigem o enforcement) · code-annotated (o bloco requests/limits no
+Deployment web) · magic-move (sem resources → +requests → +limits) · animação ResourcePressure
+(assimetria throttle vs OOMKill) · classes de QoS (Guaranteed/Burstable/BestEffort, regras
+precisas) · right-sizing (animação RightSizing com gráfico de uso + o loop de observação com
+kubectl top) · guarda-corpos de namespace (LimitRange vs ResourceQuota) · recap → lab.
+Animações: ResourcePressure.vue e RightSizing.vue (ambas autocontidas). DESVIO da animação
+"cabe/não cabe no agendamento" sugerida pela história: a transição de estado memorável no S13
+é a assimetria throttle-vs-kill, não o agendamento — então a primeira
+animação ilustra isso. Justificativa do RightSizing.vue: right-sizing é uma
+história de série temporal (linhas de referência de uso vs request vs limit), uma transição
+genuinamente nova que nenhum componente existente desenha.
+TRAVAS DE PRECISÃO do right-sizing: kubectl top precisa do metrics-server (o add-back do S16
+o instala no kind — diga isso, não deixe implícito que vem embutido); o VPA (VerticalPodAutoscaler)
+é um autoscaler que você mesmo instala e que recomenda/aplica atualizações de requests a partir
+do uso observado — mantenha só como conceito nomeado, sem superfície de instalação; o HPA (S16)
+escala para fora enquanto o VPA dimensiona o Pod — a cautela é não deixar os dois agirem na
+mesma dimensão de recurso.
 CKx: CKAD/CKA — requests/limits, QoS, LimitRange, ResourceQuota.
 -->
 
 ---
 layout: statement
-kicker: The problem
+kicker: O problema
 ---
 
-Set **no** resources and you're gambling with the whole node.
+Não defina **nenhum** resource e você está apostando o node inteiro.
 
-The `web` Deployment has run all day with a token `requests` and no ceiling. On a busy node
-that's two failures waiting: a **noisy neighbour** balloons and starves everyone sharing the
-box, and the scheduler — with nothing to reserve — **overcommits** until Pods get evicted or
-never fit. Two numbers fix both: a **request** (what you reserve) and a **limit** (what you
-may use).
+O Deployment `web` rodou o dia todo com um `requests` simbólico e sem teto. Em um node ocupado
+isso são duas falhas esperando para acontecer: um **vizinho barulhento** (noisy neighbour) incha
+e mata de fome todo mundo que compartilha a máquina, e o scheduler — sem nada a reservar —
+**faz overcommit** até Pods serem despejados ou nunca mais caberem. Dois números consertam as
+duas: um **request** (o que você reserva) e um **limit** (o que você pode usar).
 
 <!--
-Speaker: this is the "why should I care" beat. Two distinct failure modes, and they map to
-the two numbers. (1) No limit → a memory leak or a runaway loop in one Pod consumes the node
-and degrades or kills its neighbours (the noisy-neighbour problem). (2) No request → the
-scheduler treats the Pod as needing ~nothing, packs the node, and now real demand exceeds
-capacity: Pods get OOM-evicted or new Pods stay Pending. The whole section is: requests solve
-the scheduling side, limits solve the enforcement side. Hold the mental model — next slide.
+Speaker: este é o beat do "por que eu deveria me importar". Dois modos de falha distintos, e
+eles mapeiam para os dois números. (1) Sem limit → um memory leak ou um loop descontrolado em
+um Pod consome o node e degrada ou mata os vizinhos (o problema do noisy neighbour). (2) Sem
+request → o scheduler trata o Pod como se precisasse de ~nada, lota o node, e agora a demanda
+real excede a capacidade: Pods são despejados por OOM ou Pods novos ficam Pending. A seção
+inteira é: requests resolvem o lado do agendamento, limits resolvem o lado do enforcement.
+Segure o modelo mental — próximo slide.
 -->
 
 ---
 
 <div class="kw-slide-dense">
 
-<span class="kw-kicker">Mental model · two numbers, two jobs</span>
+<span class="kw-kicker">Modelo mental · dois números, dois trabalhos</span>
 
-# Requests schedule · limits enforce
+# Requests agendam · limits impõem
 
 <div class="kw-cols-2 mt-3 text-sm">
   <v-click at="1">
-    <KwCard heading="requests — what the scheduler reserves" kind="pod" variant="ok">
-      The Pod only lands on a node with this much <strong>free capacity</strong>, and that
-      amount is <strong>held</strong> for it. Drives <strong>scheduling</strong> and QoS.
-      Too high → Pod stays <code>Pending</code>.
+    <KwCard heading="requests — o que o scheduler reserva" kind="pod" variant="ok">
+      O Pod só cai em um node com essa quantidade de <strong>capacidade livre</strong>, e essa
+      quantidade fica <strong>reservada</strong> para ele. Dirige o <strong>agendamento</strong> e o QoS.
+      Alto demais → o Pod fica <code>Pending</code>.
     </KwCard>
   </v-click>
   <v-click at="2">
-    <KwCard heading="limits — the ceiling the kubelet imposes" kind="pod" variant="warn">
-      The most the container may use at runtime. Drives <strong>enforcement</strong>. Exceed
-      it and — depending on the resource — you're <strong>throttled</strong> or
-      <strong>killed</strong>.
+    <KwCard heading="limits — o teto que o kubelet impõe" kind="pod" variant="warn">
+      O máximo que o container pode usar em runtime. Dirige o <strong>enforcement</strong>. Ultrapasse-o
+      e — dependendo do recurso — você é <strong>throttled</strong> ou
+      <strong>morto</strong>.
     </KwCard>
   </v-click>
 </div>
 
 <div v-click="3" class="mt-4 text-sm">
 
-<span class="kw-kicker">the asymmetry that trips everyone up</span>
+<span class="kw-kicker">a assimetria que derruba todo mundo</span>
 
 <div class="kw-cols-2 mt-1">
-  <KwCard heading="CPU is compressible" icon="🎚️">
-    Over the limit → <strong>throttled</strong>: the kernel caps its CPU share. Slow, but
-    <strong>never killed</strong>.
+  <KwCard heading="CPU é compressível" icon="🎚️">
+    Acima do limit → <strong>throttled</strong>: o kernel limita sua fatia de CPU. Lento, mas
+    <strong>nunca morto</strong>.
   </KwCard>
-  <KwCard heading="Memory is incompressible" icon="💥" variant="danger">
-    Over the limit → <strong>OOMKilled</strong>: you can't "throttle" RAM, so the kernel
-    <strong>kills</strong> the container (exit 137).
+  <KwCard heading="Memória é incompressível" icon="💥" variant="danger">
+    Acima do limit → <strong>OOMKilled</strong>: não dá para "fazer throttle" de RAM, então o kernel
+    <strong>mata</strong> o container (exit 137).
   </KwCard>
 </div>
 
@@ -108,20 +110,20 @@ the scheduling side, limits solve the enforcement side. Hold the mental model �
 </div>
 
 <!--
-Speaker: the single most important slide. requests and limits look symmetric in YAML but do
-completely different jobs. requests is a SCHEDULING input — the scheduler sums requests on a
-node and only binds a Pod if the request fits the allocatable remainder; it's a reservation,
-not a measurement of actual use. limits is a RUNTIME input — the kubelet programs cgroups so
-the container can't exceed it. Then the asymmetry (click 3): CPU is compressible, so "too
-much" just means the CFS scheduler throttles it — the container slows down but survives.
-Memory is incompressible — there's no "use it a bit slower," so the kernel OOM-kills the
-container (exit code 137 = 128 + SIGKILL 9). Learners conflate these constantly; the animation
-two slides on makes it physical. CKA/CKAD resource-management domain.
+Speaker: o slide mais importante de todos. requests e limits parecem simétricos no YAML mas fazem
+trabalhos completamente diferentes. requests é uma entrada de AGENDAMENTO — o scheduler soma os
+requests em um node e só faz o bind de um Pod se o request cabe no restante alocável; é uma
+reserva, não uma medição de uso real. limits é uma entrada de RUNTIME — o kubelet programa cgroups
+para que o container não consiga ultrapassá-lo. Então a assimetria (clique 3): CPU é compressível,
+então "demais" só significa que o CFS scheduler faz throttle — o container fica lento mas
+sobrevive. Memória é incompressível — não existe "usar um pouco mais devagar", então o kernel dá
+OOM-kill no container (exit code 137 = 128 + SIGKILL 9). Os alunos confundem isso o tempo todo; a
+animação dois slides adiante torna isso físico. Domínio de resource-management da CKA/CKAD.
 -->
 
 ---
 layout: code-annotated
-heading: 'One resources block, four numbers'
+heading: 'Um bloco resources, quatro números'
 compact: true
 lab: labs/day-2/13-resources.md
 ---
@@ -137,73 +139,73 @@ spec:
         - name: web
           image: ghcr.io/platformrelay/workshop-web:v1
           resources:
-            requests: { cpu: 100m, memory: 128Mi }   # reserve
-            limits:   { cpu: 500m, memory: 256Mi }    # cap
+            requests: { cpu: 100m, memory: 128Mi }   # reserva
+            limits:   { cpu: 500m, memory: 256Mi }    # teto
 ```
 
 ::notes::
 
-<CodeNote at="1" label="requests = the reservation" variant="ok">
-The scheduler only places this Pod where <strong>100m CPU + 128Mi</strong> is free, and holds
-it. <code>100m</code> = 0.1 of one core (<code>m</code> = millicores). Memory is bytes;
-<code>Mi</code> = mebibytes (2²⁰), <code>M</code> = megabytes (10⁶) — not the same.
+<CodeNote at="1" label="requests = a reserva" variant="ok">
+O scheduler só posiciona este Pod onde <strong>100m de CPU + 128Mi</strong> estão livres, e os
+mantém reservados. <code>100m</code> = 0,1 de um core (<code>m</code> = millicores). Memória é bytes;
+<code>Mi</code> = mebibytes (2²⁰), <code>M</code> = megabytes (10⁶) — não é a mesma coisa.
 </CodeNote>
 
-<CodeNote at="2" label="limits = the ceiling" variant="warn">
-Runtime cap. CPU over <code>500m</code> → throttled; memory over <code>256Mi</code> →
-OOMKilled. A <code>limit</code> with no <code>request</code> makes Kubernetes copy the limit
-down to the request.
+<CodeNote at="2" label="limits = o teto" variant="warn">
+Teto de runtime. CPU acima de <code>500m</code> → throttled; memória acima de <code>256Mi</code> →
+OOMKilled. Um <code>limit</code> sem <code>request</code> faz o Kubernetes copiar o limit
+para o request.
 </CodeNote>
 
-<CodeNote at="3" label="CPU: request &lt; limit = burst room">
-The container is guaranteed <code>100m</code> and may burst to <code>500m</code> <em>if the
-node has spare CPU</em>. That gap is why this Pod's QoS is <strong>Burstable</strong>.
+<CodeNote at="3" label="CPU: request &lt; limit = espaço de burst">
+O container tem <code>100m</code> garantidos e pode fazer burst até <code>500m</code> <em>se o
+node tiver CPU sobrando</em>. Essa folga é o motivo de o QoS deste Pod ser <strong>Burstable</strong>.
 </CodeNote>
 
-<CodeNote at="4" label="memory: mind the gap" variant="danger">
-It can climb to <code>256Mi</code> before the kill — but nothing <em>reserves</em> past
-<code>128Mi</code>, so under node pressure the extra isn't protected.
+<CodeNote at="4" label="memória: cuidado com a folga" variant="danger">
+Ela pode subir até <code>256Mi</code> antes do kill — mas nada <em>reserva</em> além de
+<code>128Mi</code>, então sob pressão no node o excedente não está protegido.
 </CodeNote>
 
 <!--
-Speaker: decode the units, they cause real bugs. CPU is millicores: 1000m = 1 vCPU, 100m =
-1/10th of a core, and it's a rate not a quota. Memory suffixes: Mi/Gi are binary (1Mi =
-1048576 bytes), M/G are decimal (1M = 1000000) — mixing them up gives you ~5% surprises and
-occasionally a failed scheduling. The request/limit gap on CPU is legitimate burst headroom;
-on memory the gap is more dangerous because anything above the request isn't reserved, so the
-node can reclaim it. Fourth note foreshadows QoS: request != limit here → Burstable. Compact
-teaching view; the lab ships the full applyable manifests.
+Speaker: decodifique as unidades, elas causam bugs de verdade. CPU é millicores: 1000m = 1 vCPU,
+100m = 1/10 de um core, e é uma taxa, não uma cota. Sufixos de memória: Mi/Gi são binários (1Mi =
+1048576 bytes), M/G são decimais (1M = 1000000) — misturá-los dá surpresas de ~5% e
+ocasionalmente um agendamento que falha. A folga request/limit em CPU é espaço legítimo de burst;
+em memória a folga é mais perigosa porque tudo acima do request não está reservado, então o
+node pode recuperá-lo. A quarta nota antecipa o QoS: request != limit aqui → Burstable. Visão
+compacta de ensino; o lab entrega os manifestos completos aplicáveis.
 -->
 
 ---
 layout: code-walkthrough
-heading: 'Build it up — from BestEffort to a capped Burstable Pod'
+heading: 'Construa passo a passo — de BestEffort a um Pod Burstable com teto'
 lab: labs/day-2/13-resources.md
 ---
 
 ````md magic-move
 ```yaml
-# 1: no resources at all — the web container as it started the day
+# 1: nenhum resource — o container web como ele começou o dia
 containers:
   - name: web
     image: ghcr.io/platformrelay/workshop-web:v1
-    # (no resources block)
-    # scheduler assumes ~0 → overcommit risk; QoS class: BestEffort
+    # (sem bloco resources)
+    # o scheduler assume ~0 → risco de overcommit; classe de QoS: BestEffort
 ```
 
 ```yaml
-# 2: +requests — now the scheduler RESERVES capacity (QoS → Burstable)
+# 2: +requests — agora o scheduler RESERVA capacidade (QoS → Burstable)
 containers:
   - name: web
     image: ghcr.io/platformrelay/workshop-web:v1
     resources:
-      requests:                     # what the scheduler holds for this Pod
+      requests:                     # o que o scheduler retém para este Pod
         cpu: 100m
         memory: 128Mi
 ```
 
 ```yaml
-# 3: +limits — add the runtime ceiling the kubelet enforces
+# 3: +limits — adicione o teto de runtime que o kubelet impõe
 containers:
   - name: web
     image: ghcr.io/platformrelay/workshop-web:v1
@@ -211,28 +213,28 @@ containers:
       requests:
         cpu: 100m
         memory: 128Mi
-      limits:                       # over CPU → throttled; over memory → OOMKilled
+      limits:                       # acima em CPU → throttled; acima em memória → OOMKilled
         cpu: 500m
         memory: 256Mi
 ```
 ````
 
 <!--
-Speaker: THREE frames, each a real QoS state. (1) No resources → BestEffort: scheduler thinks
-the Pod needs nothing, first to be evicted under pressure. (2) Add requests → the scheduler
-now reserves and the class flips to Burstable; note we could stop here — a Pod with requests
-and no limits is valid and common (reserve a floor, allow bursting). (3) Add limits → the
-kubelet programs the cgroup ceiling; still Burstable because request != limit. To reach
-Guaranteed you'd set limits == requests for BOTH cpu and memory (next-but-one slide). This
-grows the same web container the deck has carried since S06; the lab applies the block-style
-files.
+Speaker: TRÊS quadros, cada um um estado real de QoS. (1) Sem resources → BestEffort: o scheduler
+acha que o Pod não precisa de nada, primeiro a ser despejado sob pressão. (2) Adicione requests →
+o scheduler agora reserva e a classe vira Burstable; note que poderíamos parar aqui — um Pod com
+requests e sem limits é válido e comum (reservar um piso, permitir burst). (3) Adicione limits →
+o kubelet programa o teto do cgroup; continua Burstable porque request != limit. Para chegar a
+Guaranteed você definiria limits == requests para AMBOS cpu e memória (daqui a dois slides). Isso
+faz crescer o mesmo container web que o deck carrega desde o S06; o lab aplica os arquivos em
+estilo de bloco.
 -->
 
 ---
 
-<span class="kw-kicker">Same limit breach · opposite outcome</span>
+<span class="kw-kicker">Mesma violação de limit · desfecho oposto</span>
 
-# Throttled vs killed, live
+# Throttled vs morto, ao vivo
 
 <div class="mt-2">
   <ResourcePressure :step="$clicks" :show-caption="false" />
@@ -241,90 +243,90 @@ files.
 <div class="mt-3 text-sm">
 <v-clicks at="1">
 
-- Both containers push **past** their limit — the enforcement path forks by resource.
-- **CPU** is compressible → the kernel **throttles** it. Slow, still `Running`, no restart.
-- **Memory** is incompressible → the kernel **OOMKills** it (`exit 137`).
-- The kubelet **restarts** the killed container per `restartPolicy` → `RESTARTS 1` (a real
-  memory leak becomes `CrashLoopBackOff`).
+- Os dois containers **ultrapassam** o seu limit — o caminho de enforcement bifurca por recurso.
+- **CPU** é compressível → o kernel faz **throttle**. Lento, ainda `Running`, sem restart.
+- **Memória** é incompressível → o kernel dá **OOMKill** (`exit 137`).
+- O kubelet **reinicia** o container morto conforme a `restartPolicy` → `RESTARTS 1` (um
+  memory leak de verdade vira `CrashLoopBackOff`).
 
 </v-clicks>
 </div>
 
 <!--
-Speaker: drive with clicks; this is the section's punchline made physical. (0) both under
-their limits, nothing to enforce. (1) both breach. (2) CPU lane clamps at the ceiling and
-stays Running — throttling is invisible in `get pods` (STATUS still Running), you only see it
-in metrics/latency; the memory lane hits the ceiling and gets SIGKILLed, exit 137. (3) the
-kubelet restarts the memory container (RESTARTS increments); if it OOMs again you get
-CrashLoopBackOff with the backoff timer. The takeaway learners must leave with: "Running" does
-NOT mean healthy — a throttled Pod is silently slow, and RESTARTS climbing with OOMKilled in
-`describe` means the memory limit is too low (or the app leaks). This is exactly the lab's
-break→fix.
+Speaker: conduza com os cliques; esta é a punchline da seção tornada física. (0) os dois abaixo
+dos seus limits, nada a impor. (1) os dois estouram. (2) a faixa de CPU trava no teto e continua
+Running — throttling é invisível no `get pods` (STATUS continua Running), você só o vê em
+métricas/latência; a faixa de memória bate no teto e leva SIGKILL, exit 137. (3) o kubelet
+reinicia o container de memória (RESTARTS incrementa); se ele estoura OOM de novo você tem
+CrashLoopBackOff com o timer de backoff. O aprendizado que os alunos têm que levar: "Running"
+NÃO significa saudável — um Pod throttled fica silenciosamente lento, e RESTARTS subindo com
+OOMKilled no `describe` significa que o limit de memória está baixo demais (ou a aplicação
+vaza). Isso é exatamente o quebre→conserte do lab.
 -->
 
 ---
 
 <div class="kw-slide-dense">
 
-<span class="kw-kicker">QoS class · assigned by Kubernetes from what you set — never typed by you</span>
+<span class="kw-kicker">Classe de QoS · atribuída pelo Kubernetes a partir do que você define — nunca digitada por você</span>
 
-# Three QoS classes, three eviction priorities
+# Três classes de QoS, três prioridades de eviction
 
 <div class="mt-3 text-sm" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.85rem;">
   <v-click at="1">
     <KwCard heading="Guaranteed" icon="🟢" variant="ok">
-      <strong>Every</strong> container sets <strong>both</strong> cpu &amp; memory, and each
+      <strong>Todo</strong> container define <strong>ambos</strong> cpu &amp; memória, e cada
       <code>request == limit</code>.
-      <div class="kw-muted mt-1">Last to be evicted. (limits-only counts — Kubernetes copies
-      them to requests.)</div>
+      <div class="kw-muted mt-1">Último a ser despejado. (Só limits conta — o Kubernetes os copia
+      para os requests.)</div>
     </KwCard>
   </v-click>
   <v-click at="2">
     <KwCard heading="Burstable" icon="🟡" variant="warn">
-      At least one request or limit set, but <strong>not</strong> Guaranteed.
-      <div class="kw-muted mt-1">Our <code>web</code> Pod — reserves a floor, may burst to the
-      ceiling. Evicted after BestEffort.</div>
+      Pelo menos um request ou limit definido, mas <strong>não</strong> Guaranteed.
+      <div class="kw-muted mt-1">Nosso Pod <code>web</code> — reserva um piso, pode fazer burst até
+      o teto. Despejado depois do BestEffort.</div>
     </KwCard>
   </v-click>
   <v-click at="3">
     <KwCard heading="BestEffort" icon="🔴" variant="danger">
-      <strong>No</strong> requests or limits <strong>anywhere</strong> in the Pod.
-      <div class="kw-muted mt-1">First to be evicted under node memory pressure. Fine for
-      throwaway, dangerous for anything you care about.</div>
+      <strong>Nenhum</strong> request ou limit <strong>em lugar nenhum</strong> do Pod.
+      <div class="kw-muted mt-1">Primeiro a ser despejado sob pressão de memória no node. Ok para
+      coisa descartável, perigoso para qualquer coisa com que você se importa.</div>
     </KwCard>
   </v-click>
 </div>
 
 <div v-click="4" class="mt-3 kw-muted text-sm">
 
-You don't <em>choose</em> a QoS class — Kubernetes <strong>derives</strong> it from your
-`resources` and shows it in <code>kubectl describe pod</code> (<code>QoS Class:</code>). It
-decides <strong>eviction order</strong> when a node runs out of memory.
+Você não <em>escolhe</em> uma classe de QoS — o Kubernetes a <strong>deriva</strong> dos seus
+`resources` e a mostra no <code>kubectl describe pod</code> (<code>QoS Class:</code>). Ela
+decide a <strong>ordem de eviction</strong> quando um node fica sem memória.
 
 </div>
 
 </div>
 
 <!--
-Speaker: precision matters here — the AC shorthand "some set" is loose, so state the exact
-rules. GUARANTEED: every container in the Pod has both cpu AND memory set, and for each the
-request equals the limit. Subtle gotcha worth saying out loud: if you set ONLY limits,
-Kubernetes copies them into requests, so a limits-only Pod is still Guaranteed, not Burstable.
-BURSTABLE: at least one container has some request or limit, but the Pod doesn't meet the
-Guaranteed bar — this is the common real-world case. BESTEFFORT: nothing set anywhere. Why it
-matters: under node memory pressure the kubelet evicts BestEffort first, then Burstable
-exceeding requests, and Guaranteed last — so QoS is your eviction insurance. You never type a
-QoS class; it's derived and shown in `describe pod`. The lab confirms all three by reading
-`describe`.
+Speaker: precisão importa aqui — o atalho "alguns definidos" do AC é frouxo, então enuncie as
+regras exatas. GUARANTEED: todo container do Pod tem cpu E memória definidos, e para cada um o
+request é igual ao limit. Pegadinha sutil que vale dizer em voz alta: se você define SÓ limits,
+o Kubernetes os copia para os requests, então um Pod só-limits ainda é Guaranteed, não Burstable.
+BURSTABLE: pelo menos um container tem algum request ou limit, mas o Pod não alcança a barra do
+Guaranteed — este é o caso comum do mundo real. BESTEFFORT: nada definido em lugar nenhum. Por
+que importa: sob pressão de memória no node o kubelet despeja BestEffort primeiro, depois
+Burstable excedendo os requests, e Guaranteed por último — então QoS é o seu seguro contra
+eviction. Você nunca digita uma classe de QoS; ela é derivada e aparece no `describe pod`. O lab
+confirma as três lendo o `describe`.
 -->
 
 ---
 clicks: 3
 ---
 
-<span class="kw-kicker">Right-sizing · the numbers come from a graph, not from vibes</span>
+<span class="kw-kicker">Right-sizing · os números vêm de um gráfico, não de achismo</span>
 
-# Right-size against what the app actually uses
+# Dimensione contra o que a aplicação realmente usa
 
 <div class="mt-2">
   <RightSizing :step="$clicks" :show-caption="false" />
@@ -333,37 +335,36 @@ clicks: 3
 <div class="mt-3 text-sm">
 <v-clicks at="1">
 
-- A **guessed** request reserves capacity nobody uses — the node's ledger fills up with fiction and real Pods go `Pending`.
-- **Right-size:** set the request at observed **steady state** — the reservation matches reality.
-- Set the **limit** as burst headroom above it — the daily peak fits, nothing is OOMKilled, nothing is hoarded.
+- Um request **chutado** reserva capacidade que ninguém usa — o livro-caixa do node se enche de ficção e Pods reais ficam `Pending`.
+- **Right-size:** defina o request no **steady state** observado — a reserva bate com a realidade.
+- Defina o **limit** como folga de burst acima dele — o pico diário cabe, nada é OOMKilled, nada fica acumulado.
 
 </v-clicks>
 </div>
 
 <!--
-Speaker: drive with clicks — this is the dashboard-graph moment every platform team
-lives in. (0) the only truth: observed usage, steady state ~90Mi with one daily
-burst. (1) the guessed request, 512Mi "to be safe": the shaded band is capacity the
-scheduler HOLDS — remember, requests are a reservation, not a measurement — so a
-node full of guessed requests is "full" while its actual usage idles; that's how
-clusters end up 30% utilised and still rejecting Pods. (2) right-size: request just
-above steady state — the same Pod, honestly booked. (3) the limit as burst
-headroom: the peak fits under 256Mi, so no OOMKill (asymmetry beat!), and nothing
-above the request is hoarded. The two failure directions to say out loud:
-request too HIGH wastes the cluster (money, Pending neighbours); limit too LOW
-kills the burst (exit 137, from the animation earlier). Next slide: where these
-observed numbers come from.
+Speaker: conduza com os cliques — este é o momento de gráfico de dashboard que todo time de
+plataforma vive. (0) a única verdade: o uso observado, steady state ~90Mi com um burst diário.
+(1) o request chutado, 512Mi "por garantia": a faixa sombreada é capacidade que o scheduler
+RETÉM — lembre, requests são uma reserva, não uma medição — então um node cheio de requests
+chutados está "cheio" enquanto seu uso real fica ocioso; é assim que clusters acabam 30%
+utilizados e ainda rejeitando Pods. (2) right-size: o request logo acima do steady state — o
+mesmo Pod, contabilizado com honestidade. (3) o limit como folga de burst: o pico cabe abaixo de
+256Mi, então sem OOMKill (beat da assimetria!), e nada acima do request fica acumulado. As duas
+direções de falha para dizer em voz alta: request ALTO demais desperdiça o cluster (dinheiro,
+vizinhos Pending); limit BAIXO demais mata o burst (exit 137, da animação anterior). Próximo
+slide: de onde vêm esses números observados.
 -->
 
 ---
 layout: code-annotated
-heading: 'The observation loop — `kubectl top`, then adjust'
+heading: 'O loop de observação — `kubectl top`, depois ajuste'
 compact: true
 lab: labs/day-2/13-resources.md
 ---
 
 ```console {none|1-3|5|all}
-$ kubectl top pod -l app=s13     # usage vs what you set
+$ kubectl top pod -l app=s13     # uso vs o que você definiu
 NAME                    CPU(cores)   MEMORY(bytes)
 web-6d5f8c7b9d-x2x7v    3m           92Mi
 
@@ -372,52 +373,50 @@ $ kubectl describe node <node>   # → "Allocated resources"
 
 ::notes::
 
-<CodeNote at="1" label="usage, live" variant="ok">
-Steady <code>92Mi</code> against a <code>128Mi</code> request is honest; against
-<code>512Mi</code> it's hoarding. Needs <strong>metrics-server</strong> (the HPA
-section installs it).
+<CodeNote at="1" label="uso, ao vivo" variant="ok">
+Um <code>92Mi</code> estável contra um request de <code>128Mi</code> é honesto; contra
+<code>512Mi</code> é acumulação. Precisa do <strong>metrics-server</strong> (a seção de HPA
+o instala).
 </CodeNote>
 
-<CodeNote at="2" label="the node's ledger">
-<code>Allocated resources</code> sums every Pod's <strong>requests</strong>
-against allocatable. A wide gap between <em>requested</em> and <em>used</em> is
-right-sizing debt.
+<CodeNote at="2" label="o livro-caixa do node">
+<code>Allocated resources</code> soma os <strong>requests</strong> de todos os Pods
+contra o alocável. Uma distância grande entre <em>requested</em> e <em>used</em> é
+dívida de right-sizing.
 </CodeNote>
 
-<CodeNote at="3" label="a loop — and VPA at scale" variant="ok">
-Observe → adjust → watch (<code>OOMKilled</code>, throttling,
-<code>Pending</code>). At scale the <strong>VerticalPodAutoscaler</strong>
-recommends sizes; HPA scales <em>out</em> — don't point both at one resource.
+<CodeNote at="3" label="um loop — e VPA em escala" variant="ok">
+Observe → ajuste → acompanhe (<code>OOMKilled</code>, throttling,
+<code>Pending</code>). Em escala o <strong>VerticalPodAutoscaler</strong>
+recomenda tamanhos; o HPA escala <em>para fora</em> — não aponte os dois para um mesmo recurso.
 </CodeNote>
 
 <!--
-Speaker: the graph on the previous slide is aspirational until you have numbers —
-this is where they come from. kubectl top reads the metrics pipeline
-(metrics-server), which is an add-on: kind doesn't ship it, the S16 HPA section
-installs it, and managed clusters usually have it. Real teams watch longer windows
-than a live top — a metrics stack (S23's Prometheus + Grafana) gives you the
-percentiles; top is the five-second version of the same loop. describe node's
-Allocated resources table is the scheduler's ledger from the mental-model slide
-made visible — walk it: requests summed vs allocatable, and the gap to actual
-usage is exactly the shaded band from the graph. Close with the automation ladder:
-VPA observes per-Pod usage and recommends (or applies) request changes —
-concept-level here, it's a separate install and applying mode restarts Pods; HPA
-changes REPLICAS instead. The classic caution: don't let VPA resize and HPA scale
-on the same metric or they chase each other. Lab 13's break→fix already showed the
-failure modes right-sizing avoids.
+Speaker: o gráfico do slide anterior é aspiracional até você ter números — é daqui que eles vêm.
+kubectl top lê o pipeline de métricas (metrics-server), que é um add-on: o kind não o traz de
+fábrica, a seção de HPA S16 o instala, e clusters gerenciados normalmente o têm. Times de verdade
+observam janelas mais longas do que um top ao vivo — uma stack de métricas (o Prometheus + Grafana
+do S23) dá os percentis; o top é a versão de cinco segundos do mesmo loop. A tabela Allocated
+resources do describe node é o livro-caixa do scheduler do slide de modelo mental tornado
+visível — percorra: requests somados vs alocável, e a distância até o uso real é exatamente a
+faixa sombreada do gráfico. Feche com a escada de automação: o VPA observa o uso por Pod e
+recomenda (ou aplica) mudanças de requests — nível de conceito aqui, é uma instalação separada e
+o modo de aplicação reinicia Pods; o HPA muda as RÉPLICAS. A cautela clássica: não deixe o VPA
+redimensionar e o HPA escalar na mesma métrica ou eles ficam se perseguindo. O quebre→conserte
+do Lab 13 já mostrou os modos de falha que o right-sizing evita.
 -->
 
 ---
 layout: comparison
 class: kw-cmp-compact
-heading: 'Namespace guardrails — so nobody has to remember'
+heading: 'Guarda-corpos de namespace — para ninguém precisar lembrar'
 leftHeading: 'LimitRange'
-leftBadge: 'per-object'
+leftBadge: 'por objeto'
 rightHeading: 'ResourceQuota'
-rightBadge: 'namespace total'
+rightBadge: 'total do namespace'
 ---
 
-Defaults & bounds **per container**, at admission.
+Defaults & limites **por container**, na admission.
 
 ```yaml
 apiVersion: v1
@@ -433,14 +432,14 @@ spec:
 
 <v-clicks>
 
-- **Injects** requests/limits when omitted → BestEffort becomes Burstable.
-- Rejects containers **above `max`** / below `min`.
+- **Injeta** requests/limits quando omitidos → BestEffort vira Burstable.
+- Rejeita containers **acima do `max`** / abaixo do `min`.
 
 </v-clicks>
 
 ::right::
 
-One **namespace-wide** aggregate cap — sum of all Pods.
+Um teto agregado **do namespace inteiro** — a soma de todos os Pods.
 
 ```yaml
 apiVersion: v1
@@ -457,46 +456,48 @@ spec:
 
 <v-clicks>
 
-- Quota names a resource → every Pod **must** set it (`must specify…`).
-- Over budget → admission `exceeded quota:` (nothing created).
+- A quota nomeia um recurso → todo Pod **precisa** defini-lo (`must specify…`).
+- Estourou o orçamento → admission `exceeded quota:` (nada é criado).
 
 </v-clicks>
 
 <!--
-Speaker: two different jobs, both admission-time. LimitRange is PER-OBJECT: it supplies default
-requests/limits to containers that don't set them (which is how you stop BestEffort Pods
-sneaking in) and enforces min/max per container. ResourceQuota is the NAMESPACE AGGREGATE cap:
-the sum of all requests/limits (and object counts) can't exceed the hard values. The
-interaction the lab exploits: once a quota constrains say requests.memory, a Pod that OMITS it
-fails with "must specify requests.memory", while a Pod that SETS IT TOO HIGH fails with
-"exceeded quota" — two different errors, and LimitRange's defaults are what save you from the
-first. Both reject at admission, so the Pod never exists — contrast that with the OOMKill,
-which happens to a Pod that very much exists. That contrast is the recap question.
+Speaker: dois trabalhos diferentes, ambos em tempo de admission. LimitRange é POR OBJETO: fornece
+requests/limits default aos containers que não os definem (que é como você impede Pods BestEffort
+de entrarem escondidos) e impõe min/max por container. ResourceQuota é o teto AGREGADO DO
+NAMESPACE: a soma de todos os requests/limits (e contagens de objetos) não pode exceder os
+valores hard. A interação que o lab explora: uma vez que uma quota restringe, digamos,
+requests.memory, um Pod que o OMITE falha com "must specify requests.memory", enquanto um Pod que
+o DEFINE ALTO DEMAIS falha com "exceeded quota" — dois erros diferentes, e os defaults do
+LimitRange são o que salva você do primeiro. Ambos rejeitam na admission, então o Pod nunca
+existe — contraste isso com o OOMKill, que acontece a um Pod que existe de verdade. Esse
+contraste é a pergunta do recap.
 -->
 
 ---
 layout: recap
-heading: 'Recap — reserve, cap, and know the enforcement path'
-story: 'The OOMKilled container came back (RESTARTS 1); the Pod that broke the quota never existed at all — runtime vs admission enforcement.'
-next: 'Health probes — readiness, liveness, startup, and how they gate traffic vs restart'
+heading: 'Recap — reserve, limite, e saiba o caminho do enforcement'
+story: 'O container OOMKilled voltou (RESTARTS 1); o Pod que estourou a quota nunca chegou a existir — enforcement de runtime vs de admission.'
+next: 'Health probes — readiness, liveness, startup, e como elas controlam tráfego vs restart'
 ---
 
-- **requests** drive **scheduling** (reserve + hold); **limits** drive **enforcement** (runtime ceiling)
-- CPU over limit → **throttled** (slow, alive); memory over limit → **OOMKilled** (exit 137) → restarted
-- **QoS** is *derived*: **Guaranteed** (all set, request==limit) · **Burstable** (some) · **BestEffort** (none) — sets eviction order
-- **LimitRange** = per-object defaults/bounds (injects requests); **ResourceQuota** = namespace aggregate cap
-- Two rejections, one insight: **OOMKilled** = runtime (kubelet restarts it) vs **exceeded quota** = admission (API server rejects — nothing created)
+- **requests** dirigem o **agendamento** (reserva + retenção); **limits** dirigem o **enforcement** (teto de runtime)
+- CPU acima do limit → **throttled** (lento, vivo); memória acima do limit → **OOMKilled** (exit 137) → reiniciado
+- **QoS** é *derivado*: **Guaranteed** (tudo definido, request==limit) · **Burstable** (algum) · **BestEffort** (nenhum) — define a ordem de eviction
+- **LimitRange** = defaults/limites por objeto (injeta requests); **ResourceQuota** = teto agregado do namespace
+- Duas rejeições, um insight: **OOMKilled** = runtime (o kubelet reinicia) vs **exceeded quota** = admission (o API server rejeita — nada é criado)
 
 <!--
-Speaker: land the through-line. The mental hook is the two enforcement moments: admission
-(before the object exists — quota/LimitRange say "no, never") vs runtime (the object exists
-and misbehaves — throttle or OOMKill). That's literally the recap question in the lab: "why
-was the OOMKilled container restarted but the quota-violating Pod never created?" — because one
-is enforced by the kubelet at runtime and the other by the API server at admission. Right-size
-by watching real usage (kubectl top, metrics) and set requests to the steady state, limits to
-a safe burst headroom; memory limit ≈ request for anything you can't afford to have killed.
-Hand to Lab 13: read all three QoS classes, force an OOMKill and read exit 137, then hit a
-ResourceQuota. Next section: probes — the other reason a Running Pod isn't necessarily healthy.
+Speaker: amarre o fio condutor. O gancho mental são os dois momentos de enforcement: admission
+(antes de o objeto existir — quota/LimitRange dizem "não, nunca") vs runtime (o objeto existe e
+se comporta mal — throttle ou OOMKill). Essa é literalmente a pergunta do recap no lab: "por que
+o container OOMKilled foi reiniciado mas o Pod que violou a quota nunca foi criado?" — porque um
+é imposto pelo kubelet em runtime e o outro pelo API server na admission. Faça right-sizing
+observando o uso real (kubectl top, métricas) e defina os requests no steady state, os limits
+como uma folga segura de burst; limit de memória ≈ request para qualquer coisa que você não pode
+se dar ao luxo de ver morta. Passe o bastão para o Lab 13: ler as três classes de QoS, forçar um
+OOMKill e ler o exit 137, depois bater numa ResourceQuota. Próxima seção: probes — o outro
+motivo pelo qual um Pod Running não é necessariamente saudável.
 -->
 
 ---
@@ -506,13 +507,13 @@ duration: 30 min
 env: namespace ✓ / kind ✓
 ---
 
-## Lab 13 — Pressure test
+## Lab 13 — Teste de pressão
 
-- Apply Burstable / Guaranteed / BestEffort variants and read the **QoS Class** from
+- Aplique as variantes Burstable / Guaranteed / BestEffort e leia a **QoS Class** no
   `kubectl describe pod`
-- **Break→fix:** run a container that allocates past its memory limit → **OOMKilled**
-  (`exit 137`, restarts) → raise the limit and confirm it stabilises
-- Apply a **ResourceQuota**, then try to create a Pod that **exceeds** it → admission error
+- **Quebre→conserte:** rode um container que aloca além do seu limit de memória → **OOMKilled**
+  (`exit 137`, restarts) → aumente o limit e confirme que ele estabiliza
+- Aplique uma **ResourceQuota**, depois tente criar um Pod que a **exceda** → erro de admission
   `exceeded quota:`
-- Answer the headline: *why was the OOMKilled container restarted, but the quota-violating
-  Pod never created?*
+- Responda a manchete: *por que o container OOMKilled foi reiniciado, mas o Pod que
+  violou a quota nunca foi criado?*

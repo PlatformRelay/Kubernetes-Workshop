@@ -7,49 +7,49 @@ tier: core
 track: Wrap
 ---
 
-# Wrap-up & next steps
+# Wrap-up & próximos passos
 
-One red line, a dozen layers — and a map of where to go from here.
+Uma "linha vermelha" (red line), uma dúzia de camadas — e um mapa de para onde ir a partir daqui.
 
-**core** · suggested Day 3 · Wrap track
+**core** · sugerido para o Day 3 · trilha Wrap
 
 <!--
-Section S27 — Wrap-up & next steps. Slides-only (no lab). Timing: ~20 min.
-Outcome: learners leave with a coherent mental model (the red line + every layer that hung off
-it) and a concrete, vendor-neutral path forward (docs, community learning, playgrounds, and
-CKAD/CKA as an OPTIONAL goal).
-Beats: bookend S00's promise · recap the red-line spine (Pod → Deployment → Service → Ingress →
-Gateway API + layered concepts) · recap the Day-2/3 layers · CKAD/CKA alignment table (framed as
-a DESIGN CHECK, not exam prep — the explicit design-check artifact) · what we skipped & where it
-lives (service mesh / multi-cluster / admin-ops — pointers only) · free-resource map (official +
-community + playgrounds, NO vendor endorsement) · CKAD/CKA as an optional downstream step +
-feedback/contribution · closing.
-Guardrail: NO vendor endorsement on the resource-map slide; name official/community/category, not
-a commercial product. This is the LAST section — the final slide is a closing statement, NOT a lab
-handoff (there is no lab).
-CKx tie-in: the CKAD/CKA alignment table IS the design-check artifact.
+Seção S27 — Wrap-up & próximos passos. Só slides (sem lab). Tempo: ~20 min.
+Resultado: os participantes saem com um modelo mental coerente (a red line + toda camada pendurada
+nela) e um caminho concreto e vendor-neutral à frente (docs, aprendizado comunitário, playgrounds e
+CKAD/CKA como um objetivo OPCIONAL).
+Beats: fechar o arco da promessa do S00 · recap da espinha da red line (Pod → Deployment → Service → Ingress →
+Gateway API + conceitos em camadas) · recap das camadas do Day 2/3 · tabela de alinhamento CKAD/CKA (enquadrada como
+um DESIGN CHECK, não preparação para prova — o artefato explícito de design-check) · o que pulamos e onde
+isso vive (service mesh / multi-cluster / admin-ops — apenas ponteiros) · mapa de recursos gratuitos (oficiais +
+comunidade + playgrounds, SEM endosso de vendor) · CKAD/CKA como passo opcional seguinte +
+feedback/contribuição · encerramento.
+Guardrail: SEM endosso de vendor no slide do mapa de recursos; nomeie o oficial/comunidade/categoria, não
+um produto comercial. Esta é a ÚLTIMA seção — o slide final é uma declaração de encerramento, NÃO um handoff
+de lab (não existe lab).
+Vínculo com CKx: a tabela de alinhamento CKAD/CKA É o artefato de design-check.
 -->
 
 ---
 layout: statement
-kicker: Where we started, where we are
+kicker: Onde começamos, onde estamos
 ---
 
-Three days ago the question was **"what is a container?"** Now you can **author, run, and operate** core Kubernetes workloads — and read the ones you didn't write.
+Três dias atrás a pergunta era **"o que é um container?"** Agora você consegue **escrever, rodar e operar** workloads centrais do Kubernetes — e ler os que você não escreveu.
 
-The whole course was **one red line** with everything else hung off it. Let's redraw it, name what layered on, and point at where to go next.
+O curso inteiro foi **uma red line** com todo o resto pendurado nela. Vamos redesenhá-la, nomear o que se somou em camadas e apontar para onde ir em seguida.
 
 <!--
-Speaker: bookend S00's "Why we're here" beat — the 50/50 promise was to take them from "what is a
-container" to confidently authoring/running/operating workloads. Land that it's now true: they
-built the spine one manifest at a time and layered config, storage, health, security, and delivery
-on top. This section is a recap + a map, not new content — breathe, zoom out, then send them off.
+Speaker: feche o arco do beat "Por que estamos aqui" do S00 — a promessa 50/50 era levá-los de "o que é um
+container" a escrever/rodar/operar workloads com confiança. Assente que agora isso é verdade: eles
+construíram a espinha um manifesto por vez e sobrepuseram config, storage, health, security e delivery
+por cima. Esta seção é um recap + um mapa, não conteúdo novo — respire, dê um zoom out e depois despache-os.
 -->
 
 ---
 layout: recap
-heading: 'The red line — one manifest that grew all week'
-story: 'A single Pod became a Deployment, got a stable Service address, was exposed through Ingress, then modernised to the Gateway API — each step extended the same manifest, so the through-line was always visible.'
+heading: 'A red line — um manifesto que cresceu a semana inteira'
+story: 'Um único Pod virou um Deployment, ganhou um endereço estável de Service, foi exposto por Ingress e depois modernizado para a Gateway API — cada passo estendeu o mesmo manifesto, então o fio condutor esteve sempre visível.'
 ---
 
 <div class="flex items-center gap-3 text-lg mt-2">
@@ -60,59 +60,59 @@ story: 'A single Pod became a Deployment, got a stable Service address, was expo
   <span class="text-2xl">🚪</span> <strong>Gateway API</strong>
 </div>
 
-- **Pod** the smallest deployable unit → **Deployment** self-heals & rolls out → **Service** a stable address for moving Pods → **Ingress** HTTP from outside → **Gateway API** the modern, role-oriented successor
-- Hung off that spine: **ConfigMap/Secret**, **storage** & **StatefulSet**, **resources**, **health probes**, **Jobs/CronJobs**, **autoscaling**
-- The one idea under all of it: **declare desired state; a controller reconciles reality to match**
+- **Pod** a menor unidade implantável → **Deployment** se autocura & faz rollout → **Service** um endereço estável para Pods que mudam → **Ingress** HTTP vindo de fora → **Gateway API** o sucessor moderno e orientado a papéis
+- Pendurado nessa espinha: **ConfigMap/Secret**, **storage** & **StatefulSet**, **resources**, **health probes**, **Jobs/CronJobs**, **autoscaling**
+- A única ideia por trás de tudo: **declare o desired state; um controller reconcilia a realidade para casar com ele**
 
 <!--
-Speaker: walk the icons left to right — this is the spine every learner watched grow in the footer
-progress bar. Each resource EXTENDED the previous manifest (pod.yaml → deployment.yaml → +service
-→ +ingress → gateway), which is why it reads as one line, not five topics. Then name the layers
-that attached to the running workload: config/secrets, storage + stateful identity, resource
-requests/limits, the three probes, batch, and HPA. Close on S03's reconciliation loop — the single
-mental model that makes all of it one idea, and the loop they met a third time in GitOps/operators.
+Speaker: percorra os ícones da esquerda para a direita — esta é a espinha que todo participante viu crescer na barra
+de progresso do rodapé. Cada recurso ESTENDEU o manifesto anterior (pod.yaml → deployment.yaml → +service
+→ +ingress → gateway), e é por isso que se lê como uma linha só, não cinco tópicos. Depois nomeie as camadas
+que se prenderam ao workload em execução: config/secrets, storage + identidade stateful, requests/limits de
+resources, as três probes, batch e o HPA. Encerre no loop de reconciliação do S03 — o único
+modelo mental que torna tudo isso uma ideia só, e o loop que eles encontraram uma terceira vez em GitOps/operators.
 -->
 
 ---
 layout: agenda
-kicker: Everything that layered on
-heading: 'Days 2–3 — operate it like production'
+kicker: Tudo o que se somou em camadas
+heading: 'Days 2–3 — opere como produção'
 columns: 2
 ---
 
-- **Security foundations** — small non-root images, Pod security & PSS, a controlled **pod escape** blocked by `restricted`
-- **Network & identity** — **NetworkPolicy** default-deny, **RBAC** least-privilege identities
-- **Packaging & delivery** — **Helm** templated releases, **GitOps** with Argo CD reconciling from Git
-- **Extending Kubernetes** — the **operator pattern**, the **Prometheus Operator** for observability, building one with **kubebuilder**
-- **Production readiness** — the **best-practices capstone**: probes, PDBs, digests, NetworkPolicy, graceful shutdown, as one checklist
+- **Fundamentos de security** — images pequenas e não-root, pod security & PSS, um **pod escape** controlado bloqueado pelo `restricted`
+- **Network & identidade** — **NetworkPolicy** default-deny, identidades **RBAC** de least-privilege
+- **Packaging & delivery** — releases templatizados com **Helm**, **GitOps** com Argo CD reconciliando a partir do Git
+- **Estendendo o Kubernetes** — o **operator pattern**, o **Prometheus Operator** para observability, construir um com **kubebuilder**
+- **Prontidão para produção** — o **capstone de best practices**: probes, PDBs, digests, NetworkPolicy, graceful shutdown, tudo como um checklist só
 
 <div class="mt-4 kw-muted text-sm" v-click>
 
-Same reconciliation loop, three times over: built-in controllers, **Git** as desired state, and **your own CRD** as desired state.
+O mesmo loop de reconciliação, três vezes: controllers nativos, o **Git** como desired state e o **seu próprio CRD** como desired state.
 
 </div>
 
 <!--
-Speaker: this is the "look how far you came" slide — the red line was Day 1; Days 2–3 made it
-operable and safe. Group the layers so it's five ideas, not a dozen: security (image → pod → the
-escape demo that proved why restricted matters), network+identity (netpol + rbac), delivery
-(helm + gitops), extension (operators + prometheus + kubebuilder), and the capstone that ties it
-all into one reviewable checklist. Callback the loop-three-times motif — it's the single most
-reusable thing they learned. Note S24 (kubebuilder) is the optional deep-dive for those who want
-to BUILD an operator, not just consume one.
+Speaker: este é o slide "olha o quanto você avançou" — a red line foi o Day 1; os Days 2–3 a tornaram
+operável e segura. Agrupe as camadas para virarem cinco ideias, não uma dúzia: security (image → pod → a
+demo de escape que provou por que o restricted importa), network+identidade (netpol + rbac), delivery
+(helm + gitops), extensão (operators + prometheus + kubebuilder) e o capstone que amarra tudo
+num único checklist revisável. Faça o callback do motivo "o loop três vezes" — é a coisa mais
+reutilizável que eles aprenderam. Note que o S24 (kubebuilder) é o aprofundamento opcional para quem quer
+CONSTRUIR um operator, não apenas consumir um.
 -->
 
 ---
 
-<span class="kw-kicker">A design check, not exam prep</span>
+<span class="kw-kicker">Um design check, não preparação para prova</span>
 
-# The CKAD/CKA domains are really a **design checklist**
+# Os domínios do CKAD/CKA são na verdade um **checklist de design**
 
 <div class="kw-slide-dense text-[0.7rem] leading-snug mt-1 grid grid-cols-2 gap-x-6 gap-y-1.5">
 
 <div>
   <div class="font-semibold opacity-80 mb-0.5">CKAD</div>
-  <div><strong>Design & build</strong> — containers, Pod lifecycle, Jobs</div>
+  <div><strong>Design & build</strong> — containers, ciclo de vida do Pod, Jobs</div>
   <div><strong>Deployment</strong> — Deployments, Helm, GitOps</div>
   <div><strong>Observability</strong> — probes, resources, Prometheus</div>
 </div>
@@ -120,165 +120,165 @@ to BUILD an operator, not just consume one.
 <div>
   <div class="font-semibold opacity-80 mb-0.5">CKAD + CKA</div>
   <div><strong>Config & security</strong> — CM/Secret, PSS, RBAC, digests</div>
-  <div><strong>Services & net</strong> — Service, Ingress, Gateway, NetPol</div>
+  <div><strong>Services & rede</strong> — Service, Ingress, Gateway, NetPol</div>
 </div>
 
 <div>
   <div class="font-semibold opacity-80 mb-0.5">CKA</div>
-  <div><strong>Architecture</strong> — control plane, kubectl, RBAC</div>
+  <div><strong>Arquitetura</strong> — control plane, kubectl, RBAC</div>
   <div><strong>Storage</strong> — PV/PVC/StorageClass, StatefulSet</div>
 </div>
 
 <div>
   <div class="font-semibold opacity-80 mb-0.5">CKA · Troubleshooting</div>
-  <div>Every lab's deliberate <strong>break → fix</strong> step</div>
+  <div>O passo deliberado de <strong>quebrar → consertar</strong> de cada lab</div>
 </div>
 
 </div>
 
 <div class="mt-2 kw-muted text-xs" v-click>
 
-Read it as *"can my workload answer each of these?"* — not a syllabus to cram.
+Leia como *"meu workload consegue responder a cada um destes?"* — não como uma ementa para decorar.
 
 </div>
 
 <!--
-Speaker: frame this carefully — it is NOT "here's how to pass the exam". The certification domains
-happen to be a well-organised production-readiness checklist, and this workshop covered nearly all
-of it by teaching design, not test-taking. Point out troubleshooting is the one domain you can't
-slide-teach — which is exactly why every single lab had a break→fix. If someone wants the cert, the
-map shows they've already met the material; the next step is timed practice, not new concepts.
+Speaker: enquadre com cuidado — isto NÃO é "aqui está como passar na prova". Os domínios da certificação
+por acaso são um checklist de prontidão para produção bem organizado, e este workshop cobriu quase tudo
+isso ensinando design, não técnica de prova. Aponte que troubleshooting é o único domínio que não dá para
+ensinar em slide — que é exatamente por que cada lab teve um quebrar→consertar. Se alguém quiser a cert, o
+mapa mostra que já encontrou o material; o próximo passo é prática cronometrada, não conceitos novos.
 -->
 
 ---
 
-<span class="kw-kicker">Honest about the edges</span>
+<span class="kw-kicker">Honestos sobre as bordas</span>
 
-# What we skipped — and where it lives
+# O que pulamos — e onde isso vive
 
 <div class="kw-cols-3 mt-4 text-sm">
   <KwCard heading="Service mesh" icon="🕸️">
-    mTLS, traffic-splitting, and L7 policy across services. The Gateway API
-    is the on-ramp; a mesh is the next layer when service-to-service security and
-    fine-grained routing become the problem.
+    mTLS, traffic-splitting e política L7 entre services. A Gateway API
+    é a rampa de entrada; um mesh é a próxima camada quando segurança service-to-service e
+    roteamento de granularidade fina viram o problema.
   </KwCard>
-  <KwCard heading="Multi-cluster & scale" icon="🌍">
-    Federation, fleet management, and cross-region delivery. GitOps is the
-    foundation the multi-cluster tooling builds on.
+  <KwCard heading="Multi-cluster & escala" icon="🌍">
+    Federação, gestão de frota e entrega cross-region. O GitOps é a
+    fundação sobre a qual o tooling de multi-cluster se constrói.
   </KwCard>
-  <KwCard heading="Cluster operations" icon="🛠️" variant="plain">
-    Running the control plane itself: upgrades, etcd backup/restore, node
-    lifecycle, capacity. A whole <strong>admin/operations track</strong> of its
-    own — this workshop was the <em>workload</em> side.
+  <KwCard heading="Operação de cluster" icon="🛠️" variant="plain">
+    Rodar o próprio control plane: upgrades, backup/restore do etcd, ciclo de vida
+    de node, capacidade. Uma <strong>trilha de admin/operations</strong> inteira por
+    conta própria — este workshop foi o lado dos <em>workloads</em>.
   </KwCard>
 </div>
 
 <div class="mt-5 kw-muted text-sm" v-click>
 
-These are pointers, not gaps to fix today — each is a deliberate next course, and each stands on something you already built here.
+Estes são ponteiros, não lacunas para fechar hoje — cada um é um próximo curso deliberado, e cada um se apoia em algo que você já construiu aqui.
 
 </div>
 
 <!--
-Speaker: be honest that a 3-day workshop can't cover everything, and name the big omissions so
-nobody thinks they're done-done. Service mesh (this taught workloads + Gateway API, not mTLS
-meshing); multi-cluster/fleet (single-cluster here, but GitOps is the primitive it's built on);
-and cluster administration — the CKA "install & configure the control plane" world, which is a
-separate discipline from authoring workloads. Frame each as "you already have the foundation for
-this", so it reads as a map forward, not a confession of holes.
+Speaker: seja honesto de que um workshop de 3 dias não cobre tudo, e nomeie as grandes omissões para que
+ninguém ache que terminou de vez. Service mesh (aqui ensinamos workloads + Gateway API, não meshing com mTLS);
+multi-cluster/frota (single-cluster aqui, mas o GitOps é a primitiva sobre a qual se constrói);
+e administração de cluster — o mundo "instalar & configurar o control plane" do CKA, que é uma
+disciplina separada de escrever workloads. Enquadre cada um como "você já tem a fundação para
+isto", para que soe como um mapa à frente, não uma confissão de buracos.
 -->
 
 ---
 
-<span class="kw-kicker">Where to go next · free & vendor-neutral</span>
+<span class="kw-kicker">Para onde ir em seguida · gratuito & vendor-neutral</span>
 
-# A map for the next 90 days
+# Um mapa para os próximos 90 dias
 
 <div class="kw-cols-3 mt-4 text-sm">
-  <KwCard heading="Read the source of truth" icon="📚">
-    The <strong>official Kubernetes documentation</strong> — Concepts, Tasks, and
-    the interactive Tutorials. The <code>kubectl explain</code> habit is the
-    docs in your terminal.
+  <KwCard heading="Leia a fonte da verdade" icon="📚">
+    A <strong>documentação oficial do Kubernetes</strong> — Concepts, Tasks e
+    os Tutorials interativos. O hábito do <code>kubectl explain</code> é a
+    documentação dentro do seu terminal.
   </KwCard>
-  <KwCard heading="Structured learning" icon="🧭">
-    <strong>CNCF / Linux Foundation</strong> community training and the
-    project-run learning paths — vendor-neutral, and the same bodies behind the
+  <KwCard heading="Aprendizado estruturado" icon="🧭">
+    Treinamentos comunitários da <strong>CNCF / Linux Foundation</strong> e as
+    trilhas de aprendizado mantidas pelos projetos — vendor-neutral, e são os mesmos órgãos por trás do
     CKAD/CKA.
   </KwCard>
-  <KwCard heading="Break things safely" icon="🧪" variant="plain">
-    Browser-based <strong>playgrounds</strong> and a local <strong>kind</strong>
-    cluster — the same throwaway environment from every lab. Keep the
-    break → fix habit going.
+  <KwCard heading="Quebre coisas com segurança" icon="🧪" variant="plain">
+    <strong>Playgrounds</strong> baseados em navegador e um cluster <strong>kind</strong>
+    local — o mesmo ambiente descartável de todo lab. Mantenha o
+    hábito de quebrar → consertar.
   </KwCard>
 </div>
 
 <div class="mt-5 text-sm" v-click>
 
-The highest-leverage next step isn't a course — it's **running a real workload through the best-practices checklist**. This whole deck and its labs are yours to keep and re-run.
+O próximo passo de maior alavancagem não é um curso — é **rodar um workload real através do checklist de best practices**. Este deck inteiro e seus labs são seus para guardar e reexecutar.
 
 </div>
 
 <!--
-Speaker: GUARDRAIL — keep this vendor-neutral. Name categories and the official/community sources,
-never promote a specific commercial product or paid platform. Three buckets: (1) the official docs
-are genuinely the best reference, and kubectl explain is those docs offline; (2) CNCF / Linux
-Foundation community training and project learning paths are free and neutral; (3) hands-on
-playgrounds + their own kind cluster to keep practising. Land the real advice: the best next move
-is applying the capstone checklist to something they actually run — the deck + labs are open and
-theirs to keep.
+Speaker: GUARDRAIL — mantenha isto vendor-neutral. Nomeie categorias e as fontes oficiais/comunitárias,
+nunca promova um produto comercial específico ou plataforma paga. Três baldes: (1) a documentação oficial
+é genuinamente a melhor referência, e o kubectl explain é essa documentação offline; (2) treinamentos comunitários da CNCF /
+Linux Foundation e trilhas de aprendizado dos projetos são gratuitos e neutros; (3) playgrounds hands-on
++ o próprio cluster kind deles para continuar praticando. Assente o conselho real: a melhor próxima ação
+é aplicar o checklist do capstone a algo que eles de fato rodam — o deck + os labs são abertos e
+deles para guardar.
 -->
 
 ---
 layout: comparison
-heading: 'CKAD / CKA — an optional goal, not the point'
-leftHeading: 'If a certification helps you'
-rightHeading: 'If it does not'
-leftBadge: optional
-rightBadge: also fine
+heading: 'CKAD / CKA — um objetivo opcional, não o ponto'
+leftHeading: 'Se uma certificação te ajuda'
+rightHeading: 'Se não ajuda'
+leftBadge: opcional
+rightBadge: também tudo bem
 ---
 
-- A **deadline and a syllabus** can be motivating — and you've already met most of the material (see the map).
-- The gap to close is **speed under time pressure**, not new concepts: timed practice, `kubectl` fluency, and the docs you're allowed to use in the exam.
-- **CKAD** leans to authoring workloads; **CKA** adds cluster administration (the operations track we flagged).
+- Um **prazo e uma ementa** podem ser motivadores — e você já encontrou a maior parte do material (veja o mapa).
+- A lacuna a fechar é **velocidade sob pressão de tempo**, não conceitos novos: prática cronometrada, fluência em `kubectl` e a documentação que você pode usar na prova.
+- O **CKAD** pende para escrever workloads; o **CKA** adiciona administração de cluster (a trilha de operações que sinalizamos).
 
 ::right::
 
-- The skills are the goal; the badge is optional. Nothing here needs a cert to be useful.
-- **Operating a real service well** — probes, limits, least privilege, GitOps, a checklist you enforce — is worth more than any exam.
-- Come back to the labs whenever you hit a topic for real; they're built to re-run.
+- As habilidades são o objetivo; o selo é opcional. Nada aqui precisa de uma cert para ser útil.
+- **Operar bem um serviço real** — probes, limits, least privilege, GitOps, um checklist que você faz valer — vale mais do que qualquer prova.
+- Volte aos labs sempre que topar com um tópico na vida real; eles foram feitos para serem reexecutados.
 
 <!--
-Speaker: defuse cert-anxiety. Position CKAD/CKA as ONE optional path, not the destination — some
-people are motivated by a goal and a date, and that's fine; others don't need it, also fine. The
-honest technical point: they already have the concepts (the alignment table proves it), so the
-only real prep gap is timed speed and kubectl muscle memory, both practice not learning. CKAD =
-workload author; CKA = + cluster admin. Either way the transferable win is operating real workloads well.
+Speaker: desarme a ansiedade com certificação. Posicione CKAD/CKA como UM caminho opcional, não o destino — algumas
+pessoas se motivam com um objetivo e uma data, e tudo bem; outras não precisam, também tudo bem. O
+ponto técnico honesto: eles já têm os conceitos (a tabela de alinhamento prova), então a
+única lacuna real de preparação é velocidade cronometrada e memória muscular de kubectl, ambas prática e não aprendizado. CKAD =
+autor de workloads; CKA = + admin de cluster. De todo jeito, o ganho transferível é operar bem workloads reais.
 -->
 
 ---
 layout: statement
-kicker: This is an open workshop — make it better
+kicker: Este é um workshop aberto — deixe-o melhor
 ---
 
-# Thank you — now go break things (safely)
+# Obrigado — agora vá quebrar coisas (com segurança)
 
-You started at *"what is a container"* and you can now **author, run, secure, deliver, and operate** Kubernetes workloads. That was the whole promise.
+Você começou em *"o que é um container"* e agora consegue **escrever, rodar, proteger, entregar e operar** workloads Kubernetes. Essa era a promessa inteira.
 
 <div class="mt-4 text-sm">
 
-- **Feedback & contributions welcome** — this deck and its labs are **open source**. Open an issue or a PR: a confusing step, a better break→fix, a section you'd add.
-- **Keep the rhythm:** explain → run → **observe → break it → fix it** → recap. It works outside this room too.
-- **Everything is yours to keep** — the slides, every lab, and the best-practices production checklist.
+- **Feedback & contribuições são bem-vindos** — este deck e seus labs são **open source**. Abra uma issue ou um PR: um passo confuso, um quebrar→consertar melhor, uma seção que você adicionaria.
+- **Mantenha o ritmo:** explique → rode → **observe → quebre → conserte** → recap. Funciona fora desta sala também.
+- **Tudo é seu para guardar** — os slides, cada lab e o checklist de produção de best practices.
 
 </div>
 
-<div class="mt-5 kw-muted">See you in the reconcile loop. 🚀</div>
+<div class="mt-5 kw-muted">Até o próximo loop de reconciliação. 🚀</div>
 
 <!--
-Speaker: the close. Restate the S00 promise as delivered — container-novice to workload-operator in
-three days. Invite real contribution: it's an open-source, vendor-neutral workshop, and the best
-improvements come from learners who just hit the rough edges (name concrete invitations — a
-confusing step, a better break→fix, a missing section). Send them off with the teaching rhythm as a
-portable habit and the reminder that the whole kit is theirs. End warm — no lab handoff, this is the
-final slide of the course.
+Speaker: o encerramento. Reafirme a promessa do S00 como cumprida — de novato em containers a operador de workloads em
+três dias. Convide contribuição real: é um workshop open-source e vendor-neutral, e as melhores
+melhorias vêm de participantes que acabaram de bater nas arestas (nomeie convites concretos — um
+passo confuso, um quebrar→consertar melhor, uma seção faltando). Despache-os com o ritmo de ensino como
+hábito portátil e o lembrete de que o kit inteiro é deles. Termine com calor — sem handoff de lab, este é o
+slide final do curso.
 -->

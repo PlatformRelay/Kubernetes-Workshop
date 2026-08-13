@@ -9,58 +9,60 @@ track: Foundations
 
 # Containers
 
-Explain what a container image is — and build one.
+Explique o que é uma container image — e construa uma.
 
-**recommended** · suggested Day 1 · Foundations track
+**recommended** · sugerido para o Day 1 · trilha Foundations
 
 <!--
-Section S01 — Containers. Timing: ~30 min slides + 25 min lab.
-Outcome: learners can explain what a container image IS and build one, so Pods
-make sense from the ground up.
-Beats: why containers vs VMs · image = content-addressed layers · reference
-string anatomy · engine vs runtime / CRI / namespaces+cgroups · Dockerfile
-built field by field · multi-stage · latest is not a version · layers observed.
-CKx tie-in: CKAD Application Design & Build (image fundamentals).
+Seção S01 — Containers. Duração: ~30 min de slides + 25 min de lab.
+Resultado: as pessoas conseguem explicar o que uma container image É e construir
+uma, para que Pods façam sentido desde a base.
+Beats: por que containers vs VMs · image = layers endereçadas por conteúdo ·
+anatomia da string de referência · engine vs runtime / CRI / namespaces+cgroups ·
+Dockerfile construído campo a campo · multi-stage · latest não é versão ·
+layers observadas.
+Amarração CKx: CKAD Application Design & Build (fundamentos de image).
 Lab: labs/day-1/01-containers.md.
 -->
 
 ---
 layout: comparison
-heading: 'Why containers — same machine, stronger walls'
-leftHeading: Virtual machine
+heading: 'Por que containers — mesma máquina, paredes mais fortes'
+leftHeading: Máquina virtual
 rightHeading: Container
-leftBadge: hardware virtualization
-rightBadge: OS virtualization
+leftBadge: virtualização de hardware
+rightBadge: virtualização de SO
 ---
 
-- Emulates **hardware**; ships a **whole guest OS + kernel**.
-- Boots in **seconds to minutes**; gigabytes on disk.
-- Strong isolation — a full kernel per workload.
-- A handful per host.
+- Emula **hardware**; carrega um **SO guest inteiro + kernel**.
+- Sobe em **segundos a minutos**; gigabytes em disco.
+- Isolamento forte — um kernel completo por workload.
+- Um punhado por host.
 
 ::right::
 
-- Shares the **host kernel**; ships only your **app + its deps**.
-- Starts in **milliseconds**; tens of megabytes.
-- Isolation from kernel features, not a second kernel.
-- **Hundreds** per host — the density Kubernetes schedules on.
+- Compartilha o **kernel do host**; carrega só sua **aplicação + dependências**.
+- Inicia em **milissegundos**; dezenas de megabytes.
+- Isolamento vindo de recursos do kernel, não de um segundo kernel.
+- **Centenas** por host — a densidade sobre a qual o Kubernetes agenda.
 
 <div class="mt-4 text-sm" v-click>
 
-Same isolation goals, far less overhead. That density and fast start is exactly
-what a scheduler wants — which is why a **container** is the thing Kubernetes runs.
+Os mesmos objetivos de isolamento, com muito menos overhead. Essa densidade e o
+início rápido são exatamente o que um scheduler quer — e é por isso que um
+**container** é a coisa que o Kubernetes roda.
 
 </div>
 
 <!--
-Speaker: the trade is a shared kernel — lighter, but the isolation boundary is
-kernel features (namespaces + cgroups), not hardware. That boundary is what
-Day 3's pod-escape module attacks and hardens.
+Speaker: a troca é um kernel compartilhado — mais leve, mas a fronteira de
+isolamento são recursos do kernel (namespaces + cgroups), não hardware. Essa
+fronteira é o que o módulo de pod-escape do Day 3 ataca e endurece.
 -->
 
 ---
 layout: code-annotated
-heading: 'An image is layers — addressed by content'
+heading: 'Uma image são layers — endereçadas por conteúdo'
 ---
 
 ```text {none|1|1|2|3|4}
@@ -72,58 +74,60 @@ registry.example.com/team/app:1.4.2@sha256:9b2c...e41
 ::notes::
 
 <CodeNote at="1" label="registry / repository">
-<strong>Where</strong> and <strong>what</strong>. The registry is the host that
-stores images; the repository is the named path inside it. Omit the registry and
-the engine assumes a default public one.
+<strong>Onde</strong> e <strong>o quê</strong>. O registry é o host que armazena
+images; o repository é o caminho nomeado dentro dele. Omita o registry e o
+engine assume um registry público padrão.
 </CodeNote>
 
 <CodeNote at="2" label="tag">
-A <strong>human label</strong> that points at a digest — and can be moved. Handy,
-but mutable: <code>1.4.2</code> today may point somewhere else tomorrow.
+Um <strong>rótulo humano</strong> que aponta para um digest — e pode ser movido.
+Prático, porém mutável: <code>1.4.2</code> hoje pode apontar para outro lugar amanhã.
 </CodeNote>
 
 <CodeNote at="3" label="digest" variant="ok">
-A <strong>content hash</strong> of the exact image. Same digest = byte-identical
-image, forever. This is what "pin by digest" means — immutable by construction.
+Um <strong>hash de conteúdo</strong> da image exata. Mesmo digest = image
+byte a byte idêntica, para sempre. É isso que "fixar por digest" (pin by digest)
+significa — imutável por construção.
 </CodeNote>
 
 <CodeNote at="4" label="layers">
-The image itself is an <strong>ordered stack of layers</strong>, each a filesystem
-diff with its own digest. Shared base layers are pulled and cached <strong>once</strong>.
+A image em si é uma <strong>pilha ordenada de layers</strong>, cada uma um diff
+de filesystem com seu próprio digest. Layers de base compartilhadas são baixadas
+e cacheadas <strong>uma vez</strong>.
 </CodeNote>
 
 <!--
-Speaker: content-addressing is the whole trick — layers and images are named by
-the hash of their bytes, so caching and integrity come for free. Tag vs digest
-returns in the lab's deliberate break.
+Speaker: o endereçamento por conteúdo é o truque inteiro — layers e images são
+nomeadas pelo hash dos seus bytes, então cache e integridade vêm de graça.
+Tag vs digest volta na quebra deliberada do lab.
 -->
 
 ---
 
-<span class="kw-kicker">What actually runs a container</span>
+<span class="kw-kicker">O que realmente roda um container</span>
 
-# Engine, runtime, and the kernel primitives
+# Engine, runtime e as primitivas do kernel
 
 <div class="kw-cols-3 mt-4">
   <v-click at="1">
     <KwCard heading="Engine / CRI" icon="🛠️">
-      What the kubelet talks to: <strong>containerd</strong> or <strong>CRI-O</strong>,
-      speaking the <strong>Container Runtime Interface</strong>. Pulls images,
-      manages container lifecycle.
+      Aquilo com que o kubelet conversa: <strong>containerd</strong> ou <strong>CRI-O</strong>,
+      falando a <strong>Container Runtime Interface</strong>. Baixa images,
+      gerencia o ciclo de vida dos containers.
     </KwCard>
   </v-click>
   <v-click at="2">
     <KwCard heading="OCI runtime" icon="⚙️">
-      The low-level tool that actually spawns the process:
-      <strong>runc</strong> or <strong>crun</strong>. Given a bundle + config, it
-      asks the kernel for an isolated process.
+      A ferramenta de baixo nível que de fato inicia o processo:
+      <strong>runc</strong> ou <strong>crun</strong>. Dado um bundle + config,
+      ela pede ao kernel um processo isolado.
     </KwCard>
   </v-click>
   <v-click at="3">
-    <KwCard heading="Kernel primitives" icon="🧬" variant="plain">
-      The isolation itself: <strong>namespaces</strong> (separate view of PIDs,
-      network, mounts, users) + <strong>cgroups</strong> (limit CPU, memory, I/O).
-      No magic — just Linux.
+    <KwCard heading="Primitivas do kernel" icon="🧬" variant="plain">
+      O isolamento em si: <strong>namespaces</strong> (visão separada de PIDs,
+      rede, mounts, usuários) + <strong>cgroups</strong> (limitam CPU, memória, I/O).
+      Nenhuma mágica — só Linux.
     </KwCard>
   </v-click>
 </div>
@@ -131,38 +135,38 @@ returns in the lab's deliberate break.
 <div v-click="4" class="mt-6 kw-muted text-sm">
 
 `kubelet → CRI (containerd/CRI-O) → OCI runtime (runc/crun) → namespaces + cgroups`.
-The **container runtime** column reappears in the mental model's node diagram — this is that box, opened up.
+A coluna **container runtime** reaparece no diagrama de node do modelo mental — este é aquele box, aberto por dentro.
 
 </div>
 
 <!--
-Speaker: a container is not a kind of object the kernel knows about — it's an
-ordinary process the kernel has been told to isolate. Namespaces = what it sees;
-cgroups = what it may use.
+Speaker: um container não é um tipo de objeto que o kernel conhece — é um
+processo comum que o kernel foi instruído a isolar. Namespaces = o que ele vê;
+cgroups = o que ele pode usar.
 -->
 
 ---
 layout: code-walkthrough
-heading: 'Build an image — one instruction, one layer'
+heading: 'Construa uma image — uma instrução, uma layer'
 lab: labs/day-1/01-containers.md
 ---
 
 ````md magic-move
 ```dockerfile
-# start from a base image (itself a stack of layers)
+# comece de uma base image (ela mesma uma pilha de layers)
 FROM golang:1.24
 ```
 
 ```dockerfile
 FROM golang:1.24
-# a stable working directory for everything that follows
+# um diretório de trabalho estável para tudo o que vem depois
 WORKDIR /src
 ```
 
 ```dockerfile
 FROM golang:1.24
 WORKDIR /src
-# copy source in — this layer's digest changes when the code changes
+# copie o código-fonte — o digest desta layer muda quando o código muda
 COPY . .
 ```
 
@@ -170,7 +174,7 @@ COPY . .
 FROM golang:1.24
 WORKDIR /src
 COPY . .
-# run a build step; its result becomes a new layer
+# rode um passo de build; o resultado vira uma nova layer
 RUN go build -o /bin/app .
 ```
 
@@ -179,7 +183,7 @@ FROM golang:1.24
 WORKDIR /src
 COPY . .
 RUN go build -o /bin/app .
-# bake in configuration as environment
+# embuta configuração como variáveis de ambiente
 ENV PORT=8080
 ```
 
@@ -189,7 +193,7 @@ WORKDIR /src
 COPY . .
 RUN go build -o /bin/app .
 ENV PORT=8080
-# drop root — the process runs as an unprivileged user
+# abandone o root — o processo roda como usuário sem privilégios
 RUN useradd -u 10001 app
 USER 10001
 ```
@@ -202,27 +206,28 @@ RUN go build -o /bin/app .
 ENV PORT=8080
 RUN useradd -u 10001 app
 USER 10001
-# document the port, then define the process to start
+# documente a porta e então defina o processo a iniciar
 EXPOSE 8080
 ENTRYPOINT ["/bin/app"]
 ```
 ````
 
 <!--
-Speaker: each instruction that changes the filesystem adds a layer; ENV/EXPOSE
-are metadata. Order matters for caching — cheap, rarely-changing steps first,
-COPY of source late. USER before ENTRYPOINT is the non-root habit S02 builds on.
+Speaker: cada instrução que altera o filesystem adiciona uma layer; ENV/EXPOSE
+são metadados. A ordem importa para o cache — passos baratos e que raramente
+mudam primeiro, COPY do código-fonte por último. USER antes do ENTRYPOINT é o
+hábito non-root sobre o qual o S02 constrói.
 -->
 
 ---
 layout: two-cols-code
-heading: 'Multi-stage — build fat, ship thin'
+heading: 'Multi-stage — construa pesado, entregue enxuto'
 lab: labs/day-1/01-containers.md
 ---
 
 ````md magic-move
 ```dockerfile
-# one stage: the toolchain ships with the app — ~800 MB
+# um estágio só: o toolchain é entregue junto com a aplicação — ~800 MB
 FROM golang:1.24
 WORKDIR /src
 COPY . .
@@ -232,14 +237,14 @@ ENTRYPOINT ["/bin/app"]
 ```
 
 ```dockerfile
-# stage 1: build with the full toolchain
+# estágio 1: build com o toolchain completo
 FROM golang:1.24 AS build
 WORKDIR /src
 COPY . .
-# CGO_ENABLED=0 → a static binary that runs on a tiny base
+# CGO_ENABLED=0 → um binário estático que roda em uma base minúscula
 RUN CGO_ENABLED=0 go build -o /bin/app .
 
-# stage 2: ship only the binary — ~15 MB
+# estágio 2: entregue só o binário — ~15 MB
 FROM alpine:3.20
 RUN adduser -D -u 10001 app
 COPY --from=build /bin/app /bin/app
@@ -252,62 +257,63 @@ ENTRYPOINT ["/bin/app"]
 
 <div class="text-sm">
 
-The **builder stage is discarded** — only what you `COPY --from=build` ships.
-The toolchain, source, and any build-time secrets stay behind.
+O **estágio de build é descartado** — só o que você levar com `COPY --from=build`
+é entregue. O toolchain, o código-fonte e quaisquer secrets de build ficam para trás.
 
 <div class="mt-3">
-  <KwChip variant="ok">smaller = faster pulls</KwChip>
-  <KwChip variant="ok">smaller = less to attack</KwChip>
+  <KwChip variant="ok">menor = pulls mais rápidos</KwChip>
+  <KwChip variant="ok">menor = menos superfície de ataque</KwChip>
 </div>
 
 <div class="mt-4 kw-muted">
 
-Container security takes this further — distroless bases, scanning, and provenance.
+A seção de segurança de containers leva isso adiante — bases distroless, scanning e proveniência.
 
 </div>
 
 </div>
 
 <!--
-Speaker: the size drop is the visible win; the security win (no compiler, no
-source, no leaked secrets in the shipped layers) is the one that matters. The
-lab has them measure both images with `docker images`.
+Speaker: a queda de tamanho é a vitória visível; a vitória de segurança (sem
+compilador, sem código-fonte, sem secrets vazados nas layers entregues) é a que
+importa. No lab eles medem as duas images com `docker images`.
 -->
 
 ---
 layout: code-annotated
-heading: '`latest` is a pointer, not a version'
+heading: '`latest` é um ponteiro, não uma versão'
 lab: labs/day-1/01-containers.md
 ---
 
 ```bash {none|1|2|3}
 docker build -t demo:1 .
-docker run demo:latest        # only demo:1 exists...
+docker run demo:latest        # só existe demo:1...
 docker run demo:1@sha256:9b2c...e41
 ```
 
 ::notes::
 
-<CodeNote at="1" label="a real tag">
-You built and named <code>demo:1</code>. That tag now points at the digest of
-what you just built.
+<CodeNote at="1" label="uma tag de verdade">
+Você construiu e nomeou <code>demo:1</code>. Essa tag agora aponta para o digest
+do que você acabou de construir.
 </CodeNote>
 
-<CodeNote at="2" label="latest ≠ newest" variant="warn">
-<code>latest</code> is just a tag that happens to be the default — you never set
-it, so it isn't there. The engine looks locally, then tries to <strong>pull</strong>
-it, then fails. "Latest" guarantees nothing.
+<CodeNote at="2" label="latest ≠ mais nova" variant="warn">
+<code>latest</code> é só uma tag que por acaso é o padrão — você nunca a definiu,
+então ela não está lá. O engine procura localmente, depois tenta fazer <strong>pull</strong>,
+depois falha. "Latest" não garante nada.
 </CodeNote>
 
-<CodeNote at="3" label="pin by digest" variant="ok">
-Reference the <strong>digest</strong> and you always get the exact bytes you
-tested — the reproducibility tags can't promise. The lab breaks this on purpose.
+<CodeNote at="3" label="fixe por digest" variant="ok">
+Referencie o <strong>digest</strong> e você sempre recebe os bytes exatos que
+testou — a reprodutibilidade que tags não conseguem prometer. O lab quebra isso
+de propósito.
 </CodeNote>
 
 <!--
-Speaker: this is the single most common beginner surprise — "latest" reads like
-"newest" but is only a default tag. Foreshadows S02's digest-pinning beat and
-the lab's break→fix.
+Speaker: esta é a surpresa mais comum de quem está começando — "latest" soa como
+"mais nova", mas é só uma tag padrão. Prenuncia o beat de fixar por digest da
+S02 e o quebre→conserte do lab.
 -->
 
 ---
@@ -317,10 +323,10 @@ duration: 25 min
 env: local — no cluster needed
 ---
 
-## Lab 01 — Build & inspect an image
+## Lab 01 — Construa & inspecione uma image
 
-- **Build** the provided Dockerfile, run it detached, and map a port
-- **Exec in** — inspect the processes and the non-root user, then the image config
-- **Layers:** read them with `history`; change a `COPY` and watch the cache invalidate
-- **Break it on purpose:** `run demo:latest` when only `demo:1` exists → fix it
-- **Multi-stage:** rebuild thin and compare `docker images` sizes before/after
+- **Build:** construa o Dockerfile fornecido, rode em modo detached e mapeie uma porta
+- **Exec:** entre no container — inspecione os processos e o usuário non-root, depois a config da image
+- **Layers:** leia-as com `history`; altere um `COPY` e veja o cache invalidar
+- **Quebre de propósito:** `run demo:latest` quando só existe `demo:1` → conserte
+- **Multi-stage:** reconstrua enxuto e compare os tamanhos em `docker images` antes/depois

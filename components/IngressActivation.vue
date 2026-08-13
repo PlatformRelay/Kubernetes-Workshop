@@ -28,9 +28,9 @@ const programmed = computed(() => props.step >= 2)
 const routing = computed(() => props.step >= 3)
 
 const status = computed(() => {
-  if (props.step >= 2) return 'programmed · routes live'
-  if (props.step >= 1) return 'claimed by contour'
-  return 'ADDRESS — · routes nothing'
+  if (props.step >= 2) return 'programado · rotas no ar'
+  if (props.step >= 1) return 'reivindicado por contour'
+  return 'ADDRESS — · não roteia nada'
 })
 
 const requests = [
@@ -49,7 +49,7 @@ const backends = [
     <!-- control plane: the object, the matchmaker, the controller -->
     <div class="kw-ia-row">
       <div class="kw-ia-node kw-ia-ingress" :class="{ 'is-programmed': programmed }">
-        <div class="kw-ia-role">the object · just rules</div>
+        <div class="kw-ia-role">o objeto · só regras</div>
         <div class="kw-kicker">Ingress · <code>web</code></div>
         <div class="kw-ia-rule"><code>web.example.com</code><span class="kw-ia-rule-to">→ web</span></div>
         <div class="kw-ia-rule"><code>web2.example.com</code><span class="kw-ia-rule-to">→ web2</span></div>
@@ -59,24 +59,24 @@ const backends = [
       <div class="kw-ia-match" :class="{ 'is-live': claimed }">
         <span class="kw-ia-match-label">IngressClass</span>
         <code>contour</code>
-        <span class="kw-ia-match-verb">{{ claimed ? '⇄ claimed' : '⇢ unclaimed' }}</span>
+        <span class="kw-ia-match-verb">{{ claimed ? '⇄ reivindicado' : '⇢ sem dono' }}</span>
       </div>
 
       <div class="kw-ia-node kw-ia-controller" :class="{ 'is-absent': !claimed }">
-        <div class="kw-ia-role">the engine · a separate install</div>
+        <div class="kw-ia-role">o motor · uma instalação à parte</div>
         <template v-if="claimed">
           <div class="kw-kicker">Contour · controller</div>
-          <div class="kw-ia-detail">watches Ingresses with class <code>contour</code></div>
+          <div class="kw-ia-detail">observa Ingresses com a class <code>contour</code></div>
         </template>
         <template v-else>
-          <div class="kw-ia-absent-label">no controller installed</div>
-          <div class="kw-ia-detail">nobody reads these rules</div>
+          <div class="kw-ia-absent-label">nenhum controller instalado</div>
+          <div class="kw-ia-detail">ninguém lê essas regras</div>
         </template>
       </div>
     </div>
 
     <div class="kw-ia-programs" :class="{ 'is-live': programmed }">
-      {{ programmed ? '▼ programs the proxy' : '▼ nothing to program' }}
+      {{ programmed ? '▼ programa o proxy' : '▼ nada para programar' }}
     </div>
 
     <!-- data plane: request → proxy → Services -->
@@ -89,7 +89,7 @@ const backends = [
           </div>
         </template>
         <div v-else class="kw-ia-req">
-          <span class="kw-ia-req-idle">no traffic</span>
+          <span class="kw-ia-req-idle">sem tráfego</span>
         </div>
       </div>
 
@@ -99,11 +99,11 @@ const backends = [
         <div class="kw-ia-role">data plane</div>
         <template v-if="programmed">
           <div class="kw-kicker">Envoy proxy</div>
-          <div class="kw-ia-detail">listener <code>:80</code> / <code>:443</code> · routes loaded</div>
+          <div class="kw-ia-detail">listener <code>:80</code> / <code>:443</code> · rotas carregadas</div>
         </template>
         <template v-else>
-          <div class="kw-ia-absent-label">no data plane</div>
-          <div class="kw-ia-detail">packets have nowhere to go</div>
+          <div class="kw-ia-absent-label">sem data plane</div>
+          <div class="kw-ia-detail">os pacotes não têm para onde ir</div>
         </template>
       </div>
 
@@ -118,30 +118,30 @@ const backends = [
         >
           <code class="kw-ia-backend-name">{{ b.name }}</code>
           <span class="kw-ia-backend-kind">Service · :80</span>
-          <span v-if="routing" class="kw-ia-backend-version">answers “workshop-web {{ b.version }}”</span>
+          <span v-if="routing" class="kw-ia-backend-version">responde “workshop-web {{ b.version }}”</span>
         </div>
       </div>
     </div>
 
     <div class="kw-ia-caption">
       <template v-if="props.step <= 0">
-        The Ingress <strong>applied cleanly</strong> — and does <strong>nothing</strong>.
-        No controller, so no address, no proxy, no traffic. No error either: it just
-        sits there. This is the #1 Ingress gotcha.
+        O Ingress <strong>foi aplicado sem erro</strong> — e não faz <strong>nada</strong>.
+        Sem controller, não há address, nem proxy, nem tráfego. E nem erro: ele só fica
+        ali parado. Essa é a pegadinha nº 1 do Ingress.
       </template>
       <template v-else-if="props.step === 1">
-        A controller is installed and the <strong>IngressClass name</strong> is the
-        matchmaker: <code>ingressClassName: contour</code> matches the class Contour
-        watches, so the controller <strong>claims</strong> the Ingress.
+        Um controller é instalado e o <strong>nome da IngressClass</strong> é o casamenteiro:
+        <code>ingressClassName: contour</code> casa com a class que o Contour observa, então
+        o controller <strong>reivindica</strong> o Ingress.
       </template>
       <template v-else-if="props.step === 2">
-        The controller <strong>programs</strong> its proxy: Envoy loads listeners and
-        the host rules. Only now do the rules exist somewhere packets actually flow.
+        O controller <strong>programa</strong> seu proxy: o Envoy carrega os listeners e as
+        regras de host. Só agora as regras existem em algum lugar por onde os pacotes passam.
       </template>
       <template v-else>
-        Requests are routed by <strong>Host</strong>: <code>web.example.com</code> lands
-        on <strong>web</strong> (v1), <code>web2.example.com</code> on
-        <strong>web2</strong> (v2) — one entry point, many Services.
+        As requisições são roteadas por <strong>Host</strong>: <code>web.example.com</code>
+        cai no <strong>web</strong> (v1), <code>web2.example.com</code> no
+        <strong>web2</strong> (v2) — um ponto de entrada, vários Services.
       </template>
     </div>
   </div>

@@ -28,13 +28,13 @@ const props = withDefaults(
     step: 0,
     desired: 3,
     resource: 'Pod',
-    controller: 'ReplicaSet controller',
+    controller: 'controller do ReplicaSet',
     desiredSource: 'spec',
     observedSource: 'status',
   },
 )
 
-const stages = ['Observe', 'Diff', 'Act'] as const
+const stages = ['Observar', 'Comparar', 'Agir'] as const
 
 // A Pod is missing through Observe/Diff/Act (steps 0-2); it converges only at
 // Repeat (step 3), so "Act" still shows the gap it is in the middle of closing.
@@ -54,7 +54,7 @@ const converged = computed(() => props.step >= 3)
 
 <template>
   <div class="kw-loop">
-    <div class="kw-kicker">Reconciliation — {{ controller }}</div>
+    <div class="kw-kicker">Reconciliação — {{ controller }}</div>
 
     <div class="kw-loop-ring">
       <template v-for="(name, i) in stages" :key="name">
@@ -63,30 +63,30 @@ const converged = computed(() => props.step >= 3)
         </div>
         <span v-if="i < stages.length - 1" class="kw-loop-arrow">→</span>
       </template>
-      <span class="kw-loop-repeat" :class="{ 'is-active': converged }">↻ repeat</span>
+      <span class="kw-loop-repeat" :class="{ 'is-active': converged }">↻ repetir</span>
     </div>
 
     <div class="kw-loop-state">
-      <span class="kw-loop-chip">desired&nbsp;<strong>{{ desired }}</strong></span>
+      <span class="kw-loop-chip">desejado&nbsp;<strong>{{ desired }}</strong></span>
       <span class="kw-loop-chip" :class="{ 'is-sync': delta === 0, 'is-drift': delta !== 0 }">
-        observed&nbsp;<strong>{{ observed }}</strong>
+        observado&nbsp;<strong>{{ observed }}</strong>
       </span>
       <span v-if="delta !== 0" class="kw-loop-chip is-drift">Δ&nbsp;<strong>+{{ delta }}</strong></span>
-      <span v-else class="kw-loop-chip is-sync"><strong>in sync</strong></span>
+      <span v-else class="kw-loop-chip is-sync"><strong>em sincronia</strong></span>
     </div>
 
     <div class="kw-loop-caption">
       <template v-if="step <= 0">
-        <strong>Observe</strong> — read desired (<code>{{ desiredSource }}</code>) and actual (<code>{{ observedSource }}</code>). A {{ resource }} was lost.
+        <strong>Observar</strong> — ler o desejado (<code>{{ desiredSource }}</code>) e o real (<code>{{ observedSource }}</code>). Falta 1 {{ resource }}.
       </template>
       <template v-else-if="step === 1">
-        <strong>Diff</strong> — desired {{ desired }} ≠ observed {{ observed }}: the loop computes a delta of +{{ delta }}.
+        <strong>Comparar</strong> — desejado {{ desired }} ≠ observado {{ observed }}: o loop calcula um delta de +{{ delta }}.
       </template>
       <template v-else-if="step === 2">
-        <strong>Act</strong> — create {{ delta === 0 ? 'the missing' : delta }} {{ resource }} to close the gap. No imperative command was issued.
+        <strong>Agir</strong> — criar {{ delta === 0 ? 1 : delta }} {{ resource }} para fechar a diferença. Nenhum comando imperativo foi emitido.
       </template>
       <template v-else>
-        <strong>Repeat</strong> — desired = observed, so there is nothing to do. The loop keeps watching, forever.
+        <strong>Repetir</strong> — desejado = observado, então não há nada a fazer. O loop segue observando, para sempre.
       </template>
     </div>
   </div>

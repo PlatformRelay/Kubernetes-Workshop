@@ -57,9 +57,9 @@ const podLane = computed(() => {
 })
 
 const verdict = computed(() => {
-  if (denied.value) return { label: 'DENIED · Forbidden', tone: 'danger' as const }
-  if (admitted.value) return { label: 'ADMITTED', tone: 'ok' as const }
-  return { label: 'evaluating…', tone: 'dim' as const }
+  if (denied.value) return { label: 'NEGADO · Forbidden', tone: 'danger' as const }
+  if (admitted.value) return { label: 'ADMITIDO', tone: 'ok' as const }
+  return { label: 'avaliando…', tone: 'dim' as const }
 })
 </script>
 
@@ -71,8 +71,8 @@ const verdict = computed(() => {
         <div class="kw-kicker">kubectl apply</div>
         <div class="kw-ag-pod" :class="[podLane, hardened ? 'is-hard' : 'is-soft']">
           <K8sIcon kind="pod" variant="unlabeled" size="1.7rem" />
-          <div class="kw-ag-podlabel">{{ hardened ? 'hardened Pod' : 'insecure Pod' }}</div>
-          <div class="kw-ag-podnote">{{ hardened ? '4 gates set' : 'root · no securityContext' }}</div>
+          <div class="kw-ag-podlabel">{{ hardened ? 'Pod hardened' : 'Pod inseguro' }}</div>
+          <div class="kw-ag-podnote">{{ hardened ? '4 gates definidos' : 'root · sem securityContext' }}</div>
         </div>
       </div>
 
@@ -80,7 +80,7 @@ const verdict = computed(() => {
       <div class="kw-ag-gate" :class="`is-${verdict.tone}`">
         <div class="kw-ag-gatehead">
           <div class="kw-ag-gatetitle">Pod Security Admission</div>
-          <div class="kw-kicker">enforce: restricted · built-in</div>
+          <div class="kw-kicker">enforce: restricted · nativo</div>
         </div>
         <ul class="kw-ag-checks">
           <li v-for="c in checks" :key="c.field" :class="{ 'is-pass': c.pass === true, 'is-fail': c.pass === false }">
@@ -94,31 +94,32 @@ const verdict = computed(() => {
       <!-- target: the namespace -->
       <div class="kw-ag-target" :class="{ 'is-live': admitted }">
         <K8sIcon kind="ns" variant="unlabeled" size="1.7rem" />
-        <div class="kw-ag-nslabel">your namespace</div>
+        <div class="kw-ag-nslabel">seu namespace</div>
         <div v-if="admitted" class="kw-ag-running">
           <K8sIcon kind="pod" variant="unlabeled" size="1.3rem" />
           <span>Running</span>
         </div>
-        <div v-else class="kw-ag-empty">— empty —</div>
+        <div v-else class="kw-ag-empty">— vazio —</div>
       </div>
     </div>
 
     <div v-if="props.showCaption" class="kw-ag-caption">
       <template v-if="props.step <= 0">
-        A bare Pod with no <code>securityContext</code> is submitted to a namespace labelled
+        Um Pod pelado, sem <code>securityContext</code>, é submetido a um namespace com o label
         <code>enforce: restricted</code>.
       </template>
       <template v-else-if="props.step === 1">
-        PSA checks the Pod against the standard <strong>before it is stored</strong> — all four
-        gates fail, so the request is <strong>rejected (Forbidden)</strong> and
-        <strong>no Pod is ever created</strong>.
+        O PSA verifica o Pod contra o standard <strong>antes de ele ser armazenado</strong> — os
+        quatro gates falham, então a requisição é <strong>rejeitada (Forbidden)</strong> e
+        <strong>nenhum Pod chega a ser criado</strong>.
       </template>
       <template v-else-if="props.step === 2">
-        Set the four fields <code>restricted</code> requires and re-apply the <em>same</em> Pod.
+        Defina os quatro campos que o <code>restricted</code> exige e reaplique o
+        <em>mesmo</em> Pod.
       </template>
       <template v-else>
-        Every gate passes → the Pod is <strong>admitted</strong> and scheduled. Same gate, same
-        namespace — the manifest changed, not the policy.
+        Todos os gates passam → o Pod é <strong>admitido</strong> e agendado. Mesmo gate, mesmo
+        namespace — o que mudou foi o manifesto, não a policy.
       </template>
     </div>
   </div>

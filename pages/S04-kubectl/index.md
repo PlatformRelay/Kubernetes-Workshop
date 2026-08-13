@@ -9,91 +9,93 @@ track: Foundations
 
 # kubectl
 
-The one tool you drive every cluster with — discover, inspect, and change.
+A única ferramenta com que você opera qualquer cluster — descubra, inspecione e altere.
 
-**core** · suggested Day 1 · Foundations track
+**core** · sugerido para o Day 1 · trilha Foundations
 
 <!--
-Section S04 — kubectl. Timing: ~30 min slides + 25 min lab.
-Outcome: learners can drive and inspect any cluster fluently — the core verbs,
-output modes (incl. jsonpath), client-vs-server dry-run, and labels/selectors as
-a query language — building the "explain habit" from S03 — and know k9s as the
-terminal UI over the same API (same kubeconfig, same RBAC, kubectl-first labs).
-Beats: imperative one-off vs declarative apply · verb tour · output modes with a
-jsonpath example (magic-move growing one command) · dry-run client vs server ·
-labels & selectors · namespaces/contexts back to Lab 00 · k9s tour (what it
-is/is not · drive it · views + --readonly guardrail).
-k9s ACCURACY LOCKS (verified against k9scli.io + the k9s README, 2026-08):
-single binary; reads the kubeconfig context; acts under YOUR RBAC (nothing
-kubectl couldn't do); `:` command mode takes resource names AND aliases
-(`:pods` and `:pod` both resolve); `/` filters; row hotkeys d/l/s/y/e/ctrl-d;
-`:xray` dependency view; `:pulses` cluster dashboard; `--readonly` disables
-all modification commands. k9s is pinned in mise.toml and documented in
-docs/setup.md — the slides introduce it; no k9s lab exists by design.
-CKx tie-in: CKAD/CKA — core kubectl workflow across every domain.
+Seção S04 — kubectl. Tempo: ~30 min de slides + 25 min de lab.
+Resultado: os participantes conseguem operar e inspecionar qualquer cluster com
+fluência — os verbos centrais, os modos de output (incl. jsonpath), dry-run
+client vs server, e labels/selectors como linguagem de consulta — consolidando o
+"hábito do explain" do S03 — e conhecem o k9s como a UI de terminal sobre a
+mesma API (mesmo kubeconfig, mesmo RBAC, labs kubectl-first).
+Beats: imperativo pontual vs apply declarativo · tour de verbos · modos de
+output com um exemplo de jsonpath (magic-move crescendo um comando) · dry-run
+client vs server · labels & selectors · namespaces/contexts de volta ao Lab 00 ·
+tour do k9s (o que é/o que não é · como operar · views + guarda-corpo --readonly).
+k9s ACCURACY LOCKS (verificado contra k9scli.io + o README do k9s, 2026-08):
+binário único; lê o context do kubeconfig; age sob o SEU RBAC (nada que o
+kubectl não pudesse fazer); o modo de comando `:` aceita nomes de recursos E
+aliases (`:pods` e `:pod` resolvem ambos); `/` filtra; hotkeys de linha
+d/l/s/y/e/ctrl-d; view de dependências `:xray`; dashboard de cluster `:pulses`;
+`--readonly` desabilita todos os comandos de modificação. O k9s está fixado no
+mise.toml e documentado em docs/setup.md — os slides o apresentam; não existe
+lab de k9s por decisão de design.
+Amarração CKx: CKAD/CKA — o workflow central do kubectl em todos os domínios.
 Lab: labs/day-1/04-kubectl.md.
 -->
 
 ---
 layout: comparison
-heading: 'Two ways to drive — and when each fits'
-leftHeading: Imperative
-rightHeading: Declarative
+heading: 'Duas formas de operar — e quando cada uma se encaixa'
+leftHeading: Imperativo
+rightHeading: Declarativo
 leftBadge: 'kubectl run / create / scale'
 rightBadge: 'kubectl apply -f'
 ---
 
-- One-off commands that act **now**: `run`, `create`, `scale`, `delete`.
-- Fast for **exploring**, demos, and generating a starting manifest.
-- Nothing records *what you wanted* — only the cluster remembers.
-- Repeat a change? You retype it, and hope you match last time.
+- Comandos pontuais que agem **agora**: `run`, `create`, `scale`, `delete`.
+- Rápidos para **explorar**, fazer demos e gerar um manifesto inicial.
+- Nada registra *o que você queria* — só o cluster lembra.
+- Repetir uma mudança? Você redigita e torce para sair igual à última vez.
 
 ::right::
 
-- You keep the desired state in **files** and `apply` them.
-- The file is the source of truth — **version it, review it, re-apply it**.
-- Re-running `apply` is safe and converges to the same result (idempotent).
-- This is how every real workload ships — and what everything from the Pod onward builds.
+- Você mantém o estado desejado em **arquivos** e faz `apply` deles.
+- O arquivo é a fonte da verdade — **versione, revise, reaplique**.
+- Reexecutar o `apply` é seguro e converge para o mesmo resultado (idempotente).
+- É assim que todo workload real é entregue — e o que tudo, do Pod em diante, constrói.
 
 <div class="mt-4 text-sm" v-click>
 
-Use imperative to **learn and scaffold** (`--dry-run=client -o yaml` prints the
-manifest); use declarative to **run and keep** it. Today's labs generate YAML
-imperatively, then `apply` it.
+Use o imperativo para **aprender e gerar esqueletos** (`--dry-run=client -o yaml`
+imprime o manifesto); use o declarativo para **executar e manter**. Os labs de
+hoje geram YAML imperativamente e depois fazem `apply`.
 
 </div>
 
 <!--
-Speaker: don't moralise "declarative good, imperative bad" — imperative is the
-fastest way to produce a first manifest. The bridge is `--dry-run=client -o yaml`,
-which the output slide and the lab both lean on. Ties straight into S05's pod.yaml.
+Speaker: não moralize "declarativo bom, imperativo ruim" — o imperativo é a forma
+mais rápida de produzir um primeiro manifesto. A ponte é o `--dry-run=client -o yaml`,
+no qual tanto o slide de output quanto o lab se apoiam. Conecta direto ao pod.yaml do S05.
 -->
 
 ---
 
 <div class="kw-slide-dense">
 
-<span class="kw-kicker">Eight verbs cover almost everything</span>
+<span class="kw-kicker">Oito verbos cobrem quase tudo</span>
 
-# The core verb tour
+# O tour dos verbos centrais
 
 <div class="kw-cols-3 mt-3">
   <v-click at="1">
-    <KwCard heading="Read" icon="🔍">
+    <KwCard heading="Ler" icon="🔍">
       <strong>get</strong> · <strong>describe</strong> · <strong>explain</strong> —
-      list, deep-dive with Events, and read the schema.
+      liste, mergulhe fundo com os Events e leia o schema.
     </KwCard>
   </v-click>
   <v-click at="2">
-    <KwCard heading="Change" icon="✏️">
+    <KwCard heading="Alterar" icon="✏️">
       <strong>apply</strong> · <strong>diff</strong> · <strong>edit</strong> —
-      declare, preview, or patch live objects.
+      declare, pré-visualize ou ajuste objetos ao vivo.
     </KwCard>
   </v-click>
   <v-click at="3">
-    <KwCard heading="Run &amp; debug" icon="🐚" variant="plain">
+    <KwCard heading="Executar &amp; debugar" icon="🐚" variant="plain">
       <strong>logs</strong> · <strong>exec</strong> · <strong>port-forward</strong> —
-      output, shell in, and tunnel when you need them.
+      saída, shell dentro do container e túnel quando você precisar.
     </KwCard>
   </v-click>
 </div>
@@ -101,39 +103,39 @@ which the output slide and the lab both lean on. Ties straight into S05's pod.ya
 </div>
 
 <!--
-Speaker: keep to one line per verb. The pairing to land: get→describe→logs is the
-triage sequence; apply→diff is the safe-change sequence. `exec` returns in every
-lab that inspects a running container.
+Speaker: mantenha uma linha por verbo. O pareamento a fixar: get→describe→logs é
+a sequência de triagem; apply→diff é a sequência de mudança segura. O `exec`
+retorna em todo lab que inspeciona um container em execução.
 -->
 
 ---
 clicks: 3
 ---
 
-<span class="kw-kicker">Story · walk the verbs in order</span>
+<span class="kw-kicker">História · percorra os verbos em ordem</span>
 
-# See the command, then the payoff
+# Veja o comando, depois a recompensa
 
 <div class="mt-2">
   <KubectlVerbDemo :step="$clicks" />
 </div>
 
 <!--
-Speaker: click through the on-call chain (three clicks: describe → logs →
-diff/apply). Each step shows a realistic command and the snippet of output that
-actually answers the question — not a feature tour. Land the habit: get for the
-headline, describe for Events, logs for app truth, diff before apply when
-changing files. `clicks: 3` reserves the budget — without it `$clicks` stays 0
-and the demo never leaves `get`.
+Speaker: avance clique a clique pela cadeia de plantão (três cliques: describe →
+logs → diff/apply). Cada passo mostra um comando realista e o trecho de output
+que de fato responde à pergunta — não é um tour de features. Fixe o hábito: get
+para a manchete, describe para os Events, logs para a verdade da aplicação, diff
+antes de apply ao mudar arquivos. `clicks: 3` reserva o orçamento — sem ele
+`$clicks` fica em 0 e a demo nunca sai do `get`.
 -->
 
 ---
 clicks: 9
 ---
 
-<span class="kw-kicker">Grow one command · type, Enter, read</span>
+<span class="kw-kicker">Cresça um comando · digite, Enter, leia</span>
 
-# Output modes — get exactly what you need
+# Modos de output — obtenha exatamente o que você precisa
 
 <div class="mt-2">
   <KubectlOutputDemo :step="$clicks" />
@@ -141,22 +143,24 @@ clicks: 9
 
 <div class="mt-3 text-sm kw-muted">
 
-`-o json` is the same as `yaml` for tools that want JSON. **`jsonpath`** turns
-`kubectl` into a precise data source — the lab uses it to pull a single value.
+`-o json` é o mesmo que `yaml` para ferramentas que querem JSON. **`jsonpath`**
+transforma o `kubectl` em uma fonte de dados precisa — o lab o usa para extrair
+um único valor.
 
 </div>
 
 <!--
-Speaker: each mode is two clicks — (1) the command is typed, cursor blinking;
-(2) Enter — sample output appears. Then the next flag. Path: table → wide →
-yaml → jsonpath → one value. The jsonpath path mirrors the object tree they saw
-with `explain` in S03 (`.spec.nodeName`). `-o wide` is the cheapest habit:
-always more context for free. `clicks: 9` = five modes × (type + Enter) − 1.
+Speaker: cada modo são dois cliques — (1) o comando é digitado, cursor piscando;
+(2) Enter — o output de exemplo aparece. Depois a próxima flag. Caminho: tabela →
+wide → yaml → jsonpath → um valor. O caminho do jsonpath espelha a árvore de
+objetos que eles viram com o `explain` no S03 (`.spec.nodeName`). `-o wide` é o
+hábito mais barato: sempre mais contexto de graça. `clicks: 9` = cinco modos ×
+(digitar + Enter) − 1.
 -->
 
 ---
 layout: code-annotated
-heading: '`--dry-run` — render, or validate, without changing anything'
+heading: '`--dry-run` — renderize, ou valide, sem mudar nada'
 lab: labs/day-1/04-kubectl.md
 ---
 
@@ -169,34 +173,35 @@ kubectl apply -f pod.yaml
 ::notes::
 
 <CodeNote at="1" label="--dry-run=client">
-Renders and does <strong>local</strong> checks only — never contacts the API
-server's admission or validation. Great for <em>generating YAML</em>
-(<code>-o yaml</code>) and quick sanity checks. It can't know anything only the
-<strong>server</strong> knows — like whether the target namespace even exists.
+Renderiza e faz apenas checagens <strong>locais</strong> — nunca contata a
+admission ou a validação do API server. Ótimo para <em>gerar YAML</em>
+(<code>-o yaml</code>) e para checagens rápidas de sanidade. Ele não tem como
+saber nada que só o <strong>server</strong> sabe — como se o namespace de destino
+sequer existe.
 </CodeNote>
 
 <CodeNote at="2" label="--dry-run=server" variant="ok">
-Sends the object through the <strong>full server path</strong> — schema
-validation, defaulting, and <strong>admission</strong> — then discards it instead
-of persisting. This catches what client can't: quota, webhooks, missing
-references. Same output shape, real validation.
+Envia o objeto pelo <strong>caminho completo do server</strong> — validação de
+schema, defaulting e <strong>admission</strong> — e então o descarta em vez de
+persistir. Isso captura o que o client não consegue: quota, webhooks,
+referências ausentes. Mesmo formato de output, validação de verdade.
 </CodeNote>
 
-<CodeNote at="3" label="no flag" variant="warn">
-The real apply — validates <em>and</em> writes to etcd. The lab's break shows an
-object that <strong>passes client but fails server</strong>, so you feel the
-difference before it bites you for real.
+<CodeNote at="3" label="sem flag" variant="warn">
+O apply de verdade — valida <em>e</em> escreve no etcd. O break do lab mostra um
+objeto que <strong>passa no client mas falha no server</strong>, para você sentir
+a diferença antes que ela te morda de verdade.
 </CodeNote>
 
 <!--
-Speaker: the one-liner — client = "does this render", server = "would the cluster
-actually accept this". The lab makes it concrete: apply into a nonexistent
-namespace passes client dry-run and fails server dry-run.
+Speaker: o resumo em uma linha — client = "isto renderiza?", server = "o cluster
+de fato aceitaria isto?". O lab torna concreto: aplicar em um namespace
+inexistente passa no dry-run client e falha no dry-run server.
 -->
 
 ---
 layout: code-annotated
-heading: 'Labels & selectors — kubectl has a query language'
+heading: 'Labels & selectors — o kubectl tem uma linguagem de consulta'
 lab: labs/day-1/04-kubectl.md
 ---
 
@@ -208,41 +213,42 @@ kubectl get pods -l app=web,tier=frontend
 
 ::notes::
 
-<CodeNote at="1" label="equality">
-<code>-l key=value</code> — the everyday filter. Selects objects carrying that
-exact label. This is how a Service finds its Pods and how every lab's
-cleanup scopes a delete.
+<CodeNote at="1" label="igualdade">
+<code>-l key=value</code> — o filtro do dia a dia. Seleciona objetos que carregam
+exatamente aquele label. É assim que um Service encontra seus Pods e que o
+cleanup de todo lab delimita um delete.
 </CodeNote>
 
-<CodeNote at="2" label="set-based">
-<code>in (…)</code>, <code>notin (…)</code>, and bare <code>key</code> /
-<code>!key</code> for existence. More expressive when one value isn't enough.
+<CodeNote at="2" label="baseado em conjuntos">
+<code>in (…)</code>, <code>notin (…)</code>, e <code>key</code> puro /
+<code>!key</code> para existência. Mais expressivo quando um único valor não basta.
 </CodeNote>
 
-<CodeNote at="3" label="AND-ed" variant="ok">
-Comma-separate to require <strong>all</strong> of them. Labels aren't decoration —
-they're the join key the whole system selects on. Set them deliberately.
+<CodeNote at="3" label="combinados com AND" variant="ok">
+Separe por vírgulas para exigir <strong>todos</strong> eles. Labels não são
+decoração — são a chave de junção sobre a qual o sistema inteiro seleciona.
+Defina-os deliberadamente.
 </CodeNote>
 
 <!--
-Speaker: frame labels as a query language, not metadata. Foreshadow S06 (a
-Deployment's selector) and S07 (a Service's selector) — both are label queries.
-The recommended `app.kubernetes.io/*` labels show up in S06.
+Speaker: enquadre labels como uma linguagem de consulta, não metadata. Antecipe o
+S06 (o selector de um Deployment) e o S07 (o selector de um Service) — ambos são
+consultas de label. Os labels recomendados `app.kubernetes.io/*` aparecem no S06.
 -->
 
 ---
 layout: statement
-kicker: 'Where am I, and the habit that saves you'
+kicker: 'Onde estou, e o hábito que te salva'
 ---
 
-You are always pointed at **one context** and **one namespace** — the pair you
-set back in **Lab 00**.
+Você está sempre apontado para **um context** e **um namespace** — o par que
+você configurou lá no **Lab 00**.
 
 <div class="mt-6 text-base kw-muted">
 
 ```bash
-kubectl config current-context                 # which cluster?
-kubectl config view --minify | grep namespace: # which namespace?
+kubectl config current-context                 # qual cluster?
+kubectl config view --minify | grep namespace: # qual namespace?
 kubectl config set-context --current --namespace=<ns>
 ```
 
@@ -250,150 +256,156 @@ kubectl config set-context --current --namespace=<ns>
 
 <div class="mt-6" v-click>
 
-When anything surprises you: **`kubectl explain <field>`** and
-**`kubectl get … -o yaml`**. The cluster documents itself — reach for it before a
-web search. That's the habit the rest of the workshop assumes.
+Quando algo te surpreender: **`kubectl explain <field>`** e
+**`kubectl get … -o yaml`**. O cluster documenta a si mesmo — recorra a ele antes
+de uma busca na web. Esse é o hábito que o resto do workshop pressupõe.
 
 </div>
 
 <!--
-Speaker: close the loop to Lab 00 — most "it's not working" moments are a wrong
-context/namespace. Then re-plant the explain habit from S03. The lab is a
-scavenger hunt that forces get/describe/explain before anyone creates a thing.
-Then the k9s coda: now that they know the verbs, show the cockpit built on them.
+Speaker: feche o ciclo com o Lab 00 — a maioria dos momentos "não está
+funcionando" é um context/namespace errado. Depois replante o hábito do explain
+do S03. O lab é uma caça ao tesouro que força get/describe/explain antes de
+qualquer um criar qualquer coisa. Depois a coda do k9s: agora que eles conhecem
+os verbos, mostre o cockpit construído sobre eles.
 -->
 
 ---
 
-<span class="kw-kicker">Same API, friendlier cockpit</span>
+<span class="kw-kicker">Mesma API, cockpit mais amigável</span>
 
-# k9s — a terminal UI over the API you just learned
+# k9s — uma UI de terminal sobre a API que você acabou de aprender
 
 <div class="kw-cols-2 mt-3 text-sm">
   <v-click at="1">
-    <KwCard heading="What it is" icon="🐶">
-      A single-binary <strong>terminal UI</strong> that <strong>watches</strong> the
-      cluster live — the resources, Events, and logs you've been pulling by hand,
-      refreshing in place. It's already in your workshop toolchain.
+    <KwCard heading="O que é" icon="🐶">
+      Uma <strong>UI de terminal</strong> de binário único que <strong>observa</strong> o
+      cluster ao vivo — os recursos, Events e logs que você vinha puxando à mão,
+      atualizando no lugar. Ela já está na toolchain do workshop.
     </KwCard>
   </v-click>
   <v-click at="2">
-    <KwCard heading="What it is not" icon="🔑" variant="plain">
-      Not a side door. k9s reads your <strong>kubeconfig</strong> and talks to the
-      same API server under your <strong>RBAC</strong> — it can do nothing
-      <code>kubectl</code> couldn't.
+    <KwCard heading="O que não é" icon="🔑" variant="plain">
+      Não é uma porta dos fundos. O k9s lê seu <strong>kubeconfig</strong> e fala com o
+      mesmo API server sob o seu <strong>RBAC</strong> — ele não consegue fazer nada
+      que o <code>kubectl</code> não pudesse.
     </KwCard>
   </v-click>
 </div>
 
 <div v-click="3" class="mt-4 kw-muted text-sm">
 
-Think of it as `kubectl get … -w` for **everything at once**: navigation instead
-of retyping, with describe, logs, and a shell one keystroke away.
+Pense nele como `kubectl get … -w` para **tudo de uma vez**: navegação em vez de
+redigitar, com describe, logs e um shell a uma tecla de distância.
 
 </div>
 
 <!--
-Speaker: why introduce k9s AFTER the verb tour and not instead of it — you need the
-kubectl vocabulary first, because k9s is a *view* over exactly those verbs and
-resources; every panel it shows maps to a get/describe/logs you now know. It ships
-in the workshop toolchain (pinned via mise, see docs/setup.md), so everyone already
-has it — `k9s` in the same shell where kubectl works. Land the trust boundary hard:
-it authenticates with the SAME kubeconfig context and namespace you set in Lab 00
-and is subject to the same RBAC — on the shared cluster it sees your namespace,
-nothing more. No agent, no server-side install. The "-w for everything" framing is
-the honest pitch: k9s's core is a live watch loop over the resource views.
+Speaker: por que apresentar o k9s DEPOIS do tour de verbos e não no lugar dele —
+você precisa do vocabulário do kubectl primeiro, porque o k9s é uma *view* sobre
+exatamente esses verbos e recursos; cada painel que ele mostra mapeia para um
+get/describe/logs que você agora conhece. Ele vem na toolchain do workshop
+(fixado via mise, veja docs/setup.md), então todo mundo já o tem — `k9s` no mesmo
+shell onde o kubectl funciona. Fixe com força a fronteira de confiança: ele
+autentica com o MESMO context e namespace do kubeconfig que você configurou no
+Lab 00 e está sujeito ao mesmo RBAC — no cluster compartilhado ele vê o seu
+namespace, nada mais. Sem agente, sem instalação server-side. O enquadramento
+"-w para tudo" é o pitch honesto: o núcleo do k9s é um loop de watch ao vivo
+sobre as views de recursos.
 -->
 
 ---
 layout: code-annotated
-heading: 'Drive it — one `:` command and a handful of keys'
+heading: 'Opere — um comando `:` e um punhado de teclas'
 compact: true
 ---
 
 ```text {none|1|2|3|4}
-:pods          # a live resource view (:deploy, :svc, :ns …)
-/web           # filter as you type
+:pods          # uma view de recursos ao vivo (:deploy, :svc, :ns …)
+/web           # filtre enquanto digita
 d · l · s · y  # describe · logs · shell · YAML
-ctrl-d         # delete — asks first
+ctrl-d         # delete — pergunta antes
 ```
 
 ::notes::
 
-<CodeNote at="1" label="`:` command mode">
-<code>:</code> plus a resource name — <code>:pods</code>, <code>:deploy</code> —
-opens that view, <strong>live</strong>.
+<CodeNote at="1" label="modo de comando `:`">
+<code>:</code> mais um nome de recurso — <code>:pods</code>, <code>:deploy</code> —
+abre aquela view, <strong>ao vivo</strong>.
 </CodeNote>
 
-<CodeNote at="2" label="filter, don't scroll">
-<code>/</code> narrows as you type — quicker than <code>-l</code> + <code>grep</code>.
+<CodeNote at="2" label="filtre, não role">
+<code>/</code> estreita enquanto você digita — mais rápido que <code>-l</code> + <code>grep</code>.
 </CodeNote>
 
-<CodeNote at="3" label="the triage keys" variant="ok">
-<strong>get → describe → logs</strong> become single keys; <code>s</code> shells in.
+<CodeNote at="3" label="as teclas de triagem" variant="ok">
+<strong>get → describe → logs</strong> viram teclas únicas; <code>s</code> abre um shell.
 </CodeNote>
 
-<CodeNote at="4" label="modifying verbs confirm" variant="warn">
-<code>ctrl-d</code> / <code>e</code> prompt first — same API server, same RBAC.
+<CodeNote at="4" label="verbos de modificação confirmam" variant="warn">
+<code>ctrl-d</code> / <code>e</code> perguntam antes — mesmo API server, mesmo RBAC.
 </CodeNote>
 
 <!--
-Speaker: do this as a 60-second live demo if the room setup allows — open k9s next
-to the deck, type :pods, filter, hit d and l on a row. Narrate the mapping out
-loud each time ("that's kubectl describe", "that's kubectl logs -f"). The colon
-commands take the same resource names and short names kubectl uses (aliases work:
-:pod and :pods both resolve), which is why we taught the verbs first. If no live
-demo: the keys on the slide are the complete starter set — command mode, filter,
-d/l/s/y, and the confirming delete. Everything is the same API call under the
-hood, so nothing here bypasses audit logs or RBAC.
+Speaker: faça isto como uma demo ao vivo de 60 segundos se a sala permitir — abra
+o k9s ao lado do deck, digite :pods, filtre, aperte d e l em uma linha. Narre o
+mapeamento em voz alta a cada vez ("isso é o kubectl describe", "isso é o kubectl
+logs -f"). Os comandos de dois-pontos aceitam os mesmos nomes de recursos e nomes
+curtos que o kubectl usa (aliases funcionam: :pod e :pods resolvem ambos), e é
+por isso que ensinamos os verbos primeiro. Sem demo ao vivo: as teclas no slide
+são o kit inicial completo — modo de comando, filtro, d/l/s/y e o delete que
+confirma. Tudo é a mesma chamada de API por baixo, então nada aqui contorna
+audit logs ou RBAC.
 -->
 
 ---
 
-<span class="kw-kicker">Views &amp; guardrails</span>
+<span class="kw-kicker">Views &amp; guarda-corpos</span>
 
-# X-ray vision — and a read-only safety catch
+# Visão de raio-X — e uma trava de segurança read-only
 
 <div class="kw-cols-3 mt-4 text-sm">
   <v-click at="1">
     <KwCard heading=":xray" icon="🩻">
-      A <strong>dependency tree</strong> per resource — <code>:xray deploy</code>
-      walks Deployment → ReplicaSet → Pods. You'll meet that ownership chain over
-      the next two sections; come back and watch it live.
+      Uma <strong>árvore de dependências</strong> por recurso — <code>:xray deploy</code>
+      percorre Deployment → ReplicaSet → Pods. Você vai conhecer essa cadeia de
+      ownership nas próximas duas seções; volte aqui e a veja ao vivo.
     </KwCard>
   </v-click>
   <v-click at="2">
     <KwCard heading=":pulses" icon="📈" variant="plain">
-      A one-screen <strong>cluster dashboard</strong> — workloads, events, and
-      errors ticking in real time. The "is anything on fire" view.
+      Um <strong>dashboard do cluster</strong> em uma tela — workloads, events e
+      erros pulsando em tempo real. A view de "tem alguma coisa pegando fogo?".
     </KwCard>
   </v-click>
   <v-click at="3">
     <KwCard heading="--readonly" icon="🛑" variant="ok">
-      <code>k9s --readonly</code> disables <strong>every modifying command</strong> —
-      the right default when you're inspecting a cluster you don't own.
+      <code>k9s --readonly</code> desabilita <strong>todo comando de modificação</strong> —
+      o default certo quando você está inspecionando um cluster que não é seu.
     </KwCard>
   </v-click>
 </div>
 
 <div v-click="4" class="mt-4 kw-muted text-sm">
 
-The labs stay **`kubectl`-first** — the CLI is the language every doc, script, and
-pipeline speaks. Reach for k9s when you're *watching* something unfold, and keep
-translating what it shows back into the verbs.
+Os labs continuam **`kubectl`-first** — a CLI é a língua que todo doc, script e
+pipeline fala. Recorra ao k9s quando estiver *assistindo* algo se desenrolar, e
+continue traduzindo o que ele mostra de volta para os verbos.
 
 </div>
 
 <!--
-Speaker: two power views and one guardrail. :xray shows ownership/dependency
-chains — it will make much more sense after S06 (Deployment → ReplicaSet → Pod),
-so plant it as "come back to this"; it's a genuine foreshadow, not a dependency.
-:pulses is the at-a-glance dashboard — useful projected on a wall during the labs.
---readonly matters on the shared cluster: it turns k9s into a pure observer (also
-settable per-context in its config). Close with the framing the workshop holds
-throughout: kubectl is the language, k9s is a faster way to read; using k9s well
-REQUIRES the kubectl mental model, which is why this is a coda and not the lead.
-Optional: invite learners to keep k9s open in a second terminal during Lab 04+.
+Speaker: duas views poderosas e um guarda-corpo. O :xray mostra cadeias de
+ownership/dependência — vai fazer muito mais sentido depois do S06 (Deployment →
+ReplicaSet → Pod), então plante como "volte aqui depois"; é um foreshadow
+genuíno, não uma dependência. O :pulses é o dashboard de relance — útil projetado
+numa parede durante os labs. O --readonly importa no cluster compartilhado: ele
+transforma o k9s em um observador puro (também configurável por context na sua
+config). Feche com o enquadramento que o workshop mantém do início ao fim:
+kubectl é a língua, k9s é um jeito mais rápido de ler; usar bem o k9s EXIGE o
+modelo mental do kubectl, e é por isso que isto é uma coda e não a abertura.
+Opcional: convide os participantes a manter o k9s aberto em um segundo terminal
+durante o Lab 04+.
 -->
 
 ---
@@ -403,10 +415,10 @@ duration: 25 min
 env: namespace ✓ / kind ✓
 ---
 
-## Lab 04 — Discovery scavenger hunt
+## Lab 04 — Caça ao tesouro de descoberta
 
-- **Inspect only:** answer questions with `get`, `describe`, `explain` — create nothing
-- **Generate YAML:** `kubectl run … --dry-run=client -o yaml` and `create deployment … --dry-run=client -o yaml`
-- **Query:** pull one node's name with `-o jsonpath`; filter with `-l`
-- **Break it on purpose:** an object that **passes `--dry-run=client` but fails `--dry-run=server`**
-- **Nothing applied** — generated YAML is local and deletable
+- **Só inspecione:** responda perguntas com `get`, `describe`, `explain` — não crie nada
+- **Gere YAML:** `kubectl run … --dry-run=client -o yaml` e `create deployment … --dry-run=client -o yaml`
+- **Consulte:** extraia o nome de um node com `-o jsonpath`; filtre com `-l`
+- **Quebre de propósito:** um objeto que **passa no `--dry-run=client` mas falha no `--dry-run=server`**
+- **Nada aplicado** — o YAML gerado é local e deletável

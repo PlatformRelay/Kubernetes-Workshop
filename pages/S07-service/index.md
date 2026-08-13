@@ -9,83 +9,88 @@ track: Core
 
 # Service
 
-Red line 3/5 · A stable address and name in front of Pods that keep coming and
-going — and the one selector bug everyone hits.
+"Linha vermelha" 3/5 · Um endereço e um nome estáveis na frente de Pods que não
+param de ir e vir — e o bug de selector que todo mundo encontra.
 
-**core** · suggested Day 1 · Core track
+**core** · sugerido para o Day 1 · trilha Core
 
 <!--
-Section S07 — Service. Timing: ~30 min slides + 30 min lab.
-Outcome: learners can front a Deployment with a ClusterIP Service, explain
-selector → EndpointSlice → Pod, reach it by cluster DNS, and diagnose an empty
-EndpointSlice.
-Beats: problem (Pod IPs are ephemeral — S06 churn proved it) · types (ClusterIP/
-NodePort/LoadBalancer/ExternalName/headless) · mechanics (selector →
-EndpointSlices → Pods + DNS name) · magic-move add service.yaml · service-routing
-animation (US-X3, incl readiness variant → S14) · optional kube-proxy deep-dive
-(off by default) · recap to S08.
-Red line: the service.yaml built here IS labs/day-1/07-service's manifest; it
-selects the S06 Deployment's app: web Pods. CKx: CKAD/CKA Services & networking.
+Seção S07 — Service. Tempo: ~30 min de slides + 30 min de lab.
+Resultado: os participantes conseguem colocar um Service ClusterIP na frente de
+um Deployment, explicar selector → EndpointSlice → Pod, alcançá-lo pelo DNS do
+cluster e diagnosticar uma EndpointSlice vazia.
+Beats: problema (IPs de Pod são efêmeros — a rotatividade do S06 provou) · tipos
+(ClusterIP/NodePort/LoadBalancer/ExternalName/headless) · mecânica (selector →
+EndpointSlices → Pods + nome DNS) · magic-move adicionando service.yaml ·
+animação de roteamento do Service (US-X3, incl. variante de readiness → S14) ·
+deep-dive opcional de kube-proxy (desligado por default) · recap rumo ao S08.
+Red line: o service.yaml construído aqui É o manifesto de labs/day-1/07-service;
+ele seleciona os Pods app: web do Deployment do S06. CKx: CKAD/CKA Services &
+networking.
 -->
 
 ---
 layout: statement
-kicker: The problem
+kicker: O problema
 ---
 
-Every rollout in Lab 06 **changed the Pod IPs.**
+Cada rollout no Lab 06 **mudou os IPs dos Pods.**
 
-Pods are cattle: rescheduled, replaced, scaled — each one gets a fresh IP, and the
-old one is gone for good. No client can hardcode an address that moves on every
-deploy. A **Service** gives that shifting set of Pods **one stable virtual IP and
-one DNS name** that never change, no matter how the Pods churn beneath it.
+Pods são gado: reagendados, substituídos, escalados — cada um ganha um IP novo, e
+o antigo se vai para sempre. Nenhum cliente pode fixar no código um endereço que
+muda a cada deploy. Um **Service** dá a esse conjunto mutável de Pods **um IP
+virtual estável e um nome DNS** que nunca mudam, não importa como os Pods girem
+por baixo dele.
 
 <!--
-Speaker: this lands hardest right after S06 — they just watched the ReplicaSet
-mint new Pods with new IPs during the rollout. The Service is the stable front
-door; the Pods behind it are free to come and go. Lab 07 follows this section.
+Speaker: isto aterrissa com mais força logo depois do S06 — eles acabaram de ver
+o ReplicaSet cunhar Pods novos com IPs novos durante o rollout. O Service é a
+porta da frente estável; os Pods atrás dele são livres para ir e vir. O Lab 07
+vem depois desta seção.
 -->
 
 ---
 
-<span class="kw-kicker">One resource, several reaches</span>
+<span class="kw-kicker">Um recurso, vários alcances</span>
 
-# Service types — pick by *who needs to reach it*
+# Tipos de Service — escolha por *quem precisa alcançá-lo*
 
 <div class="kw-cols-2 mt-3 text-sm">
-  <KwCard heading="ClusterIP — the default" kind="svc">
-    A stable <strong>in-cluster</strong> virtual IP. Reachable only from inside
-    the cluster. This is what Lab 07 builds, and what every other type is built
-    on top of.
+  <KwCard heading="ClusterIP — o default" kind="svc">
+    Um IP virtual estável <strong>dentro do cluster</strong>. Alcançável apenas de
+    dentro do cluster. É o que o Lab 07 constrói, e sobre o que todos os outros
+    tipos são construídos.
   </KwCard>
   <KwCard heading="NodePort" kind="svc" variant="plain">
-    ClusterIP <em>plus</em> a fixed port on <strong>every node</strong>. The
-    low-level way in from outside — usually a building block, not an endpoint.
+    ClusterIP <em>mais</em> uma porta fixa em <strong>cada node</strong>. O caminho
+    de baixo nível para entrar de fora — normalmente um bloco de construção, não
+    um endpoint.
   </KwCard>
   <KwCard heading="LoadBalancer" kind="svc" variant="plain">
-    NodePort <em>plus</em> a cloud/provider external IP. The usual way to expose
-    <strong>one</strong> service externally at L4.
+    NodePort <em>mais</em> um IP externo de cloud/provedor. A forma usual de expor
+    <strong>um</strong> service externamente em L4.
   </KwCard>
   <KwCard heading="ExternalName" kind="svc" variant="plain">
-    No proxying — just a DNS <code>CNAME</code> to an external host. An in-cluster
-    alias for something outside.
+    Sem proxy nenhum — apenas um <code>CNAME</code> de DNS para um host externo.
+    Um alias dentro do cluster para algo fora dele.
   </KwCard>
 </div>
 
 <div v-click class="mt-4 kw-muted text-sm">
 
-**Headless** (`clusterIP: None`) is the odd one out: no virtual IP at all — DNS
-returns the **Pod IPs directly**. It's how **StatefulSets** give each Pod a
-stable name.
+**Headless** (`clusterIP: None`) é o ponto fora da curva: nenhum IP virtual — o
+DNS retorna os **IPs dos Pods diretamente**. É assim que os **StatefulSets** dão
+a cada Pod um nome estável.
 
 </div>
 
 <!--
-Speaker: the organizing idea is REACH, not a feature list. ClusterIP = inside;
-NodePort/LoadBalancer = progressively more outside; ExternalName = pointer out;
-headless = no VIP, raw Pod IPs. Note the nesting: LoadBalancer ⊃ NodePort ⊃
-ClusterIP. Headless forward-links to S12 — don't over-explain it here. Lab 07 is
-ClusterIP only, which works identically in namespace and kind.
+Speaker: a ideia organizadora é ALCANCE, não uma lista de features. ClusterIP =
+dentro; NodePort/LoadBalancer = progressivamente mais fora; ExternalName =
+ponteiro para fora; headless = sem VIP, IPs de Pod crus. Note o aninhamento:
+LoadBalancer ⊃ NodePort ⊃ ClusterIP. Headless aponta para o S12 — não explique
+demais aqui. O Lab 07 é só ClusterIP, que funciona de forma idêntica em
+namespace e kind.
 -->
 
 ---
@@ -94,9 +99,9 @@ clicks: 3
 
 <div class="kw-slide-dense">
 
-<span class="kw-kicker">Mental model</span>
+<span class="kw-kicker">Modelo mental</span>
 
-# A Service is a selector — the rest is bookkeeping
+# Um Service é um selector — o resto é contabilidade
 
 <div class="mt-2">
   <ServiceSelectorMap :step="$clicks" />
@@ -105,16 +110,16 @@ clicks: 3
 </div>
 
 <!--
-Speaker: two moving parts, stable vs live. Stable: the ClusterIP and the DNS
-name. Live: the EndpointSlice, rewritten every time a Pod appears/disappears or
-changes readiness. Say "EndpointSlices, not Endpoints" explicitly — Endpoints is
-deprecated. The selector-is-a-query framing pays off in Step 4 of the lab where a
-wrong selector silently empties the slice.
+Speaker: duas partes móveis, estável vs vivo. Estável: o ClusterIP e o nome DNS.
+Vivo: a EndpointSlice, reescrita toda vez que um Pod aparece/desaparece ou muda
+de readiness. Diga "EndpointSlices, não Endpoints" explicitamente — Endpoints
+está deprecated. O enquadramento "selector é uma consulta" se paga no Passo 4 do
+lab, onde um selector errado esvazia a slice silenciosamente.
 -->
 
 ---
 layout: code-walkthrough
-heading: 'Add a Service that selects the Deployment'
+heading: 'Adicione um Service que seleciona o Deployment'
 lab: labs/day-1/07-service.md
 ---
 
@@ -135,7 +140,7 @@ metadata:
     app: web
 spec:
   selector:
-    app: web            # the SAME label the Deployment stamps on its Pods
+    app: web            # o MESMO label que o Deployment carimba nos seus Pods
 ```
 
 ```yaml
@@ -147,29 +152,29 @@ metadata:
     app: web
 spec:
   selector:
-    app: web            # picks every Pod carrying this label
+    app: web            # seleciona todo Pod que carrega este label
   ports:
     - name: http
-      port: 80          # the Service port — what clients hit
-      targetPort: 8080  # the container port (containerPort in the Pod)
+      port: 80          # a porta do Service — o que os clientes acessam
+      targetPort: 8080  # a porta do container (containerPort no Pod)
 ```
 ````
 
 <!--
-Speaker: build it up: identity (name) → the wiring (selector = the Deployment's
-app: web label) → the ports. Stress port vs targetPort: port is what clients hit
-on the Service; targetPort is the containerPort on the Pod. Here they DIFFER —
-clients use plain :80 while the app listens unprivileged on :8080 — which is
-exactly the point people miss when both happen to be equal. This final frame IS
-labs/day-1/07-service's service.yaml, byte-for-byte; it sits BESIDE
-deployment.yaml, it doesn't edit it.
+Speaker: construa em camadas: identidade (nome) → a fiação (selector = o label
+app: web do Deployment) → as portas. Enfatize port vs targetPort: port é o que os
+clientes acessam no Service; targetPort é o containerPort no Pod. Aqui eles
+DIFEREM — os clientes usam :80 puro enquanto a aplicação escuta sem privilégio em
+:8080 — que é exatamente o ponto que as pessoas perdem quando os dois calham de
+ser iguais. Este frame final É o service.yaml de labs/day-1/07-service, byte a
+byte; ele fica AO LADO do deployment.yaml, não o edita.
 -->
 
 ---
 
-<span class="kw-kicker">The payoff · routing</span>
+<span class="kw-kicker">A recompensa · roteamento</span>
 
-# Selector → EndpointSlice → Pods, live
+# Selector → EndpointSlice → Pods, ao vivo
 
 <div class="mt-2">
   <ServiceRouting :step="$clicks" />
@@ -178,22 +183,23 @@ deployment.yaml, it doesn't edit it.
 <div class="mt-3 text-sm">
 <v-clicks at="1">
 
-- The ClusterIP never moves; requests **load-balance** across whatever is in the slice right now.
-- Fail one Pod's **readiness** and it flips **NotReady** — still `Running`, and for a beat its IP is still in the slice.
-- Then the endpoint controller **drops it from the slice** — traffic reroutes to the healthy two, callers see nothing.
+- O ClusterIP nunca se move; as requisições fazem **load-balance** entre o que estiver na slice naquele momento.
+- Derrube a **readiness** de um Pod e ele vira **NotReady** — ainda `Running`, e por um instante seu IP ainda está na slice.
+- Então o endpoint controller **o remove da slice** — o tráfego é redirecionado para os dois saudáveis, quem chama não vê nada.
 
 </v-clicks>
 </div>
 
 <!--
-Speaker: this is the shared US-X3 service-routing animation, owned here and reused
-by S14 for the readiness-probe story (same component, the removed Pod is the
-readiness-failing one). Click through FOUR states: slice populated → request fans
-out → one Pod goes NotReady while its IP is STILL listed (the probe failed; the
-endpoint controller hasn't reacted yet — that little window is real) → the
-controller drops the IP from the slice and traffic reroutes to two. Land the
-bridge: "membership in the slice = readiness, and S14 makes that a knob." The lab
-proves the dark version — a wrong selector empties the slice entirely.
+Speaker: esta é a animação compartilhada de roteamento de Service US-X3, que
+pertence a esta seção e é reutilizada pelo S14 para a história do readiness probe
+(mesmo componente, o Pod removido é o que falha na readiness). Avance por QUATRO
+estados: slice populada → requisição se espalha → um Pod fica NotReady enquanto
+seu IP AINDA está listado (o probe falhou; o endpoint controller ainda não
+reagiu — essa janelinha é real) → o controller remove o IP da slice e o tráfego
+vai para dois. Fixe a ponte: "pertencer à slice = readiness, e o S14 transforma
+isso em um botão." O lab prova a versão sombria — um selector errado esvazia a
+slice por completo.
 -->
 
 ---
@@ -202,27 +208,27 @@ showKubeProxy: false
 
 <div class="kw-slide-dense">
 
-<span class="kw-kicker">Optional deep-dive · off by default</span>
+<span class="kw-kicker">Deep-dive opcional · desligado por default</span>
 
-# How the ClusterIP actually forwards
+# Como o ClusterIP de fato encaminha
 
 <div v-if="$frontmatter.showKubeProxy">
 
 <div class="kw-cols-2 mt-2 text-sm">
-  <KwCard heading="kube-proxy programs the node" icon="⚙️">
-    The ClusterIP is <strong>virtual</strong> — on each node <strong>kube-proxy</strong>
-    writes <strong>iptables</strong> (or IPVS) rules that DNAT to a ready Pod IP.
+  <KwCard heading="O kube-proxy programa o node" icon="⚙️">
+    O ClusterIP é <strong>virtual</strong> — em cada node o <strong>kube-proxy</strong>
+    escreve regras de <strong>iptables</strong> (ou IPVS) que fazem DNAT para o IP de um Pod pronto.
   </KwCard>
   <KwCard heading="iptables vs IPVS" icon="🔀" variant="plain">
-    <strong>iptables</strong> is the common default; <strong>IPVS</strong> scales
-    better at large Service counts. Newer clusters may use <strong>nftables</strong>.
+    <strong>iptables</strong> é o default comum; <strong>IPVS</strong> escala
+    melhor com muitos Services. Clusters mais novos podem usar <strong>nftables</strong>.
   </KwCard>
 </div>
 
 <div class="mt-3 kw-muted text-sm">
 
-"Load-balancing" is really <strong>per-node packet rules</strong>, refreshed when the
-EndpointSlice changes — no proxy Pod in the data path.
+"Load-balancing" é na verdade <strong>regras de pacote por node</strong>, atualizadas
+quando a EndpointSlice muda — nenhum Pod de proxy no caminho dos dados.
 
 </div>
 
@@ -231,35 +237,37 @@ EndpointSlice changes — no proxy Pod in the data path.
 </div>
 
 <!--
-Speaker: build/v-if toggle — set showKubeProxy: true only for an infra-curious
-room; default keeps this slide collapsed to the heading so the core flow stays
-tight. Mirrors S00's showRefresher pattern. The one durable takeaway if you do
-show it: the ClusterIP is fiction maintained by kube-proxy as node-local rules —
-that's why there's no bottleneck proxy Pod.
+Speaker: toggle de build/v-if — defina showKubeProxy: true só para uma sala
+curiosa de infra; o default mantém este slide colapsado no heading para o fluxo
+central seguir enxuto. Espelha o padrão showRefresher do S00. O único takeaway
+durável se você mostrar: o ClusterIP é uma ficção mantida pelo kube-proxy como
+regras locais em cada node — por isso não existe um Pod de proxy como gargalo.
 -->
 
 ---
 layout: recap
-heading: 'Recap — stable front door, live backend'
-story: 'After every rollout the Pod IPs changed, but `curl http://web` kept working — the selector rewrote the slice underneath.'
-next: 'Ingress — one L7 entry point routing by host and path'
+heading: 'Recap — porta da frente estável, backend vivo'
+story: 'Depois de cada rollout os IPs dos Pods mudaram, mas `curl http://web` continuou funcionando — o selector reescreveu a slice por baixo.'
+next: 'Ingress — um único ponto de entrada L7 roteando por host e path'
 ---
 
-- A **Service** is a stable ClusterIP + DNS name over a churning set of Pods —
-  the fix for the ephemeral IPs the Deployment kept changing
-- The `selector` is a **query**; matching Pod IPs land in an **EndpointSlice**
-  (not the legacy `Endpoints`), refreshed live as Pods and readiness change
-- `service.yaml` sits **beside** `deployment.yaml` and selects its `app: web`
-  Pods — red line 3/5
-- The classic trap: a wrong selector leaves the Service **healthy-looking but with
-  zero endpoints** — when a Service "doesn't work," check its endpoints first
+- Um **Service** é um ClusterIP estável + nome DNS sobre um conjunto de Pods em
+  rotatividade — o conserto para os IPs efêmeros que o Deployment vivia mudando
+- O `selector` é uma **consulta**; os IPs dos Pods que casam caem em uma
+  **EndpointSlice** (não o legado `Endpoints`), atualizada ao vivo conforme Pods
+  e readiness mudam
+- O `service.yaml` fica **ao lado** do `deployment.yaml` e seleciona seus Pods
+  `app: web` — red line 3/5
+- A armadilha clássica: um selector errado deixa o Service **com aparência
+  saudável mas com zero endpoints** — quando um Service "não funciona", cheque os
+  endpoints primeiro
 
 <!--
-Speaker: the punchline for the lab is the silent failure — Service green, curl
-dead, because the slice is empty. Drill the reflex: "check endpoints, not the
-Service object." Then hand off: a ClusterIP is in-cluster only; reaching it from
-outside by host and path with TLS is S08, Ingress. Keep service.yaml +
-deployment.yaml on disk for Lab 08.
+Speaker: a punchline do lab é a falha silenciosa — Service verde, curl morto,
+porque a slice está vazia. Treine o reflexo: "cheque os endpoints, não o objeto
+Service." Depois passe o bastão: um ClusterIP é só dentro do cluster; alcançá-lo
+de fora por host e path com TLS é o S08, Ingress. Mantenha service.yaml +
+deployment.yaml no disco para o Lab 08.
 -->
 
 ---
@@ -269,9 +277,9 @@ duration: 30 min
 env: namespace ✓ / kind ✓
 ---
 
-## Lab 07 — Expose & debug routing
+## Lab 07 — Exponha & debugue o roteamento
 
-- Add `service.yaml` beside the Deployment; confirm a stable `ClusterIP`
-- Read the **EndpointSlice** — one address per Pod; `curl http://web` by DNS from a temp Pod
-- **Break the selector** to a label no Pod has → slice empties, curl times out, Service still green
-- Fix the label → endpoints repopulate in a second; keep both files for Lab 08.
+- Adicione o `service.yaml` ao lado do Deployment; confirme um `ClusterIP` estável
+- Leia a **EndpointSlice** — um endereço por Pod; `curl http://web` por DNS a partir de um Pod temporário
+- **Quebre o selector** para um label que nenhum Pod tem → a slice esvazia, o curl dá timeout, o Service continua verde
+- Conserte o label → os endpoints repopulam em um segundo; guarde os dois arquivos para o Lab 08.
