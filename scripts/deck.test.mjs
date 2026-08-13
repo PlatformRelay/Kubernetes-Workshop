@@ -1461,6 +1461,28 @@ describe('S07/S14 — the NotReady beat precedes the reroute (US-FIX-REMOVEAT-BE
     )
   })
 
+  it('the failing pod stays a traffic target at the NotReady beat (removeAt - 1)', () => {
+    const src = componentSource()
+    const hotBind = src.match(/'is-hot':\s*([^,\n]+)/)
+    assert.ok(hotBind, 'is-hot class binding must exist on the pod')
+    const expr = hotBind[1].trim()
+    assert.doesNotMatch(
+      expr,
+      /^routing\s*&&\s*isReady\(i\)$/,
+      'is-hot must not drop solely because the pod is NotReady — kube-proxy still targets IPs listed in the slice',
+    )
+    assert.match(
+      expr,
+      /routing\s*&&\s*!isRemoved\(i\)/,
+      'is-hot must follow slice membership: still listed ⇒ still a traffic target',
+    )
+    assert.match(
+      src,
+      /\.kw-route-pod\.is-hot\.is-failing[\s\S]{0,240}--kw-accent/,
+      'combined NotReady+in-slice CSS must keep the traffic (accent) highlight; is-failing must not win the cascade alone',
+    )
+  })
+
   for (const rel of ['pages/S07-service/index.md', 'pages/S14-probes/index.md']) {
     it(`${rel} narrates NotReady-still-in-the-slice before the slice drop, in click order`, () => {
       const visible = visibleOf(rel)

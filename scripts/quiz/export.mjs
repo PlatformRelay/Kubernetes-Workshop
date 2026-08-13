@@ -5,7 +5,7 @@ const root = path.resolve(import.meta.dirname, '../..')
 const outFlag = process.argv.indexOf('--out')
 if (outFlag < 0 || !process.argv[outFlag + 1]) throw new Error('usage: export.mjs --out DIRECTORY')
 const outputDirectory = path.resolve(process.argv[outFlag + 1])
-const bank = JSON.parse(readFileSync(path.join(root, 'quiz/questions.prototype.json'), 'utf8'))
+const bank = JSON.parse(readFileSync(path.join(root, 'quiz/questions.json'), 'utf8'))
 mkdirSync(outputDirectory, { recursive: true })
 
 function renderQuestion(question, reveal) {
@@ -16,7 +16,7 @@ function renderQuestion(question, reveal) {
   return `## ${question.section} · ${question.id}\n\n${question.prompt}\n\n${options}${answer}`
 }
 
-const header = '# Workshop quiz prototype\n\nGenerated from `quiz/questions.prototype.json`; the repository remains the source of truth.'
+const header = '# Workshop quiz\n\nGenerated from `quiz/questions.json`; the repository remains the source of truth.'
 writeFileSync(path.join(outputDirectory, 'participant.md'), `${header}\n\n${bank.questions.map(question => renderQuestion(question, false)).join('\n\n---\n\n')}\n`)
 writeFileSync(path.join(outputDirectory, 'facilitator.md'), `${header}\n\n${bank.questions.map(question => renderQuestion(question, true)).join('\n\n---\n\n')}\n`)
 
@@ -42,4 +42,4 @@ const preview = {
   },
 }
 writeFileSync(path.join(outputDirectory, 'adapter-preview.json'), `${JSON.stringify(preview, null, 2)}\n`)
-process.stdout.write(`Exported offline and adapter prototypes to ${outputDirectory}.\n`)
+process.stdout.write(`Exported offline participant/facilitator copies and adapter preview to ${outputDirectory}.\n`)

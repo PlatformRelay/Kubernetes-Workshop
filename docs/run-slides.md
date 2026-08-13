@@ -141,4 +141,4 @@ pnpm pages:build
 
 - Ambiente de cluster/labs (kind): [setup.md](./setup.md)
 - Decks ao vivo no Pages e releases em PDF: [downloads.md](./downloads.md)
-- Protótipo de quiz (scripts Node, não Slidev): [quiz/README.md](https://github.com/PlatformRelay/Kubernetes-Workshop/blob/main/quiz/README.md)
+- Banco de questões (scripts Node, não Slidev): [quiz/README.md](https://github.com/PlatformRelay/Kubernetes-Workshop/blob/main/quiz/README.md)

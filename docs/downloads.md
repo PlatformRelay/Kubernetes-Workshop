@@ -56,4 +56,4 @@ no início do corpo das release notes. Como as tags são cortadas: [release.md](
 | --- | --- |
 | Labs do participante | [labs/README.md](https://github.com/PlatformRelay/Kubernetes-Workshop/tree/main/labs#readme) |
 | Lab 00 (comece aqui) | [labs/day-1/00-setup.md](https://github.com/PlatformRelay/Kubernetes-Workshop/blob/main/labs/day-1/00-setup.md) |
-| Protótipo de quiz | [quiz/README.md](https://github.com/PlatformRelay/Kubernetes-Workshop/tree/main/quiz#readme) |
+| Banco de questões | [quiz/README.md](https://github.com/PlatformRelay/Kubernetes-Workshop/tree/main/quiz#readme) |

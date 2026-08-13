@@ -36,14 +36,14 @@ resume; ela não passa na frente dos trackers privados.
 
 ## Direção
 
-### Quizzes ao vivo — planned
+### Quizzes ao vivo — planned (host)
 
-Perguntas de retrieval por seção mais um add-on de live-quiz self-hosted para a sala.
-Um protótipo portátil de banco de questões já existe em
-[`quiz/`](https://github.com/PlatformRelay/Kubernetes-Workshop/tree/main/quiz).
+As perguntas de retrieval por seção já são entregues como um banco portátil em
+[`quiz/`](https://github.com/PlatformRelay/Kubernetes-Workshop/tree/main/quiz)
+(export Markdown para facilitador e participante; sem host ao vivo).
 O spike de arquitetura avaliou três candidatos FOSS de live host e **não adotou
-nenhum deles (0/3)** — então o live host e o banco de questões completo seguem **planned**,
-com a arquitetura ainda em aberto.
+nenhum deles (0/3)** — então o add-on de live quiz self-hosted segue **planned**,
+com a arquitetura do host ainda em aberto.
 
 [Discuta os quizzes ao vivo →](https://github.com/PlatformRelay/Kubernetes-Workshop/discussions/21)
 

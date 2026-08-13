@@ -5,9 +5,11 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 import test from 'node:test'
 import { gunzipSync, gzipSync } from 'node:zlib'
+import { sections as deckSections } from '../deck-manifest.mjs'
 
 const root = path.resolve(import.meta.dirname, '../..')
-const questionsPath = path.join(root, 'quiz/questions.prototype.json')
+const questionsPath = path.join(root, 'quiz/questions.json')
+const requiredSections = deckSections.filter(section => section.status === 'authored')
 
 function readGzipJson(file) {
   return JSON.parse(gunzipSync(readFileSync(file), { encoding: 'utf8' }))
@@ -46,9 +48,53 @@ function completeSbom(name, sourceCommit) {
   }
 }
 
-test('prototype bank validates three stable section and question IDs', () => {
+test('bank covers every authored section with at least two questions', () => {
   const output = run('scripts/quiz/validate.mjs')
-  assert.match(output, /3 questions across 3 sections/)
+  const bank = JSON.parse(readFileSync(questionsPath, 'utf8'))
+  const covered = new Set(bank.questions.map(question => question.section))
+  assert.match(output, new RegExp(`Validated ${bank.questions.length} questions across ${covered.size} sections`))
+  assert.equal(covered.size, requiredSections.length)
+  for (const section of requiredSections) {
+    const count = bank.questions.filter(question => question.section === section.id).length
+    assert.ok(count >= 2, `${section.id} needs at least 2 questions, found ${count}`)
+  }
+})
+
+test('validator fails when an authored section has fewer than two questions', () => {
+  const bank = JSON.parse(readFileSync(questionsPath, 'utf8'))
+  const target = requiredSections[0].id
+  bank.questions = [
+    ...bank.questions.filter(question => question.section !== target),
+    ...bank.questions.filter(question => question.section === target).slice(0, 1),
+  ]
+  if (bank.questions.length === 0) {
+    bank.questions = [{
+      id: 'S99-Q-PAD-01',
+      section: 'S99',
+      prompt: 'padding',
+      options: [
+        { id: 'a', text: 'a', rationale: 'a' },
+        { id: 'b', text: 'b', rationale: 'b' },
+        { id: 'c', text: 'c', rationale: 'c' },
+      ],
+      answer: 'a',
+      explanation: 'padding',
+      difficulty: 'introductory',
+      learningObjective: 'padding',
+      references: ['https://kubernetes.io/docs/'],
+    }]
+  }
+  const directory = mkdtempSync(path.join(tmpdir(), 'quiz-coverage-'))
+  const thinPath = path.join(directory, 'thin.json')
+  writeFileSync(thinPath, JSON.stringify(bank))
+
+  assert.throws(
+    () => run('scripts/quiz/validate.mjs', [thinPath]),
+    error => {
+      assert.match(error.stderr, new RegExp(`${target}: need at least 2 questions`))
+      return true
+    },
+  )
 })
 
 test('validator rejects duplicate IDs and an answer outside the option set', () => {
@@ -128,9 +174,11 @@ test('adapter preview preserves IDs but never claims unsupported automatic impor
   assert.equal(preview.claper.importMode, 'manual')
   assert.equal(preview.classquiz.importMode, 'authenticated-native-export-shape')
   assert.equal(preview.quizdock.importMode, 'authenticated-rest-api')
+  const bank = JSON.parse(readFileSync(questionsPath, 'utf8'))
+  const questionIds = bank.questions.map(question => question.id)
   for (const candidate of Object.values(preview)) {
     assert.equal(candidate.productionReady, false)
-    assert.deepEqual(candidate.questionIds, ['S05-Q-SPK-01', 'S07-Q-SPK-01', 'S09-Q-SPK-01'])
+    assert.deepEqual(candidate.questionIds, questionIds)
   }
 })
 
@@ -358,9 +406,10 @@ test('offline rehearsal records replayable reveal, reset, and failure-fallback e
   run('scripts/quiz/rehearse-offline.mjs', ['--out', directory, '--timestamp', timestamp])
 
   const transcript = readFileSync(path.join(directory, 'transcript.md'), 'utf8')
+  const bank = JSON.parse(readFileSync(questionsPath, 'utf8'))
   assert.match(transcript, new RegExp(timestamp))
   assert.match(transcript, /Scope: offline fallback only; no live service was exercised/)
-  assert.match(transcript, /Reveal check: PASS — 0 participant answers; 3 facilitator answers/)
+  assert.match(transcript, new RegExp(`Reveal check: PASS — 0 participant answers; ${bank.questions.length} facilitator answers`))
   assert.match(transcript, /Reset check: PASS — repeated export produced identical SHA-256 outputs/)
   assert.match(transcript, /Failure fallback: PASS — participant and facilitator files remain readable without an audience service/)
   assert.match(transcript, /Input SHA-256: `[0-9a-f]{64}`/)

@@ -1,0 +1,816 @@
+{
+  "$schema": "./questions.schema.json",
+  "schemaVersion": 1,
+  "questions": [
+    {
+      "id": "S00-Q-RET-01",
+      "section": "S00",
+      "prompt": "A lab task looks stuck. What does this workshop guarantee about every task and question?",
+      "options": [
+        { "id": "spoiler", "text": "Each task and question has a collapsed spoiler with the exact solution or expected output.", "rationale": "The teaching model is that a learner can never stay permanently stuck: spoilers are part of the lab contract." },
+        { "id": "ask-later", "text": "Answers are withheld until a live quiz host reveals them at the end of the day.", "rationale": "Labs are standalone Markdown with spoilers; they do not depend on a live quiz service." },
+        { "id": "exam-mode", "text": "Tasks are unsolved on purpose so the room can sit a certification exam.", "rationale": "The workshop is aligned with CK* domains as a design check, not exam prep." }
+      ],
+      "answer": "spoiler",
+      "explanation": "Every lab task and question ships a <details> spoiler so a learner can unblock without waiting for a facilitator or a live quiz host.",
+      "difficulty": "introductory",
+      "learningObjective": "Use the spoiler contract instead of getting stuck on a lab step.",
+      "references": ["https://kubernetes.io/docs/tutorials/hello-minikube/"]
+    },
+    {
+      "id": "S00-Q-SCN-01",
+      "section": "S00",
+      "prompt": "Before applying any workload, Lab 00 asks you to confirm context and namespace. Why start there?",
+      "options": [
+        { "id": "wrong-cluster", "text": "A valid kubeconfig can still point at the wrong cluster or namespace, so later applies land in the wrong place.", "rationale": "Pre-flight checks catch context and namespace mistakes before the first apply." },
+        { "id": "admin-only", "text": "Every lab needs cluster-admin, so you must prove you can create nodes first.", "rationale": "Most labs are namespace-scoped; cluster-admin is not the default teaching model." },
+        { "id": "skip-kubectl", "text": "kubectl is optional if the live deck is open, so the check is only ceremonial.", "rationale": "Labs are applied with kubectl (or kind); the deck does not apply manifests for you." }
+      ],
+      "answer": "wrong-cluster",
+      "explanation": "Lab 00 is a pre-flight: confirm the intended context and namespace so later labs do not mutate the wrong cluster.",
+      "difficulty": "introductory",
+      "learningObjective": "Verify kubeconfig context and namespace before the first apply.",
+      "references": ["https://kubernetes.io/docs/reference/kubectl/generated/kubectl_config/kubectl_config_current-context/"]
+    },
+    {
+      "id": "S01-Q-RET-01",
+      "section": "S01",
+      "prompt": "You change a COPY instruction in a Dockerfile. What happens to image layers?",
+      "options": [
+        { "id": "invalidate-after", "text": "That layer and every layer after it are rebuilt; earlier unchanged layers can still be cached.", "rationale": "Docker/OCI layer cache keys on the instruction and its inputs; a changed COPY busts that layer and all following ones." },
+        { "id": "rebuild-all", "text": "The entire image is always rebuilt from scratch, including the base image download.", "rationale": "Unchanged earlier layers remain cache hits; the base image is not inherently re-pulled." },
+        { "id": "only-copy", "text": "Only the COPY layer changes; later RUN layers keep their old cached result even if they used the copied files.", "rationale": "Later layers depend on the parent digest, so they cannot stay cached after the COPY layer changes." }
+      ],
+      "answer": "invalidate-after",
+      "explanation": "Image builds are a stack of layers. Changing COPY invalidates that layer and everything after it; earlier layers can still be reused.",
+      "difficulty": "introductory",
+      "learningObjective": "Explain how Dockerfile layer cache invalidation works.",
+      "references": ["https://docs.docker.com/build/cache/"]
+    },
+    {
+      "id": "S01-Q-SCN-01",
+      "section": "S01",
+      "prompt": "A Go service image is ~800 MB because the toolchain is in the same stage as the app. What is the applied fix this section teaches?",
+      "options": [
+        { "id": "multistage", "text": "Build in one stage, then copy only the static binary into a tiny runtime stage.", "rationale": "Multi-stage builds keep compilers and module caches out of the image you run." },
+        { "id": "bigger-node", "text": "Schedule the fat image on a larger node so the extra packages do not matter.", "rationale": "Node size does not remove the toolchain from the attack surface or pull time." },
+        { "id": "latest-tag", "text": "Retag the same image as latest so Kubernetes pulls a smaller digest automatically.", "rationale": "Tags do not strip layers; latest is also a movable pointer, not a size fix." }
+      ],
+      "answer": "multistage",
+      "explanation": "A build stage compiles the binary; the final stage copies only that artifact onto a minimal base so the toolchain never ships.",
+      "difficulty": "introductory",
+      "learningObjective": "Apply a multi-stage build so the runtime image does not contain the toolchain.",
+      "references": ["https://docs.docker.com/build/building/multi-stage/"]
+    },
+    {
+      "id": "S02-Q-RET-01",
+      "section": "S02",
+      "prompt": "A Dockerfile runs curl with a token in the instruction itself. Why is that a supply-chain problem even after the build finishes?",
+      "options": [
+        { "id": "layer-history", "text": "The token is recorded in an image layer and in build history, so anyone with the image can recover it.", "rationale": "RUN/COPY layers persist. Secrets in instructions are not erased by later layers." },
+        { "id": "runtime-only", "text": "The token exists only in the builder's memory and cannot appear in the pushed image.", "rationale": "Build instructions and their outputs are part of the image unless you use a secret mount that never writes a layer." },
+        { "id": "kube-secret", "text": "Kubernetes will automatically convert that layer into a Secret object at pull time.", "rationale": "The platform does not scrape Dockerfile history into Secrets." }
+      ],
+      "answer": "layer-history",
+      "explanation": "Anything written into a layer stays in the image. Mount the secret at build time so it is used and never persisted.",
+      "difficulty": "intermediate",
+      "learningObjective": "Keep build secrets out of image layers.",
+      "references": ["https://docs.docker.com/build/building/secrets/"]
+    },
+    {
+      "id": "S02-Q-SCN-01",
+      "section": "S02",
+      "prompt": "A base image is referenced as alpine:3.20. What pinning practice does this section require for a reproducible, auditable runtime?",
+      "options": [
+        { "id": "digest", "text": "Pin the base by digest (sha256:…) so the exact bytes cannot move under the tag.", "rationale": "Tags are mutable. A digest names the image content." },
+        { "id": "major-only", "text": "Use alpine:latest so you always receive security patches without editing the file.", "rationale": "latest moves; it is the opposite of a pin and hides what you actually run." },
+        { "id": "retag-local", "text": "Retag alpine:3.20 as alpine:prod on your laptop; the cluster will resolve that name to the same digest forever.", "rationale": "A local retag is not a content pin and is not what other machines will pull." }
+      ],
+      "answer": "digest",
+      "explanation": "Digest pins name the exact blob. Version tags can be moved by a rebuild of the same name.",
+      "difficulty": "intermediate",
+      "learningObjective": "Pin container bases by digest rather than a movable tag.",
+      "references": ["https://docs.docker.com/reference/cli/docker/image/pull/#pull-an-image-by-digest-recommended"]
+    },
+    {
+      "id": "S03-Q-RET-01",
+      "section": "S03",
+      "prompt": "What does the Kubernetes control loop actually do?",
+      "options": [
+        { "id": "reconcile", "text": "Observe current state, diff it against desired state, act, and repeat.", "rationale": "Controllers reconcile: they do not run a one-shot script and exit." },
+        { "id": "imperative", "text": "SSH to each node once, start containers, and then forget them.", "rationale": "That is an imperative host model, not reconciliation." },
+        { "id": "scheduler-only", "text": "Only the scheduler loops; kubelets and controllers apply objects once.", "rationale": "kubelets and controllers also continuously reconcile their objects." }
+      ],
+      "answer": "reconcile",
+      "explanation": "Desired state lives in the API. Controllers and kubelets repeatedly observe, diff, and act until reality matches.",
+      "difficulty": "introductory",
+      "learningObjective": "Describe reconciliation as observe, diff, act, repeat.",
+      "references": ["https://kubernetes.io/docs/concepts/architecture/controller/"]
+    },
+    {
+      "id": "S03-Q-SCN-01",
+      "section": "S03",
+      "prompt": "You inspect a cluster. Where does desired state for a Deployment live, and where do the containers actually run?",
+      "options": [
+        { "id": "api-vs-nodes", "text": "Desired state is stored in the control plane (API server/etcd); containers run on worker nodes via kubelets.", "rationale": "The control plane holds objects; nodes run Pods." },
+        { "id": "only-nodes", "text": "Both desired state and containers live only on the node that first created the Pod.", "rationale": "Losing that node would lose the API objects; that is not how the control plane works." },
+        { "id": "only-laptop", "text": "Desired state lives in your local YAML files; the cluster never stores it.", "rationale": "kubectl apply writes objects into the API. Git may be a source, but the cluster stores the live object." }
+      ],
+      "answer": "api-vs-nodes",
+      "explanation": "etcd/API is the desired-state store. kubelets on nodes run the containers that realize that state.",
+      "difficulty": "introductory",
+      "learningObjective": "Separate control-plane desired state from node-level execution.",
+      "references": ["https://kubernetes.io/docs/concepts/architecture/"]
+    },
+    {
+      "id": "S04-Q-RET-01",
+      "section": "S04",
+      "prompt": "You need a compact table of Pods, then the events and conditions for one Pod. Which pair of verbs matches that?",
+      "options": [
+        { "id": "get-describe", "text": "kubectl get for the list; kubectl describe for the object plus recent events.", "rationale": "get is the inventory; describe is the narrative including events." },
+        { "id": "apply-twice", "text": "kubectl apply twice — the second call prints events instead of applying.", "rationale": "apply writes objects; it is not an inspect tool." },
+        { "id": "exec-only", "text": "kubectl exec is required because Pod status is only visible from inside the container.", "rationale": "Status and events are API data; exec is for a process in the container." }
+      ],
+      "answer": "get-describe",
+      "explanation": "get answers 'what exists'; describe answers 'what is going on with this object', including events.",
+      "difficulty": "introductory",
+      "learningObjective": "Choose get versus describe for inventory versus diagnosis.",
+      "references": ["https://kubernetes.io/docs/reference/kubectl/cheatsheet/"]
+    },
+    {
+      "id": "S04-Q-SCN-01",
+      "section": "S04",
+      "prompt": "A JSONPath one-liner is the wrong tool for a first look at a misbehaving Pod. What should you do first?",
+      "options": [
+        { "id": "human-output", "text": "Use get/describe (and optionally -o wide or -o yaml) to see status, IPs, and events before crafting a query.", "rationale": "Scavenger-hunt labs start with human-readable output, then narrow." },
+        { "id": "delete-first", "text": "Delete the Pod immediately so the controller reprints a clean object.", "rationale": "Deleting destroys evidence; describe first." },
+        { "id": "edit-live", "text": "kubectl edit the live object to add a debug sidecar before reading status.", "rationale": "You can inspect without mutating; edit is a later, deliberate change." }
+      ],
+      "answer": "human-output",
+      "explanation": "Start with get/describe so you see phase, conditions, and events. JSONPath is for extracting a known field once you know what you are looking at.",
+      "difficulty": "introductory",
+      "learningObjective": "Inspect with get/describe before writing a custom query.",
+      "references": ["https://kubernetes.io/docs/reference/kubectl/generated/kubectl_describe/"]
+    },
+    {
+      "id": "S05-Q-SPK-01",
+      "section": "S05",
+      "prompt": "A Pod's container exits and the kubelet restarts it. Which statement is accurate?",
+      "options": [
+        { "id": "same-pod", "text": "The Pod identity stays the same while its container restart count increases.", "rationale": "A container restart within the Pod does not create a replacement Pod." },
+        { "id": "new-pod", "text": "The kubelet creates a new Pod with a new UID.", "rationale": "A controller or user creates replacement Pods; a container restart alone does not." },
+        { "id": "new-deployment", "text": "Kubernetes creates a Deployment to preserve the workload.", "rationale": "Kubernetes does not infer a Deployment from a standalone Pod." }
+      ],
+      "answer": "same-pod",
+      "explanation": "The kubelet restarts containers according to the Pod restart policy; the Pod UID is unchanged.",
+      "difficulty": "introductory",
+      "learningObjective": "Distinguish a container restart from Pod replacement.",
+      "references": ["https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/"]
+    },
+    {
+      "id": "S05-Q-SCN-01",
+      "section": "S05",
+      "prompt": "Two containers in one Pod need to share a port namespace and talk on localhost. What is true?",
+      "options": [
+        { "id": "shared-net", "text": "Containers in a Pod share network namespace (and can share volumes); they are not separate Pods.", "rationale": "A Pod is one shared context: network, IPC, and optional volumes." },
+        { "id": "two-ips", "text": "Each container gets its own Pod IP, so they must use a Service to reach each other.", "rationale": "The Pod has one IP; containers share it." },
+        { "id": "init-required", "text": "They can only share localhost if both are initContainers.", "rationale": "Init containers run first and exit; sharing localhost is a property of the Pod, not of init." }
+      ],
+      "answer": "shared-net",
+      "explanation": "A Pod is one network namespace. Sidecars and the main container share localhost; init containers run to completion first.",
+      "difficulty": "introductory",
+      "learningObjective": "Use the Pod as a shared network and volume context.",
+      "references": ["https://kubernetes.io/docs/concepts/workloads/pods/"]
+    },
+    {
+      "id": "S06-Q-RET-01",
+      "section": "S06",
+      "prompt": "You edit a Deployment's pod template. Which objects actually change underneath?",
+      "options": [
+        { "id": "rs-pods", "text": "The Deployment creates a new ReplicaSet, which creates new Pods; the old ReplicaSet is scaled down.", "rationale": "Deployment → ReplicaSet → Pods is the ownership chain for a rollout." },
+        { "id": "mutate-pods", "text": "Existing Pods are patched in place and keep the same names and UIDs.", "rationale": "Pod specs are mostly immutable; rollouts replace Pods." },
+        { "id": "new-service", "text": "Kubernetes creates a new Service so old and new Pods can run side by side forever.", "rationale": "A Service is independent; rollouts do not imply a new Service." }
+      ],
+      "answer": "rs-pods",
+      "explanation": "A Deployment manages ReplicaSets. A template change starts a new ReplicaSet and rolls Pods from the old one to the new one.",
+      "difficulty": "introductory",
+      "learningObjective": "Explain Deployment, ReplicaSet, and Pod roles during a rollout.",
+      "references": ["https://kubernetes.io/docs/concepts/workloads/controllers/deployment/"]
+    },
+    {
+      "id": "S06-Q-SCN-01",
+      "section": "S06",
+      "prompt": "A rollout of a new image is unhealthy. What does this section teach as the immediate recovery?",
+      "options": [
+        { "id": "rollback", "text": "Roll back to the previous Deployment revision so the last known ReplicaSet is scaled up again.", "rationale": "Deployments keep a revision history specifically so rollbacks are a first-class operation." },
+        { "id": "delete-deploy", "text": "Delete the Deployment so kubelet recreates the old image from node cache.", "rationale": "Deleting the Deployment deletes its ReplicaSets and Pods; it is not a rollback." },
+        { "id": "edit-rs", "text": "Manually rename the old ReplicaSet; the Deployment will ignore the new one.", "rationale": "The Deployment owns ReplicaSet selection; renaming is not the supported rollback path." }
+      ],
+      "answer": "rollback",
+      "explanation": "kubectl rollout undo (or an equivalent revert of the revision) scales the previous ReplicaSet back up.",
+      "difficulty": "intermediate",
+      "learningObjective": "Recover from a bad rollout with a Deployment rollback.",
+      "references": ["https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#rolling-back-a-deployment"]
+    },
+    {
+      "id": "S07-Q-SPK-01",
+      "section": "S07",
+      "prompt": "A Service has no ready endpoints although matching Pods are Running. What should you inspect first?",
+      "options": [
+        { "id": "readiness", "text": "The Pods' readiness conditions and the Service selector.", "rationale": "EndpointSlices normally include ready matching Pods; readiness and selector mismatches are the direct checks." },
+        { "id": "nodeport", "text": "Whether the Service uses NodePort.", "rationale": "Service type does not repair selector or readiness problems." },
+        { "id": "replicaset", "text": "Whether the Pods share a ReplicaSet owner.", "rationale": "Service selection is label-based and independent of controller ownership." }
+      ],
+      "answer": "readiness",
+      "explanation": "Services discover backends through selectors and EndpointSlices; unready or non-matching Pods do not become ready endpoints.",
+      "difficulty": "intermediate",
+      "learningObjective": "Diagnose the selector-to-EndpointSlice routing path.",
+      "references": ["https://kubernetes.io/docs/concepts/services-networking/service/"]
+    },
+    {
+      "id": "S07-Q-SCN-01",
+      "section": "S07",
+      "prompt": "A frontend in the cluster must reach a backend without exposing the backend outside the cluster. Which Service type matches that intent?",
+      "options": [
+        { "id": "clusterip", "text": "ClusterIP — a virtual IP reachable from inside the cluster.", "rationale": "ClusterIP is the default in-cluster type; NodePort/LoadBalancer add off-cluster reachability." },
+        { "id": "nodeport", "text": "NodePort — required whenever two Pods need to talk.", "rationale": "Pod-to-Service traffic uses ClusterIP; NodePort is for reaching from outside a node IP." },
+        { "id": "externalname", "text": "ExternalName — Kubernetes will copy the backend Pods onto a public hostname.", "rationale": "ExternalName is a DNS CNAME to an external name, not an in-cluster selector Service." }
+      ],
+      "answer": "clusterip",
+      "explanation": "Pick Service type by who needs to reach the workload. In-cluster only means ClusterIP.",
+      "difficulty": "introductory",
+      "learningObjective": "Choose a Service type from the intended clients.",
+      "references": ["https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types"]
+    },
+    {
+      "id": "S08-Q-RET-01",
+      "section": "S08",
+      "prompt": "You apply an Ingress object and nothing answers on the hostname. What is the usual missing piece?",
+      "options": [
+        { "id": "controller", "text": "An Ingress controller must be running to implement the rules; the API object alone does not proxy traffic.", "rationale": "Ingress is a spec. A controller (Contour, ingress-nginx, …) programs a proxy." },
+        { "id": "core-dns", "text": "CoreDNS automatically becomes an HTTP reverse proxy when it sees an Ingress.", "rationale": "CoreDNS answers cluster DNS; it does not implement Ingress." },
+        { "id": "service-mesh", "text": "A Service mesh is required before any Ingress object can be created.", "rationale": "Ingress does not depend on a mesh." }
+      ],
+      "answer": "controller",
+      "explanation": "Applied ≠ working. Watch the controller (and its LoadBalancer/address) before blaming the YAML rules.",
+      "difficulty": "introductory",
+      "learningObjective": "Treat Ingress as rules that a controller must implement.",
+      "references": ["https://kubernetes.io/docs/concepts/services-networking/ingress/"]
+    },
+    {
+      "id": "S08-Q-SCN-01",
+      "section": "S08",
+      "prompt": "Two hostnames must hit different Services through one controller. Which Ingress fields carry that routing intent?",
+      "options": [
+        { "id": "host-path", "text": "rules[].host and http.paths (including pathType) bound to a backend Service.", "rationale": "Host + path + pathType are the portable Ingress routing surface." },
+        { "id": "pod-ip", "text": "A hardcoded Pod IP in the Ingress, because Services cannot be Ingress backends.", "rationale": "Ingress backends are Services, not Pod IPs." },
+        { "id": "gatewayclass", "text": "spec.gatewayClassName on the Ingress object.", "rationale": "gatewayClassName is Gateway API, not Ingress." }
+      ],
+      "answer": "host-path",
+      "explanation": "An Ingress lists host and path rules. pathType (Prefix, Exact, ImplementationSpecific) is part of the rule, not an annotation afterthought.",
+      "difficulty": "intermediate",
+      "learningObjective": "Route two hostnames with Ingress host, path, and pathType.",
+      "references": ["https://kubernetes.io/docs/concepts/services-networking/ingress/#path-types"]
+    },
+    {
+      "id": "S09-Q-SPK-01",
+      "section": "S09",
+      "prompt": "Who chooses which GatewayClass a Gateway uses?",
+      "options": [
+        { "id": "gateway-author", "text": "The Gateway author sets spec.gatewayClassName.", "rationale": "GatewayClass selection is explicit in the Gateway specification." },
+        { "id": "controller-default", "text": "Whichever controller starts first becomes the default.", "rationale": "Gateway API does not select a class by controller startup order." },
+        { "id": "route-author", "text": "Each HTTPRoute chooses the GatewayClass directly.", "rationale": "Routes attach to Gateways; the Gateway selects the GatewayClass." }
+      ],
+      "answer": "gateway-author",
+      "explanation": "A Gateway references one GatewayClass by spec.gatewayClassName; Routes attach to the resulting Gateway listeners.",
+      "difficulty": "intermediate",
+      "learningObjective": "Explain the GatewayClass, Gateway, and HTTPRoute ownership boundary.",
+      "references": ["https://gateway-api.sigs.k8s.io/api-types/gatewayclass/"]
+    },
+    {
+      "id": "S09-Q-SCN-01",
+      "section": "S09",
+      "prompt": "An HTTPRoute is applied but traffic never arrives. The Gateway shows Programmed=False with AddressNotAssigned on kind. What should you conclude?",
+      "options": [
+        { "id": "status-why", "text": "Read Gateway/HTTPRoute status (Accepted, Programmed, ResolvedRefs): kind often has no cloud load balancer, while the proxy may still be reachable via port-forward.", "rationale": "The section teaches status conditions as the diagnosis, including AddressNotAssigned on kind." },
+        { "id": "wrong-api", "text": "Gateway API cannot run on kind; convert the HTTPRoute back to an Ingress automatically.", "rationale": "The lab runs Gateway API on kind with a conformant controller." },
+        { "id": "class-on-route", "text": "Set gatewayClassName on the HTTPRoute to force an address.", "rationale": "HTTPRoute does not select GatewayClass; it attaches to a Gateway." }
+      ],
+      "answer": "status-why",
+      "explanation": "Gateway API surfaces why a route is not serving: Accepted, Programmed, ResolvedRefs. AddressNotAssigned on kind is expected without a cloud LB.",
+      "difficulty": "intermediate",
+      "learningObjective": "Diagnose Gateway API using status conditions rather than guessing.",
+      "references": ["https://gateway-api.sigs.k8s.io/api-types/httproute/"]
+    },
+    {
+      "id": "S10-Q-RET-01",
+      "section": "S10",
+      "prompt": "You change a ConfigMap that is injected as environment variables. When do running containers see the new values?",
+      "options": [
+        { "id": "restart", "text": "Not until the Pod is recreated (for example a rollout); env is fixed at container start.", "rationale": "Environment variables are not live-reloaded from a ConfigMap update." },
+        { "id": "instant", "text": "Immediately in every process, because the API server rewrites /proc/environ.", "rationale": "The kernel environment of a running process is not rewritten by a ConfigMap patch." },
+        { "id": "secret-only", "text": "ConfigMaps never affect env; only Secrets can be environment variables.", "rationale": "Both ConfigMaps and Secrets can populate env." }
+      ],
+      "answer": "restart",
+      "explanation": "envFrom/valueFrom is snapshotted at start. File mounts can update in place; many apps still need a rollout (often a checksum annotation) to reload.",
+      "difficulty": "intermediate",
+      "learningObjective": "Contrast ConfigMap env injection with mounted-file updates.",
+      "references": ["https://kubernetes.io/docs/concepts/configuration/configmap/"]
+    },
+    {
+      "id": "S10-Q-SCN-01",
+      "section": "S10",
+      "prompt": "A database password must be injected into the same app that already uses a ConfigMap for non-sensitive settings. What belongs in a Secret?",
+      "options": [
+        { "id": "sensitive", "text": "The credential — stored as a Secret and referenced separately from the ConfigMap.", "rationale": "Secrets are the API for sensitive values; ConfigMaps are for non-secret config." },
+        { "id": "same-cm", "text": "The password in the ConfigMap, because encryption at rest is identical for both objects.", "rationale": "Even when etcd encryption is enabled, the teaching split is still Secret vs ConfigMap; do not put passwords in ConfigMaps." },
+        { "id": "dockerfile", "text": "The password baked into the image so Kubernetes never stores it.", "rationale": "That puts the secret in every layer and every registry copy — the S02 anti-pattern." }
+      ],
+      "answer": "sensitive",
+      "explanation": "Keep non-secret config in a ConfigMap and credentials in a Secret. Same injection styles (env or volume), different object.",
+      "difficulty": "introductory",
+      "learningObjective": "Split non-secret config from credentials across ConfigMap and Secret.",
+      "references": ["https://kubernetes.io/docs/concepts/configuration/secret/"]
+    },
+    {
+      "id": "S11-Q-RET-01",
+      "section": "S11",
+      "prompt": "Which object is the workload's request for storage, and which object is the actual volume?",
+      "options": [
+        { "id": "pvc-pv", "text": "PersistentVolumeClaim is the request; PersistentVolume is the volume that binds to it.", "rationale": "PVC is namespaced demand; PV is the cluster volume; StorageClass describes how to provision." },
+        { "id": "pv-only", "text": "The Pod names a PersistentVolume directly; claims are optional metadata.", "rationale": "Workloads mount claims, not raw PVs, in the usual dynamic-provisioning path." },
+        { "id": "sc-is-volume", "text": "A StorageClass is the mounted volume; PVC and PV are only billing records.", "rationale": "StorageClass is a provisioner template, not a mounted volume." }
+      ],
+      "answer": "pvc-pv",
+      "explanation": "PVC → PV (often via StorageClass) is the binding chain. The Pod mounts the claim.",
+      "difficulty": "introductory",
+      "learningObjective": "Name the PVC, PV, and StorageClass roles.",
+      "references": ["https://kubernetes.io/docs/concepts/storage/persistent-volumes/"]
+    },
+    {
+      "id": "S11-Q-SCN-01",
+      "section": "S11",
+      "prompt": "A Deployment used emptyDir for app data. After a Pod replace, the files are gone. What change makes the data survive that replace?",
+      "options": [
+        { "id": "pvc-mount", "text": "Replace emptyDir with a PVC mount so a new Pod can reattach the same claim.", "rationale": "emptyDir dies with the Pod. A bound PVC outlives the Pod." },
+        { "id": "more-replicas", "text": "Scale to three replicas so emptyDir is copied between them automatically.", "rationale": "emptyDir is per-Pod and is not replicated by scaling." },
+        { "id": "hostpath-root", "text": "Mount the node root with hostPath so data lives on the node filesystem forever.", "rationale": "hostPath ties data to one node and is a security foot-gun, not the PVC lesson." }
+      ],
+      "answer": "pvc-mount",
+      "explanation": "Swap emptyDir for a claim. The PVC stays; replacement Pods mount it again (subject to access mode and scheduling).",
+      "difficulty": "intermediate",
+      "learningObjective": "Persist data across Pod replacement with a PVC.",
+      "references": ["https://kubernetes.io/docs/concepts/storage/volumes/#emptydir"]
+    },
+    {
+      "id": "S12-Q-RET-01",
+      "section": "S12",
+      "prompt": "What does a StatefulSet give each replica that a Deployment does not?",
+      "options": [
+        { "id": "stable-id", "text": "A stable ordinal name, stable DNS, and (with volumeClaimTemplates) its own PVC.", "rationale": "web-0, web-1, … plus per-ordinal storage and DNS are the StatefulSet contract." },
+        { "id": "same-as-deploy", "text": "Nothing — StatefulSet is only a rename of Deployment for marketing.", "rationale": "Identity and storage semantics differ." },
+        { "id": "shared-pvc", "text": "One shared PVC that every replica must write at the same path concurrently by default.", "rationale": "volumeClaimTemplates mint one PVC per ordinal, not one shared disk, unless you design that separately." }
+      ],
+      "answer": "stable-id",
+      "explanation": "StatefulSet identity is ordinal: hostname, DNS, and usually a dedicated claim per replica.",
+      "difficulty": "introductory",
+      "learningObjective": "State the stable-identity contract of a StatefulSet.",
+      "references": ["https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/"]
+    },
+    {
+      "id": "S12-Q-SCN-01",
+      "section": "S12",
+      "prompt": "Peers must resolve each replica as web-0.web, web-1.web, not a single ClusterIP. What Service is required?",
+      "options": [
+        { "id": "headless", "text": "A headless Service (clusterIP: None) that the StatefulSet references by serviceName.", "rationale": "Headless Services publish per-Pod DNS instead of one virtual IP." },
+        { "id": "loadbalancer", "text": "A LoadBalancer Service, because ordinal DNS only exists behind a cloud IP.", "rationale": "Per-Pod DNS is a headless Service feature, independent of LoadBalancer." },
+        { "id": "no-service", "text": "No Service: StatefulSet creates DNS names from the Pod UID alone.", "rationale": "The governing Service name is part of the StatefulSet spec and DNS scheme." }
+      ],
+      "answer": "headless",
+      "explanation": "clusterIP: None plus serviceName gives stable per-Pod DNS for the set.",
+      "difficulty": "intermediate",
+      "learningObjective": "Attach a headless Service so StatefulSet replicas have per-Pod DNS.",
+      "references": ["https://kubernetes.io/docs/concepts/services-networking/service/#headless-services"]
+    },
+    {
+      "id": "S13-Q-RET-01",
+      "section": "S13",
+      "prompt": "What do CPU/memory requests do versus limits?",
+      "options": [
+        { "id": "schedule-vs-enforce", "text": "Requests are what the scheduler reserves; limits are the runtime ceiling the kubelet/cgroup enforces.", "rationale": "That is the requests-schedule / limits-enforce split taught in the section." },
+        { "id": "same-field", "text": "They are aliases; Kubernetes uses whichever number is larger.", "rationale": "They are distinct fields with distinct effects." },
+        { "id": "limit-first", "text": "Limits are used only at schedule time; requests are ignored after the Pod binds.", "rationale": "The scheduler keys off requests; limits apply at runtime." }
+      ],
+      "answer": "schedule-vs-enforce",
+      "explanation": "Without requests the scheduler cannot reserve capacity. Limits cap usage (CPU throttle or memory OOM).",
+      "difficulty": "introductory",
+      "learningObjective": "Separate scheduling requests from runtime limits.",
+      "references": ["https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/"]
+    },
+    {
+      "id": "S13-Q-SCN-01",
+      "section": "S13",
+      "prompt": "A container exceeds its memory limit. What happens, compared with exceeding a CPU limit?",
+      "options": [
+        { "id": "oom-vs-throttle", "text": "Memory over limit is typically OOM-killed; CPU over limit is throttled, not killed for that reason.", "rationale": "cgroup memory max vs cpu quota behave differently." },
+        { "id": "both-kill", "text": "Both CPU and memory over-limit always SIGKILL the container immediately.", "rationale": "CPU quota throttles; it does not by itself OOM-kill." },
+        { "id": "both-ignore", "text": "Limits are advisory; the kubelet never kills or throttles.", "rationale": "Limits are enforced." }
+      ],
+      "answer": "oom-vs-throttle",
+      "explanation": "Right-sizing starts from that difference: CPU throttle vs memory eviction/OOM.",
+      "difficulty": "intermediate",
+      "learningObjective": "Predict throttle versus OOM from CPU vs memory limits.",
+      "references": ["https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#how-pods-with-resource-limits-are-run"]
+    },
+    {
+      "id": "S14-Q-RET-01",
+      "section": "S14",
+      "prompt": "What question does a readiness probe answer versus a liveness probe?",
+      "options": [
+        { "id": "traffic-vs-restart", "text": "Readiness: should this Pod receive traffic? Liveness: is the process wedged and should it be restarted?", "rationale": "They are different questions; collapsing them is a classic misconfiguration." },
+        { "id": "same-probe", "text": "They are the same probe with two names for historical reasons.", "rationale": "They have different kubelet actions." },
+        { "id": "startup-only", "text": "Readiness restarts the container; liveness only removes Endpoints.", "rationale": "That swaps the two actions." }
+      ],
+      "answer": "traffic-vs-restart",
+      "explanation": "Failed readiness → not a ready endpoint. Failed liveness → kubelet restarts the container. Startup delays both until boot succeeds.",
+      "difficulty": "introductory",
+      "learningObjective": "Separate readiness (traffic) from liveness (restart).",
+      "references": ["https://kubernetes.io/docs/concepts/configuration/liveness-readiness-startup-probes/"]
+    },
+    {
+      "id": "S14-Q-SCN-01",
+      "section": "S14",
+      "prompt": "A slow-booting app is killed in a restart loop even though it would become healthy after 90 seconds. Which probe is the applied fix?",
+      "options": [
+        { "id": "startup", "text": "A startup probe that delays liveness and readiness until boot succeeds.", "rationale": "startupProbe exists so liveness does not fire during a long start." },
+        { "id": "shorter-live", "text": "A more aggressive liveness probe so the kubelet 'gives up faster'.", "rationale": "That makes the restart loop worse." },
+        { "id": "drop-readiness", "text": "Remove readiness so unready Pods still receive traffic during boot.", "rationale": "That sends traffic to a process that is not ready." }
+      ],
+      "answer": "startup",
+      "explanation": "startupProbe covers slow boot. Until it succeeds, liveness and readiness are held back.",
+      "difficulty": "intermediate",
+      "learningObjective": "Use a startup probe to protect slow boots from liveness restarts.",
+      "references": ["https://kubernetes.io/docs/concepts/configuration/liveness-readiness-startup-probes/#startup-probe"]
+    },
+    {
+      "id": "S15-Q-RET-01",
+      "section": "S15",
+      "prompt": "What is the difference between a Job and a CronJob?",
+      "options": [
+        { "id": "once-vs-schedule", "text": "A Job runs to completion once; a CronJob creates Jobs on a schedule.", "rationale": "CronJob is a factory for Jobs." },
+        { "id": "cron-is-deploy", "text": "A CronJob is a Deployment that restarts every minute.", "rationale": "CronJobs create Jobs, not long-running ReplicaSets." },
+        { "id": "job-forever", "text": "A Job keeps a replica Running forever; a CronJob is only for one-shot debug Pods.", "rationale": "Jobs are finite; Deployments are the long-running controller." }
+      ],
+      "answer": "once-vs-schedule",
+      "explanation": "Job = run until Complete/Failed. CronJob = schedule that creates those Jobs, with history and concurrency controls.",
+      "difficulty": "introductory",
+      "learningObjective": "Distinguish a one-shot Job from a scheduled CronJob.",
+      "references": ["https://kubernetes.io/docs/concepts/workloads/controllers/job/"]
+    },
+    {
+      "id": "S15-Q-SCN-01",
+      "section": "S15",
+      "prompt": "A nightly Job sometimes still runs when the next schedule fires. Which CronJob field prevents overlapping runs?",
+      "options": [
+        { "id": "forbid", "text": "concurrencyPolicy: Forbid (skip the new run while the previous Job is still active).", "rationale": "Forbid, Allow, and Replace are the three concurrency policies." },
+        { "id": "completions", "text": "spec.completions on the CronJob itself, which pauses the schedule.", "rationale": "completions belongs on the Job template, not as a CronJob schedule lock." },
+        { "id": "hpa", "text": "An HPA on the CronJob so extra schedules become extra replicas of the same Job.", "rationale": "HPA does not manage CronJob concurrency." }
+      ],
+      "answer": "forbid",
+      "explanation": "concurrencyPolicy: Forbid skips a tick when a prior Job is still running. Replace would delete the old one; Allow would overlap.",
+      "difficulty": "intermediate",
+      "learningObjective": "Keep a CronJob schedule safe with concurrencyPolicy.",
+      "references": ["https://kubernetes.io/docs/concepts/workloads/controllers/cron-jobs/#concurrency-policy"]
+    },
+    {
+      "id": "S16-Q-RET-01",
+      "section": "S16",
+      "prompt": "An HPA is targeting CPU utilization at 50%. What must the workload have for that metric to be meaningful?",
+      "options": [
+        { "id": "cpu-request", "text": "A CPU request on the target Pods, because utilization is relative to the request.", "rationale": "HPA CPU % is current usage / request, not / limit and not an absolute core count." },
+        { "id": "gpu-only", "text": "A GPU limit, because HPA can only scale on extended resources.", "rationale": "The default resource metric is CPU/memory, not GPU." },
+        { "id": "no-metrics", "text": "Nothing — HPA reads replica count from etcd and ignores metrics-server.", "rationale": "HPA needs metrics (typically metrics-server) and resource requests for resource metrics." }
+      ],
+      "answer": "cpu-request",
+      "explanation": "Without a CPU request, resource utilization cannot be computed as a percentage of requested CPU.",
+      "difficulty": "intermediate",
+      "learningObjective": "Tie HPA CPU targets to Pod resource requests.",
+      "references": ["https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/"]
+    },
+    {
+      "id": "S16-Q-SCN-01",
+      "section": "S16",
+      "prompt": "Load spikes for 20 seconds, replicas jump, then immediately scale back, then jump again. What HPA behavior is the section pointing at?",
+      "options": [
+        { "id": "stabilization", "text": "Stabilization windows (and related scale-up/scale-down policies) exist to stop that flapping.", "rationale": "HPA behavior has scale-up/down stabilization so a brief spike does not thrash replica count." },
+        { "id": "delete-hpa", "text": "Delete the HPA whenever load is bursty; only Deployments can handle bursts.", "rationale": "The fix is policy, not removing autoscaling." },
+        { "id": "zero-request", "text": "Set CPU request to 0 so utilization is always 100% and the replica count stays pegged at max.", "rationale": "A zero request is invalid/meaningless for this metric and does not stabilize." }
+      ],
+      "answer": "stabilization",
+      "explanation": "HPA is another reconcile loop. Stabilization keeps replica count from chasing noise.",
+      "difficulty": "intermediate",
+      "learningObjective": "Use HPA stabilization to avoid replica flapping.",
+      "references": ["https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/#stabilization-window"]
+    },
+    {
+      "id": "S17-Q-RET-01",
+      "section": "S17",
+      "prompt": "Pod Security Standards describe profiles such as restricted. What is restricted actually evaluating?",
+      "options": [
+        { "id": "pod-fields", "text": "Fields on the Pod (securityContext, capabilities, volume types, …) against a documented profile.", "rationale": "PSS is a policy over Pod spec fields, enforced by admission (PSA) or other policy engines." },
+        { "id": "node-os", "text": "Whether the node OS vendor is on an allow-list.", "rationale": "PSS is not a node-vendor check." },
+        { "id": "image-cve", "text": "Whether the image has zero CVEs in a scanner database.", "rationale": "Image scanning is a different control than PSS." }
+      ],
+      "answer": "pod-fields",
+      "explanation": "restricted rejects root, privilege escalation, extra capabilities, missing seccomp, and similar Pod fields.",
+      "difficulty": "introductory",
+      "learningObjective": "Describe Pod Security Standards as a Pod-spec profile.",
+      "references": ["https://kubernetes.io/docs/concepts/security/pod-security-standards/"]
+    },
+    {
+      "id": "S17-Q-SCN-01",
+      "section": "S17",
+      "prompt": "You set runAsNonRoot: true but the image's default user is still UID 0. What happens under restricted?",
+      "options": [
+        { "id": "promise-broken", "text": "Admission may pass the field check, then the container fails at runtime because UID 0 violates the promise — pin runAsUser to a non-root UID in the image.", "rationale": "runAsNonRoot is a promise the image (or runAsUser) must keep." },
+        { "id": "kubelet-rewrites", "text": "The kubelet silently remaps UID 0 to 65534 without any spec change.", "rationale": "There is no automatic UID remap as the default teaching path." },
+        { "id": "root-ok", "text": "restricted allows UID 0 when runAsNonRoot is true, because the flag is documentation only.", "rationale": "The combination is inconsistent and fails." }
+      ],
+      "answer": "promise-broken",
+      "explanation": "restricted wants a non-root user. The image must actually run as one; set runAsUser (and the image USER) accordingly.",
+      "difficulty": "intermediate",
+      "learningObjective": "Make runAsNonRoot true in both the spec and the image.",
+      "references": ["https://kubernetes.io/docs/tasks/configure-pod-container/security-context/"]
+    },
+    {
+      "id": "S18-Q-RET-01",
+      "section": "S18",
+      "prompt": "A NetworkPolicy selects backend Pods and allows ingress from app=frontend on TCP 8080. What happens to other ingress?",
+      "options": [
+        { "id": "deny-rest", "text": "Once an ingress policy selects those Pods, unspecified ingress is denied (on a policy-capable CNI).", "rationale": "NetworkPolicy is allow-list once it applies; default-open becomes default-deny for that direction." },
+        { "id": "still-open", "text": "Everything else remains allowed; NetworkPolicy can only add extra allows, never deny.", "rationale": "Selecting a pod with an ingress policy isolates it." },
+        { "id": "kube-proxy", "text": "kube-proxy implements NetworkPolicy by deleting Services.", "rationale": "NetworkPolicy is CNI/dataplane, not Service deletion." }
+      ],
+      "answer": "deny-rest",
+      "explanation": "Pick Pods, then allow listed sources/ports. Other ingress to those Pods is refused if the CNI enforces NetworkPolicy.",
+      "difficulty": "intermediate",
+      "learningObjective": "Treat NetworkPolicy as isolation plus explicit allows.",
+      "references": ["https://kubernetes.io/docs/concepts/services-networking/network-policies/"]
+    },
+    {
+      "id": "S18-Q-SCN-01",
+      "section": "S18",
+      "prompt": "You apply a correct NetworkPolicy on a cluster whose CNI does not implement NetworkPolicy. What do you observe?",
+      "options": [
+        { "id": "no-effect", "text": "The object exists but traffic is not fenced — policy needs a policy-capable CNI.", "rationale": "The section warns that NetworkPolicy is not enforced by every CNI." },
+        { "id": "api-reject", "text": "The API server always rejects NetworkPolicy unless Calico is built into kube-apiserver.", "rationale": "The API accepts the object regardless of CNI." },
+        { "id": "dns-down", "text": "CoreDNS stops resolving until you delete the policy.", "rationale": "A backend ingress policy does not by itself disable DNS." }
+      ],
+      "answer": "no-effect",
+      "explanation": "Kind labs that teach NetworkPolicy use a CNI that enforces it. On a non-policy CNI the YAML is a no-op.",
+      "difficulty": "intermediate",
+      "learningObjective": "Require a policy-capable CNI before trusting NetworkPolicy.",
+      "references": ["https://kubernetes.io/docs/concepts/services-networking/network-policies/#prerequisites"]
+    },
+    {
+      "id": "S19-Q-RET-01",
+      "section": "S19",
+      "prompt": "RBAC grants a permission when which three pieces are joined by a binding?",
+      "options": [
+        { "id": "who-verb-resource", "text": "A subject (who), verbs, and resources — bound to a Role or ClusterRole.", "rationale": "Role/ClusterRole lists verbs×resources; RoleBinding/ClusterRoleBinding attaches subjects." },
+        { "id": "only-secret", "text": "A Secret token alone; bindings are optional metadata.", "rationale": "A token authenticates; authorization still needs RBAC rules." },
+        { "id": "node-label", "text": "A node label selector; RBAC is scheduling, not authorization.", "rationale": "Node selectors are not RBAC." }
+      ],
+      "answer": "who-verb-resource",
+      "explanation": "who × verb × resource, tied by a binding. Namespace Roles stay in one namespace; ClusterRoles are cluster-scoped (or used via RoleBinding).",
+      "difficulty": "introductory",
+      "learningObjective": "Describe RBAC as subject, verb, resource, and binding.",
+      "references": ["https://kubernetes.io/docs/reference/access-authn-authz/rbac/"]
+    },
+    {
+      "id": "S19-Q-SCN-01",
+      "section": "S19",
+      "prompt": "You created a Role and a ServiceAccount. Workloads still get Forbidden. What object is missing?",
+      "options": [
+        { "id": "binding", "text": "A RoleBinding (or ClusterRoleBinding) that subjects the ServiceAccount to that Role.", "rationale": "Without a binding, the Role is unused." },
+        { "id": "new-user", "text": "A Kubernetes User object in etcd named after the ServiceAccount.", "rationale": "ServiceAccounts are already API subjects; there is no separate User CR for them." },
+        { "id": "clusterrole-only", "text": "You must convert the Role into a ClusterRole or the API ignores it.", "rationale": "Namespaced Roles are valid; they just need a RoleBinding in that namespace." }
+      ],
+      "answer": "binding",
+      "explanation": "Role + ServiceAccount + RoleBinding is the three-object pattern the lab applies. auth can-i / impersonation verifies it.",
+      "difficulty": "intermediate",
+      "learningObjective": "Bind a Role to a ServiceAccount before expecting authorization to succeed.",
+      "references": ["https://kubernetes.io/docs/reference/access-authn-authz/rbac/#rolebinding-and-clusterrolebinding"]
+    },
+    {
+      "id": "S20-Q-RET-01",
+      "section": "S20",
+      "prompt": "What three files make a minimal Helm chart as taught here?",
+      "options": [
+        { "id": "chart-values-template", "text": "Chart.yaml, values.yaml, and at least one template (for example templates/deployment.yaml).", "rationale": "Chart metadata, default values, and templates are the chart." },
+        { "id": "dockerfile-only", "text": "Only a Dockerfile; Helm infers a chart from the image name.", "rationale": "Helm packages Kubernetes YAML, not Dockerfiles." },
+        { "id": "crd-only", "text": "Only a CRD named HelmRelease; templates are optional.", "rationale": "HelmRelease is a Flux (or similar) CR; a chart itself is the three-file layout." }
+      ],
+      "answer": "chart-values-template",
+      "explanation": "Chart.yaml names the chart, values.yaml supplies defaults, templates render Kubernetes objects.",
+      "difficulty": "introductory",
+      "learningObjective": "Identify the files that constitute a Helm chart.",
+      "references": ["https://helm.sh/docs/topics/charts/"]
+    },
+    {
+      "id": "S20-Q-SCN-01",
+      "section": "S20",
+      "prompt": "You want to see what a chart would apply without contacting the cluster, then validate against the API without installing. Which pair matches?",
+      "options": [
+        { "id": "template-dryrun", "text": "helm template (local render) then helm install/upgrade --dry-run=server (or equivalent client/server dry-run) to validate.", "rationale": "template never needs a cluster; server dry-run talks to the API without persisting a release." },
+        { "id": "uninstall-first", "text": "helm uninstall --keep-history is the only safe preview.", "rationale": "Uninstall is not a preview." },
+        { "id": "kubectl-run", "text": "helm has no render path; you must kubectl run the chart tarball.", "rationale": "helm template is the local render path taught in the section." }
+      ],
+      "answer": "template-dryrun",
+      "explanation": "Render locally, then dry-run against the API. install/upgrade then create numbered revisions you can roll back.",
+      "difficulty": "intermediate",
+      "learningObjective": "Preview a chart with helm template and API dry-run before install.",
+      "references": ["https://helm.sh/docs/intro/using_helm/"]
+    },
+    {
+      "id": "S21-Q-RET-01",
+      "section": "S21",
+      "prompt": "In the GitOps model this section teaches, where is desired state, and how does the cluster change?",
+      "options": [
+        { "id": "git-pull", "text": "Git holds desired state; an in-cluster agent pulls and reconciles the cluster toward that Git spec.", "rationale": "GitOps is pull-based reconciliation with Git as the source of truth, independent of Argo CD vs Flux." },
+        { "id": "kubectl-push", "text": "Engineers must kubectl apply from laptops; Git is only a wiki.", "rationale": "That is push-based imperative apply, the thing GitOps replaces as the control loop." },
+        { "id": "ci-ssh", "text": "CI must SSH to nodes and docker run the new tag.", "rationale": "That bypasses both Git and the Kubernetes API." }
+      ],
+      "answer": "git-pull",
+      "explanation": "Git is spec. The agent (Argo CD Application or Flux Kustomization/HelmRelease) pulls and reconciles. GitOps is a discipline, not a product.",
+      "difficulty": "introductory",
+      "learningObjective": "State GitOps as Git-as-desired-state with a pull agent.",
+      "references": ["https://kubernetes.io/blog/2021/11/16/gitops-quickstart/"]
+    },
+    {
+      "id": "S21-Q-SCN-01",
+      "section": "S21",
+      "prompt": "Someone kubectl-ed a replica count in the cluster that disagrees with Git. Self-heal is on. What happens?",
+      "options": [
+        { "id": "revert-git", "text": "The agent reverts the live object toward Git; the Git spec wins.", "rationale": "Self-heal is reconciliation with Git as spec." },
+        { "id": "git-rewritten", "text": "The agent commits the live replica count back to Git automatically.", "rationale": "Default self-heal does not treat the cluster as the source of truth." },
+        { "id": "split-brain", "text": "Kubernetes keeps both values forever because Git and the API are unrelated stores.", "rationale": "The agent continuously diffs and acts." }
+      ],
+      "answer": "revert-git",
+      "explanation": "Sync/Ready is not the same as application health, but self-heal specifically restores Git's desired spec.",
+      "difficulty": "intermediate",
+      "learningObjective": "Predict self-heal when live state drifts from Git.",
+      "references": ["https://argo-cd.readthedocs.io/en/stable/user-guide/auto_sync/"]
+    },
+    {
+      "id": "S22-Q-RET-01",
+      "section": "S22",
+      "prompt": "What two pieces make an operator, as this section defines it?",
+      "options": [
+        { "id": "crd-controller", "text": "A CRD that extends the API, plus a custom controller that reconciles those objects.", "rationale": "Operator = new kind (CRD) + loop (controller)." },
+        { "id": "helm-only", "text": "A Helm chart with no new API types.", "rationale": "A chart installs existing kinds; that is not the operator pattern." },
+        { "id": "kubectl-plugin", "text": "A kubectl plugin that prints YAML, with no in-cluster loop.", "rationale": "A plugin is not a controller." }
+      ],
+      "answer": "crd-controller",
+      "explanation": "The CRD registers the kind. The controller observes custom resources and acts. Maturity goes from install to autopilot.",
+      "difficulty": "introductory",
+      "learningObjective": "Define an operator as CRD plus custom controller.",
+      "references": ["https://kubernetes.io/docs/concepts/extend-kubernetes/operator/"]
+    },
+    {
+      "id": "S22-Q-SCN-01",
+      "section": "S22",
+      "prompt": "You apply a Custom Resource whose Spec asks for a child Deployment. Who is supposed to create that Deployment?",
+      "options": [
+        { "id": "controller-loop", "text": "The operator's controller, in its reconcile loop, from the CR spec.", "rationale": "You declare intent on the CR; the controller creates children." },
+        { "id": "kube-scheduler", "text": "kube-scheduler, because Spec is a scheduling hint.", "rationale": "The scheduler places Pods; it does not implement your CRD." },
+        { "id": "etcd-hook", "text": "etcd, via a built-in trigger on any CRD name ending in Operator.", "rationale": "etcd stores objects; it does not reconcile your domain." }
+      ],
+      "answer": "controller-loop",
+      "explanation": "A custom resource is declared intent. The controller observe→diff→act until children match spec.",
+      "difficulty": "intermediate",
+      "learningObjective": "Treat a custom resource as spec for a controller, not as a scheduler hint.",
+      "references": ["https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/"]
+    },
+    {
+      "id": "S23-Q-RET-01",
+      "section": "S23",
+      "prompt": "What does a ServiceMonitor declare to the Prometheus Operator?",
+      "options": [
+        { "id": "scrape-intent", "text": "Intent to scrape a Service's named metrics port (for example /metrics on port web).", "rationale": "ServiceMonitor is scrape intent; the operator generates Prometheus scrape config." },
+        { "id": "alert-only", "text": "Only Alertmanager routes; it never scrapes.", "rationale": "Alertmanager has its own CR; ServiceMonitor is scrape selection." },
+        { "id": "node-exporter", "text": "It replaces node-exporter with a sidecar in every Pod.", "rationale": "node-exporter is a cluster metrics source, not what ServiceMonitor is." }
+      ],
+      "answer": "scrape-intent",
+      "explanation": "You name the Service port and path. The operator writes scrape config; Prometheus then has a target.",
+      "difficulty": "introductory",
+      "learningObjective": "Use ServiceMonitor as scrape intent for the Prometheus Operator.",
+      "references": ["https://prometheus-operator.dev/docs/getting-started/introduction/"]
+    },
+    {
+      "id": "S23-Q-SCN-01",
+      "section": "S23",
+      "prompt": "Prometheus has no target for your app even though /metrics works on the Pod. The ServiceMonitor looks right. What is a likely miss from this section?",
+      "options": [
+        { "id": "named-port", "text": "The Service port is not named (or the name does not match the ServiceMonitor), so the operator cannot select the scrape port.", "rationale": "The walkthrough names the metrics port and points ServiceMonitor at that name." },
+        { "id": "delete-crd", "text": "You must delete the Prometheus CRD so Prometheus falls back to file_sd.", "rationale": "Deleting the CRD removes the operator's API, it does not fix discovery." },
+        { "id": "ingress-required", "text": "ServiceMonitor only works if the app is exposed via Ingress.", "rationale": "Scrape is in-cluster to the Service; Ingress is unrelated." }
+      ],
+      "answer": "named-port",
+      "explanation": "Give the metrics port a name on the Service, then reference that name from the ServiceMonitor. The operator generates scrape config from that pair.",
+      "difficulty": "intermediate",
+      "learningObjective": "Name the Service metrics port so a ServiceMonitor can select it.",
+      "references": ["https://prometheus-operator.dev/docs/developer/getting-started/"]
+    },
+    {
+      "id": "S25-Q-RET-01",
+      "section": "S25",
+      "prompt": "Which combination is taught as 'own the node' from inside a Pod?",
+      "options": [
+        { "id": "priv-hostpath", "text": "privileged plus hostPath: / (the host filesystem mounted in).", "rationale": "Those two levers are the escape hatch the section shows, then removes." },
+        { "id": "readiness-only", "text": "A failing readiness probe, because NotReady Pods gain node API access.", "rationale": "Readiness does not grant host access." },
+        { "id": "configmap-root", "text": "A ConfigMap mounted at /etc, because ConfigMaps are always hostPath.", "rationale": "ConfigMaps are not host mounts." }
+      ],
+      "answer": "priv-hostpath",
+      "explanation": "privileged + host root mount is node takeover. Drop both, then apply restricted fields, so admission can reject the escape Pod.",
+      "difficulty": "intermediate",
+      "learningObjective": "Name privileged and hostPath:/ as the node-escape pair.",
+      "references": ["https://kubernetes.io/docs/concepts/security/pod-security-standards/#privileged"]
+    },
+    {
+      "id": "S25-Q-SCN-01",
+      "section": "S25",
+      "prompt": "A namespace enforces restricted Pod Security Admission. You apply the escape Pod (privileged + hostPath /). What should happen?",
+      "options": [
+        { "id": "admit-deny", "text": "Admission rejects it before the Pod exists; the escape never runs.", "rationale": "PSA restricted is the gate that holds the line in the lab." },
+        { "id": "runs-then-kills", "text": "The Pod runs, then kubelet notices and deletes it after one probe.", "rationale": "Restricted PSA is admission-time, not a post-start killer." },
+        { "id": "always-allow", "text": "restricted only logs; privileged Pods always schedule.", "rationale": "enforce: restricted denies." }
+      ],
+      "answer": "admit-deny",
+      "explanation": "The hardened Pod is what restricted admits. The escape Pod is rejected at admission.",
+      "difficulty": "intermediate",
+      "learningObjective": "Rely on PSA restricted to reject a privileged hostPath Pod.",
+      "references": ["https://kubernetes.io/docs/concepts/security/pod-security-admission/"]
+    },
+    {
+      "id": "S26-Q-RET-01",
+      "section": "S26",
+      "prompt": "The capstone 'will it stay up?' pass adds which runtime trio to a bare container?",
+      "options": [
+        { "id": "resources-probes-shutdown", "text": "Resource requests/limits, probes, and graceful shutdown (preStop / terminationGracePeriodSeconds).", "rationale": "Those three are the stay-up walkthrough: QoS, traffic/restarts, drain in-flight work." },
+        { "id": "only-hpa", "text": "Only an HPA; probes and resources are optional once replicas exist.", "rationale": "HPA without requests/probes is not the capstone lesson." },
+        { "id": "hostnetwork", "text": "hostNetwork: true so kube-proxy cannot drop the Pod.", "rationale": "hostNetwork is not a reliability default." }
+      ],
+      "answer": "resources-probes-shutdown",
+      "explanation": "Stay up: reserve and cap resources, gate traffic and restarts with probes, drain before SIGKILL.",
+      "difficulty": "introductory",
+      "learningObjective": "List resources, probes, and graceful shutdown as the stay-up baseline.",
+      "references": ["https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#pod-termination"]
+    },
+    {
+      "id": "S26-Q-SCN-01",
+      "section": "S26",
+      "prompt": "The capstone still shows image: app:latest and no securityContext. What is the applied fix for those two gaps?",
+      "options": [
+        { "id": "digest-and-context", "text": "Pin the image by digest (or an immutable tag you control) and set a restricted-compatible securityContext.", "rationale": "Mutable tags and missing securityContext are the 'can you run it / is it safe' misses." },
+        { "id": "latest-ok", "text": "Keep latest so production always self-patches; skip securityContext on Deployments.", "rationale": "latest is not a pin; Deployments still need a securityContext for restricted." },
+        { "id": "pdb-only", "text": "Add only a PDB; image tags and securityContext are out of scope for best practices.", "rationale": "PDBs matter, but they do not replace pinning or securityContext." }
+      ],
+      "answer": "digest-and-context",
+      "explanation": "Best practices stack the earlier sections: pin what you run, and give the Pod a securityContext that can pass restricted.",
+      "difficulty": "intermediate",
+      "learningObjective": "Replace mutable tags and missing securityContext in a production-shaped workload.",
+      "references": ["https://kubernetes.io/docs/concepts/containers/images/#image-names"]
+    },
+    {
+      "id": "S27-Q-RET-01",
+      "section": "S27",
+      "prompt": "How does this workshop treat CKAD/CKA domains?",
+      "options": [
+        { "id": "design-checklist", "text": "As a design checklist for coverage — not as an exam dump or the organizing principle of the days.", "rationale": "AGENT.md and the wrap-up: alignment, not exam prep." },
+        { "id": "exam-dump", "text": "As a question bank copied from live exams so participants can memorize answers.", "rationale": "That is explicitly out of scope and against the quiz rules." },
+        { "id": "skip-domains", "text": "The domains are ignored; only vendor product labs matter.", "rationale": "The wrap-up maps domains as a checklist, vendor-neutrally." }
+      ],
+      "answer": "design-checklist",
+      "explanation": "CK* domains help check that the superset covers the field. Delivery is still the red line plus labs, not a cram course.",
+      "difficulty": "introductory",
+      "learningObjective": "Use CK* domains as a coverage checklist, not as exam prep.",
+      "references": ["https://www.cncf.io/training/certification/ckad/"]
+    },
+    {
+      "id": "S27-Q-SCN-01",
+      "section": "S27",
+      "prompt": "A participant asks to schedule Operator dev 101 (kubebuilder) as part of the canonical three-day cut. What is the honest status?",
+      "options": [
+        { "id": "deferred", "text": "S24 is deferred and not schedulable until a Go/kubebuilder toolchain session can validate it; it is not in the canonical authored cut.", "rationale": "Manifest status is deferred; docs must not claim it is taught in the three-day delivery." },
+        { "id": "day3-core", "text": "S24 is a core Day-3 lab and is already fully authored.", "rationale": "That contradicts the deferred status." },
+        { "id": "hidden-slides", "text": "S24 is authored but hidden only because quizzes are missing.", "rationale": "It is deferred for toolchain reasons, not quizzes." }
+      ],
+      "answer": "deferred",
+      "explanation": "Wrap-up points at skipped/advanced material. S24 remains deferred; do not advertise it as a schedulable lab.",
+      "difficulty": "introductory",
+      "learningObjective": "State that S24 is deferred and not part of the schedulable cut.",
+      "references": ["https://book.kubebuilder.io/"]
+    }
+  ]
+}

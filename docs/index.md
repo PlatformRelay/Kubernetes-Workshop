@@ -8,7 +8,7 @@ hide:
 # Kubernetes Practitioner Workshop
 
 **Um workshop de Kubernetes gratuito, open-source e vendor-neutral** — apresentações
-Slidev, labs prontos para rodar e um protótipo portátil de quiz. Use para aprender
+Slidev, labs prontos para rodar e um banco de questões portátil. Use para aprender
 sozinho, para ensinar colegas ou para conduzir uma entrega completa de vários dias.
 Adapte, mude o estilo, redistribua sob a
 [Licença 0BSD](https://github.com/PlatformRelay/Kubernetes-Workshop/blob/main/LICENSE)
@@ -54,7 +54,7 @@ Adapte, mude o estilo, redistribua sob a
 | Rodar o Slidev no seu laptop | [Rodar os slides localmente](run-slides.md) |
 | Fazer os labs | [Guia dos labs](https://github.com/PlatformRelay/Kubernetes-Workshop/tree/main/labs#readme) · [Lab 00 setup](https://github.com/PlatformRelay/Kubernetes-Workshop/blob/main/labs/day-1/00-setup.md) |
 | Subir um cluster kind local | [Setup local com kind](setup.md) |
-| Testar o protótipo do quiz | [README do quiz](https://github.com/PlatformRelay/Kubernetes-Workshop/tree/main/quiz#readme) |
+| Testar o banco de questões | [README do quiz](https://github.com/PlatformRelay/Kubernetes-Workshop/tree/main/quiz#readme) |
 | Ver o mapa completo de seções | [Syllabus](syllabus.md) |
 | Conduzir uma turma | [Guia do facilitador](facilitator-guide.md) |
 

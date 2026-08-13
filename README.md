@@ -9,8 +9,8 @@
 
 **Gratuito. Open source. Sem paywall.** Um workshop de Kubernetes vendor-neutral que você
 pode conduzir para si mesmo, para colegas ou como uma entrega completa de vários dias — com
-slides interativos, labs prontos para rodar, um protótipo portátil de quiz e PDFs para
-download.
+slides interativos, labs prontos para rodar, um banco de questões portátil e PDFs
+para download.
 
 Use para **aprender**, para **explicar conceitos de Kubernetes ao seu time** ou para
 **facilitar** uma sala. Mude o estilo, reordene, faça fork, redistribua ou venda sob a
@@ -34,7 +34,7 @@ telemetria.
 | **Decks ao vivo** | [Day 1](https://platformrelay.github.io/Kubernetes-Workshop/deck/day-1/) · [Day 2](https://platformrelay.github.io/Kubernetes-Workshop/deck/day-2/) · [Day 3](https://platformrelay.github.io/Kubernetes-Workshop/deck/day-3/) · [Corte de 3 dias](https://platformrelay.github.io/Kubernetes-Workshop/deck/3day/) · [Superset](https://platformrelay.github.io/Kubernetes-Workshop/deck/) |
 | **Handouts em PDF** | [GitHub Releases](https://github.com/PlatformRelay/Kubernetes-Workshop/releases) (PDFs por dia + completo + 3 dias em cada tag `v*`) |
 | **Labs** | [`labs/README.md`](./labs/README.md) · comece por [`labs/day-1/00-setup.md`](./labs/day-1/00-setup.md) |
-| **Quizzes** | [`quiz/README.md`](./quiz/README.md) (protótipo portátil; host FOSS ao vivo ainda em aberto) |
+| **Quizzes** | [`quiz/README.md`](./quiz/README.md) (banco portátil; host FOSS ao vivo ainda em aberto) |
 | **Rodar os slides localmente** | [`docs/run-slides.md`](./docs/run-slides.md) (Node.js + pnpm) |
 | **Limitações conhecidas** | [`docs/beta-limitations.md`](./docs/beta-limitations.md) (stub de S24; backlog de smoke dos add-ons) |
 | **Roadmap** | [`docs/roadmap.md`](./docs/roadmap.md) (quizzes, OpenTelemetry — sem datas) |
@@ -159,7 +159,7 @@ pnpm pages:build        # MkDocs + hash-routed decks → ./site (needs MkDocs)
 | `slides.md` / `slides-3day.md` | Superset de compatibilidade / corte de três dias |
 | `pages/SNN-topic/` | Fontes das seções |
 | `labs/day-*/` | Labs independentes |
-| `quiz/` | Protótipo portátil de quiz |
+| `quiz/` | Banco de questões portátil |
 | `theme/` | Tema Slidev local |
 | `docs/decisions/` | ADRs |
 
