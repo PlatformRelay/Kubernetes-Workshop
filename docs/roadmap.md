@@ -36,6 +36,17 @@ summarizes; it does not lead over private trackers.
 
 ## Direction
 
+### Internationalization — exploring
+
+How to ship additional languages (**slides, labs, and quiz**) without forking the section library
+or freezing English authoring is **under consideration only**. A proposed concept catalog lives in
+[ADR 0014](./decisions/0014-i18n-without-forking.md): eight elevator pitches, three full sketches,
+five short-form, plus a detailed
+[standalone Localization Hub architecture pack](./decisions/0014-tms-architecture/README.md).
+Emerging study direction: a **TMS-backed hub + generated locale artifacts + governed slide
+overrides**, with story-derived conformance tests across multiple TMS adapters. **No architecture is
+accepted yet**; hand-maintained parallel locale trees (community PR #55) are not the architecture.
+
 ### Live quizzes — planned (host only; the learner self-check is on `main`)
 
 Per-section retrieval questions ship as a portable bank in
