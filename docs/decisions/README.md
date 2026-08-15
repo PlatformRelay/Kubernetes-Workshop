@@ -32,6 +32,13 @@ shaped the way it is — not just *what* it looks like.
 | [0011](0011-live-quiz-spike.md) | Defer live-quiz adoption until a complete FOSS runtime passes | proposed |
 | [0012](0012-sibling-lab-solutions.md) | Single-file labs with sibling solution companions | accepted |
 | [0013](0013-opentelemetry-scope.md) | Scope OpenTelemetry as a concept coda on S23, not a new section | accepted |
+| [0014](0014-i18n-without-forking.md) | Internationalization without forking the section library (concept catalog) | proposed |
+
+Option sketches for 0014 (not separate ADRs):
+[`0014-i18n-options/`](0014-i18n-options/).
+
+Proposed standalone implementation architecture for 0014:
+[`0014-tms-architecture/`](0014-tms-architecture/).
 
 ## Template
 
