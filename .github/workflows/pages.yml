@@ -13,14 +13,33 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [main]
+    # Only rebuild when something the Pages tree is actually built FROM changes.
+    # The full build produces a large artifact (6 Slidev decks + MkDocs), so an
+    # unfiltered trigger burned GitHub Actions artifact storage on every push --
+    # notably lab/example-only commits, which the site does not embed (labs are
+    # linked repo-relative, never copied into docs_dir).
+    # Use workflow_dispatch to force a rebuild that these filters would skip.
+    paths:
+      - ".github/workflows/pages.yml"
+      - "components/**"
+      - "docs/**"
+      - "global-bottom.vue"
+      - "mkdocs.yml"
+      - "package.json"
+      - "pages/**"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "public/**"
+      - "quiz/**"
+      - "scripts/pages-build.sh"
+      - "setup/**"
+      - "slides*.md"
+      - "theme/**"
+      - "vite.config.mjs"
   workflow_dispatch:
 
 permissions:
   contents: read
-
-concurrency:
-  group: pages
-  cancel-in-progress: false
 
 env:
   CI: "true"
@@ -29,6 +48,14 @@ jobs:
   build:
     name: Build docs + decks
     runs-on: ubuntu-latest
+    # Supersede in-flight builds for the same ref: a burst of pushes used to
+    # queue behind one another and each upload a full Pages artifact, even
+    # though only the newest commit is ever deployed. Cancelling the stale
+    # build drops those redundant artifacts. Deploy keeps its own
+    # non-cancelling group below so a live deployment is never interrupted.
+    concurrency:
+      group: pages-build-${{ github.ref }}
+      cancel-in-progress: true
     permissions:
       contents: read
     steps:
@@ -69,6 +96,9 @@ jobs:
     name: Deploy
     needs: build
     runs-on: ubuntu-latest
+    concurrency:
+      group: pages
+      cancel-in-progress: false
     permissions:
       pages: write
       id-token: write
