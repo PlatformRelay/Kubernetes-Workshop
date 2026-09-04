@@ -1,56 +1,59 @@
-# Facilitator Guide — Kubernetes Practitioner Workshop
+# Guia do Facilitador — Kubernetes Practitioner Workshop
 
-Everything you need to **run** this workshop: room and environment setup, pacing
-against the schedule, which labs need cluster-wide add-ons (and what to pre-install),
-and how to provision a shared cluster so every attendee has a namespace they own.
+Tudo o que você precisa para **conduzir** este workshop: preparação da sala e do ambiente,
+pacing em relação ao cronograma, quais labs precisam de add-ons cluster-wide (e o que
+pré-instalar) e como provisionar um cluster compartilhado para que cada participante tenha
+um namespace próprio.
 
-This is the facilitator entry point. It is a companion to the participant-facing and
-project-overview documents — know where each one takes you:
+Este é o ponto de entrada do facilitador. Ele é complementar aos documentos voltados ao
+participante e à visão geral do projeto — saiba para onde cada um leva:
 
-- [`../README.md`](../README.md) — **project front door**: what the workshop is, live
-  decks, PDF downloads, audience & prerequisites. Send newcomers here.
-- [`syllabus.md`](./syllabus.md) — the **public schedule**: section map (S00–S27), tiers,
-  per-section timings (each linked to its lab), the canonical 3-day cut, and CKA/CKAD
-  alignment.
-- [`../labs/README.md`](../labs/README.md) — the **participant entry point**: prerequisites,
-  the two environments, how the labs work, and a direct index of every authored lab.
-- [`decisions/`](./decisions/) — architecture decision records; in particular
+- [`../README.md`](../README.md) — **porta de entrada do projeto**: o que é o workshop,
+  decks online, downloads em PDF, público e pré-requisitos. Mande os recém-chegados para cá.
+- [`syllabus.md`](./syllabus.md) — o **cronograma público**: mapa de seções (S00–S27), tiers,
+  tempos por seção (cada um com link para o seu lab), o corte canônico de 3 dias e o
+  alinhamento com CKA/CKAD.
+- [`../labs/README.md`](../labs/README.md) — o **ponto de entrada do participante**:
+  pré-requisitos, os dois ambientes, como os labs funcionam e um índice direto de todos os
+  labs escritos.
+- [`decisions/`](./decisions/) — architecture decision records; em especial
   [`0006-workshop-environment-and-iac.md`](./decisions/0006-workshop-environment-and-iac.md)
-  describes the intended environment model this guide operationalizes.
+  descreve o modelo de ambiente pretendido que este guia operacionaliza.
 
-> **Quick wayfinding.** *Just previewing?* → [README](../README.md) → the live decks.
-> *Doing the labs?* → [labs README](../labs/README.md) → [`00-setup`](../labs/day-1/00-setup.md).
-> *Running the room?* → you're in the right place; pair this with the
-> [syllabus](./syllabus.md). *Contributing content?* → [`../AGENT.md`](../AGENT.md).
+> **Orientação rápida.** *Só quer dar uma olhada?* → [README](../README.md) → os decks online.
+> *Vai fazer os labs?* → [labs README](../labs/README.md) → [`00-setup`](../labs/day-1/00-setup.md).
+> *Vai conduzir a sala?* → você está no lugar certo; use este guia junto com o
+> [syllabus](./syllabus.md). *Vai contribuir com conteúdo?* → [`../AGENT.md`](../AGENT.md).
 
-> **Honesty up front.** Of the environment automation described in ADR 0006, **local kind
-> automation is shipped** — `./workshop up` / `make kind-up` (`infra/kind/cluster.sh`).
-> **Shared-cluster namespace provisioning is still planned** — `make ns-provision` /
-> `infra/shared-cluster/` does not exist yet, so this guide documents the **manual path
-> that works today** (the `kubectl` / `helm` commands in
-> [Shared-cluster provisioning](#shared-cluster-provisioning-manual-today)) and marks that
-> future convenience explicitly as *planned*. Do not expect a one-command shared-cluster
-> setup at delivery time; provision attendee namespaces by hand.
+> **Honestidade logo de cara.** Da automação de ambiente descrita na ADR 0006, **a automação
+> local de kind está entregue** — `./workshop up` / `make kind-up` (`infra/kind/cluster.sh`).
+> **O provisionamento de namespaces em cluster compartilhado ainda é planejado** —
+> `make ns-provision` / `infra/shared-cluster/` ainda não existe, então este guia documenta o
+> **caminho manual que funciona hoje** (os comandos `kubectl` / `helm` em
+> [Provisionamento de cluster compartilhado](#shared-cluster-provisioning-manual-today)) e
+> marca essa conveniência futura explicitamente como *planejada*. Não conte com um setup de
+> cluster compartilhado em um único comando na hora da entrega; provisione os namespaces dos
+> participantes na mão.
 
-## Who runs this, and what you commit to
+## Quem conduz isto, e com o que você se compromete
 
-You are running a **beginner-to-intermediate**, code-heavy, vendor-neutral Kubernetes
-workshop. It is **~50% presentation, ~50% hands-on practice**: every concept block in the
-deck is immediately followed by a standalone lab under [`../labs/`](../labs/). Your job in
-the room is to teach the concept, then get everyone through the lab — and, crucially, to
-have the **environment ready before anyone arrives**.
+Você vai conduzir um workshop de Kubernetes **iniciante-a-intermediário**, denso em código e
+vendor-neutral. Ele é **~50% apresentação, ~50% prática**: todo bloco de conceito do deck é
+imediatamente seguido de um lab autônomo em [`../labs/`](../labs/). Seu trabalho na sala é
+ensinar o conceito e então levar todo mundo até o fim do lab — e, principalmente, ter o
+**ambiente pronto antes de qualquer pessoa chegar**.
 
-The workshop is authored as a **content superset** (S00–S27) and **boiled down** per
-delivery. The [canonical 3-day cut](./syllabus.md#the-canonical-3-day-cut) is the default
-you deliver; you compose a shorter room by toggling `recommended` / `optional` sections
-off. Decide your cut **before** the environment work below — it determines which add-ons
-you must pre-install.
+O workshop é escrito como um **content superset** (S00–S27) e **reduzido** a cada entrega. O
+[corte canônico de 3 dias](./syllabus.md#the-canonical-3-day-cut) é o padrão que você entrega;
+você compõe uma sala mais curta desligando seções `recommended` / `optional`. Decida o seu
+corte **antes** do trabalho de ambiente abaixo — ele determina quais add-ons você precisa
+pré-instalar.
 
-### Choose the deck before the room
+### Escolha o deck antes da sala
 
-Live delivery uses four small, independently buildable entries over the same section
-sources: **Day 1**, **Day 2**, **Day 3**, and **Optional / Appendix**. Start a complete day,
-one section, or a contiguous range with the launcher:
+A entrega ao vivo usa quatro entradas pequenas e construíveis de forma independente sobre as
+mesmas fontes de seção: **Day 1**, **Day 2**, **Day 3** e **Optional / Appendix**. Inicie um
+dia completo, uma seção ou um intervalo contíguo com o launcher:
 
 ```bash
 pnpm deck -- --list
@@ -59,173 +62,184 @@ pnpm deck -- --section S05
 pnpm deck -- --range S05-S09
 ```
 
-Add `--action build` or `--action export` to render a custom selection instead of serving
-it. `--dry-run` prints the resolved IDs without starting Slidev. If
-[`gum`](https://github.com/charmbracelet/gum) is installed and the command runs in a TTY,
-`pnpm deck` offers the same choices as an interactive menu. Gum is optional: flags and
-`--list` remain deterministic on CI, remote shells, and managed laptops.
+Adicione `--action build` ou `--action export` para renderizar uma seleção customizada em vez
+de servi-la. `--dry-run` imprime os IDs resolvidos sem iniciar o Slidev. Se o
+[`gum`](https://github.com/charmbracelet/gum) estiver instalado e o comando rodar em um TTY,
+`pnpm deck` oferece as mesmas opções em um menu interativo. O gum é opcional: as flags e o
+`--list` continuam determinísticos em CI, shells remotos e laptops gerenciados.
 
-An invocation without a selector intentionally fails when no interactive menu is available;
-it never falls back to the oversized content superset. The four standard entries also have
-direct scripts: `pnpm dev:day1`, `dev:day2`, `dev:day3`, and `dev:optional`. The combined
-`slides.md` superset remains available through `pnpm dev:superset` for compatibility and
-whole-corpus inspection only.
+Uma invocação sem seletor falha de propósito quando não há menu interativo disponível; ela
+nunca recorre ao content superset superdimensionado. As quatro entradas padrão também têm
+scripts diretos: `pnpm dev:day1`, `dev:day2`, `dev:day3` e `dev:optional`. O `slides.md`
+combinado (superset) continua disponível via `pnpm dev:superset` apenas por compatibilidade e
+para inspeção do corpus inteiro.
 
 ## Timing and pacing
 
-Syllabus [per-section minute marks](./syllabus.md#per-section-outcomes-timings-and-labs)
-are **planning aids**, not a delivery contract. Pace to the room: the presenter, the
-audience, and which optional sections you keep matter more than hitting a spreadsheet.
+As [marcações de minutos por seção](./syllabus.md#per-section-outcomes-timings-and-labs) do
+syllabus são **apoios de planejamento**, não um contrato de entrega. Ajuste o ritmo à sala: o
+apresentador, a audiência e quais seções opcionais você mantém pesam mais do que bater uma
+planilha.
 
-Rough shape for a full day: about half slides / half labs, with breaks and lunch on top.
-The canonical cut is a bit light on Days 1–2 (headroom for on-ramps) and heavy on Day 3 —
-trim the S26 capstone lab if you need wall-clock room.
+Formato aproximado de um dia inteiro: cerca de metade slides / metade labs, com pausas e
+almoço por cima. O corte canônico fica um pouco folgado nos Days 1–2 (margem para os
+on-ramps) e pesado no Day 3 — corte o lab capstone S26 se precisar de folga no relógio.
 
-> Confirm add-ons for *your* cut with a short dry-run (see
-> [Rehearsal debt](#rehearsal-debt-read-before-you-teach) and
-> [known limitations](./beta-limitations.md)). Do not treat unrehearsed minute totals as a
-> release or teaching blocker.
+> Confirme os add-ons do *seu* corte com um dry-run curto (veja
+> [Dívida de ensaio](#rehearsal-debt-read-before-you-teach) e
+> [limitações conhecidas](./beta-limitations.md)). Não trate totais de minutos não ensaiados
+> como bloqueio de release ou de ensino.
 
-**Pacing tactics that hold the 50/50 balance:**
+**Táticas de pacing que sustentam o equilíbrio 50/50:**
 
-- **Timebox the labs, not the discussion.** Announce a lab window up front and keep a
-  visible timer if it helps the room. Day 1 Labs 01–08, Day 2 Labs 09–16, and Day 3 Labs
-  17–23, 25–26 are fully copy-pasteable and link to their `NN-topic.solution.md` companion
-  (S24 remains a deferred stub), so a stuck learner is one click from exact commands,
-  expected state, and recovery guidance — you rarely need to stop the room.
-- **Use the break→fix step as the natural catch-up point.** Fast finishers dig into the
-  stretch goal; you circulate while slower learners reach the deliberate break.
-- **Protect the red line.** Sections S05–S09 (`Pod → Deployment → Service → Ingress →
-  Gateway API`) each extend the *same* manifest. If you fall behind, cut a later add-on
-  section, not a red-line step — the through-line is load-bearing for everything after it.
-- **Front-load the on-ramp decision.** S01/S02 (containers) run locally with no cluster.
-  If your room needs container grounding, run them as an optional "day 0" evening block or
-  a pre-read rather than eating Day-1 red-line time.
+- **Timebox nos labs, não na discussão.** Anuncie a janela do lab de antemão e mantenha um
+  timer visível se isso ajudar a sala. Os Labs 01–08 do Day 1, os Labs 09–16 do Day 2 e os
+  Labs 17–23 e 25–26 do Day 3 são totalmente copiáveis e linkam para o companion
+  `NN-topic.solution.md` (S24 continua sendo um stub `deferred`), então quem travar está a um
+  clique dos comandos exatos, do estado esperado e da orientação de recuperação — você
+  raramente precisa parar a sala.
+- **Use o passo break→fix como ponto natural de recuperação.** Quem termina rápido avança
+  para o stretch goal; você circula pela sala enquanto os mais lentos chegam ao break
+  deliberado.
+- **Proteja a "linha vermelha" (red line).** As seções S05–S09 (`Pod → Deployment → Service →
+  Ingress → Gateway API`) estendem *o mesmo* manifesto. Se você atrasar, corte uma seção de
+  add-on posterior, não um passo da red line — esse fio condutor sustenta tudo o que vem
+  depois.
+- **Antecipe a decisão sobre o on-ramp.** S01/S02 (containers) rodam localmente, sem cluster.
+  Se a sua sala precisa de fundamentos de container, rode essas seções como um bloco noturno
+  opcional de "day 0" ou como pré-leitura, em vez de consumir tempo da red line do Day 1.
 
-## The two teaching environments
+## Os dois ambientes de ensino
 
-Every cluster lab supports **two environments**, and both are first-class throughout. You
-choose which the room uses (or let attendees choose per the constraints below). The labs
-carry an **Environment badge** in their header table so a learner always knows which paths
-a given lab supports.
+Todo lab de cluster suporta **dois ambientes**, e ambos são de primeira classe em todo o
+material. Você escolhe qual a sala usa (ou deixa os participantes escolherem, dentro das
+restrições abaixo). Os labs trazem um **badge de Environment** na tabela de cabeçalho, para
+que o aluno sempre saiba quais caminhos aquele lab suporta.
 
-| Environment | What it is | Attendee gets | You provide |
+| Ambiente | O que é | O que o participante recebe | O que você fornece |
 | --- | --- | --- | --- |
-| **Shared namespace** | An assigned namespace on a cluster **you** run and admin. | A kubeconfig + a namespace (e.g. `student-07`), **no cluster-admin**. | The cluster, per-attendee namespaces, and any cluster-wide add-ons (pre-installed). |
-| **Local `kind`** | A throwaway single-node cluster each attendee creates on their laptop. | Full admin over their own cluster. | Nothing at cluster level — attendees self-install add-ons per lab. Verify laptops meet the prerequisites. |
+| **Shared namespace** | Um namespace atribuído em um cluster que **você** roda e administra. | Um kubeconfig + um namespace (ex.: `student-07`), **sem cluster-admin**. | O cluster, os namespaces por participante e quaisquer add-ons cluster-wide (pré-instalados). |
+| **`kind` local** | Um cluster descartável de nó único que cada participante cria no próprio laptop. | Admin total sobre o próprio cluster. | Nada em nível de cluster — os participantes instalam os add-ons por conta própria em cada lab. Verifique se os laptops atendem aos pré-requisitos. |
 
-### How the labs signal the split
+### Como os labs sinalizam essa divisão
 
-The badge grammar (defined in [`../labs/README.md`](../labs/README.md#your-environment))
-tells you what a lab needs:
+A gramática dos badges (definida em
+[`../labs/README.md`](../labs/README.md#your-environment)) diz o que um lab precisa:
 
-- **`namespace ✓ / kind ✓`** — runs identically in both. Most core labs.
-- **`kind ✓` + `namespace: read-only`** — needs cluster-admin, CRDs, or host access, so
-  the full path is **kind-only**. These labs **also ship a namespace-safe read-only
-  alternative** (observe a component you pre-installed) so shared-cluster learners follow
-  along. This is where your pre-install work concentrates.
-- **`kind-only`** — no shared-cluster path at all (e.g. the pod-escape lab, which performs
-  a controlled container escape and must run in a throwaway cluster the learner owns).
-- **`local — no cluster needed`** — the container labs (S01/S02) run against a container
-  engine on the laptop; no Kubernetes at all.
+- **`namespace ✓ / kind ✓`** — roda de forma idêntica nos dois. A maioria dos labs core.
+- **`kind ✓` + `namespace: read-only`** — precisa de cluster-admin, CRDs ou acesso ao host,
+  então o caminho completo é **só no kind**. Esses labs **também trazem uma alternativa
+  read-only segura para namespace** (observar um componente que você pré-instalou), para que
+  os alunos em cluster compartilhado acompanhem. É aqui que o seu trabalho de pré-instalação
+  se concentra.
+- **`kind-only`** — sem nenhum caminho em cluster compartilhado (ex.: o lab de pod escape,
+  que executa um escape de container controlado e precisa rodar em um cluster descartável do
+  próprio aluno).
+- **`local — no cluster needed`** — os labs de container (S01/S02) rodam contra um container
+  engine no laptop; nada de Kubernetes.
 
-Attendees set a shell variable `$NS` once in the [setup lab](../labs/day-1/00-setup.md)
-and reuse it everywhere (`export NS=student-07` on shared; `export NS=workshop` on kind).
+Os participantes definem uma variável de shell `$NS` uma única vez no
+[lab de setup](../labs/day-1/00-setup.md) e a reutilizam em todo lugar (`export NS=student-07`
+no compartilhado; `export NS=workshop` no kind).
 
-### Choosing an environment for your room
+### Escolhendo um ambiente para a sua sala
 
-- **Shared cluster** is smoother for a large or mixed-skill room: no laptop variance, no
-  per-laptop container-engine debugging, and you control the add-ons. Cost: you must stand
-  up and provision the cluster (see [Shared-cluster provisioning](#shared-cluster-provisioning-manual-today)),
-  and the `kind-only` labs become **watch-me demos** (learners take the read-only path).
-- **Local `kind`** is best when attendees have capable laptops and you want them to
-  experience the full add-on installs (ingress controller, Argo CD, cert-manager). Cost:
-  laptop prerequisites must be met (container engine + `kind` + adequate RAM), and network
-  pull access to public image registries must work from the room.
-- **Mixed** is supported: some attendees on kind, some on a shared namespace. Every core
-  lab is identical across both, and the badge tells each learner which path to take.
+- **Cluster compartilhado** é mais tranquilo para uma sala grande ou de nível misto: sem
+  variação de laptop, sem debug de container engine por máquina, e você controla os add-ons.
+  Custo: você precisa subir e provisionar o cluster (veja
+  [Provisionamento de cluster compartilhado](#shared-cluster-provisioning-manual-today)),
+  e os labs `kind-only` viram **demos assistidas** (os alunos seguem o caminho read-only).
+- **`kind` local** é melhor quando os participantes têm laptops capazes e você quer que eles
+  vivenciem as instalações completas dos add-ons (ingress controller, Argo CD, cert-manager).
+  Custo: os pré-requisitos de laptop precisam ser atendidos (container engine + `kind` + RAM
+  suficiente) e o acesso de rede para pull de imagens de registries públicos precisa funcionar
+  a partir da sala.
+- **Misto** é suportado: alguns participantes no kind, outros em um namespace compartilhado.
+  Todo lab core é idêntico nos dois, e o badge diz a cada aluno qual caminho seguir.
 
-> **Recommendation.** For a first delivery, run a **shared cluster** for the core red line
-> (least laptop risk) and let confident attendees use **kind** for the add-on-heavy Day-3
-> labs so they get the full install experience. Whatever you choose, verify it end-to-end
-> **before** the room arrives — the setup lab exists exactly to catch a broken environment
-> in the first 15 minutes.
+> **Recomendação.** Para uma primeira entrega, rode um **cluster compartilhado** para a red
+> line core (menor risco de laptop) e deixe os participantes mais confiantes usarem **kind**
+> nos labs do Day 3, mais pesados em add-ons, para que tenham a experiência completa de
+> instalação. Seja qual for a escolha, verifique tudo de ponta a ponta **antes** de a sala
+> chegar — o lab de setup existe exatamente para pegar um ambiente quebrado nos primeiros 15
+> minutos.
 
 ## Add-ons: what to pre-install per lab
 
-Some labs need **cluster-wide** prerequisites (a controller, CRDs, an operator, a
-policy-capable CNI). By design these are never a normal learner step: anything
-cluster-scoped is an **add-on** that is either self-installed on **kind** (the learner owns
-that cluster) or **pre-installed by you** on the shared cluster (learners then take the
-read-only path). See ADR 0006 for why this split exists.
+Alguns labs precisam de pré-requisitos **cluster-wide** (um controller, CRDs, um operator, um
+CNI capaz de aplicar policy). Por design, isso nunca é um passo normal do aluno: qualquer
+coisa cluster-scoped é um **add-on** que ou é auto-instalado no **kind** (o aluno é dono
+daquele cluster) ou é **pré-instalado por você** no cluster compartilhado (os alunos então
+seguem o caminho read-only). Veja a ADR 0006 para entender por que essa divisão existe.
 
-The table below is your pre-install checklist. On **kind**, the lab installs the add-on
-itself in an early step (learners run the command). On a **shared cluster**, **you install
-it once, in advance**, and learners observe.
+A tabela abaixo é o seu checklist de pré-instalação. No **kind**, o próprio lab instala o
+add-on em um passo inicial (os alunos rodam o comando). Em um **cluster compartilhado**,
+**você instala uma vez, com antecedência**, e os alunos observam.
 
-> **Verify versions at delivery time.** The pinned versions below are what the labs ship
-> today; re-check the current release of each component when you deliver (the workshop
-> deliberately does not hard-pin a Kubernetes version). ADR 0007 covers the intended
-> single-source version pinning (planned in `infra/versions.env`).
+> **Verifique as versões na hora da entrega.** As versões fixadas abaixo são as que os labs
+> trazem hoje; re-cheque o release atual de cada componente quando for entregar (o workshop
+> deliberadamente não fixa uma versão de Kubernetes). A ADR 0007 cobre o pinning de versão em
+> fonte única pretendido (planejado em `infra/versions.env`).
 
-| Section / lab | Add-on to pre-install | What it is / why | Install (as shipped) |
+| Seção / lab | Add-on a pré-instalar | O que é / por quê | Instalação (como entregue) |
 | --- | --- | --- | --- |
-| **S08** Ingress ([lab](../labs/day-1/08-ingress.md)) | **Ingress controller** (Contour) — profile `ingress-contour` (or day composer `day-1`) | Nothing serves an Ingress until a controller exists; the lab exposes the red-line app north-south. **Mutually exclusive** with `gateway-envoy` (never install both). | Prefer `./workshop profile day-1` or `./workshop profile ingress-contour` (or `make profile-day-1` / `make profile-ingress-contour`). Manual: Contour v1.33.5 pinned quickstart. kind needs the ingress-ready 80/443 port mappings — the repo's kind cluster config already has them. |
-| **S09** Gateway API ([lab](../labs/day-2/09-gateway-api.md)) | **Gateway API standard CRDs + Envoy Gateway** — profile `gateway-envoy` (canonical; also in `day-2`) | The Gateway API is CRD-based; you need the standard-channel CRDs **and** a controller that owns a `GatewayClass`. **Mutually exclusive** with Contour. | Prefer `./workshop profile day-2` or `./workshop profile gateway-envoy` (or `make profile-day-2` / `make profile-gateway-envoy`). Manual: Gateway API `standard-install.yaml` (v1.5.1) then Envoy Gateway `install.yaml` (v1.8.2). Provides the `eg` GatewayClass — labs must set `gatewayClassName: eg` explicitly. |
-| **S16** Autoscaling / HPA ([lab](../labs/day-2/16-hpa.md)) | **metrics-server** (composed into `day-2`) | The HPA reads CPU from the `metrics.k8s.io` API, which metrics-server serves. No metrics-server → `TARGETS <unknown>`. | Prefer `./workshop profile day-2` (installs metrics-server + Envoy). Manual: `kubectl apply -f` the metrics-server `components.yaml` pin from `infra/versions.env`. **kind needs the `--kubelet-insecure-tls` patch** (kind's kubelet serves a self-signed cert). |
-| **S18** NetworkPolicy ([lab](../labs/day-3/18-networkpolicy.md)) | **A policy-capable CNI** (Calico, Cilium, Antrea, or modern kindnet) | A NetworkPolicy is inert unless the CNI enforces it. `kubectl apply` succeeds on any cluster but the packet is only dropped if the CNI enforces. | On kind, current **kindnet** enforces (via kube-network-policies); the lab's Step 2 is an **enforcement self-test** with a **Calico fallback** if your CNI doesn't enforce. On a shared cluster, confirm your CNI enforces before the room. |
-| **S21** GitOps / Argo CD ([lab](../labs/day-3/21-gitops.md)) | **Argo CD** (composed into `day-3`) | The in-cluster GitOps agent that reconciles the cluster toward Git; the lab hands it a public `guestbook` `Application`. | Prefer `./workshop profile day-3` (heavyweight). Manual: `kubectl create namespace argocd` then `kubectl apply -n argocd --server-side` the Argo CD pinned `install.yaml` from `infra/versions.env`. |
-| **S22** Operator pattern ([lab](../labs/day-3/22-operator-concept.md)) | **cert-manager** (composed into `day-3`) | A real operator = CRDs + a controller. The lab installs **cert-manager** specifically (v1.21.0) and inspects the API it adds. | Prefer `./workshop profile day-3`. Manual: `kubectl apply -f` the cert-manager release manifest (v1.21.0). |
-| **S23** Prometheus Operator ([lab](../labs/day-3/23-prometheus.md)) | **kube-prometheus-stack** (composed into `day-3`) | The Prometheus Operator manages Prometheus via a `ServiceMonitor` CRD; the lab wires the red-line app in. | Prefer `./workshop profile day-3` (warns heavyweight). **Helm:** pinned `kube-prometheus-stack` chart from `infra/versions.env` into a `monitoring` namespace. |
-| **S25** Security & pod escape ([lab](../labs/day-3/25-pod-escape.md)) | **None** (kind-only, no add-on) | Pod Security Admission is built into the API server (stable since v1.25). | Nothing to install — but this lab is **strictly kind-only**: it runs a controlled escape and **must never touch a shared/managed/production cluster**. |
-| **S24** Operator dev / kubebuilder ([lab](../labs/day-3/24-kubebuilder.md)) | **kubebuilder toolchain** (Go, kubebuilder) — *aspirational* | Scaffold and run a minimal operator against kind. | **This lab is currently a STUB** (kind-only, advanced, unauthored). Treat its toolchain as planned; do not schedule it as a full hands-on until authored. |
+| **S08** Ingress ([lab](../labs/day-1/08-ingress.md)) | **Ingress controller** (Contour) — profile `ingress-contour` (ou o day composer `day-1`) | Nada serve um Ingress até existir um controller; o lab expõe a aplicação da red line no sentido norte-sul. **Mutuamente exclusivo** com `gateway-envoy` (nunca instale os dois). | Prefira `./workshop profile day-1` ou `./workshop profile ingress-contour` (ou `make profile-day-1` / `make profile-ingress-contour`). Manual: quickstart do Contour v1.33.5 fixado. O kind precisa dos port mappings 80/443 ingress-ready — a config de cluster kind do repositório já os tem. |
+| **S09** Gateway API ([lab](../labs/day-2/09-gateway-api.md)) | **CRDs standard da Gateway API + Envoy Gateway** — profile `gateway-envoy` (canônico; também em `day-2`) | A Gateway API é baseada em CRDs; você precisa dos CRDs do standard channel **e** de um controller que seja dono de uma `GatewayClass`. **Mutuamente exclusivo** com o Contour. | Prefira `./workshop profile day-2` ou `./workshop profile gateway-envoy` (ou `make profile-day-2` / `make profile-gateway-envoy`). Manual: `standard-install.yaml` da Gateway API (v1.5.1) e depois o `install.yaml` do Envoy Gateway (v1.8.2). Fornece a GatewayClass `eg` — os labs precisam definir `gatewayClassName: eg` explicitamente. |
+| **S16** Autoscaling / HPA ([lab](../labs/day-2/16-hpa.md)) | **metrics-server** (composto em `day-2`) | O HPA lê CPU da API `metrics.k8s.io`, servida pelo metrics-server. Sem metrics-server → `TARGETS <unknown>`. | Prefira `./workshop profile day-2` (instala metrics-server + Envoy). Manual: `kubectl apply -f` no `components.yaml` do metrics-server, na versão fixada em `infra/versions.env`. **O kind precisa do patch `--kubelet-insecure-tls`** (o kubelet do kind serve um certificado self-signed). |
+| **S18** NetworkPolicy ([lab](../labs/day-3/18-networkpolicy.md)) | **Um CNI capaz de aplicar policy** (Calico, Cilium, Antrea ou kindnet moderno) | Uma NetworkPolicy é inerte se o CNI não a aplicar. O `kubectl apply` funciona em qualquer cluster, mas o pacote só é descartado se o CNI aplicar a policy. | No kind, o **kindnet** atual aplica (via kube-network-policies); o Step 2 do lab é um **autoteste de enforcement** com **fallback para Calico** caso o seu CNI não aplique. Em cluster compartilhado, confirme que o seu CNI aplica antes da sala. |
+| **S21** GitOps / Argo CD ([lab](../labs/day-3/21-gitops.md)) | **Argo CD** (composto em `day-3`) | O agente GitOps in-cluster que reconcilia o cluster em direção ao Git; o lab entrega a ele um `Application` público do `guestbook`. | Prefira `./workshop profile day-3` (pesado). Manual: `kubectl create namespace argocd` e depois `kubectl apply -n argocd --server-side` do `install.yaml` do Argo CD fixado em `infra/versions.env`. |
+| **S22** Operator pattern ([lab](../labs/day-3/22-operator-concept.md)) | **cert-manager** (composto em `day-3`) | Um operator de verdade = CRDs + um controller. O lab instala especificamente o **cert-manager** (v1.21.0) e inspeciona a API que ele adiciona. | Prefira `./workshop profile day-3`. Manual: `kubectl apply -f` no manifesto de release do cert-manager (v1.21.0). |
+| **S23** Prometheus Operator ([lab](../labs/day-3/23-prometheus.md)) | **kube-prometheus-stack** (composto em `day-3`) | O Prometheus Operator gerencia o Prometheus via um CRD `ServiceMonitor`; o lab conecta a aplicação da red line nele. | Prefira `./workshop profile day-3` (avisa que é pesado). **Helm:** chart `kube-prometheus-stack` fixado em `infra/versions.env`, em um namespace `monitoring`. |
+| **S25** Security & pod escape ([lab](../labs/day-3/25-pod-escape.md)) | **Nenhum** (kind-only, sem add-on) | O Pod Security Admission é embutido no API server (estável desde a v1.25). | Nada a instalar — mas este lab é **estritamente kind-only**: ele executa um escape controlado e **nunca deve tocar um cluster compartilhado/gerenciado/de produção**. |
+| **S24** Operator dev / kubebuilder ([lab](../labs/day-3/24-kubebuilder.md)) | **toolchain kubebuilder** (Go, kubebuilder) — *aspiracional* | Fazer o scaffold e rodar um operator mínimo contra o kind. | **Este lab é atualmente um STUB** (kind-only, avançado, não escrito). Trate a toolchain como planejada; não o agende como hands-on completo enquanto não for escrito. |
 
-**Labs that need *no* cluster-wide add-on** (run in a plain namespace with only the default
-StorageClass where noted): S00 setup, S03 cluster tour, S04 kubectl, S05–S07 (Pod /
-Deployment / Service), S10 config, **S11 storage & S12 StatefulSet** (assume a **default
-StorageClass** — present on kind; confirm one exists on your shared cluster), S13 resources,
-S14 probes, S15 jobs, S17 pod security, S19 RBAC, S20 Helm, S26 capstone.
+**Labs que *não* precisam de nenhum add-on cluster-wide** (rodam em um namespace comum, com
+no máximo a StorageClass padrão onde indicado): S00 setup, S03 cluster tour, S04 kubectl,
+S05–S07 (Pod / Deployment / Service), S10 config, **S11 storage & S12 StatefulSet** (assumem
+uma **StorageClass padrão** — presente no kind; confirme que existe uma no seu cluster
+compartilhado), S13 resources, S14 probes, S15 jobs, S17 pod security, S19 RBAC, S20 Helm,
+S26 capstone.
 
-**Non-cluster prerequisites to check on laptops** (from
+**Pré-requisitos fora do cluster para checar nos laptops** (a partir de
 [`../labs/README.md`](../labs/README.md#prerequisites)):
 
-- **Every cluster lab:** `kubectl` on `PATH`, within one minor version of the API server.
-- **kind path:** [`kind`](https://kind.sigs.k8s.io) + a container engine (Docker or Podman).
-- **Container labs (S01/S02):** a container engine (Docker / Podman / nerdctl). **S02**
-  also needs a scanner — [Trivy](https://trivy.dev) (Grype works) and optionally
-  [cosign](https://docs.sigstore.dev/) for the signing step (skippable).
-- **S20 Helm** and **S23** need the [`helm`](https://helm.sh) CLI (v3.8+).
+- **Todo lab de cluster:** `kubectl` no `PATH`, dentro de uma minor version do API server.
+- **Caminho kind:** [`kind`](https://kind.sigs.k8s.io) + um container engine (Docker ou Podman).
+- **Labs de container (S01/S02):** um container engine (Docker / Podman / nerdctl). O **S02**
+  também precisa de um scanner — [Trivy](https://trivy.dev) (Grype funciona) e, opcionalmente,
+  [cosign](https://docs.sigstore.dev/) para o passo de assinatura (dispensável).
+- **S20 Helm** e **S23** precisam do CLI [`helm`](https://helm.sh) (v3.8+).
 
 ## Shared-cluster provisioning (manual today)
 
-If you run a shared cluster, each attendee needs a namespace they own — with the right
-RBAC, a resource cap, and (for S17) Pod Security Standards enforced. Because the model
-must never grant learners cluster-admin, **anything cluster-scoped is your responsibility
-to set up in advance.**
+Se você rodar um cluster compartilhado, cada participante precisa de um namespace próprio —
+com o RBAC certo, um limite de recursos e (para o S17) os Pod Security Standards aplicados.
+Como o modelo nunca pode conceder cluster-admin aos alunos, **tudo o que é cluster-scoped é
+responsabilidade sua, configurada com antecedência.**
 
-> **Planned automation.** ADR 0006 specifies an `infra/shared-cluster/provision.sh` script
-> (surfaced as `make ns-provision`) that mints one namespace per attendee with the RBAC,
-> quota/limit, and PSA labels below. **That script does not exist yet** (see
-> [US-ENV-1](#rehearsal-debt-read-before-you-teach)). Until it does, provision namespaces
-> by hand — a short loop over the four steps below per attendee.
+> **Automação planejada.** A ADR 0006 especifica um script `infra/shared-cluster/provision.sh`
+> (exposto como `make ns-provision`) que cria um namespace por participante com o RBAC, a
+> quota/limit e os labels de PSA abaixo. **Esse script ainda não existe** (veja
+> [US-ENV-1](#rehearsal-debt-read-before-you-teach)). Até que exista, provisione os namespaces
+> na mão — um loop curto sobre os quatro passos abaixo, por participante.
 
-Per attendee, the namespace must have:
+Por participante, o namespace precisa ter:
 
-1. **The namespace itself**, set as the attendee's default context so they can drop `-n
-   $NS` (the [setup lab](../labs/day-1/00-setup.md) has them run `kubectl config
-   set-context --current --namespace=$NS`; the namespace must already exist for them).
-2. **An in-namespace RBAC Role + RoleBinding** granting create/update/delete on the common
-   workload kinds (pods, deployments, services, configmaps, secrets, PVCs, jobs, …) **and
-   nothing cluster-scoped**. The setup lab's Step 3 asserts this — `kubectl auth can-i
-   create pods` must return `yes` in the attendee's namespace, and cluster-scoped writes
-   must be denied. Learners build exactly this kind of Role themselves in **Lab 19 (RBAC)**.
-3. **A ResourceQuota + LimitRange** so no attendee can starve the shared cluster. The
-   labs assume this is present — S13 (resources & limits) explicitly relies on a
-   quota/limit existing in the attendee's own namespace. A LimitRange also gives Pods
-   sensible default requests/limits.
-4. **Pod Security Standards labels, pre-applied.** Because labelling a Namespace is a write
-   on a cluster-scoped object that the in-namespace Role cannot do, **you pre-label each
-   attendee namespace `restricted`** on all three PSA modes:
+1. **O namespace em si**, definido como contexto padrão do participante para que ele possa
+   omitir `-n $NS` (o [lab de setup](../labs/day-1/00-setup.md) manda ele rodar
+   `kubectl config set-context --current --namespace=$NS`; o namespace já precisa existir).
+2. **Um Role + RoleBinding de RBAC dentro do namespace** concedendo create/update/delete nos
+   kinds de workload comuns (pods, deployments, services, configmaps, secrets, PVCs, jobs, …)
+   **e nada cluster-scoped**. O Step 3 do lab de setup verifica isso — `kubectl auth can-i
+   create pods` precisa retornar `yes` no namespace do participante, e escritas cluster-scoped
+   precisam ser negadas. Os alunos constroem exatamente esse tipo de Role no **Lab 19 (RBAC)**.
+3. **Uma ResourceQuota + LimitRange** para que nenhum participante consiga sufocar o cluster
+   compartilhado. Os labs assumem que isso está presente — o S13 (resources & limits) depende
+   explicitamente de uma quota/limit existindo no namespace do próprio participante. Um
+   LimitRange também dá aos Pods requests/limits padrão sensatos.
+4. **Labels de Pod Security Standards, pré-aplicados.** Como colocar label em um Namespace é
+   uma escrita em um objeto cluster-scoped que o Role in-namespace não pode fazer, **você
+   pré-marca cada namespace de participante como `restricted`** nos três modos de PSA:
 
    ```bash
    kubectl label --overwrite namespace "$NS" \
@@ -234,81 +248,82 @@ Per attendee, the namespace must have:
      pod-security.kubernetes.io/audit=restricted
    ```
 
-   S17 (pod security) depends on this: its shared-cluster path tells learners the
-   `restricted` bar is **already on their namespace** and just to confirm it — they never
-   run the `label` command (they can't). On **kind**, learners label their own namespace.
+   O S17 (pod security) depende disso: o caminho de cluster compartilhado diz aos alunos que a
+   régua `restricted` **já está no namespace deles** e que basta confirmar — eles nunca rodam
+   o comando `label` (não podem). No **kind**, os alunos marcam o próprio namespace.
 
-> **Sanity check before the room.** For a sample attendee namespace, run the
-> [setup lab](../labs/day-1/00-setup.md) end to end as that identity: `kubectl auth can-i
-> create pods` → `yes`, cluster-scoped writes → `no`, and `kubectl get namespace $NS
-> --show-labels` shows all three `restricted` PSA labels. If that passes, every attendee is
-> at the same verified starting state.
+> **Conferência antes da sala.** Para um namespace de participante de amostra, rode o
+> [lab de setup](../labs/day-1/00-setup.md) de ponta a ponta com aquela identidade:
+> `kubectl auth can-i create pods` → `yes`, escritas cluster-scoped → `no`, e
+> `kubectl get namespace $NS --show-labels` mostrando os três labels de PSA `restricted`. Se
+> isso passar, todos os participantes estão no mesmo estado inicial verificado.
 
 ## Rehearsal debt (read before you teach)
 
-The lab manifests are validated (client/server dry-run), and several were confirmed against
-a live cluster — but the workshop has **not yet had a full clean-environment rehearsal
-pass**. Be aware of the following, consistent with the honesty callouts already in the
-[syllabus](./syllabus.md#superset-vs-the-canonical-3-day-cut) and
+Os manifestos dos labs estão validados (dry-run client/server) e vários foram confirmados
+contra um cluster real — mas o workshop **ainda não passou por uma rodada completa de ensaio
+em ambiente limpo**. Fique atento aos pontos abaixo, coerentes com os avisos de honestidade já
+presentes no [syllabus](./syllabus.md#superset-vs-the-canonical-3-day-cut) e no
 [labs README](../labs/README.md#how-to-start):
 
-- **Syllabus minute marks are planning aids.** Room tempo is presenter- and
-  audience-dependent — adjust on the day rather than chasing a fixed minute total.
-- **S08 has fresh live evidence.** On 2026-08-03, its complete kind path passed on an
-  Ubuntu 26.04 x86_64 laptop with Docker 29.6.2, kind v0.32.0 / Kubernetes v1.36.1,
-  and Contour v1.33.5: controller and Envoy readiness, both host routes,
-  required-`pathType` rejection, wrong-class routing loss, TLS/SNI, optional Extension 2
-  (`ingress2gateway` preview), and cleanup. This validates behaviour, not classroom pacing.
-  The created cluster and validation namespace were removed.
-- **The remaining `kind`-only add-on installs have not all been run end-to-end** in a
-  clean environment. Dry-run the remaining **add-on-heavy labs** (S09, S16, S18, S21, S22,
-  S23) on a clean kind cluster before delivery so you know install quirks on *your*
-  network.
-- **Local kind automation is shipped** (`./workshop up` / `make kind-up` →
-  `infra/kind/cluster.sh`). **Shared-cluster namespace provisioning**
-  (`make ns-provision` / `infra/shared-cluster/`) is still planned — provision
-  attendee namespaces by hand as above until that lands.
-- **The de-nginx effort (roadmap M8 / US-NGX) has landed.** The retired ingress-nginx
-  controller was replaced by **Contour** (S08), NGINX Gateway Fabric by **Envoy Gateway**
-  (S09), and every demo web image by the purpose-built
-  `ghcr.io/platformrelay/workshop-web` (`:v1`/`:v2`/`:v3` — listens on **8080**, non-root,
-  distroless, PSA `restricted`-clean). The add-on table above reflects the new stack;
-  re-check the pinned versions against the labs at delivery time.
-- **S24 (kubebuilder) is a stub** and **S25 (pod escape) is strictly kind-only** — plan
-  those two accordingly.
+- **As marcações de minutos do syllabus são apoios de planejamento.** O ritmo da sala depende
+  do apresentador e da audiência — ajuste no dia, em vez de perseguir um total fixo de minutos.
+- **O S08 tem evidência recente de execução real.** Em 2026-08-03, o caminho kind completo
+  passou em um laptop Ubuntu 26.04 x86_64 com Docker 29.6.2, kind v0.32.0 / Kubernetes v1.36.1
+  e Contour v1.33.5: readiness do controller e do Envoy, ambas as rotas de host, rejeição de
+  `pathType` obrigatório, perda de roteamento por classe errada, TLS/SNI, a Extensão 2 opcional
+  (preview do `ingress2gateway`) e o cleanup. Isso valida comportamento, não pacing de sala. O
+  cluster criado e o namespace de validação foram removidos.
+- **As instalações de add-on restantes, exclusivas do `kind`, não foram todas rodadas de ponta
+  a ponta** em um ambiente limpo. Faça dry-run dos **labs pesados em add-ons** restantes (S09,
+  S16, S18, S21, S22, S23) em um cluster kind limpo antes da entrega, para conhecer as
+  peculiaridades de instalação na *sua* rede.
+- **A automação local de kind está entregue** (`./workshop up` / `make kind-up` →
+  `infra/kind/cluster.sh`). **O provisionamento de namespaces em cluster compartilhado**
+  (`make ns-provision` / `infra/shared-cluster/`) ainda é planejado — provisione os namespaces
+  dos participantes na mão, como acima, até que isso chegue.
+- **O esforço de-nginx (roadmap M8 / US-NGX) foi concluído.** O aposentado controller
+  ingress-nginx foi substituído pelo **Contour** (S08), o NGINX Gateway Fabric pelo **Envoy
+  Gateway** (S09) e toda imagem web de demo pela imagem feita sob medida
+  `ghcr.io/platformrelay/workshop-web` (`:v1`/`:v2`/`:v3` — escuta na **8080**, non-root,
+  distroless, limpa sob PSA `restricted`). A tabela de add-ons acima reflete a nova stack;
+  re-cheque as versões fixadas contra os labs na hora da entrega.
+- **O S24 (kubebuilder) é um stub `deferred`** e o **S25 (pod escape) é estritamente
+  kind-only** — planeje esses dois de acordo.
 
-## Stable release posture (from v0.4.0)
+## Postura de release estável (a partir da v0.4.0)
 
-The front-door **controlled-beta** banner is removed on the `v0.4.0` line by maintainer
-decision (this branch / tip). Remaining items below are a **quality backlog**, not a
-reason to re-paste a beta warning on the README or docs landing.
+O banner de **controlled-beta** da porta de entrada foi removido na linha `v0.4.0` por decisão
+do mantenedor (este branch / tip). Os itens restantes abaixo são um **backlog de qualidade**,
+não um motivo para recolar um aviso de beta no README ou na landing da documentação.
 
-| Status | Item | Story / note |
+| Status | Item | Story / nota |
 | --- | --- | --- |
-| Backlog | Full clean-environment rehearsal | **US-BETA-6** — useful for facilitators who want a recorded run; syllabus minutes stay planning aids, not a contract |
-| Backlog | Validation matrix → `kind-smoke` for the Day-2/3 drivers | **US-ENV-4** Day-2/3 drivers + recorded evidence; the Flux S21 variant row is already promoted |
-| Accepted deferred | S24 kubebuilder | **US-S24** — see [known limitations](./beta-limitations.md) |
-| Done | Repo description + topics | **US-BETA-2** |
+| Backlog | Ensaio completo em ambiente limpo | **US-BETA-6** — útil para facilitadores que querem uma execução gravada; os minutos do syllabus continuam apoios de planejamento, não contrato |
+| Backlog | Matriz de validação → `kind-smoke` para os drivers de Day 2/3 | **US-ENV-4** drivers de Day 2/3 + evidência gravada; a linha da variante Flux do S21 já foi promovida |
+| `deferred` com aceite | S24 kubebuilder | **US-S24** — veja [limitações conhecidas](./beta-limitations.md) |
+| Feito | Descrição e topics do repositório | **US-BETA-2** |
 
-Do **not** treat unrehearsed minute marks as a release blocker — pacing is presenter- and
-audience-dependent. Prefer a short dry-run of the add-ons *your* cut needs over chasing a
-perfect timing spreadsheet.
+**Não** trate marcações de minutos não ensaiadas como bloqueio de release — o pacing depende
+do apresentador e da audiência. Prefira um dry-run curto dos add-ons que o *seu* corte precisa
+a perseguir uma planilha de timing perfeita.
 
-Pre-release tags (`v*-beta.*`, `v*-rc.*`) still prepend
-[known limitations](./beta-limitations.md) to GitHub Release notes; stable tags do not.
+Tags de pré-release (`v*-beta.*`, `v*-rc.*`) ainda prefixam as
+[limitações conhecidas](./beta-limitations.md) às release notes do GitHub; tags estáveis não.
 
-## Quick pre-delivery checklist
+## Checklist rápido de pré-entrega
 
-1. **Choose your cut** from the [3-day options](./syllabus.md#the-canonical-3-day-cut);
-   note which `recommended`/`optional` sections you keep — that fixes your add-on list.
-2. **Choose the environment** (shared cluster, kind, or mixed).
-3. **Shared cluster:** stand up the cluster; provision one namespace per attendee (RBAC +
-   quota/LimitRange + `restricted` PSA labels); **pre-install** every add-on your cut needs
-   from the [add-on table](#add-ons-what-to-pre-install-per-lab).
-4. **kind:** verify laptop prerequisites (container engine, `kind`, RAM, registry pull
-   access); dry-run the add-on installs your cut actually uses.
-5. **Distribute** kubeconfigs (shared) and the [`../labs/README.md`](../labs/README.md)
-   prerequisites (both) ahead of time.
-6. **Verify** by running the [setup lab](../labs/day-1/00-setup.md) as a sample attendee.
-7. **Adjust pacing on the day** — use Day 1 feedback for Days 2–3 rather than the syllabus
-   minute marks as gospel.
+1. **Escolha o seu corte** entre as [opções de 3 dias](./syllabus.md#the-canonical-3-day-cut);
+   anote quais seções `recommended`/`optional` você mantém — isso fixa a sua lista de add-ons.
+2. **Escolha o ambiente** (cluster compartilhado, kind ou misto).
+3. **Cluster compartilhado:** suba o cluster; provisione um namespace por participante (RBAC +
+   quota/LimitRange + labels de PSA `restricted`); **pré-instale** todos os add-ons que o seu
+   corte precisa, a partir da [tabela de add-ons](#add-ons-what-to-pre-install-per-lab).
+4. **kind:** verifique os pré-requisitos de laptop (container engine, `kind`, RAM, acesso de
+   pull a registries); faça dry-run das instalações de add-on que o seu corte realmente usa.
+5. **Distribua** os kubeconfigs (compartilhado) e os pré-requisitos do
+   [`../labs/README.md`](../labs/README.md) (ambos) com antecedência.
+6. **Verifique** rodando o [lab de setup](../labs/day-1/00-setup.md) como um participante de
+   amostra.
+7. **Ajuste o pacing no dia** — use o feedback do Day 1 para os Days 2–3, em vez de tratar as
+   marcações de minutos do syllabus como dogma.

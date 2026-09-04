@@ -9,64 +9,66 @@ track: Workloads
 
 # Storage (PV/PVC/StorageClass)
 
-Give the app a volume that outlives the Pod — and reason about the storage stack that
-provisions it.
+Dê à aplicação um volume que sobrevive ao Pod — e raciocine sobre a pilha de storage
+que o provisiona.
 
-**core** · suggested Day 2 · Workloads track
+**core** · sugerido para o Day 2 · trilha Workloads
 
 <!--
-Section S11 — Storage. Timing: ~30 min slides + 30 min lab. Second Day-2 workload
-concern after config (S10): the app is configurable, but its DATA is still ephemeral.
-Outcome: learners can tell ephemeral (container fs / emptyDir) from durable storage,
-explain the PVC → PV → StorageClass chain and dynamic provisioning, pick an access mode
-and reclaim policy, and mount a dynamically-provisioned PVC into a Deployment so data
-survives a Pod delete.
-Beats: problem (fs + emptyDir are ephemeral) · mental model (PVC=request → PV=storage →
+Seção S11 — Storage. Tempo: ~30 min de slides + 30 min de lab. Segunda preocupação de
+workload do Day 2 depois da config (S10): a aplicação está configurável, mas seus DADOS
+ainda são efêmeros.
+Resultado: os participantes conseguem distinguir storage efêmero (fs do container /
+emptyDir) de durável, explicar a cadeia PVC → PV → StorageClass e o provisionamento
+dinâmico, escolher um access mode e uma reclaim policy, e montar um PVC provisionado
+dinamicamente em um Deployment para que os dados sobrevivam a um delete de Pod.
+Beats: problema (fs + emptyDir são efêmeros) · modelo mental (PVC=pedido → PV=storage →
 StorageClass=provisioner) · access modes + reclaim policy · magic-move (emptyDir → PVC
-referencing a StorageClass, mounted) · PVC-binding animation (bind → write → delete Pod →
-data survives) · provisioning + binding mode (WaitForFirstConsumer; Deployments mount
-PVCs too → sets up S12) · recap → lab.
-Optional shared animation: PvcBinding.vue (new, self-contained). CKx: CKA/CKAD storage —
-PV, PVC, StorageClass, access modes, reclaim policy, dynamic provisioning.
+referenciando uma StorageClass, montado) · animação de binding do PVC (bind → escrita →
+delete do Pod → os dados sobrevivem) · provisionamento + binding mode
+(WaitForFirstConsumer; Deployments também montam PVCs → prepara o S12) · recap → lab.
+Animação compartilhada opcional: PvcBinding.vue (nova, autocontida). CKx: storage no
+CKA/CKAD — PV, PVC, StorageClass, access modes, reclaim policy, provisionamento dinâmico.
 -->
 
 ---
 layout: statement
-kicker: The problem
+kicker: O problema
 ---
 
-A container's filesystem **dies with the Pod**.
+O filesystem de um container **morre com o Pod**.
 
-Write a file inside a running container and it lives on the Pod's writable layer — delete
-the Pod, reschedule it, or let a Deployment replace it, and that data is **gone**.
-`emptyDir` is barely better: it survives a container *restart* but is wiped when the Pod
-is removed. Anything that must **outlive the Pod** — a database, an upload, a cache you
-can't lose — needs storage that is a **separate object from the Pod**.
+Escreva um arquivo dentro de um container em execução e ele vive na camada gravável do
+Pod — delete o Pod, reagende-o, ou deixe um Deployment substituí-lo, e esses dados
+**se foram**. `emptyDir` é pouco melhor: sobrevive a um *restart* de container, mas é
+apagado quando o Pod é removido. Qualquer coisa que precise **sobreviver ao Pod** — um
+banco de dados, um upload, um cache que você não pode perder — precisa de storage que
+seja um **objeto separado do Pod**.
 
 <!--
-Speaker: make the failure concrete — this is the storage equivalent of the S10 config
-lesson (the image is immutable; config lives outside it). Here: the Pod is disposable;
-data that matters must live outside it. Two ephemeral tiers to name: (1) the container's
-own writable layer — gone on Pod delete AND reset on container restart; (2) emptyDir — an
-empty volume that shares the Pod's lifetime, survives a container crash/restart but is
-deleted with the Pod. Neither survives rescheduling. Lab 11 proves durability against a
-real Pod delete.
+Speaker: torne a falha concreta — este é o equivalente de storage da lição de config do
+S10 (a image é imutável; a config vive fora dela). Aqui: o Pod é descartável; dados que
+importam precisam viver fora dele. Dois níveis efêmeros a nomear: (1) a própria camada
+gravável do container — some no delete do Pod E é zerada no restart do container;
+(2) emptyDir — um volume vazio que compartilha o tempo de vida do Pod, sobrevive a um
+crash/restart de container mas é deletado com o Pod. Nenhum dos dois sobrevive a um
+reagendamento. O Lab 11 prova durabilidade contra um delete de Pod de verdade.
 -->
 
 ---
 
 <div class="kw-slide-dense">
 
-<span class="kw-kicker">Mental model · request, storage, provisioner</span>
+<span class="kw-kicker">Modelo mental · pedido, storage, provisioner</span>
 
-# Three objects: PVC → PV → StorageClass
+# Três objetos: PVC → PV → StorageClass
 
 <div class="mt-3 text-sm" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.85rem;">
   <v-click at="1">
     <div class="kw-icon-stack">
       <K8sIcon kind="pvc" variant="unlabeled" size="3.4rem" class="kw-icon-stack-glyph" />
       <KwCard heading="PersistentVolumeClaim" kind="pvc">
-        The <strong>request</strong>: size + access mode. Lives in the namespace next to the Deployment.
+        O <strong>pedido</strong>: tamanho + access mode. Vive no namespace ao lado do Deployment.
       </KwCard>
     </div>
   </v-click>
@@ -74,7 +76,7 @@ real Pod delete.
     <div class="kw-icon-stack">
       <K8sIcon kind="pv" variant="unlabeled" size="3.4rem" class="kw-icon-stack-glyph" />
       <KwCard heading="PersistentVolume" kind="pv">
-        The actual <strong>storage</strong> — cluster-scoped, bound 1:1 to a claim.
+        O <strong>storage</strong> de fato — escopo de cluster, vinculado 1:1 a um claim.
       </KwCard>
     </div>
   </v-click>
@@ -82,7 +84,7 @@ real Pod delete.
     <div class="kw-icon-stack">
       <div class="kw-icon-stack-glyph" style="font-size:2.8rem;line-height:1;">⚙️</div>
       <KwCard heading="StorageClass" icon="🏭">
-        The <strong>provisioner</strong> + disk flavour — dynamically creates the PV.
+        O <strong>provisioner</strong> + o sabor de disco — cria o PV dinamicamente.
       </KwCard>
     </div>
   </v-click>
@@ -90,26 +92,27 @@ real Pod delete.
 
 <div v-click="4" class="mt-3 kw-muted text-sm">
 
-You write the **PVC**. The **StorageClass** provisions a matching **PV** and binds it.
-The Pod mounts the claim by name.
+Você escreve o **PVC**. A **StorageClass** provisiona um **PV** correspondente e os
+vincula. O Pod monta o claim pelo nome.
 
 </div>
 
 </div>
 
 <!--
-Speaker: land the one-way flow — you author only the PVC (the request). Everything else is
-automatic under dynamic provisioning: the named StorageClass runs a provisioner that mints
-a PV sized to the claim and binds them 1:1. Static provisioning (an admin pre-creates PVs)
-still exists but is the exception now. Analogy that sticks: PVC = a work order, PV = the
-delivered goods, StorageClass = the supplier/catalogue. There is no vendored glyph for
-StorageClass in the icon set, so it's shown as a gear — pv/pvc use the official resource
-glyphs. Lab: apply a PVC against the default StorageClass and watch the PV appear.
+Speaker: crave o fluxo de mão única — você é autor apenas do PVC (o pedido). Todo o resto
+é automático sob provisionamento dinâmico: a StorageClass nomeada roda um provisioner que
+cunha um PV do tamanho do claim e os vincula 1:1. O provisionamento estático (um admin
+pré-cria PVs) ainda existe, mas hoje é a exceção. Analogia que gruda: PVC = uma ordem de
+serviço, PV = a mercadoria entregue, StorageClass = o fornecedor/catálogo. Não existe
+glifo oficial para StorageClass no conjunto de ícones, então ela aparece como uma
+engrenagem — pv/pvc usam os glifos oficiais dos recursos. Lab: aplicar um PVC contra a
+StorageClass default e ver o PV aparecer.
 -->
 
 ---
 layout: code-annotated
-heading: 'Access modes and reclaim policy — the two knobs that bite'
+heading: 'Access modes e reclaim policy — os dois botões que mordem'
 compact: true
 lab: labs/day-2/11-storage.md
 ---
@@ -119,56 +122,57 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata: { name: web-data, labels: { app: s11 } }
 spec:
-  storageClassName: standard        # which provisioner / disk flavour
+  storageClassName: standard        # qual provisioner / sabor de disco
   accessModes: ['ReadWriteOnce']    # RWO · RWX · ReadWriteOncePod
   resources: { requests: { storage: 1Gi } }
 ```
 
 ::notes::
 
-<CodeNote at="1" label="StorageClass name">
-Names the provisioner. Omit it and you get the cluster <strong>default</strong>
-StorageClass; name one that doesn't exist and the claim hangs <code>Pending</code> forever
-(the lab's break→fix).
+<CodeNote at="1" label="nome da StorageClass">
+Nomeia o provisioner. Omita-o e você recebe a StorageClass <strong>default</strong> do
+cluster; nomeie uma que não existe e o claim fica pendurado em <code>Pending</code> para
+sempre (o quebre→conserte do lab).
 </CodeNote>
 
-<CodeNote at="2" label="access mode = how many nodes" variant="warn">
-<code>ReadWriteOnce</code> = one <strong>node</strong> mounts read-write (most block disks).
-<code>ReadWriteMany</code> = many nodes at once (needs a shared filesystem like NFS).
-<code>ReadWriteOncePod</code> = exactly one Pod. Picking RWO is the common default — just
-know it pins the Pod to one node.
+<CodeNote at="2" label="access mode = quantos nodes" variant="warn">
+<code>ReadWriteOnce</code> = um <strong>node</strong> monta em leitura-escrita (a maioria
+dos discos de bloco). <code>ReadWriteMany</code> = muitos nodes ao mesmo tempo (exige um
+filesystem compartilhado como NFS). <code>ReadWriteOncePod</code> = exatamente um Pod.
+Escolher RWO é o default comum — só saiba que ele prende o Pod a um node.
 </CodeNote>
 
-<CodeNote at="3" label="size is a request">
-Dynamic provisioning creates a PV of at least this size. You can grow a PVC later if the
-StorageClass allows <code>allowVolumeExpansion</code>.
+<CodeNote at="3" label="o tamanho é um pedido">
+O provisionamento dinâmico cria um PV de pelo menos este tamanho. Você pode crescer um PVC
+depois se a StorageClass permitir <code>allowVolumeExpansion</code>.
 </CodeNote>
 
-<CodeNote at="4" label="reclaim policy lives on the PV" variant="ok">
-The bound PV's <code>persistentVolumeReclaimPolicy</code> decides what happens on PVC
-delete: <code>Delete</code> (default for dynamic PVs — disk destroyed) or
-<code>Retain</code> (PV + data kept for manual recovery).
+<CodeNote at="4" label="a reclaim policy vive no PV" variant="ok">
+O <code>persistentVolumeReclaimPolicy</code> do PV vinculado decide o que acontece no
+delete do PVC: <code>Delete</code> (default para PVs dinâmicos — disco destruído) ou
+<code>Retain</code> (PV + dados mantidos para recuperação manual).
 </CodeNote>
 
 <!--
-Speaker: two knobs cause most storage confusion. (1) Access mode is about NODES, not a
-lock — RWO means one node mounts it, so a multi-replica Deployment on RWO can wedge Pods
-onto one node or block a rollout. RWX needs a real shared filesystem. RWOP (1.22+, GA
-1.29) is one-Pod-exclusive. (2) Reclaim policy sits on the PV and is why "delete the PVC"
-can be destructive: dynamic PVs default to Delete, so removing the claim removes the disk.
-Retain keeps the data but leaves you a Released PV to clean up by hand. Both are lab
-observations. The claim shown here is the exact one the lab applies.
+Speaker: dois botões causam a maior parte da confusão de storage. (1) Access mode é sobre
+NODES, não um lock — RWO significa que um node o monta, então um Deployment multi-réplica
+em RWO pode encurralar Pods em um node ou bloquear um rollout. RWX exige um filesystem
+compartilhado de verdade. RWOP (1.22+, GA na 1.29) é exclusivo de um Pod. (2) A reclaim
+policy fica no PV e é o motivo de "deletar o PVC" poder ser destrutivo: PVs dinâmicos
+default para Delete, então remover o claim remove o disco. Retain mantém os dados mas te
+deixa um PV Released para limpar na mão. Ambos são observações do lab. O claim mostrado
+aqui é exatamente o que o lab aplica.
 -->
 
 ---
 layout: code-walkthrough
-heading: 'Extend the app — from emptyDir to a durable PVC'
+heading: 'Estenda a aplicação — de emptyDir a um PVC durável'
 lab: labs/day-2/11-storage.md
 ---
 
 ````md magic-move
 ```yaml
-# our web app — data lives in an emptyDir: gone when the Pod is removed
+# nossa aplicação web — os dados vivem em um emptyDir: somem quando o Pod é removido
 apiVersion: apps/v1
 kind: Deployment
 metadata: { name: web, labels: { app: s11 } }
@@ -182,29 +186,29 @@ spec:
           image: ghcr.io/platformrelay/workshop-web:v1
           volumeMounts:
             - { name: data, mountPath: /data }
-        - name: toolbox   # shell-less app image → our pen for /data (as in Lab 10)
+        - name: toolbox   # image da aplicação sem shell → nossa caneta para /data (como no Lab 10)
           image: busybox:1.37
           command: ["sleep", "infinity"]
           volumeMounts:
             - { name: data, mountPath: /data }
       volumes:
         - name: data
-          emptyDir: {}                       # ephemeral — shares the Pod's lifetime
+          emptyDir: {}                       # efêmero — compartilha o tempo de vida do Pod
 ```
 
 ```yaml
-# +1: a PVC — the request for durable storage (its own object)
+# +1: um PVC — o pedido de storage durável (um objeto próprio)
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata: { name: web-data, labels: { app: s11 } }
 spec:
-  storageClassName: standard                 # cluster default provisioner
+  storageClassName: standard                 # provisioner default do cluster
   accessModes: ['ReadWriteOnce']
   resources: { requests: { storage: 1Gi } }
 ```
 
 ```yaml
-# +2: the SAME Deployment — swap emptyDir for the claim, mount unchanged
+# +2: o MESMO Deployment — troque emptyDir pelo claim, mount inalterado
 apiVersion: apps/v1
 kind: Deployment
 metadata: { name: web, labels: { app: s11 } }
@@ -217,7 +221,7 @@ spec:
         - name: web
           image: ghcr.io/platformrelay/workshop-web:v1
           volumeMounts:
-            - { name: data, mountPath: /data }    # container is none the wiser
+            - { name: data, mountPath: /data }    # o container nem fica sabendo
         - name: toolbox
           image: busybox:1.37
           command: ["sleep", "infinity"]
@@ -225,124 +229,126 @@ spec:
             - { name: data, mountPath: /data }
       volumes:
         - name: data
-          persistentVolumeClaim: { claimName: web-data }   # durable, survives the Pod
+          persistentVolumeClaim: { claimName: web-data }   # durável, sobrevive ao Pod
 ```
 
 ````
 
 <!--
-Speaker: THREE frames, the same app growing durable storage. (1) emptyDir mounted at
-/data — the container writes happily but the data shares the Pod's lifetime. (2) a PVC as
-its OWN object — the request; note it's namespaced and labelled app: s11 like everything
-else. (3) the Deployment's volume flips from emptyDir to persistentVolumeClaim.claimName —
-the container spec and mountPath are IDENTICAL, only the volume source changed. That's the
-whole trick: storage is pluggable behind the mount. The toolbox sidecar carries over from
-Lab 10: the app image is distroless, so busybox is the pen that writes the sentinel.
-Compact teaching view (inlined metadata) — the lab's manifests carry the block-style,
-applyable originals. The lab applies exactly these pieces, writes a sentinel to /data
-(via the toolbox), and deletes the Pod.
+Speaker: TRÊS frames, a mesma aplicação ganhando storage durável. (1) emptyDir montado em
+/data — o container escreve feliz, mas os dados compartilham o tempo de vida do Pod. (2)
+um PVC como objeto PRÓPRIO — o pedido; note que ele é namespaced e etiquetado app: s11
+como todo o resto. (3) o volume do Deployment vira de emptyDir para
+persistentVolumeClaim.claimName — o spec do container e o mountPath são IDÊNTICOS, só a
+fonte do volume mudou. Esse é o truque inteiro: o storage é plugável atrás do mount. O
+sidecar toolbox vem do Lab 10: a image da aplicação é distroless, então o busybox é a
+caneta que escreve o sentinela. Visão de ensino compacta (metadata em linha) — os
+manifestos do lab carregam os originais aplicáveis em estilo de bloco. O lab aplica
+exatamente estas peças, escreve um sentinela em /data (via toolbox) e deleta o Pod.
 -->
 
 ---
 clicks: 3
 ---
 
-<span class="kw-kicker">Watch it bind · data survives a Pod delete</span>
+<span class="kw-kicker">Veja o bind · os dados sobrevivem a um delete de Pod</span>
 
-# The PVC binds, the Pod comes and goes
+# O PVC vincula, o Pod vai e vem
 
 <div class="mt-4">
   <PvcBinding :step="$clicks" />
 </div>
 
 <!--
-Speaker: drive the animation with clicks (`clicks: 3` — without it the slide has
-no other clickable and advances away while `$clicks` stays 0). (0) The PVC is
-Pending — with a WaitForFirstConsumer StorageClass (kind's local-path default)
-binding waits for a Pod, so Pending here is NORMAL, not a fault. (1) The Pod
-schedules → the provisioner mints a PV → the PVC goes Bound → the container
-writes data.txt. (2) Delete the Pod: the PVC and PV are separate objects with
-their own lifecycle, so they and the data persist. (3) The Deployment recreates
-the Pod; it re-binds the SAME claim and the file is still there. This is
-precisely the lab's core proof — call it out so learners know what "correct"
-looks like before they run it.
+Speaker: conduza a animação com cliques (`clicks: 3` — sem isso o slide não tem outro
+clicável e avança embora enquanto `$clicks` fica em 0). (0) O PVC está Pending — com uma
+StorageClass WaitForFirstConsumer (o default local-path do kind) o binding espera por um
+Pod, então Pending aqui é NORMAL, não uma falha. (1) O Pod é agendado → o provisioner
+cunha um PV → o PVC vai a Bound → o container escreve o data.txt. (2) Delete o Pod: o PVC
+e o PV são objetos separados com seu próprio ciclo de vida, então eles e os dados
+persistem. (3) O Deployment recria o Pod; ele revincula o MESMO claim e o arquivo ainda
+está lá. Esta é precisamente a prova central do lab — destaque isso para que os
+participantes saibam como é o "correto" antes de executarem.
 -->
 
 ---
 
 <div class="kw-slide-dense">
 
-<span class="kw-kicker">Dynamic provisioning · and a bridge to StatefulSets</span>
+<span class="kw-kicker">Provisionamento dinâmico · e uma ponte para StatefulSets</span>
 
-# Who creates the PV — and when it binds
+# Quem cria o PV — e quando ele vincula
 
 <div class="kw-cols-2 mt-2 text-sm">
   <v-click at="1">
-    <KwCard heading="Dynamic provisioning" icon="🏭">
-      The StorageClass provisioner creates a PV <strong>on demand</strong> when your PVC
-      appears — the norm on managed clusters and in kind.
+    <KwCard heading="Provisionamento dinâmico" icon="🏭">
+      O provisioner da StorageClass cria um PV <strong>sob demanda</strong> quando seu PVC
+      aparece — a norma em clusters gerenciados e no kind.
     </KwCard>
   </v-click>
   <v-click at="2">
     <KwCard heading="volumeBindingMode" icon="⏳" variant="warn">
-      <code>Immediate</code> binds at once.
-      <code>WaitForFirstConsumer</code> stays <strong>Pending until a Pod schedules</strong>
-      — Pending ≠ broken.
+      <code>Immediate</code> vincula na hora.
+      <code>WaitForFirstConsumer</code> fica <strong>Pending até um Pod ser agendado</strong>
+      — Pending ≠ quebrado.
     </KwCard>
   </v-click>
 </div>
 
 <div v-click="3" class="kw-cols-2 mt-3 text-sm">
-  <KwCard heading="Deployments mount PVCs too" icon="📦">
-    Fine for one replica or <code>ReadWriteMany</code> — awkward when many RWO replicas
-    need separate disks.
+  <KwCard heading="Deployments também montam PVCs" icon="📦">
+    Bom para uma réplica ou <code>ReadWriteMany</code> — desajeitado quando muitas réplicas
+    RWO precisam de discos separados.
   </KwCard>
-  <KwCard heading="→ StatefulSet: per-Pod storage" icon="🔢" variant="ok">
-    <code>volumeClaimTemplates</code> mints one PVC per Pod — that's next.
+  <KwCard heading="→ StatefulSet: storage por Pod" icon="🔢" variant="ok">
+    <code>volumeClaimTemplates</code> cunha um PVC por Pod — isso é o próximo.
   </KwCard>
 </div>
 
 </div>
 
 <!--
-Speaker: two things to seat before the lab and before S12. (1) volumeBindingMode explains
-the Pending-then-binds behaviour the animation just showed — WaitForFirstConsumer defers
-binding until scheduling so a topology-constrained disk (e.g. a zonal EBS volume) attaches
-to the node the Pod actually lands on. This is why the lab tells kind users Pending is
-expected until the Deployment is applied. (2) The S12 bridge: a Deployment can mount a PVC,
-but all replicas share that ONE claim — great for a single writer, wrong for N independent
-stateful instances. That gap is exactly what StatefulSet + volumeClaimTemplates fills, and
-it reuses this same PVC/StorageClass model. CKA/CKAD storage domain lands here.
+Speaker: duas coisas a assentar antes do lab e antes do S12. (1) volumeBindingMode explica
+o comportamento Pending-e-depois-vincula que a animação acabou de mostrar —
+WaitForFirstConsumer adia o binding até o agendamento para que um disco restrito por
+topologia (ex.: um volume EBS zonal) se anexe ao node em que o Pod realmente cai. É por
+isso que o lab diz aos usuários de kind que Pending é esperado até o Deployment ser
+aplicado. (2) A ponte para o S12: um Deployment pode montar um PVC, mas todas as réplicas
+compartilham aquele ÚNICO claim — ótimo para um único escritor, errado para N instâncias
+stateful independentes. Essa lacuna é exatamente o que StatefulSet + volumeClaimTemplates
+preenche, e ele reusa este mesmo modelo PVC/StorageClass. O domínio de storage do CKA/CKAD
+cai aqui.
 -->
 
 ---
 layout: recap
-heading: 'Recap — data that outlives the Pod'
-story: 'The sentinel file survived a Pod delete because the PVC outlived the Pod — storage has its own lifecycle.'
+heading: 'Recap — dados que sobrevivem ao Pod'
+story: 'O arquivo sentinela sobreviveu a um delete de Pod porque o PVC sobreviveu ao Pod — o storage tem seu próprio ciclo de vida.'
 compact: true
-next: 'StatefulSet — stable identity + per-Pod storage (volumeClaimTemplates)'
+next: 'StatefulSet — identidade estável + storage por Pod (volumeClaimTemplates)'
 ---
 
-- The container filesystem and **`emptyDir`** are **ephemeral** — gone when the Pod is
-  removed; durable data needs an object with its **own lifecycle**
-- **PVC → PV → StorageClass:** you write the **claim**, the StorageClass **provisions** a
-  matching **PV** on demand and binds it 1:1; the Pod mounts the PVC by name
-- **Access mode** = how many **nodes** mount it (`ReadWriteOnce` / `ReadWriteMany` /
-  `ReadWriteOncePod`); **reclaim policy** on the PV (`Delete` vs `Retain`) decides if the
-  disk dies with the claim
-- **`volumeBindingMode: WaitForFirstConsumer`** keeps a PVC **Pending until a Pod
-  schedules** — normal, not a failure
-- Swapping `emptyDir` → `persistentVolumeClaim` leaves the container mount **unchanged** —
-  storage is pluggable behind the mount
-- Next: give each replica its **own** identity and volume with a **StatefulSet**
+- O filesystem do container e o **`emptyDir`** são **efêmeros** — somem quando o Pod é
+  removido; dados duráveis precisam de um objeto com seu **próprio ciclo de vida**
+- **PVC → PV → StorageClass:** você escreve o **claim**, a StorageClass **provisiona** um
+  **PV** correspondente sob demanda e o vincula 1:1; o Pod monta o PVC pelo nome
+- **Access mode** = quantos **nodes** o montam (`ReadWriteOnce` / `ReadWriteMany` /
+  `ReadWriteOncePod`); a **reclaim policy** no PV (`Delete` vs `Retain`) decide se o
+  disco morre com o claim
+- **`volumeBindingMode: WaitForFirstConsumer`** mantém um PVC **Pending até um Pod ser
+  agendado** — normal, não uma falha
+- Trocar `emptyDir` → `persistentVolumeClaim` deixa o mount do container **inalterado** —
+  o storage é plugável atrás do mount
+- A seguir: dê a cada réplica sua **própria** identidade e volume com um **StatefulSet**
 
 <!--
-Speaker: the takeaway they'll reach for in an incident: "my data vanished" is almost always
-ephemeral storage (emptyDir or the container layer), and "my PVC is stuck Pending" is
-usually WaitForFirstConsumer waiting for a Pod — or a StorageClass name typo (the lab's
-break). Then pivot to S12: we made data durable, but a Deployment shares one claim across
-replicas; identity-bearing workloads need one volume each. Hand off to Lab 11: bind a PVC,
-write a sentinel, delete the Pod, and prove the file survives.
+Speaker: o takeaway que vão buscar em um incidente: "meus dados sumiram" é quase sempre
+storage efêmero (emptyDir ou a camada do container), e "meu PVC está preso em Pending" é
+geralmente WaitForFirstConsumer esperando por um Pod — ou um erro de digitação no nome da
+StorageClass (a quebra do lab). Depois pivote para o S12: tornamos os dados duráveis, mas
+um Deployment compartilha um claim entre as réplicas; workloads com identidade precisam de
+um volume cada. Passe o bastão para o Lab 11: vincular um PVC, escrever um sentinela,
+deletar o Pod e provar que o arquivo sobrevive.
 -->
 
 ---
@@ -352,11 +358,11 @@ duration: 30 min
 env: namespace ✓ / kind ✓
 ---
 
-## Lab 11 — Data that survives
+## Lab 11 — Dados que sobrevivem
 
-- Apply a **PVC** against the default **StorageClass**; watch it bind once a Pod consumes it
-- Mount it into a **Deployment**, `exec` in and write a **sentinel** file
-- **Delete the Pod**, let the Deployment recreate it, and confirm the file **survived**
-- **Break→fix:** request a StorageClass that doesn't exist → PVC stuck `Pending` → diagnose
-  with `describe pvc` → fix and watch it bind
-- Answer the headline: *why did the file survive a Pod delete but not `kubectl delete pvc`?*
+- Aplique um **PVC** contra a **StorageClass** default; veja-o vincular quando um Pod o consumir
+- Monte-o em um **Deployment**, entre com `exec` e escreva um arquivo **sentinela**
+- **Delete o Pod**, deixe o Deployment recriá-lo e confirme que o arquivo **sobreviveu**
+- **Quebre→conserte:** peça uma StorageClass que não existe → PVC preso em `Pending` → diagnostique
+  com `describe pvc` → conserte e veja-o vincular
+- Responda a manchete: *por que o arquivo sobreviveu a um delete de Pod mas não a `kubectl delete pvc`?*

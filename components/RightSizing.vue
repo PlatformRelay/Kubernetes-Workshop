@@ -41,14 +41,14 @@ const showRequest = computed(() => props.step >= 1)
 const showWaste = computed(() => props.step === 1)
 const showLimit = computed(() => props.step >= 3)
 const requestLabel = computed(() =>
-  props.step >= 2 ? 'request: 128Mi ≈ steady state' : 'request: 512Mi (guessed)',
+  props.step >= 2 ? 'request: 128Mi ≈ estado estável' : 'request: 512Mi (chutado)',
 )
 </script>
 
 <template>
   <div class="kw-rs">
     <svg class="kw-rs-chart" viewBox="0 0 640 250" role="img"
-      aria-label="Memory usage over a day against the request and limit lines">
+      aria-label="Uso de memória ao longo de um dia contra as linhas de request e limit">
       <!-- ruler: faint gridlines with Mi labels -->
       <g class="kw-rs-grid">
         <line x1="50" x2="590" :y1="Y_512" :y2="Y_512" />
@@ -65,7 +65,7 @@ const requestLabel = computed(() =>
       <!-- the waste band: reservation minus reality (step 1 only) -->
       <g class="kw-rs-waste" :class="{ 'is-visible': showWaste }">
         <rect x="50" :y="Y_512" width="540" :height="188 - Y_512" />
-        <text x="320" y="126" text-anchor="middle">reserved, never used</text>
+        <text x="320" y="126" text-anchor="middle">reservado, nunca usado</text>
       </g>
 
       <!-- observed usage: one series, steady state + a daily burst -->
@@ -78,15 +78,15 @@ const requestLabel = computed(() =>
           class="kw-rs-usage-line"
           points="50,196 90,193 130,197 170,192 210,195 250,191 290,196 330,194 370,170 400,154 430,156 460,175 490,192 530,195 590,194"
         />
-        <text class="kw-rs-usage-label" x="586" y="208" text-anchor="end">usage · web</text>
+        <text class="kw-rs-usage-label" x="586" y="208" text-anchor="end">uso · web</text>
       </g>
 
       <!-- the limit: burst headroom above the right-sized request (step 3) -->
       <g class="kw-rs-limit" :class="{ 'is-visible': showLimit }">
         <line x1="50" x2="590" :y1="Y_256" :y2="Y_256" />
-        <text x="586" :y="Y_256 - 6" text-anchor="end">limit: 256Mi — burst headroom</text>
+        <text x="586" :y="Y_256 - 6" text-anchor="end">limit: 256Mi — folga para burst</text>
         <circle cx="400" cy="154" r="4" />
-        <text x="385" y="158" text-anchor="end" class="kw-rs-peak">peak fits under the limit</text>
+        <text x="385" y="158" text-anchor="end" class="kw-rs-peak">o pico cabe sob o limit</text>
       </g>
 
       <!-- the request line: guessed high, then right-sized down -->
@@ -102,19 +102,19 @@ const requestLabel = computed(() =>
 
     <div v-if="props.showCaption" class="kw-rs-caption">
       <template v-if="props.step <= 0">
-        What the app <strong>actually uses</strong> — steady state, one daily burst.
+        O que a aplicação <strong>realmente usa</strong> — estado estável, um burst diário.
       </template>
       <template v-else-if="props.step === 1">
-        The guessed request reserves <strong>512Mi</strong>; the app uses ~90Mi. The shaded gap
-        is capacity the scheduler <strong>holds for nobody</strong>.
+        O request chutado reserva <strong>512Mi</strong>; a aplicação usa ~90Mi. A faixa
+        sombreada é capacidade que o scheduler <strong>guarda para ninguém</strong>.
       </template>
       <template v-else-if="props.step === 2">
-        Right-sized: the request sits <strong>just above steady state</strong> — the
-        reservation matches reality, the node gets its capacity back.
+        Right-sizing feito: o request fica <strong>logo acima do estado estável</strong> — a
+        reserva bate com a realidade e o node recupera sua capacidade.
       </template>
       <template v-else>
-        The limit adds <strong>burst headroom</strong>: the daily peak fits under it —
-        no OOMKill, nothing hoarded.
+        O limit acrescenta <strong>folga para burst</strong>: o pico diário cabe embaixo dele —
+        sem OOMKill, nada represado.
       </template>
     </div>
   </div>

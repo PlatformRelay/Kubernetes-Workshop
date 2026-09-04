@@ -1,16 +1,16 @@
-# Lab 12 — StatefulSet (S12) — solutions
+# Lab 12 — StatefulSet (S12) — soluções
 
-Use this companion after attempting the participant lab. Outputs contain representative
-names, addresses, ages, and image sizes; compare the state and meaning rather than copying
-ephemeral values literally.
+Use este companion depois de tentar o lab do participante. As saídas contêm nomes, endereços,
+idades e tamanhos de image representativos; compare o estado e o significado em vez de copiar
+literalmente valores efêmeros.
 
 ## Guided solutions
 
-### Step 0 — apply the headless Service
+### Step 0 — aplique o headless Service
 
-A **headless** Service (`clusterIP: None`) doesn't hand out one virtual IP and load-balance.
-Instead, cluster DNS returns a record **per Pod** — that's what gives each StatefulSet Pod a
-stable address its peers can dial.
+Um Service **headless** (`clusterIP: None`) não entrega um único IP virtual com load-balance.
+Em vez disso, o DNS do cluster retorna um registro **por Pod** — é isso que dá a cada Pod do
+StatefulSet um endereço estável que seus peers podem discar.
 
 ```bash
 cat > headless-svc.yaml <<'EOF'
@@ -21,7 +21,7 @@ metadata:
   labels:
     app: s12
 spec:
-  clusterIP: None                 # headless — per-Pod DNS, no single virtual IP
+  clusterIP: None                 # headless — DNS por Pod, sem um único IP virtual
   selector:
     app: s12
   ports:
@@ -34,9 +34,9 @@ kubectl apply -f headless-svc.yaml
 kubectl get svc web
 ```
 
-**Task:** confirm the Service is headless (no cluster IP).
+**Tarefa:** confirme que o Service é headless (sem cluster IP).
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ kubectl get svc web
@@ -44,14 +44,15 @@ NAME   TYPE        CLUSTER-IP   EXTERNAL-IP   PORT(S)   AGE
 web    ClusterIP   None         <none>        80/TCP    3s
 ```
 
-`CLUSTER-IP: None` is the headless marker. A normal Service would show a virtual IP here and
-DNS would resolve the Service name to that one IP. Headless means DNS instead returns the
-**set of Pod IPs**, and — crucially for a StatefulSet — a stable **per-Pod** name.
+`CLUSTER-IP: None` é o marcador de headless. Um Service normal mostraria um IP virtual aqui e
+o DNS resolveria o nome do Service para aquele único IP. Headless significa que o DNS retorna,
+em vez disso, o **conjunto de IPs dos Pods** e — crucialmente para um StatefulSet — um nome
+estável **por Pod**.
 </details>
 
 ---
 
-### Step 1 — apply the StatefulSet and watch ordered creation
+### Step 1 — aplique o StatefulSet e observe a criação ordenada
 
 ```bash
 cat > statefulset.yaml <<'EOF'
@@ -62,7 +63,7 @@ metadata:
   labels:
     app: s12
 spec:
-  serviceName: web                # MUST match the headless Service name (per-Pod DNS)
+  serviceName: web                # DEVE bater com o nome do headless Service (DNS por Pod)
   replicas: 3
   selector:
     matchLabels:
@@ -80,13 +81,13 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /data
-        - name: toolbox           # the app image has no shell — the sidecar is our pen
+        - name: toolbox           # a image da aplicação não tem shell — o sidecar é nossa caneta
           image: busybox:1.37
           command: ["sleep", "infinity"]
           volumeMounts:
             - name: data
               mountPath: /data
-  volumeClaimTemplates:           # a PVC STENCIL — one minted per ordinal
+  volumeClaimTemplates:           # um ESTÊNCIL de PVC — um cunhado por ordinal
     - metadata:
         name: data
       spec:
@@ -98,13 +99,13 @@ EOF
 
 kubectl apply -f statefulset.yaml
 
-# watch the ordered rollout — Ctrl-C once all three are Running
+# observe o rollout ordenado — Ctrl-C quando os três estiverem Running
 kubectl get pods -l app=s12 -w
 ```
 
-**Task:** in what order do the Pods appear, and what are their names?
+**Tarefa:** em que ordem os Pods aparecem, e quais são seus nomes?
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ kubectl get pods -l app=s12 -w
@@ -117,37 +118,37 @@ web-2   0/2     Pending             0          0s
 web-2   2/2     Running             0          7s
 ```
 
-Names are **stable ordinals** — `web-0`, `web-1`, `web-2` — not the random
-`web-<hash>-<hash>` a Deployment produces. They come up **strictly in order**: the
-StatefulSet controller waits for `web-0` to be Ready before it creates `web-1`
-(`podManagementPolicy: OrderedReady`, the default). (Note: on kind's
-`WaitForFirstConsumer` StorageClass each ordinal's PVC binds as that Pod schedules — the
-same behaviour you saw in Lab 11.)
+Os nomes são **ordinais estáveis** — `web-0`, `web-1`, `web-2` — e não o
+`web-<hash>-<hash>` aleatório que um Deployment produz. Eles sobem **estritamente em ordem**:
+o controller do StatefulSet espera o `web-0` ficar Ready antes de criar o `web-1`
+(`podManagementPolicy: OrderedReady`, o padrão). (Nota: na StorageClass
+`WaitForFirstConsumer` do kind, o PVC de cada ordinal faz bind conforme aquele Pod é agendado
+— o mesmo comportamento que você viu no Lab 11.)
 </details>
 
-**Question:** you set `replicas: 3` but never wrote three PVCs. Where did the storage come
-from?
+**Pergunta:** você definiu `replicas: 3` mas nunca escreveu três PVCs. De onde veio o
+storage?
 
-<details><summary>Answer</summary>
+<details><summary>Resposta</summary>
 
-From `volumeClaimTemplates`. It's a **stencil**, not a volume: the controller stamps out one
-PVC **per ordinal**, named `<template>-<statefulset>-<ordinal>` → `data-web-0`,
-`data-web-1`, `data-web-2`. Each is dynamically provisioned by the default StorageClass
-exactly like the Lab 11 PVC — the only new idea is **one per Pod**, and it stays glued to
-that ordinal across restarts.
+De `volumeClaimTemplates`. É um **estêncil**, não um volume: o controller estampa um
+PVC **por ordinal**, nomeado `<template>-<statefulset>-<ordinal>` → `data-web-0`,
+`data-web-1`, `data-web-2`. Cada um é provisionado dinamicamente pela StorageClass padrão
+exatamente como o PVC do Lab 11 — a única ideia nova é **um por Pod**, e ele fica colado
+àquele ordinal entre restarts.
 </details>
 
 ---
 
-### Step 2 — confirm one PVC per ordinal
+### Step 2 — confirme um PVC por ordinal
 
 ```bash
 kubectl get pvc -l app=s12
 ```
 
-**Task:** how many PVCs exist, and how are they named?
+**Tarefa:** quantos PVCs existem, e como são nomeados?
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ kubectl get pvc -l app=s12
@@ -157,57 +158,57 @@ data-web-1   Bound    pvc-c3d4...-2222   1Gi        RWO            standard     
 data-web-2   Bound    pvc-e5f6...-3333   1Gi        RWO            standard       24s
 ```
 
-**Three** PVCs — one per ordinal, `data-web-<n>`. Each is bound to its own PV. This is the
-difference from a Deployment mounting a single PVC: there, every replica shares one claim;
-here, every Pod owns its own.
+**Três** PVCs — um por ordinal, `data-web-<n>`. Cada um está vinculado ao seu próprio PV. Essa
+é a diferença em relação a um Deployment montando um único PVC: lá, toda réplica compartilha
+um claim; aqui, cada Pod é dono do seu.
 
-> **Note the label.** These PVCs carry `app: s12` because `volumeClaimTemplates` copies the
-> template's `metadata.labels` (we set `app: s12` on the StatefulSet's `metadata`, and the
-> minted PVCs inherit the StatefulSet's labels). If `kubectl get pvc -l app=s12` comes back
-> empty on your cluster, drop the selector: `kubectl get pvc`.
+> **Repare no label.** Esses PVCs carregam `app: s12` porque `volumeClaimTemplates` copia os
+> `metadata.labels` do template (definimos `app: s12` no `metadata` do StatefulSet, e os PVCs
+> cunhados herdam os labels do StatefulSet). Se `kubectl get pvc -l app=s12` voltar vazio no
+> seu cluster, remova o selector: `kubectl get pvc`.
 </details>
 
 ---
 
-### Step 3 — write a sentinel into `web-1`
+### Step 3 — escreva um sentinela no `web-1`
 
-Give one specific ordinal some data we can recognise later.
+Dê a um ordinal específico alguns dados que possamos reconhecer depois.
 
 ```bash
 kubectl exec web-1 -c toolbox -- sh -c 'echo "written by $(hostname)" > /data/data.txt'
 kubectl exec web-1 -c toolbox -- cat /data/data.txt
 ```
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ kubectl exec web-1 -c toolbox -- cat /data/data.txt
 written by web-1
 ```
 
-The file lives on `data-web-1` (web-1's own PVC), not on the Pod's writable layer. We wrote
-the Pod's own hostname so that after a delete/recreate we can prove the **same** volume came
-back — the content will still say `web-1`, written by the original Pod.
+O arquivo vive em `data-web-1` (o PVC próprio do web-1), não na camada gravável do Pod.
+Escrevemos o hostname do próprio Pod para que, após um delete/recreate, possamos provar que o
+**mesmo** volume voltou — o conteúdo ainda vai dizer `web-1`, escrito pelo Pod original.
 </details>
 
 ---
 
-### Step 4 — delete `web-1`; prove identity **and** data survive
+### Step 4 — delete o `web-1`; prove que identidade **e** dados sobrevivem
 
-This is the heart of the section.
+Este é o coração da seção.
 
 ```bash
-# delete just the middle ordinal; the StatefulSet immediately recreates it
+# delete apenas o ordinal do meio; o StatefulSet o recria imediatamente
 kubectl delete pod web-1
-kubectl get pods -l app=s12 -w        # Ctrl-C once web-1 is Running again
+kubectl get pods -l app=s12 -w        # Ctrl-C quando web-1 estiver Running de novo
 
-# read the sentinel from the REPLACEMENT web-1
+# leia o sentinela a partir do web-1 SUBSTITUTO
 kubectl exec web-1 -c toolbox -- cat /data/data.txt
 ```
 
-**Task:** what name does the replacement Pod get, and is the sentinel still there?
+**Tarefa:** que nome o Pod substituto recebe, e o sentinela ainda está lá?
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ kubectl delete pod web-1
@@ -215,46 +216,47 @@ pod "web-1" deleted
 $ kubectl get pods -l app=s12
 NAME    READY   STATUS    RESTARTS   AGE
 web-0   2/2     Running   0          5m
-web-1   2/2     Running   0          12s     # <-- same NAME, a fresh Pod underneath
+web-1   2/2     Running   0          12s     # <-- mesmo NOME, um Pod novo por baixo
 web-2   2/2     Running   0          5m
 $ kubectl exec web-1 -c toolbox -- cat /data/data.txt
 written by web-1
 ```
 
-The replacement is **still `web-1`** (not a new random name) and it re-bound the **same**
-`data-web-1` PVC, so the sentinel — written by the *original* `web-1` — is intact. Identity
-and data both survived the delete.
+O substituto **ainda é `web-1`** (não um novo nome aleatório) e religou o **mesmo** PVC
+`data-web-1`, então o sentinela — escrito pelo `web-1` *original* — está intacto. Identidade
+e dados sobreviveram ao delete.
 </details>
 
-**Question:** why did `web-1` reattach its old data, when a Deployment Pod would have come
-back empty?
+**Pergunta:** por que o `web-1` reanexou seus dados antigos, quando um Pod de Deployment teria
+voltado vazio?
 
-<details><summary>Answer</summary>
+<details><summary>Resposta</summary>
 
-Two StatefulSet guarantees combine. **Stable identity:** the controller always recreates the
-missing ordinal with the *same* name (`web-1`), never a random suffix. **Sticky storage:**
-each ordinal is permanently associated with its own PVC (`data-web-1`), so the replacement
-Pod re-binds that exact claim. A Deployment gives neither — a replacement Pod gets a new
-random name and, sharing one PVC (or an `emptyDir`), no per-instance memory.
+Duas garantias do StatefulSet se combinam. **Identidade estável:** o controller sempre recria
+o ordinal ausente com o *mesmo* nome (`web-1`), nunca um sufixo aleatório. **Sticky storage:**
+cada ordinal é permanentemente associado ao seu próprio PVC (`data-web-1`), então o Pod
+substituto religa exatamente aquele claim. Um Deployment não dá nenhuma das duas — um Pod
+substituto recebe um novo nome aleatório e, compartilhando um único PVC (ou um `emptyDir`),
+nenhuma memória por instância.
 </details>
 
 ---
 
-### Step 5 — see stable per-Pod DNS
+### Step 5 — veja o DNS estável por Pod
 
-The headless Service publishes a DNS name for **each** Pod:
-`<pod>.<serviceName>.<namespace>.svc.cluster.local`. Peers use these to find each other.
-Look one up from another Pod.
+O headless Service publica um nome DNS para **cada** Pod:
+`<pod>.<serviceName>.<namespace>.svc.cluster.local`. Os peers usam esses nomes para se
+encontrar. Resolva um deles a partir de outro Pod.
 
 ```bash
-# resolve web-1's per-Pod name from a temporary Pod (any Pod counts as "a peer")
+# resolva o nome por Pod do web-1 a partir de um Pod temporário (qualquer Pod conta como "um peer")
 kubectl run dnstest --rm -it --restart=Never --image=busybox:1.36 -- \
   nslookup "web-1.web.$NS.svc.cluster.local"
 ```
 
-**Task:** does `web-1.web.<ns>.svc.cluster.local` resolve to an IP?
+**Tarefa:** `web-1.web.<ns>.svc.cluster.local` resolve para um IP?
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ kubectl run dnstest --rm -it --restart=Never --image=busybox:1.36 -- \
@@ -266,20 +268,21 @@ Name:      web-1.web.<ns>.svc.cluster.local
 Address:   10.244.1.7
 ```
 
-It resolves to `web-1`'s Pod IP. The name is built from the Pod's `hostname` (`web-1`, set by
-the StatefulSet) and its `subdomain` (`web`, set from `serviceName`) — and it resolves **only
-because a headless Service named `web` exists** to publish the record. That is exactly the
-wiring Step 6 breaks. (If `nslookup` returns before the Pod has an address, give the rollout
-a few seconds and retry.)
+Resolve para o IP do Pod `web-1`. O nome é construído a partir do `hostname` do Pod (`web-1`,
+definido pelo StatefulSet) e do seu `subdomain` (`web`, definido a partir de `serviceName`) —
+e ele resolve **apenas porque existe um headless Service chamado `web`** para publicar o
+registro. É exatamente essa a ligação que o Step 6 quebra. (Se o `nslookup` retornar antes de
+o Pod ter um endereço, dê alguns segundos ao rollout e tente de novo.)
 </details>
 
 ---
 
-### Step 6 — break→fix: a `serviceName` pointing at nothing
+### Step 6 — break→fix: um `serviceName` apontando para o nada
 
-The `serviceName` must name a real headless Service or per-Pod DNS silently never works — the
-Pods run fine, so nothing looks wrong until peers fail to connect. Two twists make this
-realistic: `serviceName` is **immutable**, and a broken StatefulSet still schedules Pods.
+O `serviceName` precisa nomear um headless Service real, ou o DNS por Pod silenciosamente
+nunca funciona — os Pods rodam bem, então nada parece errado até os peers falharem em
+conectar. Dois detalhes tornam isso realista: `serviceName` é **imutável**, e um StatefulSet
+quebrado ainda agenda Pods.
 
 ```bash
 cat > statefulset-bad-servicename.yaml <<'EOF'
@@ -290,7 +293,7 @@ metadata:
   labels:
     app: s12
 spec:
-  serviceName: web-nope           # <-- no headless Service by this name exists
+  serviceName: web-nope           # <-- nenhum headless Service com este nome existe
   replicas: 3
   selector:
     matchLabels:
@@ -324,13 +327,13 @@ spec:
             storage: 1Gi
 EOF
 
-# first try to apply it over the running StatefulSet
+# primeiro tente aplicá-lo por cima do StatefulSet em execução
 kubectl apply -f statefulset-bad-servicename.yaml
 ```
 
-**Task:** the apply is **rejected**. Why — and what does that tell you about `serviceName`?
+**Tarefa:** o apply é **rejeitado**. Por quê — e o que isso te diz sobre o `serviceName`?
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ kubectl apply -f statefulset-bad-servicename.yaml
@@ -339,27 +342,28 @@ other than 'replicas', 'ordinals', 'template', 'updateStrategy',
 'persistentVolumeClaimRetentionPolicy' and 'minReadySeconds' are forbidden
 ```
 
-`serviceName` (like `selector` and `volumeClaimTemplates`) is **immutable** — you can't edit
-it on a live StatefulSet, exactly as `storageClassName` was immutable on the Lab 11 PVC. To
-change it you must **delete and recreate**. Because the PVCs are independent objects, the
-data survives the recreate — which we'll confirm.
+`serviceName` (como `selector` e `volumeClaimTemplates`) é **imutável** — você não pode
+editá-lo em um StatefulSet vivo, exatamente como `storageClassName` era imutável no PVC do
+Lab 11. Para mudá-lo você precisa **deletar e recriar**. Como os PVCs são objetos
+independentes, os dados sobrevivem à recriação — o que vamos confirmar.
 
 </details>
 
-**Task:** now actually create the broken version (delete + recreate), then test peer DNS.
+**Tarefa:** agora crie de fato a versão quebrada (delete + recrie), depois teste o DNS entre
+peers.
 
 ```bash
-# delete the StatefulSet — its PVCs (data-web-0/1/2) are NOT deleted, so data is safe
+# delete o StatefulSet — seus PVCs (data-web-0/1/2) NÃO são deletados, então os dados estão seguros
 kubectl delete statefulset web
 kubectl apply -f statefulset-bad-servicename.yaml
-kubectl rollout status statefulset/web        # Pods come up despite the bad serviceName
+kubectl rollout status statefulset/web        # os Pods sobem apesar do serviceName ruim
 
-# the Pods run — but does per-Pod DNS resolve?
+# os Pods rodam — mas o DNS por Pod resolve?
 kubectl run dnstest --rm -it --restart=Never --image=busybox:1.36 -- \
   nslookup "web-1.web.$NS.svc.cluster.local"
 ```
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ kubectl rollout status statefulset/web
@@ -377,29 +381,30 @@ $ kubectl run dnstest --rm -it --restart=Never --image=busybox:1.36 -- \
 pod "dnstest" deleted
 ```
 
-The Pods are **Running** — a bad `serviceName` doesn't stop them scheduling — but their
-`subdomain` is now `web-nope`, so no per-Pod record is published under `web` (nor under
-`web-nope`, since no Service by that name exists). `web-1.web…` returns **NXDOMAIN**. This is
-the trap: everything looks healthy in `get pods`, yet peer discovery is silently dead.
+Os Pods estão **Running** — um `serviceName` ruim não os impede de ser agendados — mas o
+`subdomain` deles agora é `web-nope`, então nenhum registro por Pod é publicado sob `web`
+(nem sob `web-nope`, já que nenhum Service com esse nome existe). `web-1.web…` retorna
+**NXDOMAIN**. Essa é a armadilha: tudo parece saudável no `get pods`, e mesmo assim a
+descoberta de peers está silenciosamente morta.
 </details>
 
-**Task:** fix it — recreate the StatefulSet with the correct `serviceName`, and confirm DNS
-returns **and** the data is still there.
+**Tarefa:** conserte — recrie o StatefulSet com o `serviceName` correto, e confirme que o DNS
+volta **e** os dados ainda estão lá.
 
 ```bash
 kubectl delete statefulset web
-kubectl apply -f statefulset.yaml               # the good manifest, serviceName: web
+kubectl apply -f statefulset.yaml               # o manifesto bom, serviceName: web
 kubectl rollout status statefulset/web
 
-# DNS resolves again...
+# o DNS resolve de novo...
 kubectl run dnstest --rm -it --restart=Never --image=busybox:1.36 -- \
   nslookup "web-1.web.$NS.svc.cluster.local"
 
-# ...and the sentinel from Step 3 survived TWO delete/recreate cycles
+# ...e o sentinela do Step 3 sobreviveu a DOIS ciclos de delete/recreate
 kubectl exec web-1 -c toolbox -- cat /data/data.txt
 ```
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ kubectl run dnstest --rm -it --restart=Never --image=busybox:1.36 -- \
@@ -411,81 +416,82 @@ $ kubectl exec web-1 -c toolbox -- cat /data/data.txt
 written by web-1
 ```
 
-With `serviceName: web` matching the existing headless Service, the per-Pod record is
-published again and resolves. And notice: `data.txt` still reads `written by web-1` even
-though we deleted and recreated the **entire StatefulSet twice**. The PVCs
-(`data-web-0/1/2`) are separate objects with their own lifecycle — deleting the StatefulSet
-never touched them.
+Com `serviceName: web` batendo com o headless Service existente, o registro por Pod é
+publicado de novo e resolve. E repare: `data.txt` ainda diz `written by web-1` mesmo tendo
+deletado e recriado o **StatefulSet inteiro duas vezes**. Os PVCs (`data-web-0/1/2`) são
+objetos separados com seu próprio ciclo de vida — deletar o StatefulSet nunca os tocou.
 </details>
 
-### Stretch (optional) — scale down and back up
+### Stretch (opcional) — reduza as réplicas e escale de volta
 
-Prove the sticky-storage guarantee against a scale-down/up cycle.
+Prove a garantia de sticky storage contra um ciclo de scale-down/up.
 
 ```bash
-kubectl scale statefulset web --replicas=1        # removes web-2 then web-1 (reverse order)
-kubectl get pods -l app=s12                        # only web-0 remains
-kubectl get pvc -l app=s12 || kubectl get pvc      # ...but data-web-1 and data-web-2 REMAIN
-kubectl scale statefulset web --replicas=3        # web-1, web-2 recreated in order
-kubectl exec web-1 -c toolbox -- cat /data/data.txt   # sentinel still there
+kubectl scale statefulset web --replicas=1        # remove web-2 e depois web-1 (ordem reversa)
+kubectl get pods -l app=s12                        # só web-0 permanece
+kubectl get pvc -l app=s12 || kubectl get pvc      # ...mas data-web-1 e data-web-2 PERMANECEM
+kubectl scale statefulset web --replicas=3        # web-1, web-2 recriados em ordem
+kubectl exec web-1 -c toolbox -- cat /data/data.txt   # o sentinela ainda está lá
 ```
 
-<details><summary>Solution / what you're looking at</summary>
+<details><summary>Solução / o que você está vendo</summary>
 
 ```console
-$ kubectl get pods -l app=s12       # after scaling to 1
+$ kubectl get pods -l app=s12       # depois de escalar para 1
 NAME    READY   STATUS    RESTARTS   AGE
 web-0   2/2     Running   0          10m
 
-$ kubectl get pvc -l app=s12        # PVCs for the removed ordinals are kept
+$ kubectl get pvc -l app=s12        # os PVCs dos ordinais removidos são mantidos
 NAME         STATUS   VOLUME             CAPACITY   ACCESS MODES   STORAGECLASS   AGE
 data-web-0   Bound    pvc-a1b2...        1Gi        RWO            standard       10m
 data-web-1   Bound    pvc-c3d4...        1Gi        RWO            standard       10m
 data-web-2   Bound    pvc-e5f6...        1Gi        RWO            standard       10m
 
-$ kubectl exec web-1 -c toolbox -- cat /data/data.txt   # after scaling back to 3
+$ kubectl exec web-1 -c toolbox -- cat /data/data.txt   # depois de escalar de volta para 3
 written by web-1
 ```
 
-Scale-down removes Pods in **reverse ordinal order** (`web-2`, then `web-1`) but **keeps
-their PVCs**. Scale back up and each returning ordinal re-binds its original claim — so
-`web-1` still has its sentinel. That retained-PVC behaviour is why the cleanup step above has
-to delete the claims explicitly.
+O scale-down remove Pods em **ordem ordinal reversa** (`web-2`, depois `web-1`) mas **mantém
+seus PVCs**. Escale de volta e cada ordinal que retorna religa seu claim original — então o
+`web-1` ainda tem seu sentinela. Esse comportamento de PVC retido é a causa de o passo de
+cleanup acima ter que deletar os claims explicitamente.
 </details>
 
 ## Expected state / output
 
-- A **headless** Service (`clusterIP: None`) is the prerequisite for per-Pod DNS.
-- StatefulSet Pods have **stable ordinal names** (`web-0/1/2`) and are created **in order**
-  (`web-0` Ready before `web-1` starts).
-- `volumeClaimTemplates` mints **one PVC per ordinal** (`data-web-<n>`), each dynamically
-  provisioned and **sticky** to its Pod.
-- Deleting a Pod recreates it with the **same name** re-bound to the **same PVC** — identity
-  and data both survive.
-- Each Pod is addressable at `<pod>.<serviceName>.<ns>.svc.cluster.local`, and this resolves
-  **only** while a headless Service named `serviceName` exists.
-- `serviceName` (and `selector`, `volumeClaimTemplates`) are **immutable** — changing them
-  means delete + recreate; the PVCs (and data) survive because they are separate objects.
+- Um Service **headless** (`clusterIP: None`) é o pré-requisito para DNS por Pod.
+- Pods de StatefulSet têm **nomes ordinais estáveis** (`web-0/1/2`) e são criados **em ordem**
+  (`web-0` Ready antes de `web-1` começar).
+- `volumeClaimTemplates` cunha **um PVC por ordinal** (`data-web-<n>`), cada um provisionado
+  dinamicamente e **grudado** ao seu Pod.
+- Deletar um Pod o recria com o **mesmo nome**, religado ao **mesmo PVC** — identidade e dados
+  sobrevivem.
+- Cada Pod é endereçável em `<pod>.<serviceName>.<ns>.svc.cluster.local`, e isso resolve
+  **apenas** enquanto existir um headless Service com o nome de `serviceName`.
+- `serviceName` (e `selector`, `volumeClaimTemplates`) são **imutáveis** — mudá-los significa
+  delete + recriação; os PVCs (e os dados) sobrevivem porque são objetos separados.
 
-Representative statuses include Running/Complete/Failed Pods, Bound PVCs, Accepted
-Gateway conditions, or numeric HPA TARGETS — compare meaning, not ephemeral names.
+Status representativos incluem Pods Running/Complete/Failed, PVCs Bound, conditions
+Accepted de Gateway ou TARGETS numéricos de HPA — compare o significado, não nomes efêmeros.
 
 ## Explanation
 
-StatefulSet identity DNS is <pod>.<serviceName>. If serviceName points at nothing,
-ordinal Pods do not get stable network identity even when PVCs exist. Restoring the
-named headless Service re-links identity without recreating volumeClaimTemplates.
+A identidade DNS do StatefulSet é <pod>.<serviceName>. Se o serviceName aponta para o nada,
+os Pods ordinais não ganham identidade de rede estável mesmo quando os PVCs existem — o
+serviceName errado é a causa direta da falha. Restaurar o headless Service nomeado religa a
+identidade sem recriar os volumeClaimTemplates.
 
-The guided steps above prove the control-plane behaviour for this section; read Events and
-status fields when a one-line phase is ambiguous.
+Os passos guiados acima provam o comportamento do control plane desta seção; leia os Events e
+os campos de status quando uma fase de uma linha só for ambígua.
 
 ## Troubleshooting and recovery
 
-If ordinal Pods never become Ready, compare `kubectl get statefulset -n "$NS" -o yaml` —
-especially `spec.serviceName` — with `kubectl get svc -n "$NS"`. Restore the headless Service
-with `kubectl apply -f headless-svc.yaml -n "$NS"` (or the lab's named Service manifest), then
-`kubectl apply -f statefulset.yaml -n "$NS"` so ordered Pods can attach. Prove identity with
-`kubectl get endpointslices -n "$NS"` or a DNS lookup against `web-0.<service>.$NS.svc`.
+Se os Pods ordinais nunca ficarem Ready, compare `kubectl get statefulset -n "$NS" -o yaml` —
+especialmente `spec.serviceName` — com `kubectl get svc -n "$NS"`. Restaure o headless Service
+com `kubectl apply -f headless-svc.yaml -n "$NS"` (ou o manifesto de Service nomeado do lab);
+como `serviceName` é imutável, faça `kubectl delete statefulset web -n "$NS"` antes de
+`kubectl apply -f statefulset.yaml -n "$NS"` para que os Pods ordenados possam se anexar. Prove a identidade com `kubectl get endpointslices -n "$NS"` ou um lookup de DNS
+contra `web-0.<service>.$NS.svc`.
 
 ## Challenge solution
 
@@ -502,17 +508,18 @@ kubectl run -n "$NS" tmp --rm -i --restart=Never --image=busybox:1.37 -- nslooku
 
 ### Expected state / output
 
-Pods reach Ready status in ordinal order. nslookup returns an address for the
-per-Pod DNS name. The diagnosis names the missing or wrong governing Service rather
-than a PVC or image fault.
+Os Pods alcançam o status Ready em ordem ordinal. O nslookup retorna um endereço para o
+nome DNS por Pod. O diagnóstico nomeia o governing Service ausente ou errado, e não uma
+falha de PVC ou de image.
 
 ### Explanation
 
-StatefulSet identity DNS is <pod>.<serviceName>. If serviceName points at nothing,
-ordinal Pods do not get stable network identity even when PVCs exist. Restoring the
-named headless Service re-links identity without recreating volumeClaimTemplates.
+A identidade DNS do StatefulSet é <pod>.<serviceName>. Se o serviceName aponta para o nada,
+os Pods ordinais não ganham identidade de rede estável mesmo quando os PVCs existem — o
+serviceName errado é a causa direta da falha. Restaurar o headless Service nomeado religa a
+identidade sem recriar os volumeClaimTemplates.
 
 ### Hints
 
-Inspect spec.serviceName on the StatefulSet and compare it with kubectl get svc;
-headless Services use clusterIP: None.
+Inspecione o spec.serviceName no StatefulSet e compare-o com kubectl get svc;
+headless Services usam clusterIP: None.

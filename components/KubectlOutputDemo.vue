@@ -18,18 +18,18 @@ const props = withDefaults(defineProps<{ step?: number }>(), { step: 0 })
 
 const modes = [
   {
-    label: 'table',
+    label: 'tabela',
     cmd: 'kubectl get pods',
     out: `NAME          READY   STATUS    RESTARTS   AGE
 web-6f8c-x2l   1/1     Running   0          2m`,
-    note: 'Default: a human-readable table — eyes first.',
+    note: 'Padrão: uma tabela legível para humanos — primeiro os olhos.',
   },
   {
     label: '-o wide',
     cmd: 'kubectl get pods -o wide',
     out: `NAME          READY   STATUS    RESTARTS   AGE   IP           NODE
 web-6f8c-x2l   1/1     Running   0          2m    10.244.1.7   worker-a`,
-    note: 'Same table, free context — node and Pod IP.',
+    note: 'Mesma tabela, contexto de graça — node e IP do Pod.',
   },
   {
     label: '-o yaml',
@@ -40,20 +40,20 @@ metadata:
   name: web-6f8c-x2l
 status:
   phase: Running
-# … full object as the API server stores it`,
-    note: 'The whole truth — every field the server knows.',
+# … objeto completo, como o API server o armazena`,
+    note: 'A verdade inteira — todo campo que o server conhece.',
   },
   {
     label: 'jsonpath',
     cmd: `kubectl get pods -o jsonpath='{.items[*].spec.nodeName}'`,
     out: `worker-a worker-b`,
-    note: 'Extract exactly the fields you need — script-friendly.',
+    note: 'Extraia exatamente os campos que você precisa — amigável a scripts.',
   },
   {
-    label: 'one value',
+    label: 'um valor',
     cmd: `kubectl get nodes -o jsonpath='{.items[0].metadata.name}'`,
     out: `worker-a`,
-    note: 'One node name — no grep/awk needed.',
+    note: 'Um nome de node — sem precisar de grep/awk.',
   },
 ]
 
@@ -85,7 +85,7 @@ const mode = () => modes[modeIdx()]
         <pre v-if="revealed()" class="kw-kod-out">{{ mode().out }}</pre>
       </Transition>
       <p v-if="!revealed()" class="kw-kod-hint">
-        Press <kbd>→</kbd> / click — as if you hit <strong>Enter</strong>
+        Aperte <kbd>→</kbd> / clique — como se você tivesse dado <strong>Enter</strong>
       </p>
       <p v-else class="kw-kod-note">{{ mode().note }}</p>
     </div>

@@ -4,41 +4,42 @@
 
 | | |
 | --- | --- |
-| **Section** | S06 — Deployment *(red line 2/5)* |
+| **Section** | S06 — Deployment *("linha vermelha" 2/5)* |
 | **Environment** | namespace ✓ / kind ✓ |
 | **Estimated time** | 30 min |
 
 ## Objective
 
-Turn the bare Pod from Lab 05 into a **Deployment**, then scale it, roll out a new image,
-watch ReplicaSets churn, and roll back. You will see *why* you rarely create bare Pods. This
-is red-line step **2 of 5** — `deployment.yaml` **extends** `pod.yaml`.
+Transformar o Pod avulso do Lab 05 em um **Deployment**, depois escalá-lo, fazer o rollout de
+uma nova image, observar os ReplicaSets se alternarem e fazer o rollback. Você vai ver *por
+que* raramente se criam Pods avulsos. Este é o passo **2 de 5** da red line — o
+`deployment.yaml` **estende** o `pod.yaml`.
 
 ## Prerequisites
 
-- Lab 05 complete; `pod.yaml` still on disk. `$NS` is your default namespace.
-- Namespace empty (`kubectl get all` → *No resources found*). Run the Lab 00 panic reset if
-  not.
+- Lab 05 concluído; `pod.yaml` ainda no disco. `$NS` é seu namespace padrão.
+- Namespace vazio (`kubectl get all` → *No resources found*). Execute o reset de pânico do
+  Lab 00 se não estiver.
 
 ## Files used
 
-- `deployment.yaml` — the Deployment, built in Step 1 by wrapping `pod.yaml`'s Pod as the
-  Deployment's `template`. **Keep it** — Lab 07 adds a Service alongside it.
+- `deployment.yaml` — o Deployment, construído no Step 1 embrulhando o Pod do `pod.yaml`
+  como o `template` do Deployment. **Guarde-o** — o Lab 07 adiciona um Service ao lado dele.
 
 ---
 
 ## Guided task
 
-Work through the steps without opening the companion unless you are blocked. The spoiler
-contains exact commands, expected state, explanations, and recovery guidance.
+Percorra os passos sem abrir o companion, a menos que fique travado. O spoiler
+contém os comandos exatos, o estado esperado, explicações e orientações de recuperação.
 
-[Spoiler: guided solutions and expected output](./06-deployment.solution.md#guided-solutions)
+[Spoiler: soluções guiadas e saída esperada](./06-deployment.solution.md#guided-solutions)
 
-### Step 1 — extend the Pod into a Deployment
+### Step 1 — estenda o Pod em um Deployment
 
-A Deployment carries the **same Pod** inside `spec.template`, plus three new things:
-`replicas`, a `selector`, and metadata about the template. Compare against your `pod.yaml` —
-everything under `template:` is the Lab 05 Pod, indented.
+Um Deployment carrega o **mesmo Pod** dentro de `spec.template`, mais três coisas novas:
+`replicas`, um `selector` e metadata sobre o template. Compare com o seu `pod.yaml` —
+tudo sob `template:` é o Pod do Lab 05, indentado.
 
 ```bash
 cat > deployment.yaml <<'EOF'
@@ -52,11 +53,11 @@ spec:
   replicas: 3
   selector:
     matchLabels:
-      app: web          # must match template.metadata.labels below
+      app: web          # deve casar com template.metadata.labels abaixo
   template:
     metadata:
       labels:
-        app: web        # the Pod labels — Lab 07's Service selects these
+        app: web        # os labels do Pod — o Service do Lab 07 seleciona estes
     spec:
       containers:
         - name: web
@@ -76,28 +77,28 @@ kubectl apply -f deployment.yaml
 kubectl get deploy,rs,pods -l app=web
 ```
 
-**Task:** how many Pods appear, and what owns them?
+**Tarefa:** quantos Pods aparecem, e o que é dono deles?
 
-**Question:** delete one Pod — what happens, and how is this different from Lab 05?
+**Pergunta:** delete um Pod — o que acontece, e como isso é diferente do Lab 05?
 
 ---
 
-### Step 2 — scale
+### Step 2 — escale
 
 ```bash
 kubectl scale deployment web --replicas=5
-kubectl get pods -l app=web -w        # Ctrl-C once 5 are Running
+kubectl get pods -l app=web -w        # Ctrl-C quando os 5 estiverem Running
 kubectl scale deployment web --replicas=3
 ```
 
 ---
 
-### Step 3 — roll out a new image, watch ReplicaSets churn
+### Step 3 — faça o rollout de uma nova image, observe os ReplicaSets se alternarem
 
-In one terminal, start watching ReplicaSets; in another, change the image.
+Em um terminal, comece a observar os ReplicaSets; em outro, troque a image.
 
 ```bash
-# Terminal A — leave this running:
+# Terminal A — deixe este rodando:
 kubectl get rs -l app=web -w
 
 # Terminal B:
@@ -105,11 +106,11 @@ kubectl set image deployment/web web=ghcr.io/platformrelay/workshop-web:v2
 kubectl rollout status deployment/web
 ```
 
-**Task:** in Terminal A, describe what happens to the number of ReplicaSets.
+**Tarefa:** no Terminal A, descreva o que acontece com o número de ReplicaSets.
 
 ---
 
-### Step 4 — history and rollback
+### Step 4 — histórico e rollback
 
 ```bash
 kubectl rollout history deployment/web
@@ -117,14 +118,15 @@ kubectl rollout undo deployment/web
 kubectl rollout status deployment/web
 ```
 
-**Task:** verify the image actually reverted to `ghcr.io/platformrelay/workshop-web:v1`.
+**Tarefa:** verifique que a image realmente reverteu para
+`ghcr.io/platformrelay/workshop-web:v1`.
 
 ---
 
-### Step 5 — break/fix: a rollout that stalls
+### Step 5 — quebre/conserte: um rollout que trava
 
-Roll out an image tag that does not exist and watch the rollout **stall** rather than break
-the running app.
+Faça o rollout de uma tag de image que não existe e observe o rollout **travar** em vez de
+derrubar a aplicação em execução.
 
 ```bash
 kubectl set image deployment/web web=ghcr.io/platformrelay/workshop-web:v9.99-nope
@@ -132,30 +134,30 @@ kubectl rollout status deployment/web --timeout=30s ; echo "exit=$?"
 kubectl get pods -l app=web
 ```
 
-**Task:** the running app never went down — why, and how do you recover?
+**Tarefa:** a aplicação em execução nunca caiu — por quê, e como você se recupera?
 
 ## Observe
 
-- `Deployment → ReplicaSet → Pods`; deleting a Pod triggers immediate recreation.
-- A new image spawns a **second ReplicaSet**; new scales up as old scales down, with no
-  outage.
-- `rollout undo` restores the previous image (verified by jsonpath).
-- A bad-image rollout **stalls** with the new Pod in `ImagePullBackOff` while old Pods keep
-  serving — recovered with `rollout undo`.
+- `Deployment → ReplicaSet → Pods`; deletar um Pod dispara a recriação imediata.
+- Uma nova image gera um **segundo ReplicaSet**; o novo escala para cima enquanto o antigo
+  escala para baixo, sem indisponibilidade.
+- `rollout undo` restaura a image anterior (verificado por jsonpath).
+- Um rollout com image ruim **trava** com o Pod novo em `ImagePullBackOff` enquanto os Pods
+  antigos continuam servindo — recuperado com `rollout undo`.
 
 ## Challenge
 
-Make the rollout visibly gradual by widening the surge, then roll a new image and watch the
-Pod counts.
+Torne o rollout visivelmente gradual ampliando o surge, depois faça o rollout de uma nova
+image e observe as contagens de Pods.
 
 **Difficulty:** Intermediate
 
-**Success criteria:** Record the minimum Ready count and maximum total Pod count during
-the rollout, relate them to `maxUnavailable: 0` and `maxSurge: 2`, and explain the resource
-trade-off.
+**Success criteria:** Registre a contagem mínima de Ready e a contagem máxima total de Pods
+durante o rollout, compare-as com `maxUnavailable: 0` e `maxSurge: 2`, e explique o
+trade-off de recursos.
 
-**Hints:** Keep `kubectl get pods -w` in one terminal and run patch/image commands in
-another; count Running plus ContainerCreating Pods at the peak.
+**Hints:** Mantenha `kubectl get pods -w` em um terminal e use os comandos de
+patch/image em outro; conte os Pods Running mais ContainerCreating no pico.
 
 ```bash
 kubectl patch deployment web --type=merge \
@@ -164,11 +166,11 @@ kubectl set image deployment/web web=ghcr.io/platformrelay/workshop-web:v2
 kubectl get pods -l app=web -w
 ```
 
-[Spoiler: challenge solution](./06-deployment.solution.md#challenge-solution)
+[Spoiler: solução do challenge](./06-deployment.solution.md#challenge-solution)
 
 ## Verify
 
-Verify recovery from the deliberately bad rollout before deleting the Deployment.
+Verifique a recuperação do rollout deliberadamente ruim antes de deletar o Deployment.
 
 ```bash
 kubectl rollout status deployment/web -n "$NS" --timeout=120s
@@ -176,14 +178,14 @@ kubectl get deployment web -n "$NS" \
   -o jsonpath='{.status.availableReplicas}{" ready; image="}{.spec.template.spec.containers[0].image}{"\n"}'
 ```
 
-Expected: `3 ready` and a real workshop-web image tag, not `v9.99-nope`.
+Esperado: `3 ready` e uma tag real da image workshop-web, não `v9.99-nope`.
 
 ## Cleanup / reset
 
 ```bash
 kubectl delete -f deployment.yaml -n "$NS" --ignore-not-found
-# or the Lab 00 panic reset:
+# ou o reset de pânico do Lab 00:
 kubectl delete deploy,rs,pod --all -n "$NS" --ignore-not-found
 ```
 
-Keep `deployment.yaml` and `pod.yaml` for Lab 07.
+Guarde o `deployment.yaml` e o `pod.yaml` para o Lab 07.

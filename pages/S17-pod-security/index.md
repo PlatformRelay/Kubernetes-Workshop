@@ -7,107 +7,113 @@ tier: core
 track: Security
 ---
 
-# Pod security
+# Segurança de Pods
 
-Harden a Pod; understand Pod Security Standards.
+Aplique hardening em um Pod; entenda os Pod Security Standards.
 
-**core** · suggested Day 3 · Security track
+**core** · sugerido para o Day 3 · trilha Security
 
 <!--
-Section S17 — Pod security (securityContext + Pod Security Standards / Admission).
-Opens Day 3 (M5). Timing: ~30 min slides + 25 min lab. Outcome: learners can harden a Pod
-to the `restricted` standard by setting the FOUR fields it gates, explain why PSA rejects a
-Pod at admission (before it exists), and distinguish admission enforcement (PSA) from the
-runtime enforcement the kubelet applies (runAsNonRoot on an image that runs as root → CrashLoop).
-Beats: problem (root + writable rootfs on a shared kernel → foreshadows S25) · mental model
-(container vs pod-level securityContext; PSS ladder privileged/baseline/restricted) ·
-code-annotated (the four restricted gates) · magic-move (insecure → four gates PASS restricted →
-+readOnlyRootFilesystem, BEYOND restricted) · S02 callback + the runtime landmine · Trivy
-image-scan gate (the S02 scanner named + the CI exit-code pattern; net-zero add — 11 slides
-still under the deck's 30-min density norm) · PSA via
-namespace labels (enforce/warn/audit) · AdmissionGate animation · recap → S25 · lab.
-Trivy ACCURACY LOCKS (verified against trivy.dev docs, 2026-08): open-source scanner
-by Aqua Security; `trivy image` matches OS packages AND language dependencies against
-CVE feeds (also misconfig/secret/SBOM scanning); `--severity HIGH,CRITICAL
---exit-code 1` is the documented CI-gate pattern; workshop-web's own build pipeline
-is genuinely Trivy-gated (see infra/versions.env commentary). Concepts-only: no
-TRIVY pin, no lab step; S25 adds the in-cluster live half (Trivy Operator).
-Animation: AdmissionGate.vue (new, self-contained) — request → PSA check → deny then admit.
-ACCURACY LOCKS (verified against the current Pod Security Standards doc):
-- `restricted` gates EXACTLY four spec fields for a plain Pod: runAsNonRoot:true,
+Seção S17 — Segurança de Pods (securityContext + Pod Security Standards / Admission).
+Abre o Day 3 (M5). Tempo: ~30 min de slides + 25 min de lab. Resultado: os participantes
+conseguem aplicar hardening em um Pod até o padrão `restricted` definindo os QUATRO campos que
+ele verifica, explicar por que o PSA rejeita um Pod na admission (antes de ele existir) e
+distinguir o enforcement de admission (PSA) do enforcement de runtime que o kubelet aplica
+(runAsNonRoot em uma image que roda como root → CrashLoop).
+Beats: problema (root + rootfs gravável em um kernel compartilhado → antecipa o S25) · modelo
+mental (securityContext de container vs de Pod; a escada PSS privileged/baseline/restricted) ·
+code-annotated (os quatro gates do restricted) · magic-move (inseguro → quatro gates PASSAM o
+restricted → +readOnlyRootFilesystem, ALÉM do restricted) · callback ao S02 + a armadilha de
+runtime · gate de scan de image com Trivy (o scanner do S02 agora nomeado + o padrão de exit
+code em CI; adição de custo zero — 11 slides ainda abaixo da norma de densidade de 30 min do
+deck) · PSA via labels de namespace (enforce/warn/audit) · animação AdmissionGate · recap →
+S25 · lab.
+Trivy ACCURACY LOCKS (verificados contra a documentação de trivy.dev, 2026-08): scanner
+open-source da Aqua Security; `trivy image` compara pacotes do SO E dependências de linguagem
+contra feeds de CVE (também scan de misconfig/secret/SBOM); `--severity HIGH,CRITICAL
+--exit-code 1` é o padrão documentado de gate em CI; o pipeline de build do próprio
+workshop-web é genuinamente gated pelo Trivy (ver os comentários em infra/versions.env).
+Apenas conceitos: sem pin de TRIVY, sem passo de lab; o S25 adiciona a metade viva in-cluster
+(Trivy Operator).
+Animação: AdmissionGate.vue (novo, autocontido) — request → verificação do PSA → deny e depois admit.
+ACCURACY LOCKS (verificados contra o doc atual de Pod Security Standards):
+- `restricted` verifica EXATAMENTE quatro campos de spec para um Pod simples: runAsNonRoot:true,
   allowPrivilegeEscalation:false, capabilities.drop:["ALL"], seccompProfile RuntimeDefault|Localhost.
-- readOnlyRootFilesystem is NOT a restricted requirement — it's beyond-restricted hardening,
-  authored as the FINAL magic-move step and the lab's post-admission break→fix.
-- runAsNonRoot passes PSA admission when the field is set, but the KUBELET enforces at runtime:
-  a root image admits then CrashLoops ("container has runAsNonRoot and image will run as
-  root"). We use ghcr.io/platformrelay/workshop-web (distroless nonroot, UID 65532, :8080) so
-  the harden lab actually runs — and since it never writes to disk, readOnlyRootFilesystem
-  costs it nothing; the lab's runtime break→fix uses a busybox writer Pod instead.
-CKx tie-in: CKAD securityContext + CKA admission/security hardening.
+- readOnlyRootFilesystem NÃO é um requisito do restricted — é hardening além do restricted,
+  escrito como o passo FINAL do magic-move e o quebre→conserte pós-admission do lab.
+- runAsNonRoot passa na admission do PSA quando o campo está definido, mas o KUBELET aplica em
+  runtime: uma image root é admitida e depois entra em CrashLoop ("container has runAsNonRoot
+  and image will run as root"). Usamos ghcr.io/platformrelay/workshop-web (distroless nonroot,
+  UID 65532, :8080) para o lab de hardening realmente rodar — e como ela nunca escreve em
+  disco, readOnlyRootFilesystem não custa nada; o quebre→conserte de runtime do lab usa um Pod
+  busybox que escreve em disco.
+Amarração CKx: CKAD securityContext + CKA admission/security hardening.
 -->
 
 ---
 layout: statement
-kicker: The problem
+kicker: O problema
 ---
 
-Your container shares the host's **kernel** — and by default it runs as **root** on it.
+Seu container compartilha o **kernel** do host — e, por padrão, roda como **root** nele.
 
-Every earlier `web` Pod ran as **UID 0** with a **writable root filesystem** and the full set
-of Linux capabilities. On a shared node that's one kernel bug — or one compromised
-dependency — away from a container that can write where it shouldn't, add capabilities, or
-climb toward the host. Least privilege isn't paperwork here; it's the blast radius.
+Todo Pod `web` até aqui rodou como **UID 0**, com um **root filesystem gravável** e o conjunto
+completo de Linux capabilities. Em um node compartilhado, isso está a um bug de kernel — ou a
+uma dependência comprometida — de distância de um container que escreve onde não deveria,
+adiciona capabilities ou escala em direção ao host. Menor privilégio aqui não é burocracia;
+é o blast radius.
 
 <!--
-Speaker: the "why care" beat, and it foreshadows S25 (pod escape). A container is not a VM —
-it's a process on the HOST kernel, isolated by namespaces + cgroups (callback to S01/S03). If
-the process is root and the isolation has a hole, root-in-container is a long way toward
-root-on-node. Two concrete defaults to name: (1) most images run as UID 0 unless told otherwise;
-(2) the root filesystem is writable, so a foothold can drop tools/binaries. This section gives
-you the two levers that shrink the blast radius: the Pod's own `securityContext` (what the Pod
-asks to be) and Pod Security Admission (what the platform will let in). S25 turns these same
-knobs into named defences against a real escape.
+Speaker: o beat do "por que se importar", e ele antecipa o S25 (pod escape). Um container não é
+uma VM — é um processo no kernel do HOST, isolado por namespaces + cgroups (callback ao
+S01/S03). Se o processo é root e o isolamento tem uma brecha, root-no-container está a meio
+caminho de root-no-node. Dois defaults concretos para nomear: (1) a maioria das images roda
+como UID 0 a menos que se diga o contrário; (2) o root filesystem é gravável, então um invasor
+com um ponto de apoio consegue instalar ferramentas/binários. Esta seção entrega as duas
+alavancas que encolhem o blast radius: o `securityContext` do próprio Pod (o que o Pod pede
+para ser) e o Pod Security Admission (o que a plataforma deixa entrar). O S25 transforma esses
+mesmos botões em defesas nomeadas contra um escape real.
 -->
 
 ---
 
 <div class="kw-slide-dense">
 
-<span class="kw-kicker">Mental model · two questions, two mechanisms</span>
+<span class="kw-kicker">Modelo mental · duas perguntas, dois mecanismos</span>
 
-# What the Pod asks for · what the platform allows
+# O que o Pod pede · o que a plataforma permite
 
 <div class="kw-cols-2 mt-3 text-sm">
   <v-click at="1">
-    <KwCard heading="securityContext — what the Pod requests" kind="pod" variant="ok">
-      Fields on the <strong>Pod</strong> and each <strong>container</strong>:
+    <KwCard heading="securityContext — o que o Pod solicita" kind="pod" variant="ok">
+      Campos no <strong>Pod</strong> e em cada <strong>container</strong>:
       <code>runAsNonRoot</code>, <code>runAsUser</code>, <code>capabilities</code>,
       <code>allowPrivilegeEscalation</code>, <code>seccompProfile</code>,
-      <code>readOnlyRootFilesystem</code>. You set these.
-      <div class="kw-muted mt-1">Container-level overrides Pod-level where they overlap.</div>
+      <code>readOnlyRootFilesystem</code>. Quem define é você.
+      <div class="kw-muted mt-1">O nível de container sobrescreve o nível de Pod onde houver sobreposição.</div>
     </KwCard>
   </v-click>
   <v-click at="2">
-    <KwCard heading="Pod Security Standards — what the platform requires" icon="🛡️" variant="warn">
-      Three named profiles the cluster can <strong>enforce</strong> at admission. A ladder,
-      loosest → strictest.
+    <KwCard heading="Pod Security Standards — o que a plataforma exige" icon="🛡️" variant="warn">
+      Três perfis nomeados que o cluster pode <strong>impor</strong> na admission. Uma escada,
+      do mais frouxo → ao mais estrito.
     </KwCard>
   </v-click>
 </div>
 
 <div v-click="3" class="mt-4 text-sm">
 
-<span class="kw-kicker">the ladder — Pod Security Standards</span>
+<span class="kw-kicker">a escada — Pod Security Standards</span>
 
 <div class="mt-1" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.8rem;">
   <KwCard heading="privileged" icon="🔓" variant="danger">
-    Wide open. No restrictions — for trusted infra/system workloads only.
+    Escancarado. Sem restrições — só para workloads de infra/sistema confiáveis.
   </KwCard>
   <KwCard heading="baseline" icon="🚧" variant="warn">
-    Blocks the known-dangerous: no privileged, host namespaces, hostPath, etc.
+    Bloqueia o sabidamente perigoso: nada de privileged, host namespaces, hostPath etc.
   </KwCard>
   <KwCard heading="restricted" icon="🔒" variant="ok">
-    Baseline <strong>plus</strong> least-privilege: non-root, no priv-esc, drop caps, seccomp.
+    Baseline <strong>mais</strong> menor privilégio: non-root, sem priv-esc, drop de caps, seccomp.
   </KwCard>
 </div>
 
@@ -116,19 +122,20 @@ knobs into named defences against a real escape.
 </div>
 
 <!--
-Speaker: separate the two ideas cleanly, because learners fuse them. securityContext is what
-YOUR manifest declares — Pod-level (spec.securityContext) sets defaults for all containers,
-container-level (spec.containers[].securityContext) overrides for one; container wins on
-overlap. Pod Security STANDARDS are the CNCF-defined profiles — privileged (no-op), baseline
-(blocks the obviously dangerous — hostNetwork, privileged, hostPath…), restricted (baseline +
-least privilege). It's a ladder: each rung is a superset of the one below. The platform picks a
-rung per namespace and the built-in admission controller checks your Pod against it. Next slide:
-exactly which fields `restricted` checks — it's a short, learnable list.
+Speaker: separe as duas ideias com clareza, porque os alunos as fundem. securityContext é o que
+o SEU manifesto declara — o nível de Pod (spec.securityContext) define defaults para todos os
+containers, o nível de container (spec.containers[].securityContext) sobrescreve para um; o
+container vence na sobreposição. Pod Security STANDARDS são os perfis definidos pela CNCF —
+privileged (no-op), baseline (bloqueia o obviamente perigoso — hostNetwork, privileged,
+hostPath…), restricted (baseline + menor privilégio). É uma escada: cada degrau é um
+superconjunto do anterior. A plataforma escolhe um degrau por namespace e o admission
+controller embutido confere seu Pod contra ele. Próximo slide: exatamente quais campos o
+`restricted` verifica — é uma lista curta e memorizável.
 -->
 
 ---
 layout: code-annotated
-heading: 'The four fields `restricted` actually checks'
+heading: 'Os quatro campos que o `restricted` de fato verifica'
 compact: true
 lab: labs/day-3/17-pod-security.md
 ---
@@ -149,50 +156,51 @@ spec:
 ::notes::
 
 <CodeNote at="1" label="1 · runAsNonRoot" variant="ok">
-The container must <strong>not</strong> run as UID 0. This is a <em>promise the image has to
-keep</em> — see the next slide.
+O container <strong>não</strong> pode rodar como UID 0. Esta é uma <em>promessa que a image
+precisa cumprir</em> — veja o próximo slide.
 </CodeNote>
 
-<CodeNote at="2" label="2 · no privilege escalation" variant="ok">
-Blocks <code>setuid</code>-style gaining of more privileges than the parent — no
-<code>sudo</code>-ing your way up inside the container.
+<CodeNote at="2" label="2 · sem escalação de privilégio" variant="ok">
+Bloqueia ganhos de privilégio estilo <code>setuid</code> acima do processo pai — nada de
+<code>sudo</code> para subir de nível dentro do container.
 </CodeNote>
 
-<CodeNote at="3" label="3 · drop ALL capabilities" variant="ok">
-Start from zero Linux capabilities. <code>restricted</code> lets you <code>add</code> back only
-<code>NET_BIND_SERVICE</code> if you truly need a low port.
+<CodeNote at="3" label="3 · drop de TODAS as capabilities" variant="ok">
+Comece com zero Linux capabilities. O <code>restricted</code> permite dar <code>add</code> de
+volta apenas em <code>NET_BIND_SERVICE</code>, se você realmente precisar de uma porta baixa.
 </CodeNote>
 
 <CodeNote at="4" label="4 · seccompProfile: RuntimeDefault" variant="ok">
-Apply the runtime's default syscall filter (<code>RuntimeDefault</code> or
-<code>Localhost</code>) — shrinks the reachable kernel surface.
+Aplica o filtro de syscalls padrão do runtime (<code>RuntimeDefault</code> ou
+<code>Localhost</code>) — encolhe a superfície de kernel alcançável.
 </CodeNote>
 
 <div v-click="5" class="mt-2 text-sm kw-muted">
-Set these four and a plain Pod satisfies <code>restricted</code>. That's the whole checklist
-the admission gate runs.
+Defina esses quatro e um Pod simples satisfaz o <code>restricted</code>. Esse é o checklist
+inteiro que o gate de admission executa.
 </div>
 
 <!--
-Speaker: this is the memorise-this slide. For a PLAIN Pod (no host namespaces, no volumes to
-worry about), `restricted` gates exactly these four fields — nothing else. runAsNonRoot=true,
-allowPrivilegeEscalation=false, capabilities.drop must contain ALL (you may add back only
-NET_BIND_SERVICE), and seccompProfile.type is RuntimeDefault or Localhost. Set at the container
-level here; three of them (runAsNonRoot, seccompProfile) can also sit at Pod level to cover all
-containers at once. If a learner asks "what about readOnlyRootFilesystem?" — hold it, it's the
-next-but-two slide, and it is NOT one of these four. The lab clears these violations one at a
-time; the exact violation strings come straight from the admission controller.
+Speaker: este é o slide de "memorize isto". Para um Pod SIMPLES (sem host namespaces, sem
+volumes para se preocupar), o `restricted` verifica exatamente estes quatro campos — nada mais.
+runAsNonRoot=true, allowPrivilegeEscalation=false, capabilities.drop precisa conter ALL (você
+pode adicionar de volta apenas NET_BIND_SERVICE), e seccompProfile.type é RuntimeDefault ou
+Localhost. Aqui definidos no nível de container; parte deles (runAsNonRoot, seccompProfile)
+também pode ficar no nível de Pod para cobrir todos os containers de uma vez. Se um aluno
+perguntar "e o readOnlyRootFilesystem?" — segure, é o slide depois do próximo, e ele NÃO é um
+desses quatro. O lab elimina essas violações uma de cada vez; as strings exatas de violação vêm
+direto do admission controller.
 -->
 
 ---
 layout: code-walkthrough
-heading: 'Harden it up — insecure Pod → passes `restricted` → beyond'
+heading: 'Hardening na prática — Pod inseguro → passa no `restricted` → além'
 lab: labs/day-3/17-pod-security.md
 ---
 
 ````md magic-move
 ```yaml
-# 0: as it ran all along — root, full caps, writable rootfs. REJECTED by restricted.
+# 0: como rodou até agora — root, caps completas, rootfs gravável. REJEITADO pelo restricted.
 apiVersion: v1
 kind: Pod
 metadata: { name: web, labels: { app: s17 } }
@@ -200,22 +208,22 @@ spec:
   containers:
     - name: web
       image: ghcr.io/platformrelay/workshop-web:v1
-      # (no securityContext at all)
+      # (sem nenhum securityContext)
 ```
 
 ```yaml
-# 1: +runAsNonRoot / runAsUser — clears "runAsNonRoot != true"
+# 1: +runAsNonRoot / runAsUser — elimina "runAsNonRoot != true"
 spec:
   containers:
     - name: web
       image: ghcr.io/platformrelay/workshop-web:v1
       securityContext:
         runAsNonRoot: true
-        runAsUser: 65532                   # the image's built-in non-root user (distroless "nonroot")
+        runAsUser: 65532                   # o usuário non-root embutido da image (distroless "nonroot")
 ```
 
 ```yaml
-# 2: +allowPrivilegeEscalation:false — clears "allowPrivilegeEscalation != false"
+# 2: +allowPrivilegeEscalation:false — elimina "allowPrivilegeEscalation != false"
       securityContext:
         runAsNonRoot: true
         runAsUser: 65532
@@ -223,7 +231,7 @@ spec:
 ```
 
 ```yaml
-# 3: +drop ALL capabilities — clears "unrestricted capabilities"
+# 3: +drop de TODAS as capabilities — elimina "unrestricted capabilities"
       securityContext:
         runAsNonRoot: true
         runAsUser: 65532
@@ -233,7 +241,7 @@ spec:
 ```
 
 ```yaml
-# 4: +seccompProfile — clears the last gate. NOW IT PASSES `restricted`.
+# 4: +seccompProfile — elimina o último gate. AGORA PASSA no `restricted`.
       securityContext:
         runAsNonRoot: true
         runAsUser: 65532
@@ -245,51 +253,51 @@ spec:
 ```
 
 ```yaml
-# 5: +readOnlyRootFilesystem — BEYOND restricted (not required), defence-in-depth.
+# 5: +readOnlyRootFilesystem — ALÉM do restricted (não exigido), defesa em profundidade.
       securityContext:
         runAsNonRoot: true
         runAsUser: 65532
         allowPrivilegeEscalation: false
         capabilities: { drop: ["ALL"] }
         seccompProfile: { type: RuntimeDefault }
-        readOnlyRootFilesystem: true       # free for THIS app — it never writes to /
+        readOnlyRootFilesystem: true       # de graça para ESTA aplicação — ela nunca escreve em /
 ```
 ````
 
 <!--
-Speaker: SIX frames, and the caption boundary matters. Frames 0→4 each clear ONE restricted
-violation, in the same order the admission controller lists them; by frame 4 all four gates
-pass and the Pod is admitted. STOP and say it: frame 4 is `restricted`-compliant. Frame 5 adds
-readOnlyRootFilesystem — call out explicitly that this is NOT part of restricted, it's extra
-hardening. Call out honestly: the demo app sails through frame 5 — it's distroless, logs to
-stdout, keeps state in memory, and never writes to its root filesystem, which is what a
-well-built image buys you. The lab then shows the OTHER case: a busybox Pod that writes a PID
-file crashes under readOnlyRootFilesystem, and you fix it with an emptyDir over just that path.
-Image note: workshop-web already runs as the distroless nonroot user (UID 65532) and listens on
-8080, so runAsNonRoot is a promise it keeps — which is exactly the runtime point on the next
-slide. The lab applies these frames as real files and watches the gate flip from Forbidden to
-created.
+Speaker: SEIS frames, e a fronteira da legenda importa. Os frames 0→4 eliminam UMA violação do
+restricted cada, na mesma ordem em que o admission controller as lista; no frame 4 os quatro
+gates passam e o Pod é admitido. PARE e diga: o frame 4 é compatível com o `restricted`. O
+frame 5 adiciona readOnlyRootFilesystem — deixe explícito que isso NÃO faz parte do restricted,
+é hardening extra. Seja honesto: a aplicação de demo passa pelo frame 5 sem esforço — ela é
+distroless, loga em stdout, mantém estado em memória e nunca escreve no root filesystem, que é
+exatamente o que uma image bem construída te compra. O lab então mostra o OUTRO caso: um Pod
+busybox que escreve um arquivo de PID quebra sob readOnlyRootFilesystem, e você conserta com um
+emptyDir cobrindo só aquele path. Nota sobre a image: workshop-web já roda como o usuário
+nonroot do distroless (UID 65532) e escuta na 8080, então runAsNonRoot é uma promessa que ela
+cumpre — que é exatamente o ponto de runtime do próximo slide. O lab aplica esses frames como
+arquivos reais e observa o gate virar de Forbidden para created.
 -->
 
 ---
 
 <div class="kw-slide-dense">
 
-<span class="kw-kicker">Callback to image hygiene · admission ≠ runtime</span>
+<span class="kw-kicker">Callback à higiene de images · admission ≠ runtime</span>
 
-# `runAsNonRoot` is a promise the image must keep
+# `runAsNonRoot` é uma promessa que a image precisa cumprir
 
 <div class="kw-cols-2 mt-3 text-sm">
   <v-click at="1">
-    <KwCard heading="Admission checks the field" kind="pod" variant="ok">
-      PSA sees <code>runAsNonRoot: true</code> is <em>set</em> and admits the Pod. That's all
-      admission can know — it reads YAML, not the image.
+    <KwCard heading="A admission verifica o campo" kind="pod" variant="ok">
+      O PSA vê que <code>runAsNonRoot: true</code> está <em>definido</em> e admite o Pod. É tudo
+      que a admission pode saber — ela lê YAML, não a image.
     </KwCard>
   </v-click>
   <v-click at="2">
-    <KwCard heading="The kubelet checks reality" icon="💥" variant="danger">
-      At start, if the image's effective user is <strong>root</strong>, the kubelet refuses to
-      run it:
+    <KwCard heading="O kubelet verifica a realidade" icon="💥" variant="danger">
+      Na inicialização, se o usuário efetivo da image for <strong>root</strong>, o kubelet se
+      recusa a executá-la:
       <div class="kw-muted mt-1"><code>container has runAsNonRoot and image will run as root</code>
       → <strong>CreateContainerError → CrashLoopBackOff</strong>.</div>
     </KwCard>
@@ -298,81 +306,81 @@ created.
 
 <div v-click="3" class="mt-4 text-sm">
 
-<span class="kw-kicker">so the image has to actually be non-root</span>
+<span class="kw-kicker">então a image precisa de fato ser non-root</span>
 
-Either the image sets a non-root `USER` (this is exactly the **non-root image you built in
-container security**), or you pin `runAsUser` to a real non-root UID the image can run as. We use
-`workshop-web` — its distroless base ships as UID **65532** (`nonroot`) and it listens on
-**8080**, so the promise holds and the Pod runs.
+Ou a image define um `USER` non-root (esta é exatamente a **image non-root que você construiu
+em segurança de containers**), ou você fixa `runAsUser` em um UID non-root real com o qual a
+image consegue rodar. Usamos a `workshop-web` — sua base distroless vem como UID **65532**
+(`nonroot`) e ela escuta na **8080**, então a promessa se sustenta e o Pod roda.
 
 </div>
 
 </div>
 
 <!--
-Speaker: this is the landmine that bites everyone, and it's the honest S02 tie-in. runAsNonRoot:
-true is not "make me non-root" — it's an ASSERTION the platform verifies two different ways.
-Admission (PSA) only checks the field is present, so it admits. The kubelet, at container
-create, resolves the image's effective UID; if that's 0 and runAsNonRoot is true, it errors with
-"container has runAsNonRoot and image will run as root" — the Pod exists but never starts
-(CreateContainerError → CrashLoopBackOff). The fix is not a securityContext field — it's the
-IMAGE: build it non-root (S02's multi-stage, non-root USER) or set runAsUser to a UID the image
-actually supports. Most base images (busybox, debian, …) run as root and would hit this — the
-lab's callout names it; workshop-web ships as the distroless nonroot user 65532, so our hardened
-Pod actually serves traffic. Point back to S02: the reason we did all that image hygiene is so
-runtime hardening like this is even possible.
+Speaker: esta é a armadilha que morde todo mundo, e é a amarração honesta com o S02.
+runAsNonRoot: true não é "me torne non-root" — é uma AFIRMAÇÃO que a plataforma verifica de
+duas formas diferentes. A admission (PSA) só confere que o campo está presente, então admite. O
+kubelet, na criação do container, resolve o UID efetivo da image; se for 0 e runAsNonRoot for
+true, ele falha com "container has runAsNonRoot and image will run as root" — o Pod existe mas
+nunca inicia (CreateContainerError → CrashLoopBackOff). O conserto não é um campo de
+securityContext — é a IMAGE: construa-a non-root (o multi-stage com USER non-root do S02) ou
+defina runAsUser com um UID que a image realmente suporte. A maioria das base images (busybox,
+debian, …) roda como root e cairia nisso — o callout do lab nomeia o problema; a workshop-web
+vem como o usuário nonroot 65532 do distroless, então nosso Pod com hardening realmente serve
+tráfego. Aponte de volta para o S02: a razão de toda aquela higiene de image é justamente
+tornar possível um hardening de runtime como este.
 -->
 
 ---
 layout: code-annotated
-heading: 'Scan the image before any gate sees the Pod'
+heading: 'Escaneie a image antes de qualquer gate ver o Pod'
 compact: true
 ---
 
 ```console {none|1-2|4-5|all}
 $ trivy image ghcr.io/platformrelay/workshop-web:v1
-  0 known CVEs — distroless: almost nothing to match
+  0 CVEs conhecidos — distroless: quase nada para comparar
 
 $ trivy image --severity HIGH,CRITICAL --exit-code 1 app:2019
-  47 CVEs (HIGH 31, CRITICAL 16) → exit 1 — deploy stops
+  47 CVEs (HIGH 31, CRITICAL 16) → exit 1 — o deploy para
 ```
 
 ::notes::
 
-<CodeNote at="1" label="what a scanner checks" variant="ok">
-<strong>Trivy</strong> — the scanner from the container-security section —
-matches OS packages <em>and</em> language deps against CVE feeds.
+<CodeNote at="1" label="o que um scanner verifica" variant="ok">
+<strong>Trivy</strong> — o scanner da seção de segurança de containers —
+compara pacotes do SO <em>e</em> dependências de linguagem contra feeds de CVE.
 </CodeNote>
 
-<CodeNote at="2" label="the CI gate" variant="warn">
-<code>--exit-code 1</code> fails the pipeline: a vulnerable image never ships.
-Our own <code>workshop-web</code> build is gated exactly like this.
+<CodeNote at="2" label="o gate de CI" variant="warn">
+<code>--exit-code 1</code> falha o pipeline: uma image vulnerável nunca é publicada.
+Nosso próprio build do <code>workshop-web</code> tem um gate exatamente assim.
 </CodeNote>
 
-<CodeNote at="3" label="two different questions" variant="ok">
-The scanner gates the image's <strong>contents</strong>; PSA (next slide) gates
-the Pod's <strong>spec</strong>. Defence in depth needs both.
+<CodeNote at="3" label="duas perguntas diferentes" variant="ok">
+O scanner faz o gate do <strong>conteúdo</strong> da image; o PSA (próximo slide) faz o gate da
+<strong>spec</strong> do Pod. Defesa em profundidade precisa dos dois.
 </CodeNote>
 
 <!--
-Speaker: this beat names the tool the S02 scan story used generically. Trivy is the
-open-source scanner (Aqua Security) most of the ecosystem reaches for — Grype is a
-fine alternative, and S25 keeps the vendor-neutral category framing. First command:
-our demo image comes back clean, and not by luck — distroless means there's
-almost no package inventory to match, which is the S02 lesson paying rent. Second
-command: the CI-gate idiom straight from the Trivy docs — filter to HIGH/CRITICAL,
---exit-code 1, and the deploy stops in the pipeline; tell them honestly that the
-workshop-web image they've used all week is built behind exactly this gate (plus
-signing + SBOM) in this repo's own CI. The third note is the slide's real point and
-the bridge to PSA: image contents vs pod spec are ORTHOGONAL admission questions —
-scanning can't see privileged:true, PSA can't see an outdated OpenSSL. Defence in
-depth needs both, and S25 adds the third leg: what about CVEs disclosed AFTER the
-image was admitted?
+Speaker: este beat nomeia a ferramenta que a história de scan do S02 usou genericamente. Trivy
+é o scanner open-source (Aqua Security) que a maior parte do ecossistema usa — Grype é uma boa
+alternativa, e o S25 mantém o enquadramento por categoria, neutro de fornecedor. Primeiro
+comando: nossa image de demo volta limpa, e não por sorte — distroless significa que quase não
+há inventário de pacotes para comparar, que é a lição do S02 pagando dividendos. Segundo
+comando: o idioma de gate de CI direto da documentação do Trivy — filtre para HIGH/CRITICAL,
+--exit-code 1, e o deploy para no pipeline; diga com honestidade que a image workshop-web que
+eles usaram a semana toda é construída atrás de exatamente esse gate (mais assinatura + SBOM)
+no CI deste próprio repositório. A terceira nota é o ponto real do slide e a ponte para o PSA:
+conteúdo da image vs spec do Pod são perguntas de admission ORTOGONAIS — o scan não enxerga
+privileged:true, o PSA não enxerga um OpenSSL desatualizado. Defesa em profundidade precisa dos
+dois, e o S25 adiciona a terceira perna: e os CVEs divulgados DEPOIS de a image ser admitida?
 -->
 
 ---
 layout: code-annotated
-heading: 'Enforcement lives on the namespace — three labels'
+heading: 'O enforcement mora no namespace — três labels'
 compact: true
 lab: labs/day-3/17-pod-security.md
 ---
@@ -380,50 +388,51 @@ lab: labs/day-3/17-pod-security.md
 ```yaml {none|2-3|4|5|all}
 metadata:
   labels:
-    pod-security.kubernetes.io/enforce: restricted        # reject violators
-    pod-security.kubernetes.io/warn: restricted           # warn on kubectl
-    pod-security.kubernetes.io/audit: restricted          # record in audit log
+    pod-security.kubernetes.io/enforce: restricted        # rejeita violadores
+    pod-security.kubernetes.io/warn: restricted           # avisa no kubectl
+    pod-security.kubernetes.io/audit: restricted          # registra no audit log
 ```
 
 ::notes::
 
-<CodeNote at="1" label="enforce — the one with teeth" variant="danger">
-Violating Pods are <strong>rejected at admission</strong>. This is the label the lab flips; the
-other two never block.
+<CodeNote at="1" label="enforce — o único com dentes" variant="danger">
+Pods violadores são <strong>rejeitados na admission</strong>. Este é o label que o lab liga; os
+outros dois nunca bloqueiam.
 </CodeNote>
 
-<CodeNote at="2" label="warn — a heads-up to the author" variant="warn">
-Pod is still created, but <code>kubectl</code> prints a <code>Warning:</code> for each
-violation. Great for a soft rollout.
+<CodeNote at="2" label="warn — um aviso ao autor" variant="warn">
+O Pod ainda é criado, mas o <code>kubectl</code> imprime um <code>Warning:</code> para cada
+violação. Ótimo para um rollout suave.
 </CodeNote>
 
-<CodeNote at="3" label="audit — a note for the cluster log" variant="ok">
-Records the violation in the API audit log — invisible to the user, visible to the platform team.
+<CodeNote at="3" label="audit — uma nota para o log do cluster" variant="ok">
+Registra a violação no audit log da API — invisível para o usuário, visível para o time de plataforma.
 </CodeNote>
 
 <div v-click="4" class="mt-2 text-sm kw-muted">
-PSA is <strong>built in</strong> — no controller to install. Each label also takes a pinned
-version (<code>…/enforce-version: v1.34</code>). Add <code>warn</code> before <code>enforce</code>
-to migrate a namespace without breaking anyone.
+O PSA é <strong>embutido</strong> — nenhum controller para instalar. Cada label também aceita
+uma versão fixada (<code>…/enforce-version: v1.34</code>). Adicione <code>warn</code> antes de
+<code>enforce</code> para migrar um namespace sem quebrar ninguém.
 </div>
 
 <!--
-Speaker: Pod Security ADMISSION is how a Standard gets applied — and it's namespace-scoped
-LABELS, nothing to install (built into the API server since 1.25, stable). Three independent
-modes, each can name a different profile and version: enforce (reject — the only one that
-blocks), warn (create anyway, but return a Warning to kubectl — the author sees it), audit
-(create anyway, write it to the audit log — the platform sees it). The migration play, worth
-saying: label warn+audit=restricted first, watch what would break via warnings/audit, fix the
-workloads, THEN switch enforce=restricted. Version pin (enforce-version: v1.34) freezes the
-ruleset so a cluster upgrade doesn't silently tighten it. The lab sets enforce (kind) or uses a
-pre-labelled namespace (shared cluster). Next: watch the gate rule, live.
+Speaker: Pod Security ADMISSION é como um Standard é aplicado — e são LABELS com escopo de
+namespace, nada para instalar (embutido no API server desde a 1.25, estável). Três modos
+independentes, cada um pode nomear um perfil e uma versão diferentes: enforce (rejeita — o
+único que bloqueia), warn (cria mesmo assim, mas retorna um Warning ao kubectl — o autor vê),
+audit (cria mesmo assim, escreve no audit log — a plataforma vê). A jogada de migração, que
+vale dizer: rotule warn+audit=restricted primeiro, observe o que quebraria via warnings/audit,
+conserte os workloads, e ENTÃO troque para enforce=restricted. O pin de versão
+(enforce-version: v1.34) congela o conjunto de regras para um upgrade de cluster não apertá-lo
+silenciosamente. O lab define enforce (kind) ou usa um namespace pré-rotulado (cluster
+compartilhado). A seguir: veja o gate decidir, ao vivo.
 -->
 
 ---
 
-<span class="kw-kicker">Same gate, same namespace — the manifest is what changed</span>
+<span class="kw-kicker">Mesmo gate, mesmo namespace — o que mudou foi o manifesto</span>
 
-# The admission gate, live
+# O gate de admission, ao vivo
 
 <div class="mt-2">
   <AdmissionGate :step="$clicks" :show-caption="false" />
@@ -432,55 +441,56 @@ pre-labelled namespace (shared cluster). Next: watch the gate rule, live.
 <div class="mt-3 text-sm">
 <v-clicks at="1">
 
-- A bare Pod (root, no `securityContext`) is submitted to an `enforce: restricted` namespace.
-- PSA checks it **before it's stored** — all four gates fail → **Forbidden**, and **nothing is
-  created**.
-- Set the four fields and re-apply the *same* Pod…
-- …every gate passes → **admitted** and scheduled. Policy didn't move; the Pod did.
+- Um Pod cru (root, sem `securityContext`) é submetido a um namespace com `enforce: restricted`.
+- O PSA o verifica **antes de ser armazenado** — os quatro gates falham → **Forbidden**, e
+  **nada é criado**.
+- Defina os quatro campos e reaplique o *mesmo* Pod…
+- …todos os gates passam → **admitido** e agendado. A política não se moveu; o Pod, sim.
 
 </v-clicks>
 </div>
 
 <!--
-Speaker: drive with clicks; this makes the admission moment physical, and it's exactly the lab.
-(0) the insecure Pod heading for the gate. (1) the gate rules — four red ✗, verdict DENIED
-(Forbidden); crucial point: the Pod is NEVER created, there's nothing to kubectl get, nothing to
-delete — contrast with the runtime failures from S13/S14 where the Pod exists and misbehaves.
-This is admission enforcement: the API server said no before etcd ever saw it. (2) re-apply the
-hardened version. (3) four green ✓, ADMITTED, Pod lands in the namespace Running. The takeaway:
-you didn't change the policy or beg an admin — you changed your manifest to meet the bar. That's
-the whole loop the learner runs in Lab 17.
+Speaker: conduza com os cliques; isto torna o momento da admission físico, e é exatamente o
+lab. (0) o Pod inseguro rumo ao gate. (1) o gate decide — quatro ✗ vermelhos, veredito DENIED
+(Forbidden); ponto crucial: o Pod NUNCA é criado, não há nada para kubectl get, nada para
+deletar — contraste com as falhas de runtime do S13/S14, onde o Pod existe e se comporta mal.
+Isso é enforcement de admission: o API server disse não antes de o etcd sequer vê-lo. (2)
+reaplique a versão com hardening. (3) quatro ✓ verdes, ADMITTED, o Pod aterrissa no namespace
+Running. A lição: você não mudou a política nem implorou a um admin — mudou seu manifesto para
+alcançar a régua. Esse é o loop inteiro que o aluno roda no Lab 17.
 -->
 
 ---
 layout: recap
-heading: 'Recap — least privilege, and who enforces it when'
-story: 'The insecure Pod was refused before it existed (admission); the same Pod, hardened, walked straight in. readOnlyRootFilesystem then broke a Pod that writes to disk at runtime — a different layer, a different fix.'
-next: 'NetworkPolicy — the network complement: default-deny pod-to-pod traffic and explicit allows'
+heading: 'Recap — menor privilégio, e quem o impõe quando'
+story: 'O Pod inseguro foi recusado antes de existir (admission); o mesmo Pod, com hardening, entrou direto. readOnlyRootFilesystem então quebrou um Pod que escreve em disco em runtime — outra camada, outro conserto.'
+next: 'NetworkPolicy — o complemento de rede: default-deny no tráfego pod-a-pod e allows explícitos'
 ---
 
-- **`securityContext`** = what the Pod asks to be; **Pod Security Standards** = privileged →
-  baseline → **restricted**, the platform's bar
-- `restricted` gates **four** fields: `runAsNonRoot` · `allowPrivilegeEscalation:false` ·
-  `drop ["ALL"]` · `seccompProfile` — set them and you're in
-- **`readOnlyRootFilesystem` is *beyond* restricted** — great hygiene, but it can break apps
-  that write to `/` (fix with an `emptyDir`)
-- **PSA = namespace labels** (`enforce`/`warn`/`audit`), built in — `warn` first, then `enforce`
-- Two layers: **admission** rejects before the Pod exists (PSA); the **kubelet** enforces at
-  runtime (`runAsNonRoot` on a root image → CrashLoop) — sets up **pod-escape** defences
+- **`securityContext`** = o que o Pod pede para ser; **Pod Security Standards** = privileged →
+  baseline → **restricted**, a régua da plataforma
+- O `restricted` verifica **quatro** campos: `runAsNonRoot` · `allowPrivilegeEscalation:false` ·
+  `drop ["ALL"]` · `seccompProfile` — defina-os e você entra
+- **`readOnlyRootFilesystem` está *além* do restricted** — ótima higiene, mas pode quebrar
+  aplicações que escrevem em `/` (conserte com um `emptyDir`)
+- **PSA = labels de namespace** (`enforce`/`warn`/`audit`), embutido — `warn` primeiro, depois `enforce`
+- Duas camadas: a **admission** rejeita antes de o Pod existir (PSA); o **kubelet** impõe em
+  runtime (`runAsNonRoot` numa image root → CrashLoop) — prepara as defesas contra **pod escape**
 
 <!--
-Speaker: land the two-layer mental model, because it's the thread through the rest of Day 3.
-ADMISSION (PSA) decides whether the Pod may exist at all — pure YAML check, namespace-scoped,
-happens before storage. RUNTIME (kubelet + kernel: seccomp, caps, the runAsNonRoot reality
-check, readOnlyRootFilesystem) governs what the Pod may DO once it's running. `restricted` is
-four fields; readOnlyRootFilesystem is a fifth good habit that's NOT part of it and needs an
-emptyDir when the app writes to disk. Migrate namespaces with warn→enforce so you never surprise
-a team. All of this is the toolkit S25 uses against a real pod escape, and it pairs with S18
-(NetworkPolicy) for the network side. Hand to Lab 17: label a namespace restricted, get your
-insecure Pod refused, harden it field by field until the gate admits it, then meet
-readOnlyRootFilesystem — free for the demo app, fatal for a Pod that writes a PID file until
-you give it a writable emptyDir path.
+Speaker: consolide o modelo mental de duas camadas, porque ele é o fio condutor do resto do Day
+3. ADMISSION (PSA) decide se o Pod pode sequer existir — verificação pura de YAML, escopo de
+namespace, acontece antes do armazenamento. RUNTIME (kubelet + kernel: seccomp, caps, a
+verificação de realidade do runAsNonRoot, readOnlyRootFilesystem) governa o que o Pod pode
+FAZER depois de rodando. `restricted` são quatro campos; readOnlyRootFilesystem é um quinto bom
+hábito que NÃO faz parte dele e precisa de um emptyDir quando a aplicação escreve em disco.
+Migre namespaces com warn→enforce para nunca surpreender um time. Tudo isso é o kit que o S25
+usa contra um pod escape real, e faz par com o S18 (NetworkPolicy) no lado da rede. Passe o
+bastão ao Lab 17: rotule um namespace como restricted, veja seu Pod inseguro ser recusado,
+aplique hardening campo a campo até o gate admiti-lo, e então conheça o readOnlyRootFilesystem
+— de graça para a aplicação de demo, fatal para um Pod que escreve um arquivo de PID até você
+dar a ele um path gravável com emptyDir.
 -->
 
 ---
@@ -490,11 +500,11 @@ duration: 25 min
 env: namespace ✓ / kind ✓
 ---
 
-## Lab 17 — Pass `restricted`
+## Lab 17 — Passe no `restricted`
 
-- Label a namespace `enforce=restricted` (kind) or use your pre-labelled shared namespace
-- **Break:** apply a bare, root, no-context Pod → **Forbidden**; read the four-violation list
-- **Fix:** add the four fields one at a time, re-applying until the gate **admits** it
-- Turn on `readOnlyRootFilesystem` — free for the demo app; then watch a *writing* Pod crash
-  and give it an `emptyDir`
-- Confirm the app runs as UID 65532 (via `kubectl debug`) and that writes to `/` are refused
+- Rotule um namespace com `enforce=restricted` (kind) ou use seu namespace compartilhado pré-rotulado
+- **Quebre:** aplique um Pod cru, root, sem contexto → **Forbidden**; leia a lista de quatro violações
+- **Conserte:** adicione os quatro campos um de cada vez, reaplicando até o gate **admitir**
+- Ligue o `readOnlyRootFilesystem` — de graça para a aplicação de demo; depois veja um Pod que
+  *escreve* quebrar e dê a ele um `emptyDir`
+- Confirme que a aplicação roda como UID 65532 (via `kubectl debug`) e que escritas em `/` são recusadas

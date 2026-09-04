@@ -9,14 +9,14 @@ track: Operators
 
 # Operator dev 101 (kubebuilder)
 
-Scaffold a tiny operator and understand reconcile.
+Faça o scaffold de um operator minúsculo e entenda o reconcile.
 
-**optional** · suggested Day 3 · Operators track
+**optional** · sugerido para o Day 3 · trilha Operators
 
 <!--
-Stub (M2). Author full content per the outline section S24;
-timing target: 40 min slides + 40 min lab.
-CKx tie-in: Beyond exam scope; enrichment for the operator concept.
+Stub (M2). Escrever o conteúdo completo conforme a seção S24 do outline;
+alvo de tempo: 40 min de slides + 40 min de lab.
+Vínculo com CKx: além do escopo do exame; enriquecimento para o conceito de operator.
 -->
 
 ---
@@ -26,7 +26,7 @@ duration: 40 min
 env: kind-only · advanced
 ---
 
-## Lab 24 — Write a reconcile loop
+## Lab 24 — Escreva um loop de reconciliação
 
-- Scaffold an API type and a minimal reconcile loop
-- Run it against kind (prebuilt fallback provided)
+- Faça o scaffold de um API type e um loop de reconciliação mínimo
+- Rode contra o kind (fallback pré-compilado fornecido)

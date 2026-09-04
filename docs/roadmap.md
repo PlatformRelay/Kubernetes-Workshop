@@ -1,66 +1,66 @@
 # Roadmap
 
-Where the workshop is heading — a **public summary** for facilitators and
-contributors. Statuses use honest vocabulary only: **in progress**, **planned**,
-or **exploring**. Nothing here is a commitment, a schedule, or a promise that
-work lands by a date. Items listed as shipped live on `main`; everything else is
-direction, not delivery.
+Para onde o workshop está indo — um **resumo público** para facilitadores e
+contribuidores. Os status usam apenas vocabulário honesto: **in progress**, **planned**
+ou **exploring**. Nada aqui é um compromisso, um cronograma ou uma promessa de que o
+trabalho será entregue em uma data. Itens listados como entregues vivem na `main`; todo o
+resto é direção, não entrega.
 
-Internal planning notes (if any) stay out of the published site. This page
-summarizes; it does not lead over private trackers.
+Notas internas de planejamento (se houver) ficam fora do site publicado. Esta página
+resume; ela não passa na frente dos trackers privados.
 
-> **GitOps tool choice is on `main`, not direction.** The GitOps section (S21)
-> ships with **Argo CD as the default** and **Flux as a selectable variant**, so
-> facilitators can match the tool their room actually uses without forking the
-> curriculum. Choose one per delivery with `--gitops argocd|flux`; see
-> [running the slides](./run-slides.md).
+> **A escolha da ferramenta de GitOps está na `main`, não é direção.** A seção de GitOps
+> (S21) entrega com **Argo CD como padrão** e **Flux como variante selecionável**, para que
+> facilitadores possam usar a ferramenta que a sala realmente usa sem forkar o currículo.
+> Escolha uma por entrega com `--gitops argocd|flux`; veja
+> [rodando os slides](./run-slides.md).
 >
-> [Discuss GitOps tool choice →](https://github.com/PlatformRelay/Kubernetes-Workshop/discussions/22)
+> [Discuta a escolha da ferramenta de GitOps →](https://github.com/PlatformRelay/Kubernetes-Workshop/discussions/22)
 
-> **OpenTelemetry scope is decided, not direction.** OpenTelemetry is covered as
-> **concepts inside the Prometheus operator section (S23)**: OTLP as the wire
-> protocol and the collector as a pipeline shape, with traces named but not
-> exercised. No dedicated section, lab, or environment add-on is planned; the
-> decision and the conditions that would reopen it are recorded in
+> **O escopo de OpenTelemetry está decidido, não é direção.** OpenTelemetry é coberto como
+> **conceitos dentro da seção do Prometheus operator (S23)**: OTLP como protocolo de fio e
+> o collector como formato de pipeline, com traces citados mas não exercitados. Nenhuma
+> seção, lab ou add-on de ambiente dedicado está planejado; a decisão e as condições que
+> reabririam o tema estão registradas na
 > [ADR 0013](./decisions/0013-opentelemetry-scope.md).
 >
-> [Discuss OpenTelemetry →](https://github.com/PlatformRelay/Kubernetes-Workshop/discussions/23)
+> [Discuta OpenTelemetry →](https://github.com/PlatformRelay/Kubernetes-Workshop/discussions/23)
 
-## Status vocabulary
+## Vocabulário de status
 
-| Status | Meaning |
+| Status | Significado |
 | --- | --- |
-| **in progress** | Active work toward something that is not yet on `main`. |
-| **planned** | Intended next work; architecture or sequencing may still be open. |
-| **exploring** | Under consideration only — explicitly **not** committed. |
+| **in progress** | Trabalho ativo rumo a algo que ainda não está na `main`. |
+| **planned** | Próximo trabalho pretendido; arquitetura ou sequenciamento ainda podem estar em aberto. |
+| **exploring** | Apenas em consideração — explicitamente **não** comprometido. |
 
-## Direction
+## Direção
 
-### Live quizzes — planned (host)
+### Quizzes ao vivo — planned (host)
 
-Per-section retrieval questions ship as a portable bank in
+As perguntas de retrieval por seção já são entregues como um banco portátil em
 [`quiz/`](https://github.com/PlatformRelay/Kubernetes-Workshop/tree/main/quiz)
-(facilitator and participant Markdown export; no live host).
-The architecture spike evaluated three FOSS live-host candidates and **adopted
-none of them (0/3)** — so the self-hosted live quiz add-on remains **planned**,
-with host architecture still open.
+(export Markdown para facilitador e participante; sem host ao vivo).
+O spike de arquitetura avaliou três candidatos FOSS de live host e **não adotou
+nenhum deles (0/3)** — então o add-on de live quiz self-hosted segue **planned**,
+com a arquitetura do host ainda em aberto.
 
-[Discuss live quizzes →](https://github.com/PlatformRelay/Kubernetes-Workshop/discussions/21)
+[Discuta os quizzes ao vivo →](https://github.com/PlatformRelay/Kubernetes-Workshop/discussions/21)
 
-## Standing debts (referenced, not restated)
+## Dívidas em aberto (referenciadas, não repetidas)
 
-These are already documented on dedicated pages; the roadmap only points at them:
+Estas já estão documentadas em páginas dedicadas; o roadmap apenas aponta para elas:
 
-- **Windows / WSL2 live validation** — route is contract-tested; live-smoke still
-  pending. See [Windows / WSL2](./windows-wsl2.md).
-- **Human rehearsal / beta-exit evidence** — paper and CI coverage ahead of a
-  full kind-path walk-through. See [Known limitations](./beta-limitations.md),
-  the [rehearsal checklist](./rehearsal-checklist.md), and the
-  [validation matrix](./validation-matrix.md).
+- **Validação ao vivo em Windows / WSL2** — a rota é testada por contrato; o live-smoke
+  ainda está pendente. Veja [Windows / WSL2](./windows-wsl2.md).
+- **Evidência de ensaio humano / saída do beta** — cobertura em papel e no CI antes de uma
+  passada completa pelo caminho kind. Veja [Limitações conhecidas](./beta-limitations.md),
+  o [checklist de ensaio](./rehearsal-checklist.md) e a
+  [matriz de validação](./validation-matrix.md).
 
-[Discuss standing debts →](https://github.com/PlatformRelay/Kubernetes-Workshop/discussions/24)
+[Discuta as dívidas em aberto →](https://github.com/PlatformRelay/Kubernetes-Workshop/discussions/24)
 
 ## Feedback
 
-Each item above links to a GitHub Discussion. Use those threads for interest,
-trade-offs, and evidence — not as a support queue or a delivery tracker.
+Cada item acima linka para uma GitHub Discussion. Use essas threads para interesse,
+trade-offs e evidências — não como fila de suporte nem como tracker de entrega.

@@ -1,42 +1,42 @@
-# Lab 16 — Autoscaling (HPA) (S16) — solutions
+# Lab 16 — Autoscaling (HPA) (S16) — soluções
 
-Use this companion after attempting the participant lab. Outputs contain representative
-names, addresses, ages, and image sizes; compare the state and meaning rather than copying
-ephemeral values literally.
+Use este companion depois de tentar o lab do participante. As saídas contêm nomes, endereços,
+idades e tamanhos de image representativos; compare o estado e o significado em vez de copiar
+literalmente valores efêmeros.
 
 ## Guided solutions
 
-### Step 0 — metrics-server: the HPA's eyes
+### Step 0 — metrics-server: os olhos do HPA
 
-The HPA reads CPU from the **metrics.k8s.io** API, which **metrics-server** serves. No
-metrics-server → no data → the HPA can't compute a target. Check first:
+O HPA lê a CPU da API **metrics.k8s.io**, que o **metrics-server** serve. Sem
+metrics-server → sem dados → o HPA não consegue calcular um alvo. Verifique primeiro:
 
 ```bash
-kubectl top pods -A            # if this prints CPU/MEM, metrics-server is already up — skip ahead
+kubectl top pods -A            # se isto imprimir CPU/MEM, o metrics-server já está no ar — pule adiante
 ```
 
-If it errors with `Metrics API not available`, install it (kind needs one extra flag):
+Se der erro com `Metrics API not available`, instale-o (o kind precisa de uma flag extra):
 
 ```bash
 kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
 
-# kind's kubelet serves metrics over a self-signed cert; metrics-server rejects it by default and
-# never goes Ready. Allow it (kind/dev ONLY — never in production):
+# o kubelet do kind serve métricas com um cert autoassinado; o metrics-server o rejeita por padrão e
+# nunca fica Ready. Permita isso (APENAS kind/dev — nunca em produção):
 kubectl -n kube-system patch deployment metrics-server --type=json \
   -p '[{"op":"add","path":"/spec/template/spec/containers/0/args/-","value":"--kubelet-insecure-tls"}]'
 
-kubectl -n kube-system rollout status deployment/metrics-server   # wait for it to be Available
+kubectl -n kube-system rollout status deployment/metrics-server   # aguarde ficar Available
 ```
 
-**Task:** confirm metrics-server now serves data (give it ~30–60s after Ready to collect a first
-sample).
+**Tarefa:** confirme que o metrics-server agora serve dados (dê ~30–60s após o Ready para ele
+coletar a primeira amostra).
 
 ```bash
 kubectl top nodes
 kubectl top pods -A | head
 ```
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ kubectl top nodes
@@ -49,20 +49,20 @@ kube-system   coredns-...                       3m           14Mi
 kube-system   metrics-server-...                5m           18Mi
 ```
 
-If `kubectl top` returns numbers, the HPA has a metric source. If it still says
-`Metrics API not available`, metrics-server hasn't collected a sample yet (wait a bit) or the
-`--kubelet-insecure-tls` patch didn't apply — re-check `kubectl -n kube-system get deploy
-metrics-server -o jsonpath='{..args}'`. **Remember this symptom:** a broken metrics-server ALSO
-makes an HPA read `<unknown>` — that's a *different* cause from the missing-request break in Step 4.
+Se o `kubectl top` retorna números, o HPA tem uma fonte de métricas. Se ainda diz
+`Metrics API not available`, o metrics-server ainda não coletou uma amostra (aguarde um pouco) ou
+o patch `--kubelet-insecure-tls` não foi aplicado — re-verifique `kubectl -n kube-system get deploy
+metrics-server -o jsonpath='{..args}'`. **Lembre-se deste sintoma:** um metrics-server quebrado
+TAMBÉM faz um HPA ler `<unknown>` — essa é uma causa *diferente* da quebra por request ausente do Step 4.
 </details>
 
 ---
 
-### Step 1 — a CPU-bound app with a request, and an HPA over it
+### Step 1 — um app CPU-bound com request, e um HPA por cima
 
-`hpa-example` is a tiny PHP app that burns CPU on every request — unlike the workshop-web demo app, which
-answers instantly and would never move the needle. The `requests.cpu: 200m` is the **denominator**
-the HPA scales against.
+O `hpa-example` é um pequeno app PHP que queima CPU a cada request — ao contrário do app de demo
+workshop-web, que responde na hora e nunca moveria o ponteiro. O `requests.cpu: 200m` é o
+**denominador** contra o qual o HPA escala.
 
 ```bash
 cat > web.yaml <<'EOF'
@@ -83,7 +83,7 @@ spec:
           image: registry.k8s.io/hpa-example
           ports: [{ containerPort: 80 }]
           resources:
-            requests: { cpu: 200m }        # the HPA scales CPU toward 50% of THIS
+            requests: { cpu: 200m }        # o HPA escala a CPU rumo a 50% DISTO
             limits:   { cpu: 500m }
 ---
 apiVersion: v1
@@ -92,7 +92,7 @@ metadata:
   name: web
   labels: { app: s16 }
 spec:
-  selector: { run: web }                   # selects the web Pods (NOT the load Pods)
+  selector: { run: web }                   # seleciona os Pods web (NÃO os Pods de load)
   ports: [{ port: 80, targetPort: 80 }]
 EOF
 
@@ -100,7 +100,7 @@ kubectl apply -f web.yaml
 kubectl rollout status deployment/web
 ```
 
-Now the HPA — `autoscaling/v2`, targeting CPU **Utilization** (a percentage of the request):
+Agora o HPA — `autoscaling/v2`, mirando **Utilization** de CPU (um percentual do request):
 
 ```bash
 cat > hpa.yaml <<'EOF'
@@ -122,20 +122,20 @@ spec:
         name: cpu
         target:
           type: Utilization
-          averageUtilization: 50           # hold avg CPU at 50% of requests.cpu (=100m)
+          averageUtilization: 50           # manter a CPU média em 50% do requests.cpu (=100m)
 EOF
 
 kubectl apply -f hpa.yaml
 ```
 
-**Task:** watch the HPA settle at its baseline. Within ~30–60s `TARGETS` should show a real
-percentage (near 0%) and `REPLICAS` should sit at `minReplicas` (2).
+**Tarefa:** observe o HPA se assentar na sua linha de base. Em ~30–60s `TARGETS` deve mostrar um
+percentual real (perto de 0%) e `REPLICAS` deve ficar em `minReplicas` (2).
 
 ```bash
-kubectl get hpa web -w        # wait for TARGETS to show cpu: X%/50% (not <unknown>), then Ctrl-C
+kubectl get hpa web -w        # aguarde TARGETS mostrar cpu: X%/50% (não <unknown>), depois Ctrl-C
 ```
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ kubectl get hpa web
@@ -143,20 +143,20 @@ NAME   REFERENCE        TARGETS       MINPODS   MAXPODS   REPLICAS   AGE
 web    Deployment/web   cpu: 0%/50%   2         10        2          60s
 ```
 
-`TARGETS cpu: 0%/50%` = "current average CPU is ~0% of the request, target is 50%." The app is
-idle, so the HPA holds at `minReplicas: 2`. If you instead see `cpu: <unknown>/50%`, either
-metrics-server hasn't produced a sample yet (wait) or the Deployment is missing `requests.cpu`
-(you'll do that deliberately in Step 4). Note you set `replicas: 2` in the Deployment as a
-*starting point* — from now on the HPA owns that field; don't `kubectl scale` it by hand.
+`TARGETS cpu: 0%/50%` = "a CPU média atual é ~0% do request, o alvo é 50%." O app está
+ocioso, então o HPA segura em `minReplicas: 2`. Se em vez disso você vê `cpu: <unknown>/50%`, ou o
+metrics-server ainda não produziu uma amostra (aguarde) ou o Deployment está sem o `requests.cpu`
+(você fará isso de propósito no Step 4). Note que você definiu `replicas: 2` no Deployment como
+*ponto de partida* — daqui em diante o HPA é dono desse campo; não faça `kubectl scale` nele à mão.
 </details>
 
 ---
 
-### Step 2 — pour on load and watch it grow
+### Step 2 — despeje carga e veja-o crescer
 
-Run a load generator that hammers the `web` Service in a tight loop. It carries the label
-`run: load` (so the `web` Service does **not** treat it as a backend) plus `app: s16` (so cleanup
-catches it).
+Execute um gerador de carga que martela o Service `web` em um loop apertado. Ele carrega o label
+`run: load` (para o Service `web` **não** tratá-lo como backend) mais `app: s16` (para o cleanup
+pegá-lo).
 
 ```bash
 cat > load.yaml <<'EOF'
@@ -181,17 +181,17 @@ EOF
 kubectl apply -f load.yaml
 ```
 
-**Task:** watch the HPA react. Over the next 1–3 minutes `TARGETS` should climb **past 50%** and
-`REPLICAS` should ramp up toward `max`. (One loop may not be enough on a fast machine — if
-`TARGETS` stays low, scale the load up: `kubectl scale deployment/load --replicas=3`.)
+**Tarefa:** observe o HPA reagir. Nos próximos 1–3 minutos `TARGETS` deve subir **além de 50%** e
+`REPLICAS` deve escalar rumo ao `max`. (Um loop pode não bastar em uma máquina rápida — se
+`TARGETS` continuar baixo, aumente a carga: `kubectl scale deployment/load --replicas=3`.)
 
 ```bash
-kubectl get hpa web -w        # TARGETS crosses 50%, REPLICAS climbs 2 → … → toward 10
-# in another view:
+kubectl get hpa web -w        # TARGETS cruza 50%, REPLICAS sobe 2 → … → rumo a 10
+# em outra visão:
 kubectl get pods -l run=web
 ```
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ kubectl get hpa web -w
@@ -203,74 +203,77 @@ web    Deployment/web   cpu: 130%/50%   2         10        8          4m30s
 web    Deployment/web   cpu: 55%/50%    2         10        10         5m30s
 ```
 
-The load pushes average CPU well over the target, so the HPA applies
-`ceil(current × util/target)` and adds Pods — you'll see `REPLICAS` step up (2 → 4 → 8 → 10) as it
-re-evaluates every ~15s. Notice `TARGETS` **falls as REPLICAS rises**: the same total load spread
-over more Pods is less CPU per Pod. It stops at `maxReplicas: 10` even if `TARGETS` is still above
-50% — `max` is the hard ceiling. The exact numbers depend on your machine; the shape (over target →
-climb → per-Pod CPU eases) is the point.
+A carga empurra a CPU média bem acima do alvo, então o HPA aplica
+`ceil(current × util/target)` e adiciona Pods — você verá `REPLICAS` subir em degraus
+(2 → 4 → 8 → 10) conforme ele reavalia a cada ~15s. Note que `TARGETS` **cai enquanto REPLICAS
+sobe**: a mesma carga total espalhada por mais Pods é menos CPU por Pod. Ele para em
+`maxReplicas: 10` mesmo se `TARGETS` ainda estiver acima de 50% — o `max` é o teto rígido. Os
+números exatos dependem da sua máquina; o formato (acima do alvo → subida → CPU por Pod alivia) é
+o que importa.
 </details>
 
-**Question:** `TARGETS` briefly read `240%/50%` — how can a Pod's CPU utilization be over 100%?
+**Pergunta:** `TARGETS` leu por um instante `240%/50%` — como a utilização de CPU de um Pod pode
+passar de 100%?
 
-<details><summary>Answer</summary>
+<details><summary>Resposta</summary>
 
-Utilization here is **relative to the `requests.cpu` (200m)**, not to a whole core.
-`240%` means the Pods were averaging ~`480m` of actual CPU against a `200m` request — they're
-allowed to burst above their request up to their `limit` (500m). So "utilization" for HPA is
-"actual CPU ÷ requested CPU," which can exceed 100% whenever a Pod uses more than it requested.
-That's exactly why a request must exist for the number to mean anything (Step 4).
+A utilização aqui é **relativa ao `requests.cpu` (200m)**, não a um core inteiro.
+`240%` significa que os Pods estavam em média usando ~`480m` de CPU real contra um request de
+`200m` — eles podem fazer burst acima do request até o seu `limit` (500m). Então "utilização" para
+o HPA é "CPU real ÷ CPU requisitada", o que pode passar de 100% sempre que um Pod usa mais do que
+pediu. É exatamente por essa causa que um request precisa existir para o número significar alguma
+coisa (Step 4).
 </details>
 
 ---
 
-### Step 3 — stop the load and watch it *linger*
+### Step 3 — pare a carga e observe a *demora*
 
 ```bash
-kubectl delete -f load.yaml       # or: kubectl scale deployment/load --replicas=0
-kubectl get hpa web -w            # keep watching — note how long REPLICAS stays high
+kubectl delete -f load.yaml       # ou: kubectl scale deployment/load --replicas=0
+kubectl get hpa web -w            # continue observando — note por quanto tempo REPLICAS fica alto
 ```
 
-**Task:** time roughly how long it takes `REPLICAS` to fall back to `2` after `TARGETS` drops to
-near 0%. It is **not** immediate.
+**Tarefa:** cronometre aproximadamente quanto tempo `REPLICAS` leva para voltar a `2` depois que
+`TARGETS` cai para perto de 0%. **Não** é imediato.
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ kubectl get hpa web -w
 NAME   REFERENCE        TARGETS        MINPODS   MAXPODS   REPLICAS   AGE
 web    Deployment/web   cpu: 55%/50%   2         10        10         6m
-web    Deployment/web   cpu: 0%/50%    2         10        10         6m30s   # load gone, still 10
-web    Deployment/web   cpu: 0%/50%    2         10        10         10m     # ...still holding
-web    Deployment/web   cpu: 0%/50%    2         10        2          11m30s  # finally shrinks
+web    Deployment/web   cpu: 0%/50%    2         10        10         6m30s   # carga sumiu, ainda 10
+web    Deployment/web   cpu: 0%/50%    2         10        10         10m     # ...ainda segurando
+web    Deployment/web   cpu: 0%/50%    2         10        2          11m30s  # finalmente encolhe
 ```
 
-CPU drops to ~0% almost at once, but `REPLICAS` **stays at 10 for about five minutes** before
-collapsing back to `min`. Scale-up was quick; scale-down is deliberately slow. That delay is the
-whole point of the next question.
+A CPU cai para ~0% quase de imediato, mas `REPLICAS` **fica em 10 por cerca de cinco minutos**
+antes de colapsar de volta ao `min`. O scale-up foi rápido; o scale-down é deliberadamente lento.
+Esse atraso é todo o ponto da próxima pergunta.
 </details>
 
-**Question (the headline):** why did scale-down lag behind the load dropping?
+**Pergunta (a manchete):** por que o scale-down ficou atrás da queda da carga?
 
-<details><summary>Answer</summary>
+<details><summary>Resposta</summary>
 
-Because of the **scale-down stabilization window**, `behavior.scaleDown.stabilizationWindowSeconds`,
-which **defaults to 300 seconds (5 minutes)**. When deciding whether to shrink, the HPA looks back
-over that window and uses the **highest** replica recommendation in it — so a sudden drop in load
-can't immediately shrink the fleet; the low reading has to persist for the whole window first. (The
-**scale-up** window defaults to `0` — spikes are met right away.) The asymmetry is intentional:
-over-reacting to a brief lull just **thrashes** Pods (and leaves you short right before the next
-spike), whereas under-reacting to a spike **drops traffic**. So the HPA errs toward keeping
-capacity — **fast up, patient down**. You can tune it under `spec.behavior` if 5 minutes is wrong
-for your workload.
+Por causa da **janela de estabilização do scale-down**, `behavior.scaleDown.stabilizationWindowSeconds`,
+cujo **padrão é 300 segundos (5 minutos)**. Ao decidir se encolhe, o HPA olha para trás dentro
+dessa janela e usa a recomendação de réplicas **mais alta** nela — então uma queda súbita de carga
+não consegue encolher a frota de imediato; a leitura baixa precisa persistir pela janela inteira
+primeiro. (A janela de **scale-up** tem padrão `0` — picos são atendidos na hora.) A assimetria é
+intencional: reagir demais a uma calmaria breve só **sacode** (thrashing) os Pods (e te deixa
+curto logo antes do próximo pico), enquanto reagir de menos a um pico **derruba tráfego**. Então o
+HPA erra para o lado de manter capacidade — **sobe rápido, desce paciente**. Você pode ajustar
+isso em `spec.behavior` se 5 minutos for errado para seu workload.
 </details>
 
 ---
 
-### Step 4 — break→fix: an HPA with nothing to divide by
+### Step 4 — break→fix: um HPA sem nada pelo que dividir
 
-The HPA scales on a **percentage of `requests.cpu`**. Take the request away and the percentage has
-no denominator.
+O HPA escala com base em um **percentual de `requests.cpu`**. Tire o request e o percentual fica
+sem denominador.
 
 ```bash
 cat > web-no-requests.yaml <<'EOF'
@@ -290,22 +293,22 @@ spec:
         - name: web
           image: registry.k8s.io/hpa-example
           ports: [{ containerPort: 80 }]
-          # resources.requests.cpu REMOVED — the HPA has no base to compute % against
+          # resources.requests.cpu REMOVIDO — o HPA não tem base para calcular o % contra
 EOF
 
 kubectl apply -f web-no-requests.yaml
 kubectl rollout status deployment/web
-kubectl get hpa web            # TARGETS now <unknown>
+kubectl get hpa web            # TARGETS agora <unknown>
 ```
 
-**Task:** confirm the HPA can no longer compute a target, and read *why* from `describe`.
+**Tarefa:** confirme que o HPA não consegue mais calcular um alvo, e leia o *porquê* no `describe`.
 
 ```bash
 kubectl get hpa web
 kubectl describe hpa web | sed -n '/Conditions/,/Events/p'
 ```
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ kubectl get hpa web
@@ -321,24 +324,24 @@ Conditions:
   ScalingActive  False   FailedGetResourceMetric  failed to get cpu utilization: missing request for cpu ...
 ```
 
-`TARGETS <unknown>/50%` and `ScalingActive: False` with **`missing request for cpu`**. Without a
-`requests.cpu`, "50% utilization" is undefined, so the HPA gives up computing a desired count and
-**freezes at the current replica count** — it can neither scale up under load nor down when idle.
-This is the single most common "my HPA does nothing" cause. (Contrast Step 0's `<unknown>`, which
-came from metrics-server not serving data — same symptom, different root cause: check
-`kubectl top pods` to tell them apart. If `top` works but the HPA is `<unknown>`, it's the missing
-request; if `top` itself fails, it's metrics-server.)
+`TARGETS <unknown>/50%` e `ScalingActive: False` com **`missing request for cpu`**. Sem um
+`requests.cpu`, "50% de utilização" é indefinido, então o HPA desiste de calcular uma contagem
+desejada e **congela na contagem de réplicas atual** — ele não consegue nem subir sob carga nem
+descer quando ocioso. Esta é a causa mais comum de "meu HPA não faz nada". (Contraste com o
+`<unknown>` do Step 0, que veio do metrics-server sem servir dados — mesmo sintoma, causa raiz
+diferente: verifique `kubectl top pods` para distingui-los. Se o `top` funciona mas o HPA está
+`<unknown>`, é o request ausente; se o próprio `top` falha, é o metrics-server.)
 </details>
 
-**Task:** restore the request and confirm the HPA recovers.
+**Tarefa:** restaure o request e confirme que o HPA se recupera.
 
 ```bash
-kubectl apply -f web.yaml          # the original, WITH requests.cpu
+kubectl apply -f web.yaml          # o original, COM requests.cpu
 kubectl rollout status deployment/web
-kubectl get hpa web -w             # TARGETS goes back to cpu: X%/50%, then Ctrl-C
+kubectl get hpa web -w             # TARGETS volta a cpu: X%/50%, depois Ctrl-C
 ```
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ kubectl get hpa web
@@ -346,15 +349,17 @@ NAME   REFERENCE        TARGETS       MINPODS   MAXPODS   REPLICAS   AGE
 web    Deployment/web   cpu: 0%/50%   2         10        2          16m
 ```
 
-With the request back, the HPA can compute utilization again — `TARGETS` shows a real percentage
-and `ScalingActive` returns to `True`. The fix for a real-world `<unknown>` is almost always
-"add the missing `requests.cpu`" (or fix metrics-server) — not touching the HPA at all.
+Com o request de volta, o HPA consegue calcular utilização de novo — `TARGETS` mostra um
+percentual real e `ScalingActive` volta a `True`. A correção de um `<unknown>` no mundo real é
+quase sempre "adicione o `requests.cpu` faltante" (ou conserte o metrics-server) — sem tocar no
+HPA em nada.
 </details>
 
-### Stretch (optional) — make scale-down snappier with `behavior`
+### Stretch (opcional) — deixe o scale-down mais ágil com `behavior`
 
-The 5-minute scale-down default is conservative. Add a `behavior` block to shrink faster — useful
-to *see* scale-down without waiting, and a good feel for the knob from the slides.
+O padrão de 5 minutos do scale-down é conservador. Adicione um bloco `behavior` para encolher mais
+rápido — útil para *ver* o scale-down sem esperar, e um bom jeito de sentir na prática o knob dos
+slides.
 
 ```bash
 kubectl patch hpa web --type=merge -p '{
@@ -365,78 +370,79 @@ kubectl patch hpa web --type=merge -p '{
 }'
 ```
 
-<details><summary>What changes</summary>
+<details><summary>O que muda</summary>
 
-You've cut the scale-down stabilization window from 300s to **30s** and capped the rate at
-**2 Pods per 15s**. Re-run Steps 2–3: after the load stops, `REPLICAS` now falls back toward `min`
-within about half a minute instead of five, stepping down at most 2 at a time. This is exactly the
-`spec.behavior.scaleDown` block from the slides — proof that the "slow down" is a **default, not a
-law**. (Lowering it too far reintroduces the flapping the window exists to prevent, so 300s is a
-sane production default.)
+Você cortou a janela de estabilização do scale-down de 300s para **30s** e limitou a taxa a
+**2 Pods a cada 15s**. Re-execute os Steps 2–3: depois que a carga para, `REPLICAS` agora cai de
+volta rumo ao `min` em cerca de meio minuto em vez de cinco, descendo no máximo 2 por vez. Este é
+exatamente o bloco `spec.behavior.scaleDown` dos slides — prova de que o "desce devagar" é um
+**padrão, não uma lei**. (Baixar demais reintroduz o flapping que a janela existe para prevenir,
+então 300s é um padrão de produção sensato.)
 </details>
 
 ---
 
-## Read-only namespace alternative (shared cluster)
+## Alternativa read-only por namespace (cluster compartilhado)
 
-You can't install metrics-server or scale nodes in a shared namespace, so the facilitator will
-pre-provision a Deployment + HPA under load in your namespace. You **observe** it instead of
-building it:
+Você não pode instalar o metrics-server nem escalar nodes em um namespace compartilhado, então o
+facilitador vai pré-provisionar um Deployment + HPA sob carga no seu namespace. Você o **observa**
+em vez de construí-lo:
 
 ```bash
 kubectl get hpa
-kubectl describe hpa <name>              # read Conditions + the Events (ScalingActive, scale decisions)
-kubectl get hpa <name> -w                # watch TARGETS and REPLICAS move if load is applied
-kubectl top pods -l app=<label>          # the raw CPU the HPA is dividing by the request
+kubectl describe hpa <name>              # leia as Conditions + os Events (ScalingActive, decisões de scale)
+kubectl get hpa <name> -w                # observe TARGETS e REPLICAS se moverem se houver carga aplicada
+kubectl top pods -l app=<label>          # a CPU bruta que o HPA está dividindo pelo request
 ```
 
-**Question:** from `kubectl describe hpa`, how do you tell whether an HPA is *healthy* versus
-*stuck*?
+**Pergunta:** a partir do `kubectl describe hpa`, como você distingue um HPA *saudável* de um
+*travado*?
 
-<details><summary>Answer</summary>
+<details><summary>Resposta</summary>
 
-Read the **Conditions**. A healthy HPA shows `AbleToScale: True` and **`ScalingActive: True`**
-(`ValidMetricFound`) — it's reading a metric and free to act. A stuck one shows
-**`ScalingActive: False`** with a reason like `FailedGetResourceMetric` (no metric —
-`missing request for cpu`, or metrics-server down) or `FailedGetScale` (can't find the target). The
-`ScaleDownStabilized` condition/event also explains a fleet that's holding high after load drops:
-it's inside the stabilization window. `TARGETS` reading `<unknown>` in `kubectl get hpa` is the
-quick tell; `describe` gives you the *why*.
+Leia as **Conditions**. Um HPA saudável mostra `AbleToScale: True` e **`ScalingActive: True`**
+(`ValidMetricFound`) — ele está lendo uma métrica e livre para agir. Um travado mostra
+**`ScalingActive: False`** com uma razão como `FailedGetResourceMetric` (sem métrica —
+`missing request for cpu`, ou metrics-server fora do ar) ou `FailedGetScale` (não encontra o
+alvo). A condition/event `ScaleDownStabilized` também explica uma frota que segura alto depois da
+carga cair: ela está dentro da janela de estabilização. `TARGETS` lendo `<unknown>` no
+`kubectl get hpa` é o sinal rápido; o `describe` te dá o *porquê*.
 </details>
 
 ## Expected state / output
 
-- **metrics-server** must serve `kubectl top` before an HPA can read anything; on kind it needs
-  `--kubelet-insecure-tls` to go Ready.
-- With a **CPU-bound** app that declares `requests.cpu`, load pushes `TARGETS` past 50% and the HPA
-  ramps `REPLICAS` toward `maxReplicas`; per-Pod CPU **falls** as replicas rise.
-- Utilization is **relative to the request**, so `TARGETS` can read **>100%** (bursting above the
-  request toward the limit).
-- Scale-**up** is quick; scale-**down** waits out the **300s** stabilization window before shrinking.
-- Remove `requests.cpu` → `TARGETS <unknown>`, `ScalingActive: False`,
-  `FailedGetResourceMetric: missing request for cpu` → the HPA is frozen until you restore it.
+- O **metrics-server** precisa servir o `kubectl top` antes de um HPA conseguir ler qualquer
+  coisa; no kind ele precisa de `--kubelet-insecure-tls` para ficar Ready.
+- Com um app **CPU-bound** que declara `requests.cpu`, a carga empurra `TARGETS` além de 50% e o
+  HPA escala `REPLICAS` rumo a `maxReplicas`; a CPU por Pod **cai** conforme as réplicas sobem.
+- A utilização é **relativa ao request**, então `TARGETS` pode ler **>100%** (burst acima do
+  request rumo ao limit).
+- O scale-**up** é rápido; o scale-**down** espera a janela de estabilização de **300s** antes de
+  encolher.
+- Remova o `requests.cpu` → `TARGETS <unknown>`, `ScalingActive: False`,
+  `FailedGetResourceMetric: missing request for cpu` → o HPA fica congelado até você restaurá-lo.
 
-Representative statuses include Running/Complete/Failed Pods, Bound PVCs, Accepted
-Gateway conditions, or numeric HPA TARGETS — compare meaning, not ephemeral names.
+Status representativos incluem Pods Running/Complete/Failed, PVCs Bound, conditions
+Accepted de Gateway ou TARGETS numéricos de HPA — compare o significado, não nomes efêmeros.
 
 ## Explanation
 
-HPA resource metrics are percentages of requests — without a CPU request there is
-nothing to divide by. Without metrics-server the HPA cannot read utilization at all.
-Distinguishing those failures avoids installing metrics-server when the Deployment
-simply omitted requests.
+As métricas de resource do HPA são percentuais dos requests — sem um request de CPU não há
+nada pelo que dividir. Sem o metrics-server, o HPA não consegue ler utilização de forma alguma.
+Distinguir essas causas de falha evita instalar o metrics-server quando o Deployment
+simplesmente omitiu os requests.
 
-The guided steps above prove the control-plane behaviour for this section; read Events and
-status fields when a one-line phase is ambiguous.
+Os passos guiados acima provam o comportamento do control plane desta seção; leia os Events e os
+campos de status quando uma fase de uma linha só for ambígua.
 
 ## Troubleshooting and recovery
 
-When HPA `TARGETS` stay `<unknown>` under load, run `kubectl describe hpa -n "$NS"` and look
-for `failedGetResourceMetric`. Missing `resources.requests.cpu` is fixed by restoring the
-Deployment template — `kubectl apply -f web.yaml -n "$NS"` — then confirming
-`kubectl get hpa -n "$NS"` shows numeric CURRENT/TARGET. If metrics-server itself is down,
-check `kubectl -n kube-system get deploy metrics-server` before blaming the HPA; do not delete
-the HPA as the first recovery step.
+Quando os `TARGETS` do HPA ficam `<unknown>` sob carga, execute `kubectl describe hpa -n "$NS"` e
+procure `failedGetResourceMetric`. Um `resources.requests.cpu` ausente é corrigido restaurando o
+template do Deployment — `kubectl apply -f web.yaml -n "$NS"` — e depois confirmando que
+`kubectl get hpa -n "$NS"` mostra CURRENT/TARGET numéricos. Se o próprio metrics-server estiver
+fora do ar, verifique `kubectl -n kube-system get deploy metrics-server` antes de culpar o HPA;
+não delete o HPA como primeiro passo de recuperação.
 
 ## Challenge solution
 
@@ -453,18 +459,18 @@ kubectl get hpa -n "$NS"
 
 ### Expected state / output
 
-describe names either failed metrics fetch or a missing CPU request (target undefined).
-After the fix, HPA shows a numeric target status and can raise the replica count when
-load is applied.
+O describe nomeia ou uma falha na coleta de métricas ou um request de CPU ausente (alvo
+indefinido). Após a correção, o HPA mostra um status de alvo numérico e consegue elevar a
+contagem de réplicas quando há carga aplicada.
 
 ### Explanation
 
-HPA resource metrics are percentages of requests — without a CPU request there is
-nothing to divide by. Without metrics-server the HPA cannot read utilization at all.
-Distinguishing those failures avoids installing metrics-server when the Deployment
-simply omitted requests.
+As métricas de resource do HPA são percentuais dos requests — sem um request de CPU não há
+nada pelo que dividir. Sem o metrics-server, o HPA não consegue ler utilização de forma alguma.
+Distinguir essas causas de falha evita instalar o metrics-server quando o Deployment
+simplesmente omitiu os requests.
 
 ### Hints
 
-Read kubectl describe hpa for failedGetResourceMetric; compare Deployment pod
-template resources.requests.cpu with metrics-server readiness.
+Leia kubectl describe hpa procurando failedGetResourceMetric; compare o
+resources.requests.cpu do template de Pod do Deployment com a prontidão do metrics-server.

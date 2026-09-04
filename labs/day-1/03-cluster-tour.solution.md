@@ -1,24 +1,24 @@
-# Lab 03 — Kubernetes mental model (S03) — solutions
+# Lab 03 — Modelo mental do Kubernetes (S03) — soluções
 
-Use this companion after attempting the participant lab. Outputs contain representative
-names, addresses, ages, and image sizes; compare the state and meaning rather than copying
-ephemeral values literally.
+Use este companion depois de tentar o lab do participante. As saídas contêm nomes, endereços,
+idades e tamanhos de image representativos; compare o estado e o significado em vez de copiar
+literalmente valores efêmeros.
 
 ## Guided solutions
 
-### Step 1 — the nodes: where your containers actually run
+### Step 1 — os nodes: onde seus containers realmente rodam
 
-Every Pod runs on a node. Ask the cluster what its nodes look like.
+Todo Pod roda em um node. Pergunte ao cluster como são seus nodes.
 
 ```bash
 kubectl get nodes -o wide
 ```
 
-**Task:** run it and read across one row to the **OS-IMAGE**, **KERNEL-VERSION**, and
-**CONTAINER-RUNTIME** columns. That last column is the same runtime stack you met in
+**Tarefa:** execute e leia uma linha inteira até as colunas **OS-IMAGE**, **KERNEL-VERSION** e
+**CONTAINER-RUNTIME**. Essa última coluna é a mesma pilha de runtime que você conheceu na
 S01.
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ kubectl get nodes -o wide
@@ -26,14 +26,15 @@ NAME              STATUS   ROLES           AGE   VERSION   INTERNAL-IP   OS-IMAG
 workshop-cp       Ready    control-plane   4h    v1.3x.y   172.18.0.2    Debian GNU/Linux 12          6.x.y            containerd://1.7.x
 ```
 
-- On **kind** you'll typically see one node (`*-control-plane`); a shared cluster
-  shows many worker nodes and their roles.
-- **CONTAINER-RUNTIME** shows `containerd://…` (or `cri-o://…`) — the CRI runtime the
-  kubelet drives. Kubernetes doesn't run containers itself; it tells this runtime to.
+- No **kind** você normalmente verá um node (`*-control-plane`); um cluster compartilhado
+  mostra muitos worker nodes e suas roles.
+- **CONTAINER-RUNTIME** mostra `containerd://…` (ou `cri-o://…`) — o runtime CRI que o
+  kubelet comanda. O Kubernetes não roda containers por conta própria; ele manda esse
+  runtime rodar.
 
 </details>
 
-<details><summary>Shared cluster: got <code>Error ... "nodes" is forbidden</code>?</summary>
+<details><summary>Cluster compartilhado: recebeu <code>Error ... "nodes" is forbidden</code>?</summary>
 
 ```console
 $ kubectl get nodes -o wide
@@ -41,27 +42,27 @@ Error from server (Forbidden): nodes is forbidden: User "..." cannot list
 resource "nodes" in API group "" at the cluster scope
 ```
 
-That's not a mistake — listing nodes is **cluster-scoped**, and your workshop role is
-scoped to your namespace (least privilege, exactly as in Lab 00). Note the message and
-continue; you don't need node access for the rest of the lab. On **kind** you own the
-cluster, so this always works.
+Isso não é um engano — listar nodes é **cluster-scoped**, e sua role do workshop tem
+escopo no seu namespace (least privilege, exatamente como no Lab 00). Anote a mensagem e
+continue; você não precisa de acesso a nodes para o resto do lab. No **kind** você é dono do
+cluster, então isso sempre funciona.
 </details>
 
 ---
 
-### Step 2 — the API is self-documenting
+### Step 2 — a API é autodocumentada
 
-You never need to memorise fields. The cluster ships its own schema.
+Você nunca precisa memorizar campos. O cluster traz seu próprio schema.
 
 ```bash
-kubectl api-resources | head -20      # every kind the cluster understands
-kubectl explain pod.spec              # the schema behind a Pod's spec
+kubectl api-resources | head -20      # todo kind que o cluster entende
+kubectl explain pod.spec              # o schema por trás da spec de um Pod
 ```
 
-**Task:** run both. In `api-resources`, find the `SHORTNAMES`, `APIVERSION`, and
-`NAMESPACED` columns. In `explain`, read the first few fields of `pod.spec`.
+**Tarefa:** execute os dois. No `api-resources`, encontre as colunas `SHORTNAMES`, `APIVERSION` e
+`NAMESPACED`. No `explain`, leia os primeiros campos de `pod.spec`.
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ kubectl api-resources | head -6
@@ -85,14 +86,14 @@ FIELDS:
   nodeName      <string>
 ```
 
-`NAMESPACED=false` marks cluster-scoped kinds (Node, Namespace) — the ones a
-namespace-scoped role can't list. `explain` reads the same OpenAPI schema the API
-server validates against, so it's always correct for **your** cluster version.
+`NAMESPACED=false` marca kinds cluster-scoped (Node, Namespace) — os que uma role com
+escopo de namespace não pode listar. O `explain` lê o mesmo schema OpenAPI contra o qual o
+API server valida, então está sempre correto para a versão do **seu** cluster.
 </details>
 
-**Question:** what does `kubectl explain pod.spec.restartPolicy` say the default is?
+**Pergunta:** o que `kubectl explain pod.spec.restartPolicy` diz que é o padrão?
 
-<details><summary>Answer</summary>
+<details><summary>Resposta</summary>
 
 ```console
 $ kubectl explain pod.spec.restartPolicy
@@ -104,26 +105,26 @@ DESCRIPTION:
     Never. ... Default to Always.
 ```
 
-The default is **`Always`** — which is why a bare Pod's container keeps restarting.
-We use this in Lab 05. Reaching for `explain` instead of a web search is the habit to
-build.
+O padrão é **`Always`** — e é por isso que o container de um Pod avulso continua
+reiniciando. Usamos isso no Lab 05. Recorrer ao `explain` em vez de uma busca na web é o
+hábito a construir.
 </details>
 
 ---
 
-### Step 3 — find the control plane (or your namespace)
+### Step 3 — encontre o control plane (ou seu namespace)
 
-The control-plane components from the slides — API server, etcd, scheduler,
-controller-manager — run as Pods in the `kube-system` namespace on a
-self-hosted/kind cluster.
+Os componentes do control plane dos slides — API server, etcd, scheduler,
+controller-manager — rodam como Pods no namespace `kube-system` em um
+cluster self-hosted/kind.
 
-#### kind path (you own the cluster)
+#### Caminho kind (você é dono do cluster)
 
 ```bash
 kubectl get pods -n kube-system
 ```
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ kubectl get pods -n kube-system
@@ -137,22 +138,22 @@ kindnet-...                             1/1     Running   0          4h
 kube-proxy-...                          1/1     Running   0          4h
 ```
 
-There they are: `etcd`, `kube-apiserver`, `kube-controller-manager`,
-`kube-scheduler` — the four boxes from the slide, running as ordinary Pods. Managed
-clouds hide these, but they still exist.
+Lá estão eles: `etcd`, `kube-apiserver`, `kube-controller-manager`,
+`kube-scheduler` — as quatro caixas do slide, rodando como Pods comuns. As nuvens
+gerenciadas escondem esses Pods, mas eles continuam existindo.
 </details>
 
-#### Namespace path (shared cluster, read-only alternative)
+#### Caminho do namespace (cluster compartilhado, alternativa read-only)
 
-`kube-system` isn't yours to read on a shared cluster. Explore what **is** — your own
-namespace:
+O `kube-system` não é seu para ler em um cluster compartilhado. Explore o que **é** — seu
+próprio namespace:
 
 ```bash
 kubectl describe namespace "$NS"
 kubectl get all -n "$NS"
 ```
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ kubectl describe namespace student-07
@@ -165,34 +166,34 @@ $ kubectl get all -n student-07
 No resources found in student-07 namespace.
 ```
 
-An empty namespace is the correct clean state (you built nothing yet). The control
-plane is still there doing its job for your namespace — you just can't peek at its
-Pods, which is RBAC working as designed.
+Um namespace vazio é o estado limpo correto (você ainda não construiu nada). O control
+plane continua lá fazendo seu trabalho pelo seu namespace — você só não pode espiar os
+Pods dele, que é o RBAC funcionando como projetado.
 </details>
 
 ---
 
-### Step 4 — break it on purpose: a typo `explain`
+### Step 4 — quebre de propósito: um `explain` com typo
 
-Every lab has a deliberate **break→fix**. Here it's the most common `kubectl` slip:
-a mistyped field path. Watch it fail, read the error, then fix it.
+Todo lab tem um **break→fix** deliberado. Aqui é o deslize mais comum do `kubectl`:
+um path de campo digitado errado. Veja-o falhar, leia o erro, depois conserte.
 
 ```bash
-kubectl explain pod.spce      # typo: "spce" instead of "spec"
+kubectl explain pod.spce      # typo: "spce" em vez de "spec"
 ```
 
-**Task:** run it. It must **fail**. Read the error, then run the corrected command.
+**Tarefa:** execute. Ele deve **falhar**. Leia o erro, depois execute o comando corrigido.
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ kubectl explain pod.spce
 error: field "spce" does not exist
 ```
 
-*(Exact wording varies slightly by `kubectl` version — the point is it names the bad
-field and refuses, rather than guessing.)* Because `explain` validates the path
-against the real schema, a typo can't slip through. Fix it:
+*(O texto exato varia levemente conforme a versão do `kubectl` — o ponto é que ele nomeia o
+campo ruim e se recusa, em vez de adivinhar.)* Como o `explain` valida o path
+contra o schema real, um typo não consegue passar. Conserte:
 
 ```console
 $ kubectl explain pod.spec
@@ -202,53 +203,53 @@ FIELD: spec <PodSpec>
 ...
 ```
 
-This is a **safe** break — `explain` only reads schema, so there's nothing to clean
-up. Contrast Lab 05, where a bad *manifest* actually creates a failing Pod.
+Este é um break **seguro** — o `explain` só lê schema, então não há nada para limpar.
+Compare com o Lab 05, onde um *manifesto* ruim realmente cria um Pod que falha.
 </details>
 
-**Question:** why is a typo in `explain` harmless, but a typo in a manifest you
-`apply` might not be?
+**Pergunta:** por que um typo no `explain` é inofensivo, mas um typo em um manifesto que
+você `apply` pode não ser?
 
-<details><summary>Answer</summary>
+<details><summary>Resposta</summary>
 
-`explain` only **reads** the schema — no object is created or changed. `apply` sends a
-manifest to the API server, which creates/updates a real object; a typo there can
-produce a broken workload (or, for an unknown field, be rejected or silently dropped
-depending on validation). That's why the next labs always pair `apply` with
-`kubectl describe` and `get` to confirm what actually happened.
+O `explain` só **lê** o schema — nenhum objeto é criado ou alterado. O `apply` envia um
+manifesto ao API server, que cria/atualiza um objeto real; um typo ali pode
+produzir um workload quebrado (ou, para um campo desconhecido, ser rejeitado ou
+silenciosamente descartado dependendo da validação). É por isso que os próximos labs sempre
+acompanham o `apply` de `kubectl describe` e `get` para confirmar o que de fato aconteceu.
 </details>
 
 ---
 
-### Step 5 — see reconciliation: spec vs status on a live object
+### Step 5 — veja a reconciliação: spec vs status em um objeto vivo
 
-The slides said reconciliation drives **status** (observed) toward **spec** (desired).
-Every object carries both halves — read them on something already running.
+Os slides disseram que a reconciliação leva o **status** (observado) em direção à **spec** (desejado).
+Todo objeto carrega as duas metades — leia-as em algo que já está rodando.
 
-Pick any existing object. On **kind**, a `kube-system` Pod works; on a **shared**
-cluster where your namespace is empty, every Namespace object also has `spec`/`status`,
-so use that as the fallback.
+Escolha qualquer objeto existente. No **kind**, um Pod do `kube-system` funciona; em um cluster
+**compartilhado** onde seu namespace está vazio, todo objeto Namespace também tem `spec`/`status`,
+então use isso como fallback.
 
 ```bash
-# kind (or anywhere you can read a Pod):
+# kind (ou qualquer lugar onde você possa ler um Pod):
 kubectl get pods -n kube-system \
   -l component=kube-apiserver -o yaml | head -40
 
-# shared, namespace-only fallback — every object has spec/status:
+# compartilhado, fallback só de namespace — todo objeto tem spec/status:
 kubectl get namespace "$NS" -o yaml
 ```
 
-**Task:** in the YAML, find the top-level `spec:` block and the top-level `status:`
-block. Note that you *wrote* nothing in `status` — the system did.
+**Tarefa:** no YAML, encontre o bloco `spec:` de nível superior e o bloco `status:`
+de nível superior. Note que você não *escreveu* nada em `status` — o sistema escreveu.
 
-<details><summary>Solution / what you're looking at</summary>
+<details><summary>Solução / o que você está vendo</summary>
 
 ```yaml
-spec:                     # DESIRED — authored by whoever created the object
+spec:                     # DESEJADO — escrito por quem criou o objeto
   containers:
     - name: kube-apiserver
       image: registry.k8s.io/kube-apiserver:v1.3x.y
-status:                   # OBSERVED — written by the kubelet / controllers
+status:                   # OBSERVADO — escrito pelo kubelet / controllers
   phase: Running
   podIP: 172.18.0.2
   conditions:
@@ -256,7 +257,7 @@ status:                   # OBSERVED — written by the kubelet / controllers
       status: "True"
 ```
 
-For the Namespace fallback the blocks are smaller but the shape is identical:
+Para o fallback de Namespace os blocos são menores, mas o formato é idêntico:
 
 ```yaml
 spec:
@@ -265,20 +266,20 @@ status:
   phase: Active
 ```
 
-`spec` is the request; `status` is reality. Reconciliation is the loop closing the gap
-between them — the animation from the slide, on a real object.
+`spec` é o pedido; `status` é a realidade. A reconciliação é o loop fechando a lacuna
+entre eles — a animação do slide, em um objeto real.
 </details>
 
-**Question:** which component *writes* the `status` of a Pod, and which component
-decided *which node* the Pod's `spec` runs on?
+**Pergunta:** qual componente *escreve* o `status` de um Pod, e qual componente
+decidiu *em qual node* a `spec` do Pod roda?
 
-<details><summary>Answer</summary>
+<details><summary>Resposta</summary>
 
-- The **kubelet** on the Pod's node writes the Pod's `status` (it observes the real
-  containers and reports back through the API server).
-- The **scheduler** set `spec.nodeName` — it watched for a Pod with no node and bound
-  one. It only *decides*; the kubelet does the running. Both talk **only** to the API
-  server, never to etcd directly.
+- O **kubelet** no node do Pod escreve o `status` do Pod (ele observa os containers
+  reais e reporta de volta através do API server).
+- O **scheduler** definiu `spec.nodeName` — ele observou um Pod sem node e vinculou
+  um. Ele apenas *decide*; quem executa é o kubelet. Ambos falam **apenas** com o API
+  server, nunca diretamente com o etcd.
 
 </details>
 
@@ -286,32 +287,33 @@ decided *which node* the Pod's `spec` runs on?
 
 ## Expected state / output
 
-- `kubectl get nodes -o wide` shows a `CONTAINER-RUNTIME` of `containerd`/`cri-o` —
-  the CRI stack from S01 (or a `Forbidden` you can explain, on a locked-down shared
-  cluster).
-- `kubectl api-resources` distinguishes namespaced kinds from cluster-scoped ones.
-- `kubectl explain` answers schema questions authoritatively and **rejects** a typo'd
-  field path instead of guessing.
-- On kind, the control plane is visible as Pods in `kube-system`; on a shared cluster,
-  it isn't yours to read — and that's correct.
-- Every live object has a `spec` (desired, you write) and a `status` (observed, the
-  system writes) — reconciliation is the loop between them.
+- `kubectl get nodes -o wide` mostra um `CONTAINER-RUNTIME` `containerd`/`cri-o` —
+  a pilha CRI da S01 (ou um `Forbidden` que você sabe explicar, em um cluster
+  compartilhado restrito).
+- `kubectl api-resources` distingue kinds namespaced de kinds cluster-scoped.
+- `kubectl explain` responde perguntas de schema com autoridade e **rejeita** um path de
+  campo com typo em vez de adivinhar.
+- No kind, o control plane fica visível como Pods no `kube-system`; em um cluster compartilhado,
+  ele não é seu para ler — e isso está correto.
+- Todo objeto vivo tem uma `spec` (desejado, você escreve) e um `status` (observado, o
+  sistema escreve) — a reconciliação é o loop entre eles.
 
 ---
 
 ## Explanation
 
-Kubernetes exposes its resource schema through discovery and `kubectl explain`. Cluster
-scope and namespace scope are authorization boundaries, while `spec` and `status` expose
-the desired/observed split that controllers continuously reconcile.
+O Kubernetes expõe seu schema de recursos por meio de discovery e do `kubectl explain`. Escopo
+de cluster e escopo de namespace são fronteiras de autorização — a causa dos erros `Forbidden`
+em um cluster compartilhado — enquanto `spec` e `status` expõem a divisão desejado/observado
+que os controllers reconciliam continuamente.
 
 ## Troubleshooting and recovery
 
-A Forbidden response on nodes or `kube-system` is expected on a
-shared cluster. Use the namespace path and confirm `kubectl auth can-i get pods -n "$NS"`.
-On local kind, restore the workshop context with
-`kubectl config use-context kind-workshop`; on a shared cluster, stop and ask the facilitator
-for the assigned context rather than changing another namespace.
+Uma resposta Forbidden em nodes ou no `kube-system` é esperada em um
+cluster compartilhado. Use o caminho do namespace e confirme com `kubectl auth can-i get pods -n "$NS"`.
+No kind local, faça o reset para o contexto do workshop com
+`kubectl config use-context kind-workshop`; em um cluster compartilhado, pare e peça ao facilitador
+o contexto atribuído em vez de mudar outro namespace.
 
 ## Challenge solution
 
@@ -325,15 +327,16 @@ kubectl explain pod.spec.containers.livenessProbe
 
 ### Expected state / output
 
-The recursive search reveals both probe fields below `containers`; the focused commands identify
-each as an object and show its supported child fields.
+A busca recursiva revela `readinessProbe` e `livenessProbe` abaixo de `containers`; os
+comandos focados identificam cada path como um objeto e mostram seus campos filhos suportados.
 
 ### Explanation
 
-Recursive output is a discovery map, while a focused `kubectl explain` validates the exact API path
-and schema. This is safer than guessing field names from memory or an outdated example.
+A saída recursiva é um mapa de descoberta, enquanto um `kubectl explain` focado valida o path
+exato da API e o schema. Isso é mais seguro do que adivinhar nomes de campos de memória ou a
+partir de um exemplo desatualizado — adivinhação é uma causa comum de manifesto inválido.
 
 ### Hints
 
-Pipe recursive output through `grep -i -E 'readiness|liveness'`, then confirm each result with a
-focused `kubectl explain` command.
+Encaminhe a saída recursiva por `grep -i -E 'readiness|liveness'`, depois confirme cada
+resultado com um comando `kubectl explain` focado.

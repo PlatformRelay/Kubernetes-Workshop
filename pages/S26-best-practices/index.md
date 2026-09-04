@@ -7,105 +7,105 @@ tier: core
 track: Wrap
 ---
 
-# Best practices
+# Boas práticas
 
-Every layer we built, as **one** production-readiness checklist — run against a real manifest.
+Cada camada que construímos, como **um** checklist de production-readiness — rodado contra um manifesto real.
 
-**core** · suggested Day 3 · Wrap track
+**core** · sugerido para o Day 3 · trilha Wrap
 
 <!--
-Section S26 — Best practices (CAPSTONE). Core, Day 3, Wrap track. Timing: ~30 min slides + 40 min
-lab. This section SYNTHESIZES the whole course: it does not teach a new resource, it ties every
-prior layer together as one checklist and runs it against a single "before → after" manifest set
-with ~10 planted problems. The SAME flawed/fixed Deployment the slide magic-move walks is the lab's
-flawed/fixed Deployment (single source of truth) — the magic-move's fixed frames == the lab files.
-Beats: (1) capstone framing (the red line + every Day-3 layer, as one checklist) · (2) checklist I —
+Seção S26 — Best practices (CAPSTONE). Core, Day 3, trilha Wrap. Tempo: ~30 min de slides + 40 min
+de lab. Esta seção SINTETIZA o curso inteiro: não ensina um recurso novo, amarra cada
+camada anterior num único checklist e o roda contra um único conjunto de manifestos "before → after"
+com ~10 problemas plantados. O MESMO Deployment falho/corrigido que o magic-move dos slides percorre é o
+Deployment falho/corrigido do lab (fonte única de verdade) — os frames corrigidos do magic-move == os arquivos do lab.
+Beats: (1) enquadramento do capstone (a red line + toda camada do Day 3, como um checklist) · (2) checklist I —
 availability (probes S14, resources S13, PDB, anti-affinity/topology spread, rollout strategy) ·
 (3) checklist II — security (labels, digest pin S02, restricted PSS S17, NetworkPolicy S18,
-config/secret hygiene) · (4) checklist III — operations (GitOps S21, observability S23, graceful
-shutdown, cost) · (5) the flawed Deployment — 10 planted problems, spot them · (6) magic-move A:
-HEALTH fixes (probes, resources, graceful shutdown) · (7) magic-move B: SECURITY fixes (labels,
-digest, restricted securityContext) · (8) magic-move C: AVAILABILITY + the two sibling objects
-(replicas+topologySpread+rollout, then PDB, then NetworkPolicy) · (9) AdmissionGate REUSE — the same
-restricted gate admits the fixed Deployment · (10) the checklist as a repo artifact · (11) recap → lab.
-Each magic-move step is annotated with the SECTION it traces to. Reuse AdmissionGate.vue (do NOT
-author a new component). CKx tie-in: CKAD/CKA synthesis (probes, resources, PDBs, rollouts, security).
-ACCURACY LOCKS: image ghcr.io/platformrelay/workshop-web:v1 runs as UID 65532 (distroless
-nonroot) on port 8080 → ALL ports are 8080; probes use the app's real endpoints (/ready,
-/healthz); the image has NO shell → graceful shutdown uses the native preStop sleep action
-(lifecycle.preStop.sleep, stable), NOT an exec sh sleep; restricted gates FOUR fields
+higiene de config/secret) · (4) checklist III — operations (GitOps S21, observability S23, graceful
+shutdown, cost) · (5) o Deployment falho — 10 problemas plantados, identifique-os · (6) magic-move A:
+correções de HEALTH (probes, resources, graceful shutdown) · (7) magic-move B: correções de SECURITY (labels,
+digest, restricted securityContext) · (8) magic-move C: AVAILABILITY + os dois objetos irmãos
+(replicas+topologySpread+rollout, depois PDB, depois NetworkPolicy) · (9) REÚSO do AdmissionGate — o mesmo
+gate restricted admite o Deployment corrigido · (10) o checklist como artefato de repo · (11) recap → lab.
+Cada passo do magic-move é anotado com a SEÇÃO à qual remete. Reutilize AdmissionGate.vue (NÃO
+escreva um novo componente). Vínculo com CKx: síntese CKAD/CKA (probes, resources, PDBs, rollouts, security).
+ACCURACY LOCKS: a image ghcr.io/platformrelay/workshop-web:v1 roda como UID 65532 (distroless
+nonroot) na porta 8080 → TODAS as portas são 8080; as probes usam os endpoints reais da app (/ready,
+/healthz); a image NÃO tem shell → graceful shutdown usa a ação nativa preStop sleep
+(lifecycle.preStop.sleep, estável), NÃO um exec sh sleep; o restricted controla QUATRO campos
 (runAsNonRoot/allowPrivilegeEscalation:false/drop ALL/seccomp),
-split pod-level (runAsNonRoot,runAsUser,seccomp) vs container-level (allowPrivilegeEscalation,drop).
-The digest placeholder satisfies restricted admission (dry-run) but is ImagePullBackOff at runtime —
-resolve at rehearsal. PDB/topologySpread/NetworkPolicy selectors all match app.kubernetes.io/name: web.
+divididos entre nível de pod (runAsNonRoot,runAsUser,seccomp) e nível de container (allowPrivilegeEscalation,drop).
+O placeholder de digest satisfaz o restricted admission (dry-run) mas é ImagePullBackOff em runtime —
+resolver no rehearsal. Os selectors de PDB/topologySpread/NetworkPolicy todos casam app.kubernetes.io/name: web.
 -->
 
 ---
 layout: statement
-kicker: The capstone · everything, as one list
+kicker: O capstone · tudo, como uma lista só
 ---
 
-You've built the whole line — now make it **production-ready**.
+Você construiu a linha inteira — agora deixe-a **production-ready**.
 
-**Pod → Deployment → Service → Ingress → Gateway** carried the app; Day 3 added
-**security**, **policy**, **delivery**, and **observability** on top. This section is the
-**synthesis**: no new resource, just **one checklist** that every prior layer contributes a line to —
-and a single real manifest we'll run it against, before and after.
+**Pod → Deployment → Service → Ingress → Gateway** carregou a app; o Day 3 adicionou
+**security**, **policy**, **delivery** e **observability** por cima. Esta seção é a
+**síntese**: nenhum recurso novo, apenas **um checklist** para o qual cada camada anterior contribui uma linha —
+e um único manifesto real contra o qual vamos rodá-lo, antes e depois.
 
 <!--
-Speaker: this is the wrap. Frame it as the payoff of the whole course — we are not learning anything
-new, we are collecting what we already learned into a single artifact you can carry to work. The red
-line (S05–S09) is the spine — a Deployment behind a Service, exposed by Ingress/Gateway. Day 3 bolted
-on the cross-cutting concerns: image hygiene (S02), pod security (S17), NetworkPolicy (S18), GitOps
-(S21), observability (S23). The capstone question is: "is this manifest ready for production?" and the
-answer is a checklist with a line from every section. The rest of this deck IS that checklist, then a
-before→after manifest with ~10 planted problems that we fix one at a time — each fix a checklist item.
-The lab (labs/day-3/26-capstone.md) hands the learner the SAME flawed manifest to audit and fix.
+Speaker: este é o fechamento. Enquadre-o como o payoff do curso inteiro — não estamos aprendendo nada
+novo, estamos coletando o que já aprendemos num único artefato que você pode levar para o trabalho. A red
+line (S05–S09) é a espinha — um Deployment atrás de um Service, exposto por Ingress/Gateway. O Day 3 aparafusou
+as preocupações transversais: image hygiene (S02), pod security (S17), NetworkPolicy (S18), GitOps
+(S21), observability (S23). A pergunta do capstone é: "este manifesto está pronto para produção?" e a
+resposta é um checklist com uma linha de cada seção. O resto deste deck É esse checklist, depois um
+manifesto before→after com ~10 problemas plantados que corrigimos um de cada vez — cada correção um item do checklist.
+O lab (labs/day-3/26-capstone.md) entrega ao participante o MESMO manifesto falho para auditar e corrigir.
 -->
 
 ---
 
 <div class="kw-slide-dense">
 
-<span class="kw-kicker">Checklist I · availability — keep serving through failure and change</span>
+<span class="kw-kicker">Checklist I · availability — continue servindo apesar de falhas e mudanças</span>
 
-# Will it stay up?
+# Vai continuar de pé?
 
 <div class="kw-cols-2 mt-3 text-sm">
   <v-click at="1">
     <KwCard heading="Probes — readiness / liveness / startup" kind="pod" variant="ok">
-      Readiness gates traffic, liveness restarts a wedged container, startup shields a slow boot.
-      <code>Running</code> ≠ healthy.
+      A readiness controla o tráfego, a liveness reinicia um container travado, a startup protege um boot lento.
+      <code>Running</code> ≠ saudável.
     </KwCard>
   </v-click>
   <v-click at="2">
     <KwCard heading="Requests & limits" kind="pod" variant="ok">
-      Reserve what you need (scheduling), cap what you use (enforcement). No resources → BestEffort,
-      first evicted.
+      Reserve o que você precisa (scheduling), limite o que você usa (enforcement). Sem resources → BestEffort,
+      o primeiro a ser despejado.
     </KwCard>
   </v-click>
   <v-click at="3">
     <KwCard heading="PodDisruptionBudget" icon="🛟" variant="ok">
-      Keep <code>minAvailable</code> Pods up during <em>voluntary</em> disruptions — node drains,
-      upgrades — so a rollout or a drain can't take you to zero. <span class="kw-muted">(availability)</span>
+      Mantenha <code>minAvailable</code> Pods de pé durante disrupções <em>voluntárias</em> — drains de node,
+      upgrades — para que um rollout ou um drain não te leve a zero. <span class="kw-muted">(availability)</span>
     </KwCard>
   </v-click>
   <v-click at="4">
     <KwCard heading="Anti-affinity / topology spread" kind="node" variant="ok">
-      Spread replicas across nodes (and zones) so one node failure doesn't kill every replica.
+      Espalhe as réplicas entre nodes (e zonas) para que a falha de um node não mate todas as réplicas.
       <span class="kw-muted">(availability)</span>
     </KwCard>
   </v-click>
   <v-click at="5">
-    <KwCard heading="Rollout strategy" kind="deploy" variant="ok">
-      <code>RollingUpdate</code> with sane <code>maxUnavailable</code>/<code>maxSurge</code> — plus
-      <code>revisionHistoryLimit</code> so old ReplicaSets don't pile up.
+    <KwCard heading="Estratégia de rollout" kind="deploy" variant="ok">
+      <code>RollingUpdate</code> com <code>maxUnavailable</code>/<code>maxSurge</code> sensatos — mais
+      <code>revisionHistoryLimit</code> para que ReplicaSets antigos não se acumulem.
     </KwCard>
   </v-click>
   <v-click at="6">
-    <KwCard heading="More than one replica" kind="deploy" variant="warn">
-      <code>replicas: 1</code> has no headroom — a single Pod restart is an outage. HA starts at
-      two, spread apart. <span class="kw-muted">(availability)</span>
+    <KwCard heading="Mais de uma réplica" kind="deploy" variant="warn">
+      <code>replicas: 1</code> não tem folga — um único restart de Pod é uma indisponibilidade. HA começa em
+      duas, bem separadas. <span class="kw-muted">(availability)</span>
     </KwCard>
   </v-click>
 </div>
@@ -113,58 +113,58 @@ The lab (labs/day-3/26-capstone.md) hands the learner the SAME flawed manifest t
 </div>
 
 <!--
-Speaker: checklist part one — availability, i.e. "does it survive failure and change." Walk the six:
-probes (S14) so Running means serving, not just started; requests/limits (S13) so it's scheduled and
-capped and not first to be evicted; a PodDisruptionBudget so voluntary disruptions (node drain, an
-upgrade) can't drain you below minAvailable — this is new here but it's pure availability; anti-
-affinity / topologySpreadConstraints so your replicas don't all land on one node that then dies; a
-rollout strategy with sane surge/unavailable and a revisionHistoryLimit so you don't accumulate dead
-ReplicaSets; and simply more than one replica — replicas:1 is a guaranteed outage on any Pod restart.
-Every one of these is a line the flawed manifest gets wrong. Next: the security half.
+Speaker: checklist parte um — availability, ou seja, "isto sobrevive a falhas e mudanças?". Percorra os seis:
+probes (S14) para que Running signifique servindo, não apenas iniciado; requests/limits (S13) para que seja agendado e
+limitado, e não o primeiro a ser despejado; um PodDisruptionBudget para que disrupções voluntárias (drain de node, um
+upgrade) não te drenem abaixo do minAvailable — isto é novo aqui, mas é availability pura; anti-
+affinity / topologySpreadConstraints para que suas réplicas não caiam todas num único node que depois morre; uma
+estratégia de rollout com surge/unavailable sensatos e um revisionHistoryLimit para você não acumular ReplicaSets
+mortos; e simplesmente mais de uma réplica — replicas:1 é uma indisponibilidade garantida a cada restart de Pod.
+Cada um destes é uma linha que o manifesto falho erra. A seguir: a metade de security.
 -->
 
 ---
 
 <div class="kw-slide-dense">
 
-<span class="kw-kicker">Checklist II · security — least privilege, provenance, isolation</span>
+<span class="kw-kicker">Checklist II · security — least privilege, proveniência, isolamento</span>
 
-# Will it hold up?
+# Vai aguentar?
 
 <div class="kw-cols-2 mt-3 text-sm">
   <v-click at="1">
-    <KwCard heading="Recommended labels" icon="🏷️" variant="ok">
+    <KwCard heading="Labels recomendados" icon="🏷️" variant="ok">
       <code>app.kubernetes.io/name</code>, <code>/instance</code>, <code>/version</code>,
-      <code>/part-of</code>, <code>/managed-by</code> — the common set selectors, dashboards, and
-      GitOps all rely on. <span class="kw-muted">(hygiene)</span>
+      <code>/part-of</code>, <code>/managed-by</code> — o conjunto comum do qual selectors, dashboards e
+      GitOps todos dependem. <span class="kw-muted">(higiene)</span>
     </KwCard>
   </v-click>
   <v-click at="2">
-    <KwCard heading="Immutable image digest" icon="🔏" variant="ok">
-      Pin by <code>@sha256:…</code>, not a movable tag — the running bytes can't change under you.
+    <KwCard heading="Digest de image imutável" icon="🔏" variant="ok">
+      Fixe por <code>@sha256:…</code>, não por uma tag móvel — os bytes em execução não mudam por baixo de você.
     </KwCard>
   </v-click>
   <v-click at="3">
-    <KwCard heading="Restricted securityContext" kind="pod" variant="ok">
-      Non-root, no priv-esc, drop <code>ALL</code> caps, <code>RuntimeDefault</code> seccomp — the
-      four fields <code>restricted</code> gates.
+    <KwCard heading="securityContext restricted" kind="pod" variant="ok">
+      Não-root, sem priv-esc, drop <code>ALL</code> nas capabilities, seccomp <code>RuntimeDefault</code> — os
+      quatro campos que o <code>restricted</code> controla.
     </KwCard>
   </v-click>
   <v-click at="4">
     <KwCard heading="NetworkPolicy" kind="netpol" variant="ok">
-      Default-deny, then an explicit allow — so a foothold can't roam a flat pod network.
+      Default-deny, depois um allow explícito — para que um ponto de apoio não passeie por uma pod network plana.
     </KwCard>
   </v-click>
   <v-click at="5">
-    <KwCard heading="Config & secret hygiene" kind="secret" variant="ok">
-      Config in <code>ConfigMap</code>/<code>Secret</code>, not baked into the image or the manifest;
-      mount least privilege; never log secrets.
+    <KwCard heading="Higiene de config & secret" kind="secret" variant="ok">
+      Config em <code>ConfigMap</code>/<code>Secret</code>, não embutida na image nem no manifesto;
+      monte com least privilege; nunca logue secrets.
     </KwCard>
   </v-click>
   <v-click at="6">
-    <KwCard heading="The through-line" icon="🎯" variant="warn">
-      <code>enforce: restricted</code> alone rejects the un-hardened Pod at admission — but labels,
-      digests, and NetworkPolicy are on <em>you</em>.
+    <KwCard heading="O fio condutor" icon="🎯" variant="warn">
+      O <code>enforce: restricted</code> sozinho rejeita o Pod não-hardened no admission — mas labels,
+      digests e NetworkPolicy dependem de <em>você</em>.
     </KwCard>
   </v-click>
 </div>
@@ -172,74 +172,74 @@ Every one of these is a line the flawed manifest gets wrong. Next: the security 
 </div>
 
 <!--
-Speaker: checklist part two — security, i.e. "does it resist compromise and drift." Recommended
-labels (app.kubernetes.io/*) aren't decoration — they're the contract Services, dashboards, PDBs,
-topologySpread, and GitOps all select on; get them wrong and half the other controls silently don't
-apply. Pin the image by digest (S02) so the bytes running today are the bytes you scanned. The four
-restricted securityContext fields (S17) — non-root, no priv-esc, drop ALL, seccomp — are the
-least-privilege floor. NetworkPolicy (S18): default-deny then one allow, so a compromised Pod can't
-scan the namespace. Config/secret hygiene (S11/S12): externalize config, don't bake secrets. Callout
-(card 6): restricted admission will reject the un-hardened Deployment for you, but nothing enforces
-"you pinned a digest" or "you wrote a NetworkPolicy" — those are discipline. Next: operations.
+Speaker: checklist parte dois — security, ou seja, "isto resiste a comprometimento e drift?". Os labels
+recomendados (app.kubernetes.io/*) não são decoração — são o contrato sobre o qual Services, dashboards, PDBs,
+topologySpread e GitOps selecionam; erre neles e metade dos outros controles silenciosamente não se
+aplica. Fixe a image por digest (S02) para que os bytes que rodam hoje sejam os bytes que você escaneou. Os quatro
+campos do securityContext restricted (S17) — não-root, sem priv-esc, drop ALL, seccomp — são o
+piso de least privilege. NetworkPolicy (S18): default-deny e depois um allow, para que um Pod comprometido não consiga
+varrer o namespace. Higiene de config/secret (S11/S12): externalize a config, não embuta secrets. Destaque
+(card 6): o restricted admission vai rejeitar o Deployment não-hardened por você, mas nada garante
+"você fixou um digest" ou "você escreveu uma NetworkPolicy" — isso é disciplina. A seguir: operations.
 -->
 
 ---
 
 <div class="kw-slide-dense">
 
-<span class="kw-kicker">Checklist III · operations — deliver, observe, shut down, and pay for it</span>
+<span class="kw-kicker">Checklist III · operations — entregar, observar, desligar e pagar a conta</span>
 
-# Can you run it?
+# Dá para operar?
 
 <div class="kw-cols-2 mt-3 text-sm">
   <v-click at="1">
-    <KwCard heading="GitOps delivery" icon="🔁" variant="ok">
-      The manifest lives in <strong>Git</strong>; an in-cluster agent reconciles the cluster to it —
-      auditable, revertable, self-healing.
+    <KwCard heading="Entrega por GitOps" icon="🔁" variant="ok">
+      O manifesto vive no <strong>Git</strong>; um agente dentro do cluster reconcilia o cluster com ele —
+      auditável, reversível, self-healing.
     </KwCard>
   </v-click>
   <v-click at="2">
     <KwCard heading="Observability" icon="📈" variant="ok">
-      Expose <code>/metrics</code>; a <code>ServiceMonitor</code> selects the Service by label so
-      new Pods are scraped automatically.
+      Exponha <code>/metrics</code>; um <code>ServiceMonitor</code> seleciona o Service por label, então
+      Pods novos são raspados automaticamente.
     </KwCard>
   </v-click>
   <v-click at="3">
     <KwCard heading="Graceful shutdown" kind="pod" variant="ok">
-      <code>terminationGracePeriodSeconds</code> + a <code>preStop</code> hook — drain in-flight
-      requests before <code>SIGTERM</code>, so a rollout drops no connections. <span class="kw-muted">(graceful shutdown)</span>
+      <code>terminationGracePeriodSeconds</code> + um hook <code>preStop</code> — drene as requests
+      em voo antes do <code>SIGTERM</code>, para que um rollout não derrube conexão nenhuma. <span class="kw-muted">(graceful shutdown)</span>
     </KwCard>
   </v-click>
   <v-click at="4">
-    <KwCard heading="Cost awareness" icon="💰" variant="warn">
-      Right-size requests to real usage; don't over-provision limits "just in case." Idle
-      reservations are money the whole cluster can't use. <span class="kw-muted">(cost)</span>
+    <KwCard heading="Consciência de custo" icon="💰" variant="warn">
+      Dimensione os requests pelo uso real; não superprovisione limits "por via das dúvidas". Reservas
+      ociosas são dinheiro que o cluster inteiro não pode usar. <span class="kw-muted">(cost)</span>
     </KwCard>
   </v-click>
 </div>
 
 <div v-click="5" class="mt-3 text-sm kw-muted">
-Three lists, one manifest. Next: a real Deployment that gets <strong>every one of these wrong</strong>.
+Três listas, um manifesto. A seguir: um Deployment real que erra <strong>todos esses pontos</strong>.
 </div>
 
 </div>
 
 <!--
-Speaker: checklist part three — operations, i.e. "can a team actually run this over time." GitOps
-(S21): the manifest is in Git and an agent reconciles the cluster to it, so every change is reviewed,
-audited, and revertable, and drift self-heals — it's the S03 reconcile loop with Git in the desired
-slot. Observability (S23): the app exposes /metrics and a ServiceMonitor selects it by label, so
-scaling up adds scrape targets automatically — you can't operate what you can't see. Graceful
-shutdown: terminationGracePeriodSeconds plus a preStop hook lets the Pod finish in-flight requests
-and leave the endpoints before SIGTERM, so a rollout or scale-down drops zero connections. Cost:
-requests are a reservation the whole cluster honors — over-request and you pay for idle capacity
-nobody else can use; right-size to observed usage. That's the full checklist: availability, security,
-operations. Now we make it concrete — a Deployment that violates all of it.
+Speaker: checklist parte três — operations, ou seja, "um time consegue de fato rodar isto ao longo do tempo?". GitOps
+(S21): o manifesto está no Git e um agente reconcilia o cluster com ele, então toda mudança é revisada,
+auditada e reversível, e o drift se autocorrige — é o loop de reconciliação do S03 com o Git no lugar do
+desired state. Observability (S23): a app expõe /metrics e um ServiceMonitor a seleciona por label, então
+escalar adiciona scrape targets automaticamente — você não opera o que não enxerga. Graceful
+shutdown: terminationGracePeriodSeconds mais um hook preStop permitem que o Pod termine as requests em voo
+e saia dos endpoints antes do SIGTERM, então um rollout ou scale-down derruba zero conexões. Cost:
+requests são uma reserva que o cluster inteiro honra — peça demais e você paga por capacidade ociosa
+que ninguém mais pode usar; dimensione pelo uso observado. Este é o checklist completo: availability, security,
+operations. Agora vamos concretizar — um Deployment que viola tudo isso.
 -->
 
 ---
 layout: code-annotated
-heading: 'The manifest that fails the checklist — spot the problems'
+heading: 'O manifesto que reprova no checklist — ache os problemas'
 compact: true
 lab: labs/day-3/26-capstone.md
 ---
@@ -249,72 +249,72 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: web
-  labels: { app: web }            # ① only the ad-hoc label
+  labels: { app: web }            # ① só o label ad-hoc
 spec:
-  replicas: 1                     # ② no HA — one Pod = outage
-  # ③ no strategy / revisionHistoryLimit
+  replicas: 1                     # ② sem HA — um Pod = downtime
+  # ③ sem strategy / revisionHistoryLimit
   template:
     spec:
       containers:
         - name: web
-          # ④ mutable tag — no digest
+          # ④ tag móvel — sem digest
           image: ghcr.io/platformrelay/workshop-web:v1
           ports: [{ containerPort: 8080 }]
-          # ⑤ no resources  ⑥ no probes  ⑦ no securityContext
-      # ⑧ no graceful shutdown  ⑨ no anti-affinity/spread
-# ⑩ no PDB, ⑪ no NetworkPolicy — sibling objects also missing
+          # ⑤ sem resources  ⑥ sem probes  ⑦ sem securityContext
+      # ⑧ sem graceful shutdown  ⑨ sem anti-affinity/spread
+# ⑩ sem PDB, ⑪ sem NetworkPolicy — irmãos também faltando
 ```
 
 ::notes::
 
-<CodeNote at="1" label="④ mutable image tag" variant="danger">
-A tag is a <em>movable pointer</em> — <code>:v1</code> can be repointed and the bytes you
-scanned aren't the bytes that run. <strong>Image hygiene</strong> says pin by
+<CodeNote at="1" label="④ tag de image móvel" variant="danger">
+Uma tag é um <em>ponteiro móvel</em> — <code>:v1</code> pode ser reapontada e os bytes que você
+escaneou não são os bytes que rodam. A <strong>higiene de image</strong> manda fixar por
 <code>@sha256:…</code>.
 </CodeNote>
 
-<CodeNote at="2" label="⑤ no resources · ⑥ no probes" variant="danger">
-No <code>requests/limits</code> → <strong>BestEffort</strong>, first evicted. No probes →
-<code>Running</code> is the only (misleading) signal.
+<CodeNote at="2" label="⑤ sem resources · ⑥ sem probes" variant="danger">
+Sem <code>requests/limits</code> → <strong>BestEffort</strong>, o primeiro a ser despejado. Sem probes →
+<code>Running</code> é o único sinal (enganoso).
 </CodeNote>
 
-<CodeNote at="3" label="⑦ no securityContext · ⑧ no shutdown" variant="danger">
-Runs as default user, full caps, no seccomp → <code>restricted</code> rejects it. No
-<code>preStop</code>/grace → dropped connections on every rollout.
+<CodeNote at="3" label="⑦ sem securityContext · ⑧ sem shutdown" variant="danger">
+Roda com o usuário padrão, todas as capabilities, sem seccomp → o <code>restricted</code> o rejeita. Sem
+<code>preStop</code>/grace → conexões derrubadas a cada rollout.
 </CodeNote>
 
-<CodeNote at="4" label="② replicas: 1 · ⑨ no spread" variant="danger">
-One replica, unspread → a single node or Pod restart is a full outage.
+<CodeNote at="4" label="② replicas: 1 · ⑨ sem spread" variant="danger">
+Uma réplica, sem spread → um único node ou restart de Pod é uma indisponibilidade total.
 </CodeNote>
 
 <div v-click="5" class="mt-2 text-sm kw-muted">
-Ten-plus problems, each a checklist line. The lab has you audit this exact file <em>before</em>
-revealing the list — try it first.
+Dez e tantos problemas, cada um uma linha do checklist. O lab pede que você audite este mesmo arquivo <em>antes</em>
+de revelar a lista — tente primeiro.
 </div>
 
 <!--
-Speaker: this is the "spot the bug" slide — and it's the lab's opening self-audit, so pause and let
-people actually find problems before you narrate. The manifest is deliberately minimal and every
-omission is a checklist violation: (①) only an ad-hoc `app: web` label, none of the recommended
-app.kubernetes.io/* set; (②) replicas:1; (③) no strategy or revisionHistoryLimit; (④) image pinned
-only by a mutable tag, no digest; (⑤) no resources; (⑥) no probes; (⑦) no securityContext; (⑧) no graceful
-shutdown; (⑨) no anti-affinity/topologySpread; and the two SEPARATE objects that should exist
-alongside it — (⑩) a PodDisruptionBudget and (⑪) a NetworkPolicy. That's why the count is "ten-plus":
-eight are wrong INSIDE the Deployment, two are missing sibling objects. Port is 8080 because
-workshop-web listens there — hold that, it threads through every fix. On ④, be precise: the tag
-isn't ":latest" but ANY tag is mutable — the fix is a digest pin, not a "better" tag. Next three
-slides fix these one at a time, grouped by checklist: health, then security, then availability.
+Speaker: este é o slide "ache o bug" — e é a autoauditoria de abertura do lab, então pause e deixe
+as pessoas realmente encontrarem problemas antes de narrar. O manifesto é deliberadamente mínimo e cada
+omissão é uma violação do checklist: (①) só um label ad-hoc `app: web`, nenhum do conjunto recomendado
+app.kubernetes.io/*; (②) replicas:1; (③) sem strategy nem revisionHistoryLimit; (④) image fixada
+apenas por uma tag móvel, sem digest; (⑤) sem resources; (⑥) sem probes; (⑦) sem securityContext; (⑧) sem graceful
+shutdown; (⑨) sem anti-affinity/topologySpread; e os dois objetos SEPARADOS que deveriam existir
+ao lado dele — (⑩) um PodDisruptionBudget e (⑪) uma NetworkPolicy. É por isso que a contagem é "dez e tantos":
+oito estão errados DENTRO do Deployment, dois são objetos irmãos faltando. A porta é 8080 porque
+o workshop-web escuta ali — guarde isso, atravessa toda correção. No ④, seja preciso: a tag
+não é ":latest", mas QUALQUER tag é móvel — a correção é fixar por digest, não uma tag "melhor". Os próximos três
+slides corrigem isto um de cada vez, agrupados por checklist: health, depois security, depois availability.
 -->
 
 ---
 layout: code-walkthrough
-heading: 'Fix I · health — one fix per step (resources, probes, graceful shutdown)'
+heading: 'Correção I · health — uma correção por passo (resources, probes, graceful shutdown)'
 lab: labs/day-3/26-capstone.md
 ---
 
 ````md magic-move
 ```yaml
-# 0: the flawed container — no probes, no resources, no graceful shutdown
+# 0: o container falho — sem probes, sem resources, sem graceful shutdown
 containers:
   - name: web
     image: ghcr.io/platformrelay/workshop-web:v1
@@ -322,18 +322,18 @@ containers:
 ```
 
 ```yaml
-# 1: +resources — reserve + cap. No longer BestEffort.
+# 1: +resources — reserva + teto. Não é mais BestEffort.
 containers:
   - name: web
     image: ghcr.io/platformrelay/workshop-web:v1
     ports: [{ containerPort: 8080 }]
     resources:
-      requests: { cpu: 50m, memory: 64Mi }    # right-sized, not padded (cost)
+      requests: { cpu: 50m, memory: 64Mi }    # dimensionado, não inflado (cost)
       limits:   { cpu: 200m, memory: 128Mi }
 ```
 
 ```yaml
-# 2: +probes — readiness gates traffic, liveness restarts, startup shields boot
+# 2: +probes — readiness controla o tráfego, liveness reinicia, startup protege o boot
     resources:
       requests: { cpu: 50m, memory: 64Mi }
       limits:   { cpu: 200m, memory: 128Mi }
@@ -350,42 +350,42 @@ containers:
 ```
 
 ```yaml
-# 3: +graceful shutdown — drain in-flight requests before SIGTERM (graceful shutdown)
+# 3: +graceful shutdown — drene as requests em voo antes do SIGTERM (graceful shutdown)
     startupProbe:
       httpGet: { path: /healthz, port: 8080 }
       periodSeconds: 3
       failureThreshold: 30
     lifecycle:
       preStop:
-        sleep: { seconds: 5 }        # let endpoints drain first — no shell needed
-# at pod level:
+        sleep: { seconds: 5 }        # deixe os endpoints drenarem antes — sem precisar de shell
+# no nível do pod:
 # spec.template.spec.terminationGracePeriodSeconds: 30
 ```
 ````
 
 <!--
-Speaker: FOUR frames, the HEALTH group — resources, probes, graceful shutdown. Each fixes exactly one
-checklist line. Frame 1: resources (S13) — deliberately modest (50m/64Mi request) and the cost point:
-don't pad "just in case," right-size to real usage. Frame 2: all three probes (S14) on port 8080 (the
-port workshop-web serves), on the app's OWN health endpoints — readiness on /ready, liveness and
-startup on /healthz — exactly what "probe the app's own health path" means in practice. Frame 3: the
-graceful shutdown pair — a preStop hook that sleeps a few seconds so the Pod leaves the Service
-endpoints and finishes in-flight requests before SIGTERM, and terminationGracePeriodSeconds at pod
-level (shown as a comment; it's set in the full file). Note the NATIVE sleep action
-(preStop.sleep, stable API): the classic `exec sh -c sleep` would fail here — the image is
-distroless, there is no shell — and the native action is the current best practice anyway.
-Next group: security.
+Speaker: QUATRO frames, o grupo HEALTH — resources, probes, graceful shutdown. Cada um corrige exatamente uma
+linha do checklist. Frame 1: resources (S13) — deliberadamente modesto (request de 50m/64Mi) e o ponto de custo:
+não infle "por via das dúvidas", dimensione pelo uso real. Frame 2: as três probes (S14) na porta 8080 (a
+porta em que o workshop-web serve), nos PRÓPRIOS endpoints de health da app — readiness em /ready, liveness e
+startup em /healthz — exatamente o que "sonde o health path da própria app" significa na prática. Frame 3: o
+par de graceful shutdown — um hook preStop que dorme alguns segundos para o Pod sair dos endpoints do
+Service e terminar as requests em voo antes do SIGTERM, e o terminationGracePeriodSeconds no nível do
+pod (mostrado como comentário; ele é definido no arquivo completo). Repare na ação sleep NATIVA
+(preStop.sleep, API estável): o clássico `exec sh -c sleep` falharia aqui — a image é
+distroless, não há shell — e a ação nativa é a best practice atual de qualquer forma.
+Próximo grupo: security.
 -->
 
 ---
 layout: code-walkthrough
-heading: 'Fix II · security — one fix per step (labels, image digest, securityContext)'
+heading: 'Correção II · security — uma correção por passo (labels, digest de image, securityContext)'
 lab: labs/day-3/26-capstone.md
 ---
 
 ````md magic-move
 ```yaml
-# 0: still on a mutable tag, ad-hoc label, no securityContext
+# 0: ainda numa tag móvel, label ad-hoc, sem securityContext
 metadata:
   labels: { app: web }
 spec:
@@ -397,7 +397,7 @@ spec:
 ```
 
 ```yaml
-# 1: +recommended labels — the app.kubernetes.io/* set everything selects on (hygiene)
+# 1: +labels recomendados — o conjunto app.kubernetes.io/* sobre o qual tudo seleciona (higiene)
 metadata:
   labels:
     app.kubernetes.io/name: web
@@ -408,18 +408,18 @@ metadata:
 ```
 
 ```yaml
-# 2: +digest pin — immutable bytes, not a movable tag
+# 2: +fixação por digest — bytes imutáveis, não uma tag móvel
         - name: web
-          # RESOLVE at rehearsal: docker buildx imagetools inspect … / crane digest
+          # RESOLVER no rehearsal: docker buildx imagetools inspect … / crane digest
           image: ghcr.io/platformrelay/workshop-web:v1@sha256:0000000000000000000000000000000000000000000000000000000000000000
 ```
 
 ```yaml
-# 3: +restricted securityContext — pod-level: non-root user + seccomp
+# 3: +securityContext restricted — nível de pod: usuário não-root + seccomp
     spec:
       securityContext:
         runAsNonRoot: true
-        runAsUser: 65532                       # the image's built-in non-root UID (distroless nonroot)
+        runAsUser: 65532                       # o UID não-root embutido na image (distroless nonroot)
         seccompProfile: { type: RuntimeDefault }
       containers:
         - name: web
@@ -427,7 +427,7 @@ metadata:
 ```
 
 ```yaml
-# 4: +restricted securityContext — container-level: no priv-esc, drop ALL caps
+# 4: +securityContext restricted — nível de container: sem priv-esc, drop ALL nas capabilities
         - name: web
           image: ghcr.io/platformrelay/workshop-web:v1@sha256:0000000000000000000000000000000000000000000000000000000000000000
           securityContext:
@@ -437,33 +437,33 @@ metadata:
 ````
 
 <!--
-Speaker: FIVE frames, the SECURITY group. Frame 1: the recommended labels — app.kubernetes.io/name,
-instance, version, part-of, managed-by. These aren't cosmetic: the Service selector, the PDB and
-topologySpread selectors, the ServiceMonitor, and Argo all key off these, so getting them right is a
-prerequisite for the other fixes to actually bind. Frame 2: pin by digest (S02) — @sha256:… so the
-running bytes are the scanned bytes; the digest here is a PLACEHOLDER, resolved at rehearsal with
-crane/buildx (say this out loud — it's ImagePullBackOff until resolved). Frames 3+4 are the restricted
-securityContext, deliberately SPLIT: pod-level takes runAsNonRoot / runAsUser:65532 / seccompProfile
-(these are valid at pod scope and cover every container); container-level takes
-allowPrivilegeEscalation:false and capabilities.drop:["ALL"] (these are container-only fields). All
-four together are exactly what `restricted` gates. Next: availability plus the two sibling objects.
+Speaker: CINCO frames, o grupo SECURITY. Frame 1: os labels recomendados — app.kubernetes.io/name,
+instance, version, part-of, managed-by. Eles não são cosméticos: o selector do Service, os selectors do PDB e do
+topologySpread, o ServiceMonitor e o Argo se apoiam todos neles, então acertá-los é
+pré-requisito para as outras correções realmente se conectarem. Frame 2: fixe por digest (S02) — @sha256:… para que os
+bytes em execução sejam os bytes escaneados; o digest aqui é um PLACEHOLDER, resolvido no rehearsal com
+crane/buildx (diga isto em voz alta — é ImagePullBackOff até ser resolvido). Os frames 3+4 são o securityContext
+restricted, deliberadamente DIVIDIDO: o nível de pod recebe runAsNonRoot / runAsUser:65532 / seccompProfile
+(são válidos no escopo do pod e cobrem todo container); o nível de container recebe
+allowPrivilegeEscalation:false e capabilities.drop:["ALL"] (são campos exclusivos de container). Os
+quatro juntos são exatamente o que o `restricted` controla. A seguir: availability mais os dois objetos irmãos.
 -->
 
 ---
 layout: code-walkthrough
-heading: 'Fix III · availability + the two sibling objects (HA, PDB, NetworkPolicy)'
+heading: 'Correção III · availability + os dois objetos irmãos (HA, PDB, NetworkPolicy)'
 lab: labs/day-3/26-capstone.md
 ---
 
 ````md magic-move
 ```yaml
-# 0: replicas: 1, no strategy, no spread — one Pod, one node, one outage
+# 0: replicas: 1, sem strategy, sem spread — um Pod, um node, uma indisponibilidade
 spec:
   replicas: 1
 ```
 
 ```yaml
-# 1: +replicas, +strategy, +spread — HA across nodes, controlled rollout (availability)
+# 1: +replicas, +strategy, +spread — HA entre nodes, rollout controlado (availability)
 spec:
   replicas: 3
   revisionHistoryLimit: 5
@@ -480,7 +480,7 @@ spec:
 ```
 
 ```yaml
-# 2: +PodDisruptionBudget — a SEPARATE object: keep ≥2 up through drains (availability)
+# 2: +PodDisruptionBudget — um objeto SEPARADO: mantenha ≥2 de pé durante drains (availability)
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata: { name: web }
@@ -491,36 +491,36 @@ spec:
 ```
 
 ```yaml
-# 3: +NetworkPolicy — a SEPARATE object: default-deny ingress for these Pods
+# 3: +NetworkPolicy — um objeto SEPARADO: default-deny de ingress para estes Pods
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata: { name: web-default-deny }
 spec:
   podSelector:
     matchLabels: { app.kubernetes.io/name: web }
-  policyTypes: [Ingress]        # no ingress rules below → deny all inbound
+  policyTypes: [Ingress]        # sem regras de ingress abaixo → nega toda entrada
 ```
 ````
 
 <!--
-Speaker: FOUR frames, the AVAILABILITY group — and note frames 2 and 3 are SEPARATE OBJECTS, not
-Deployment fields (be honest about this — a PDB is not a spec field). Frame 1 fixes the Deployment
-itself: replicas:3, a revisionHistoryLimit so dead ReplicaSets don't accumulate, a RollingUpdate with
-maxUnavailable:0/maxSurge:1 (never dip below full capacity during a rollout), and
-topologySpreadConstraints so the three replicas land on different nodes — its labelSelector matches
-the app.kubernetes.io/name:web label we added in the security group, which is exactly why labels came
-first. Frame 2: a PodDisruptionBudget, minAvailable:2, selecting the same label — now a node drain
-can't take us below two Pods. Frame 3: a default-deny NetworkPolicy (S18) selecting the same label —
-podSelector on our Pods, policyTypes:[Ingress], no rules → deny all inbound; in the lab you'd then add
-one explicit allow. Every selector keys off the SAME recommended label — that's the payoff of getting
-labels right. The fixed Deployment on these slides IS the lab's fixed file.
+Speaker: QUATRO frames, o grupo AVAILABILITY — e repare que os frames 2 e 3 são OBJETOS SEPARADOS, não
+campos do Deployment (seja honesto sobre isso — um PDB não é um campo do spec). O frame 1 corrige o próprio
+Deployment: replicas:3, um revisionHistoryLimit para que ReplicaSets mortos não se acumulem, um RollingUpdate com
+maxUnavailable:0/maxSurge:1 (nunca cair abaixo da capacidade total durante um rollout) e
+topologySpreadConstraints para que as três réplicas caiam em nodes diferentes — seu labelSelector casa com
+o label app.kubernetes.io/name:web que adicionamos no grupo de security, e é exatamente por isso que os labels vieram
+primeiro. Frame 2: um PodDisruptionBudget, minAvailable:2, selecionando o mesmo label — agora um drain de node
+não consegue nos levar abaixo de dois Pods. Frame 3: uma NetworkPolicy default-deny (S18) selecionando o mesmo label —
+podSelector nos nossos Pods, policyTypes:[Ingress], sem regras → nega toda entrada; no lab você adicionaria em seguida
+um allow explícito. Todo selector se apoia no MESMO label recomendado — esse é o payoff de acertar
+os labels. O Deployment corrigido destes slides É o arquivo corrigido do lab.
 -->
 
 ---
 
-<span class="kw-kicker">The same restricted gate from Pod security — it checks the Pod, not the Deployment</span>
+<span class="kw-kicker">O mesmo gate restricted do Pod security — ele verifica o Pod, não o Deployment</span>
 
-# The checklist meets admission
+# O checklist encontra o admission
 
 <div class="mt-2">
   <AdmissionGate :step="$clicks" :show-caption="false" />
@@ -529,61 +529,61 @@ labels right. The fixed Deployment on these slides IS the lab's fixed file.
 <div class="mt-3 text-sm">
 <v-clicks at="1">
 
-- The flawed workload's **Pod** (no `securityContext`) meets `enforce: restricted`…
-- …all four gates fail → **Forbidden**. `enforce` gates **Pods**, so a flawed *Deployment* is
-  admitted but its **Pods** are rejected (`FailedCreate`) — the security line is still enforced *for* you.
-- The **fixed** Pod — non-root, no priv-esc, drop `ALL`, seccomp — every gate passes → **admitted**.
-- Admission catches that **one** line; **you** still owe the labels, digest, PDB, and NetworkPolicy.
+- O **Pod** do workload falho (sem `securityContext`) encontra o `enforce: restricted`…
+- …os quatro gates falham → **Forbidden**. O `enforce` controla **Pods**, então um *Deployment* falho é
+  admitido, mas seus **Pods** são rejeitados (`FailedCreate`) — a linha de security continua sendo aplicada *por* você.
+- O Pod **corrigido** — não-root, sem priv-esc, drop `ALL`, seccomp — passa em todo gate → **admitido**.
+- O admission pega **aquela** linha; **você** ainda deve os labels, o digest, o PDB e a NetworkPolicy.
 
 </v-clicks>
 </div>
 
 <!--
-Speaker: reuse the S17/S25 AdmissionGate — it visualises the FOUR restricted fields on a POD, which is
-exactly the security line of our checklist. IMPORTANT accuracy point to say out loud: PSA `enforce`
-gates PODS, not workload objects. So if you apply the flawed DEPLOYMENT to a restricted namespace, the
-Deployment is CREATED — the rejection lands later, when the ReplicaSet controller tries to make the
-Pods, as a FailedCreate event (kubectl describe rs). The gate still protects you (no violating Pod ever
-runs), it just fires one level down. The animation shows the Pod-level check: (step 0) the flawed Pod
-heads for the gate; (step 1) four gates fail → Forbidden, that Pod never exists; (step 2) the fixed
-Pod; (step 3) four green, admitted. The honest caveat to land: admission only checks those four
-securityContext fields — it does NOT verify you pinned a digest, added recommended labels, wrote a PDB,
-or applied a NetworkPolicy. Those are review discipline (GitOps/CI is where you gate them). So
-restricted admission is a floor, not the whole checklist — which is why the capstone is a checklist and
-a review discipline, not one control. The lab proves this by dry-running the Pod template directly.
+Speaker: reúso do AdmissionGate do S17/S25 — ele visualiza os QUATRO campos restricted em um POD, que é
+exatamente a linha de security do nosso checklist. Ponto de precisão IMPORTANTE para dizer em voz alta: o `enforce` do PSA
+controla PODS, não objetos de workload. Então, se você aplicar o DEPLOYMENT falho num namespace restricted, o
+Deployment é CRIADO — a rejeição chega depois, quando o controller do ReplicaSet tenta criar os
+Pods, como um evento FailedCreate (kubectl describe rs). O gate continua te protegendo (nenhum Pod violador
+roda), ele apenas dispara um nível abaixo. A animação mostra a verificação no nível do Pod: (step 0) o Pod falho
+segue para o gate; (step 1) os quatro gates falham → Forbidden, aquele Pod nunca existe; (step 2) o Pod
+corrigido; (step 3) quatro verdes, admitido. A ressalva honesta a fixar: o admission só verifica aqueles quatro
+campos do securityContext — ele NÃO confere se você fixou um digest, adicionou os labels recomendados, escreveu um PDB
+ou aplicou uma NetworkPolicy. Isso é disciplina de review (GitOps/CI é onde você aplica esses gates). Então o
+restricted admission é um piso, não o checklist inteiro — e é por isso que o capstone é um checklist e
+uma disciplina de review, não um controle único. O lab prova isto rodando o dry-run do Pod template diretamente.
 -->
 
 ---
 
 <div class="kw-slide-dense">
 
-<span class="kw-kicker">The deliverable · a checklist you keep, not a slide you forget</span>
+<span class="kw-kicker">O entregável · um checklist que você guarda, não um slide que você esquece</span>
 
-# Ship the checklist as a repo artifact
+# Entregue o checklist como artefato do repo
 
 <div class="kw-cols-2 mt-3 text-sm">
   <v-click at="1">
-    <KwCard heading="Commit it next to your manifests" icon="📄" variant="ok">
-      A <code>PRODUCTION-CHECKLIST.md</code> in the repo — availability, security, operations — that
-      every change is reviewed against. The lab prints the exact list.
+    <KwCard heading="Commite-o ao lado dos seus manifestos" icon="📄" variant="ok">
+      Um <code>PRODUCTION-CHECKLIST.md</code> no repo — availability, security, operations — contra o qual
+      toda mudança é revisada. O lab imprime a lista exata.
     </KwCard>
   </v-click>
   <v-click at="2">
-    <KwCard heading="Gate it in review / CI" icon="✅" variant="ok">
-      Turn lines into checks: <code>restricted</code> admission, a policy engine, a linter,
-      required labels — so the list can't be skipped under deadline.
+    <KwCard heading="Transforme-o em gate no review / CI" icon="✅" variant="ok">
+      Converta linhas em verificações: admission <code>restricted</code>, um policy engine, um linter,
+      labels obrigatórios — para que a lista não possa ser pulada sob pressão de prazo.
     </KwCard>
   </v-click>
   <v-click at="3">
-    <KwCard heading="Reconcile it with GitOps" icon="🔁" variant="ok">
-      The reviewed manifest is the Git source of truth; the agent keeps the cluster matching it
-      and self-heals drift. The checklist ships <em>with</em> the code.
+    <KwCard heading="Reconcilie-o com GitOps" icon="🔁" variant="ok">
+      O manifesto revisado é a fonte da verdade no Git; o agente mantém o cluster casando com ele
+      e autocorrige o drift. O checklist viaja <em>junto</em> com o código.
     </KwCard>
   </v-click>
   <v-click at="4">
-    <KwCard heading="It's never 'done'" icon="🔁" variant="warn">
-      New sections (CVEs, new nodes, new load) add lines. Treat it as living — revisit it every
-      rollout, not once.
+    <KwCard heading="Ele nunca está 'pronto'" icon="🔁" variant="warn">
+      Novas seções (CVEs, novos nodes, nova carga) adicionam linhas. Trate-o como vivo — revisite-o a cada
+      rollout, não uma vez só.
     </KwCard>
   </v-click>
 </div>
@@ -591,45 +591,45 @@ a review discipline, not one control. The lab proves this by dry-running the Pod
 </div>
 
 <!--
-Speaker: the takeaway artifact. A checklist is only useful if it outlives this room — so the
-deliverable is a PRODUCTION-CHECKLIST.md committed next to the manifests (the lab prints the exact
-list so learners leave with it). Then make it un-skippable: turn lines into automated gates —
-restricted admission (S17) blocks the security line, a policy engine or linter can require labels /
-resources / probes, CI can fail a PR that regresses. And reconcile it with GitOps (S21): the reviewed
-manifest is the Git source of truth, so the checklist travels with the code and drift self-heals.
-Last card: it's living — every new threat, node type, or load pattern adds a line, so revisit it every
-rollout, not once a year. That's the professional habit the whole course was building toward.
+Speaker: o artefato que fica. Um checklist só é útil se sobreviver a esta sala — então o
+entregável é um PRODUCTION-CHECKLIST.md commitado ao lado dos manifestos (o lab imprime a lista
+exata para que os participantes saiam com ela). Depois torne-o impossível de pular: converta linhas em gates automatizados —
+o restricted admission (S17) bloqueia a linha de security, um policy engine ou linter pode exigir labels /
+resources / probes, o CI pode reprovar um PR que regrida. E reconcilie-o com GitOps (S21): o manifesto
+revisado é a fonte da verdade no Git, então o checklist viaja com o código e o drift se autocorrige.
+Último card: ele é vivo — cada nova ameaça, tipo de node ou padrão de carga adiciona uma linha, então revisite-o a cada
+rollout, não uma vez por ano. Esse é o hábito profissional para o qual o curso inteiro estava construindo.
 -->
 
 ---
 layout: recap
-heading: 'Recap — the whole course, as one list you run every time'
-story: 'One flawed Deployment failed a dozen checklist lines at once; fixed one line per step, it became production-ready — and the same restricted gate that rejected it now admits it.'
-next: 'Wrap-up & next steps — the red line, the Day-3 layers, and a checklist that ties them together'
+heading: 'Recap — o curso inteiro, como uma lista que você roda sempre'
+story: 'Um Deployment falho reprovou em uma dúzia de linhas do checklist de uma vez; corrigido uma linha por passo, ele ficou production-ready — e o mesmo gate restricted que o rejeitou agora o admite.'
+next: 'Wrap-up & próximos passos — a red line, as camadas do Day 3 e um checklist que amarra tudo'
 ---
 
-- The capstone is **synthesis**, not a new resource: the **red line** plus every Day-3
-  layer, as **one checklist** — availability · security · operations
+- O capstone é **síntese**, não um recurso novo: a **"linha vermelha" (red line)** mais toda camada do
+  Day 3, como **um checklist** — availability · security · operations
 - **Availability:** probes · requests/limits · **PDB** · anti-affinity/**topology spread**
-  · rollout strategy + `revisionHistoryLimit` · **>1 replica**
-- **Security:** recommended **labels** · **digest** pin · **restricted** securityContext ·
-  **NetworkPolicy** · config/secret hygiene
+  · estratégia de rollout + `revisionHistoryLimit` · **>1 réplica**
+- **Security:** **labels** recomendados · fixação por **digest** · securityContext **restricted** ·
+  **NetworkPolicy** · higiene de config/secret
 - **Operations:** **GitOps** · **observability** · **graceful shutdown**
-  (`terminationGracePeriodSeconds` + `preStop`) · **cost** (right-size)
-- **`restricted` admission enforces one line for you; the rest is review discipline** — ship the
-  checklist as a repo artifact and gate it in CI/GitOps
+  (`terminationGracePeriodSeconds` + `preStop`) · **cost** (dimensionamento correto)
+- **O admission `restricted` aplica uma linha por você; o resto é disciplina de review** — entregue o
+  checklist como artefato do repo e transforme-o em gate no CI/GitOps
 
 <!--
-Speaker: land the whole course. This section didn't teach a resource — it collected everything into a
-list you run against every manifest, forever. Three groups: availability (survive failure and change),
-security (resist compromise and drift), operations (deliver, observe, shut down, pay for it). The
-mental hook is the before→after: one manifest failed a dozen lines simultaneously, and fixing one line
-per step turned it production-ready — and the SAME restricted gate that rejected the flawed one admits
-the fixed one. But admission only covers the security floor; labels, digests, PDBs, NetworkPolicy, and
-right-sizing are review discipline — so commit the checklist as PRODUCTION-CHECKLIST.md and gate it in
-CI/GitOps so it can't be skipped. Hand to the capstone lab (labs/day-3/26-capstone.md): audit the
-flawed manifest yourself, fix every line, dry-run it against a restricted namespace, and confirm full
-checklist coverage. That's the course.
+Speaker: assente o curso inteiro. Esta seção não ensinou um recurso — ela reuniu tudo numa
+lista que você roda contra todo manifesto, para sempre. Três grupos: availability (sobreviver a falhas e mudanças),
+security (resistir a comprometimento e drift), operations (entregar, observar, desligar, pagar a conta). O
+gancho mental é o before→after: um manifesto reprovou em uma dúzia de linhas simultaneamente, e corrigir uma linha
+por passo o tornou production-ready — e o MESMO gate restricted que rejeitou o falho admite
+o corrigido. Mas o admission só cobre o piso de security; labels, digests, PDBs, NetworkPolicy e
+dimensionamento correto são disciplina de review — então commite o checklist como PRODUCTION-CHECKLIST.md e transforme-o em gate no
+CI/GitOps para que não possa ser pulado. Passe para o lab do capstone (labs/day-3/26-capstone.md): audite o
+manifesto falho você mesmo, corrija cada linha, rode o dry-run contra um namespace restricted e confirme a cobertura
+completa do checklist. Esse é o curso.
 -->
 
 ---
@@ -639,13 +639,13 @@ duration: 40 min
 env: namespace ✓ / kind ✓
 ---
 
-## Lab 26 — Capstone review
+## Lab 26 — Review do capstone
 
-- **Self-audit first:** read the deliberately flawed manifest set and list **every** issue *before*
-  revealing the answer key (~10 problems, each a checklist line)
-- **Fix one issue per problem:** probes, resources, restricted `securityContext`, a **PDB**, a
-  **digest** pin, a **NetworkPolicy**, graceful shutdown, recommended labels, HA + spread
-- **Validate:** `kubectl apply --dry-run=server` the fixed set, then confirm a **restricted**
-  namespace (`enforce=restricted`) **admits** the fixed Deployment
-- **Answer:** which fixes are **availability** vs **security** vs **cost** — and confirm the fixed
-  manifests cover the whole printed checklist
+- **Autoauditoria primeiro:** leia o conjunto de manifestos deliberadamente falho e liste **todos** os problemas *antes*
+  de revelar o gabarito (~10 problemas, cada um uma linha do checklist)
+- **Corrija um problema por vez:** probes, resources, `securityContext` restricted, um **PDB**, uma
+  fixação por **digest**, uma **NetworkPolicy**, graceful shutdown, labels recomendados, HA + spread
+- **Valide:** rode `kubectl apply --dry-run=server` no conjunto corrigido, depois confirme que um namespace
+  **restricted** (`enforce=restricted`) **admite** o Deployment corrigido
+- **Responda:** quais correções são de **availability**, de **security** ou de **cost** — e confirme que os
+  manifestos corrigidos cobrem todo o checklist impresso

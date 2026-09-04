@@ -9,117 +9,120 @@ track: Delivery
 
 # Helm
 
-Install and customize apps with Helm; upgrade and roll back.
+Instale e customize aplicações com Helm; faça upgrade e rollback.
 
-**core** · suggested Day 3 · Delivery track
+**core** · sugerido para o Day 3 · trilha Delivery
 
 <!--
-Section S20 — Helm. Core, Day 3, Delivery track. Timing: ~30 min slides + 30 min lab.
-Outcome: learners can package the familiar `web` app as a chart, install it as a release,
-override values, upgrade to a new revision, and roll back — and can say what a revision
-stores and what rollback restores. Beats: problem (copy-pasted YAML per env, hand-edited
-values → drift) · mental model (chart = Chart.yaml/values.yaml/templates/; release = an
-installed instance; revision = a versioned snapshot) · code-annotated (the templated `web`
-Deployment) · magic-move (rendered output: defaults → --set replicaCount → --set image.tag =
-the revisions) · releases & revisions (install rev1 → upgrade rev2 → rollback = a NEW rev) ·
-distribution (repos AND OCI registries) · Kustomize contrast + when NOT to template · helm
-template vs helm install --dry-run · recap → S21 · lab.
-Animation: NONE (per outline — the value→manifest render is a code transition, not a state
-machine worth a component). The chart the slides teach IS the chart the lab installs.
-ACCURACY LOCKS (verified against Helm v4.2.2 in this environment):
-- Chart.yaml apiVersion: v2 (v2 = Helm 3/4; v1 was Helm 2 / Tiller). No Tiller — Helm is a
-  client that renders locally and talks to the API server as you.
-- A release revision stores the RENDERED manifests + the supplied values + chart metadata,
-  persisted as a Secret of type helm.sh/release.v1 in the release namespace.
-- `helm rollback web N` does NOT delete revisions or move a pointer back — it re-applies
-  revision N's stored manifests as a NEW, higher-numbered revision.
-- `helm template` renders 100% client-side (never contacts the API server). `helm install
-  --dry-run=server` renders AND sends to the server for validation but doesn't persist.
-- OCI (oci://…, `helm push`/`helm pull`, GA since 3.8) is referenced by URL directly — NOT
-  via `helm repo add` (that's the classic index.yaml repo model).
-- The taught template renders to the exact `web` Deployment/Service from S06/S07 (release
-  name `web`), byte-for-byte with the lab's chart.
-CKx tie-in: CKA now covers Helm & Kustomize (packaging & templating). Landed on the recap.
+Seção S20 — Helm. Core, Day 3, trilha Delivery. Tempo: ~30 min de slides + 30 min de lab.
+Resultado: os participantes conseguem empacotar a já familiar aplicação `web` como um chart,
+instalá-la como um release, sobrescrever values, fazer upgrade para uma nova revision e
+rollback — e sabem dizer o que uma revision armazena e o que o rollback restaura. Beats:
+problema (YAML copiado e colado por ambiente, values editados à mão → drift) · modelo mental
+(chart = Chart.yaml/values.yaml/templates/; release = uma instância instalada; revision = um
+snapshot versionado) · code-annotated (o Deployment `web` templatizado) · magic-move (saída
+renderizada: defaults → --set replicaCount → --set image.tag = as revisions) · releases &
+revisions (install rev1 → upgrade rev2 → rollback = uma NOVA rev) · distribuição (repos E OCI
+registries) · contraste com Kustomize + quando NÃO templatizar · helm template vs helm install
+--dry-run · recap → S21 · lab.
+Animação: NENHUMA (conforme o outline — o render de value→manifesto é uma transição de código,
+não uma máquina de estados que mereça um componente). O chart que os slides ensinam É o chart
+que o lab instala.
+ACCURACY LOCKS (verificados contra o Helm v4.2.2 neste ambiente):
+- Chart.yaml apiVersion: v2 (v2 = Helm 3/4; v1 era Helm 2 / Tiller). Sem Tiller — o Helm é um
+  client que renderiza localmente e fala com o API server como você.
+- Uma revision de release armazena os manifestos RENDERIZADOS + os values fornecidos + a
+  metadata do chart, persistidos como um Secret do tipo helm.sh/release.v1 no namespace do release.
+- `helm rollback web N` NÃO deleta revisions nem move um ponteiro para trás — ele reaplica os
+  manifestos armazenados da revision N como uma NOVA revision, de número mais alto.
+- `helm template` renderiza 100% client-side (nunca contata o API server). `helm install
+  --dry-run=server` renderiza E envia ao server para validação, mas não persiste.
+- OCI (oci://…, `helm push`/`helm pull`, GA desde a 3.8) é referenciado por URL diretamente —
+  NÃO via `helm repo add` (esse é o modelo clássico de repo com index.yaml).
+- O template ensinado renderiza exatamente o Deployment/Service `web` do S06/S07 (nome de
+  release `web`), byte a byte igual ao chart do lab.
+Amarração CKx: o CKA agora cobre Helm & Kustomize (packaging & templating). Aterrissa no recap.
 -->
 
 ---
 layout: statement
-kicker: The problem
+kicker: O problema
 ---
 
-You have **one** app and **three** environments — and **three** copies of the same YAML that have already drifted apart.
+Você tem **uma** aplicação e **três** ambientes — e **três** cópias do mesmo YAML que já se afastaram entre si.
 
-Dev runs 1 replica on `:v1`, staging 2 replicas on `:v2`, prod 4 replicas on `:v1` with a different resource limit. Same Deployment, hand-edited per environment, kept in sync by **remembering** to edit all three. Miss one and the environments diverge silently. You don't want three files — you want **one template** and **three sets of values**.
+Dev roda 1 réplica na `:v1`, staging 2 réplicas na `:v2`, prod 4 réplicas na `:v1` com um resource limit diferente. Mesmo Deployment, editado à mão por ambiente, mantido em sincronia por **lembrar** de editar os três. Esqueça um e os ambientes divergem em silêncio. Você não quer três arquivos — quer **um template** e **três conjuntos de values**.
 
 <!--
-Speaker: the templating motivation, and it's a pain every learner has felt. The `web`
-Deployment from Day 1 is fine for ONE place. The moment you have dev/staging/prod (or per-
-tenant, or per-region) you copy the manifest and hand-edit replicas, image tag, limits,
-hostnames. Now the "source of truth" is N nearly-identical files that drift the instant
-someone edits one and forgets the others. Helm's answer: keep ONE parameterised template
-plus a small values file per environment. Same idea as a function with arguments instead of
-N copied-and-tweaked functions. Next: what a chart actually is.
+Speaker: a motivação de templating, e é uma dor que todo aluno já sentiu. O Deployment `web` do
+Day 1 serve bem para UM lugar. No momento em que você tem dev/staging/prod (ou por tenant, ou
+por região) você copia o manifesto e edita à mão replicas, tag de image, limits, hostnames.
+Agora a "fonte da verdade" são N arquivos quase idênticos que dão drift no instante em que
+alguém edita um e esquece os outros. A resposta do Helm: mantenha UM template parametrizado
+mais um pequeno arquivo de values por ambiente. Mesma ideia de uma função com argumentos em vez
+de N funções copiadas e ajustadas. A seguir: o que é, de fato, um chart.
 -->
 
 ---
 
 <div class="kw-slide-dense">
 
-<span class="kw-kicker">Mental model · a chart is a template, a release is an instance</span>
+<span class="kw-kicker">Modelo mental · um chart é um template, um release é uma instância</span>
 
-# Three files make a chart
+# Três arquivos fazem um chart
 
 <div class="kw-cols-2 mt-3 text-sm">
   <v-click at="1">
-    <KwCard heading="Chart.yaml — the metadata" icon="📦" variant="ok">
-      Name, chart <code>version</code>, <code>appVersion</code>, and <code>apiVersion: v2</code>
-      (v2 = Helm 3/4 — no Tiller). This file makes a directory a chart.
+    <KwCard heading="Chart.yaml — a metadata" icon="📦" variant="ok">
+      Nome, <code>version</code> do chart, <code>appVersion</code> e <code>apiVersion: v2</code>
+      (v2 = Helm 3/4 — sem Tiller). É este arquivo que torna um diretório um chart.
     </KwCard>
   </v-click>
   <v-click at="2">
-    <KwCard heading="values.yaml — the defaults" icon="🎛️" variant="ok">
-      The knobs and their default settings (<code>replicaCount</code>, <code>image.tag</code>,
-      …). Override any of them at install/upgrade time.
+    <KwCard heading="values.yaml — os defaults" icon="🎛️" variant="ok">
+      Os botões e seus valores padrão (<code>replicaCount</code>, <code>image.tag</code>,
+      …). Sobrescreva qualquer um deles na hora do install/upgrade.
     </KwCard>
   </v-click>
   <v-click at="3">
-    <KwCard heading="templates/ — the manifests" icon="📄" variant="ok">
-      Your Kubernetes YAML with <code>values</code> punched in as placeholders. Helm renders
-      template + values → plain manifests.
+    <KwCard heading="templates/ — os manifestos" icon="📄" variant="ok">
+      Seu YAML do Kubernetes com <code>values</code> encaixados como placeholders. O Helm
+      renderiza template + values → manifestos puros.
     </KwCard>
   </v-click>
   <v-click at="4">
-    <KwCard heading="a release — chart installed" kind="deploy" variant="warn">
-      <code>helm install web ./demo-app</code> renders the chart and applies it as a named
-      <strong>release</strong>. Install it twice = two releases, two names.
+    <KwCard heading="um release — o chart instalado" kind="deploy" variant="warn">
+      <code>helm install web ./demo-app</code> renderiza o chart e o aplica como um
+      <strong>release</strong> nomeado. Instale duas vezes = dois releases, dois nomes.
     </KwCard>
   </v-click>
 </div>
 
 <div v-click="5" class="mt-4 text-sm kw-muted">
 
-**render → apply:** `template + values → manifests → the API server`. Helm is a **client** —
-it renders on your machine and applies as *you*. Nothing runs server-side (no Tiller since
-Helm 3).
+**renderiza → aplica:** `template + values → manifestos → o API server`. O Helm é um
+**client** — ele renderiza na sua máquina e aplica como *você*. Nada roda server-side (sem
+Tiller desde o Helm 3).
 
 </div>
 
 </div>
 
 <!--
-Speaker: three files and one word. Chart.yaml (identity + versions + apiVersion v2 — flag that
-v2 means Helm 3/4, v1 was the Helm-2/Tiller era that's long dead), values.yaml (the defaults,
-i.e. the knobs), templates/ (your manifests with {{ .Values.x }} holes). A CHART is the
-package (the template). A RELEASE is one installation of it under a name — install the same
-chart twice with different names/values and you get two independent releases. Critical
-correction to a common myth: Helm 3/4 has NO server component. `helm install` renders locally
-and applies with your kubeconfig/RBAC — if you can't `kubectl apply` it, neither can Helm.
-Next: what a template actually looks like — and it's the `web` app you already know.
+Speaker: três arquivos e uma palavra. Chart.yaml (identidade + versões + apiVersion v2 —
+sinalize que v2 significa Helm 3/4, v1 era a era Helm-2/Tiller, morta há muito tempo),
+values.yaml (os defaults, ou seja, os botões), templates/ (seus manifestos com buracos
+{{ .Values.x }}). Um CHART é o pacote (o template). Um RELEASE é uma instalação dele sob um
+nome — instale o mesmo chart duas vezes com nomes/values diferentes e você tem dois releases
+independentes. Correção crítica de um mito comum: Helm 3/4 NÃO tem componente server. `helm
+install` renderiza localmente e aplica com o seu kubeconfig/RBAC — se você não consegue dar
+`kubectl apply`, o Helm também não consegue. A seguir: como um template realmente se parece — e
+é a aplicação `web` que você já conhece.
 -->
 
 ---
 layout: code-annotated
-heading: 'A template is your manifest with values punched in'
+heading: 'Um template é o seu manifesto com values encaixados'
 compact: true
 lab: labs/day-3/20-helm.md
 ---
@@ -150,47 +153,47 @@ spec:
 ::notes::
 
 <CodeNote at="1" label=".Release.Name" variant="ok">
-Built-in release data. <code>helm install <strong>web</strong> ./demo-app</code> makes every
-<code>.Release.Name</code> render as <code>web</code> — so this chart produces the exact
-<code>web</code> Deployment from Day 1.
+Dados embutidos do release. <code>helm install <strong>web</strong> ./demo-app</code> faz cada
+<code>.Release.Name</code> renderizar como <code>web</code> — então este chart produz
+exatamente o Deployment <code>web</code> do Day 1.
 </CodeNote>
 
 <CodeNote at="2" label=".Values.replicaCount" variant="ok">
-Pulled from <code>values.yaml</code> (default <code>1</code>). Override it per environment
-without touching this template.
+Vem do <code>values.yaml</code> (default <code>1</code>). Sobrescreva por ambiente sem tocar
+neste template.
 </CodeNote>
 
 <CodeNote at="3" label=".Values.image.*" variant="ok">
-Repository and tag from <code>values.yaml</code>. One knob to bump the image across every
-environment that renders this chart.
+Repository e tag vindos do <code>values.yaml</code>. Um botão só para subir a image em todos os
+ambientes que renderizam este chart.
 </CodeNote>
 
 <div v-click="4" class="mt-2 text-sm kw-muted">
-It's still just a Deployment — Helm fills the placeholder holes from
-<code>.Values</code> and <code>.Release</code>, then applies plain YAML. No magic, only
-substitution.
+Continua sendo apenas um Deployment — o Helm preenche os buracos de placeholder a partir de
+<code>.Values</code> e <code>.Release</code> e depois aplica YAML puro. Sem mágica, só
+substituição.
 </div>
 
 <!--
-Speaker: this is the whole trick, and it's deliberately the `web` Deployment from S06 with
-holes cut in it. Two sources feed the holes: .Release.* (built-in facts about THIS
-installation — Name, Namespace, …) and .Values.* (whatever values.yaml sets, overridable at
-the CLI). With release name `web`, .Release.Name renders `web`, so this chart emits byte-for-
-byte the Day-1 web Deployment — the point being a chart is not a new kind of object, it's your
-same manifests, parameterised. Templates can also loop/conditional (Go templates + Sprig) but
-save that — the mental model is "manifest with variables." Next: watch the values actually
-flow into the rendered output.
+Speaker: este é o truque inteiro, e é deliberadamente o Deployment `web` do S06 com buracos
+recortados nele. Duas fontes alimentam os buracos: .Release.* (fatos embutidos sobre ESTA
+instalação — Name, Namespace, …) e .Values.* (o que o values.yaml definir, sobrescrevível na
+CLI). Com o nome de release `web`, .Release.Name renderiza `web`, então este chart emite byte a
+byte o Deployment web do Day 1 — o ponto é que um chart não é um novo tipo de objeto, são os
+seus mesmos manifestos, parametrizados. Templates também podem ter loop/condicional (Go
+templates + Sprig), mas guarde isso — o modelo mental é "manifesto com variáveis". A seguir:
+veja os values de fato fluindo para a saída renderizada.
 -->
 
 ---
 layout: code-walkthrough
-heading: 'Same template, different values — that is a revision'
+heading: 'Mesmo template, values diferentes — isso é uma revision'
 lab: labs/day-3/20-helm.md
 ---
 
 ````md magic-move
 ```yaml
-# helm install web ./demo-app        → revision 1  (values.yaml defaults)
+# helm install web ./demo-app        → revision 1  (defaults do values.yaml)
 # replicaCount: 1  ·  image.tag: "v1"
 kind: Deployment
 metadata:
@@ -210,7 +213,7 @@ kind: Deployment
 metadata:
   name: web
 spec:
-  replicas: 3        # one value changed → the manifest re-rendered
+  replicas: 3        # um value mudou → o manifesto foi rerrenderizado
   template:
     spec:
       containers:
@@ -229,246 +232,255 @@ spec:
     spec:
       containers:
         - name: web
-          image: "ghcr.io/platformrelay/workshop-web:v2"    # bumped, replicas kept
+          image: "ghcr.io/platformrelay/workshop-web:v2"    # subiu, replicas mantidas
 ```
 ````
 
 <!--
-Speaker: three frames = three revisions, and the diff is the story. Frame 1: install with the
-defaults from values.yaml → replicas 1, tag v1 — that's revision 1. Frame 2: `helm upgrade
---set replicaCount=3` re-renders the SAME template with one changed value → replicas 3,
-everything else identical — revision 2. Frame 3: `--set image.tag=v2` → the image bumps,
-replicas STAY 3 because upgrade carries prior values forward unless you override them (that's
-the reuse-prior-values behaviour worth naming). Every install/upgrade renders fresh manifests
-and stores them as a numbered revision. These are the exact bytes `helm template` prints — the
-lab renders them for real. That stored history is what makes the next slide's rollback possible.
+Speaker: três frames = três revisions, e o diff é a história. Frame 1: install com os defaults
+do values.yaml → replicas 1, tag v1 — essa é a revision 1. Frame 2: `helm upgrade --set
+replicaCount=3` rerrenderiza o MESMO template com um value alterado → replicas 3, todo o resto
+idêntico — revision 2. Frame 3: `--set image.tag=v2` → a image sobe, replicas CONTINUAM 3
+porque o upgrade carrega os values anteriores adiante a menos que você os sobrescreva (vale
+nomear esse comportamento de reusar os values anteriores). Todo install/upgrade renderiza
+manifestos novos e os armazena como uma revision numerada. Estes são os bytes exatos que o
+`helm template` imprime — o lab os renderiza de verdade. É esse histórico armazenado que torna
+possível o rollback do próximo slide.
 -->
 
 ---
 
 <div class="kw-slide-dense">
 
-<span class="kw-kicker">Releases & revisions · install → upgrade → roll back</span>
+<span class="kw-kicker">Releases & revisions · install → upgrade → rollback</span>
 
-# Every change is a numbered, reversible revision
+# Toda mudança é uma revision numerada e reversível
 
 <div class="mt-3 text-sm" style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.8rem;">
   <v-click at="1">
     <KwCard heading="install → revision 1" kind="deploy" variant="ok">
-      <code>helm install web ./demo-app</code>. Creates the release and stores revision 1.
+      <code>helm install web ./demo-app</code>. Cria o release e armazena a revision 1.
     </KwCard>
   </v-click>
   <v-click at="2">
     <KwCard heading="upgrade → revision 2, 3, …" icon="⬆️" variant="ok">
-      <code>helm upgrade web ./demo-app --set …</code>. Re-renders, applies, stores a new
-      revision. <code>helm history web</code> lists them all.
+      <code>helm upgrade web ./demo-app --set …</code>. Rerrenderiza, aplica e armazena uma nova
+      revision. <code>helm history web</code> lista todas.
     </KwCard>
   </v-click>
   <v-click at="3">
-    <KwCard heading="rollback → yet another revision" icon="↩️" variant="warn">
-      <code>helm rollback web 2</code> re-applies revision 2's manifests as a <strong>new</strong>
-      revision 4. It never deletes history — it moves forward to an old state.
+    <KwCard heading="rollback → mais uma revision" icon="↩️" variant="warn">
+      <code>helm rollback web 2</code> reaplica os manifestos da revision 2 como uma
+      <strong>nova</strong> revision 4. Ele nunca deleta histórico — anda para a frente rumo a
+      um estado antigo.
     </KwCard>
   </v-click>
 </div>
 
 <div v-click="4" class="mt-4 text-sm">
 
-<span class="kw-kicker">what a revision stores · what rollback restores</span>
+<span class="kw-kicker">o que uma revision armazena · o que o rollback restaura</span>
 
-A revision is a **snapshot**: the *rendered manifests* + the *values* + the *chart metadata*,
-saved as a `Secret` (`helm.sh/release.v1`) in the release's namespace. `rollback N` re-applies
-that snapshot — so it restores the **manifests and values** exactly, and it does so by creating
-the *next* revision, keeping the trail intact.
+Uma revision é um **snapshot**: os *manifestos renderizados* + os *values* + a *metadata do
+chart*, salvos como um `Secret` (`helm.sh/release.v1`) no namespace do release. `rollback N`
+reaplica esse snapshot — então ele restaura exatamente os **manifestos e os values**, e faz
+isso criando a *próxima* revision, mantendo a trilha intacta.
 
 </div>
 
 </div>
 
 <!--
-Speaker: this answers the lab's required question, so land it precisely. A release has a
-numbered history; install is revision 1, every upgrade adds one. Each revision is a SNAPSHOT
-stored in the cluster — not "a diff", the whole rendered manifest set + the values + chart
-metadata — persisted as a Secret of type helm.sh/release.v1 in the namespace (kubectl get
-secret -l owner=helm shows them). Rollback is the part people get wrong: `helm rollback web 2`
-does NOT delete revisions 3/4 or rewind a pointer — it reads revision 2's stored snapshot and
-re-applies it AS a new, higher revision. So history only ever grows, and you can roll forward
-again. What it "restores" is therefore the manifests + values of the target revision. This is
-why Helm rollback is safe and auditable: nothing is destroyed, every state is replayable. The
-lab breaks an upgrade and rolls back to feel this.
+Speaker: isto responde à pergunta obrigatória do lab, então aterrisse com precisão. Um release
+tem um histórico numerado; o install é a revision 1, cada upgrade adiciona uma. Cada revision é
+um SNAPSHOT armazenado no cluster — não "um diff", e sim o conjunto inteiro de manifestos
+renderizados + os values + a metadata do chart — persistido como um Secret do tipo
+helm.sh/release.v1 no namespace (kubectl get secret -l owner=helm mostra eles). O rollback é a
+parte que as pessoas entendem errado: `helm rollback web 2` NÃO deleta as revisions 3/4 nem
+rebobina um ponteiro — ele lê o snapshot armazenado da revision 2 e o reaplica COMO uma
+revision nova, de número mais alto. Então o histórico só cresce, e você pode rolar para frente
+de novo. O que ele "restaura", portanto, são os manifestos + values da revision alvo. É por
+isso que o rollback do Helm é seguro e auditável: nada é destruído, todo estado é reproduzível.
+O lab quebra um upgrade e faz rollback para sentir isso.
 -->
 
 ---
 
 <div class="kw-slide-dense">
 
-<span class="kw-kicker">Distribution · where charts live</span>
+<span class="kw-kicker">Distribuição · onde os charts moram</span>
 
-# Two ways to ship a chart
+# Duas formas de entregar um chart
 
 <div class="kw-cols-2 mt-3 text-sm">
   <v-click at="1">
     <KwCard heading="Chart repository (index.yaml)" icon="🗂️" variant="ok">
-      An HTTP server hosting packaged charts + an <code>index.yaml</code>.
+      Um servidor HTTP hospedando charts empacotados + um <code>index.yaml</code>.
       <div class="kw-muted mt-1">
         <code>helm repo add prometheus-community https://…</code><br>
         <code>helm install mon prometheus-community/kube-prometheus-stack</code>
       </div>
-      The classic model — you <em>add a repo</em>, then reference <code>repo/chart</code>.
+      O modelo clássico — você <em>adiciona um repo</em> e depois referencia
+      <code>repo/chart</code>.
     </KwCard>
   </v-click>
   <v-click at="2">
-    <KwCard heading="OCI registry (the current default)" icon="🐳" variant="ok">
-      Store charts as OCI artifacts in the <em>same registries as your images</em> (GHCR, ECR,
-      Harbor, …).
+    <KwCard heading="OCI registry (o padrão atual)" icon="🐳" variant="ok">
+      Guarde charts como OCI artifacts nos <em>mesmos registries das suas images</em> (GHCR,
+      ECR, Harbor, …).
       <div class="kw-muted mt-1">
         <code>helm push demo-app-0.1.0.tgz oci://registry/charts</code><br>
         <code>helm install web oci://registry/charts/demo-app --version 0.1.0</code>
       </div>
-      No <code>repo add</code> — reference the <code>oci://</code> URL directly.
+      Sem <code>repo add</code> — referencie a URL <code>oci://</code> diretamente.
     </KwCard>
   </v-click>
 </div>
 
 <div v-click="3" class="mt-4 text-sm kw-muted">
 
-OCI support is **GA** (since Helm 3.8) and is now the recommended way to distribute charts —
-one registry, one auth story for both images and charts. `helm pull` fetches a chart without
-installing it.
+O suporte a OCI é **GA** (desde o Helm 3.8) e hoje é a forma recomendada de distribuir charts —
+um registry, uma única história de autenticação para images e charts. `helm pull` baixa um
+chart sem instalá-lo.
 
 </div>
 
 </div>
 
 <!--
-Speaker: two distribution models, and the industry has shifted. (1) The classic chart REPO: an
-HTTP server with an index.yaml catalogue; you `helm repo add name url` then install
-`name/chart`. Still everywhere (prometheus-community, grafana, etc.). (2) OCI registries: a chart is
-just an OCI artifact, so it lives in the SAME registry as your container images — push with
-`helm push chart.tgz oci://…`, install straight from the `oci://` URL with `--version`, no
-`repo add` step. Keep these mentally distinct: repo = index.yaml + `repo add`; OCI = URL by
-reference. OCI went GA in 3.8 and is the recommended path now — one registry and one auth for
-images + charts. `helm pull` just downloads a chart (to inspect/vendor) without installing. The
-lab's optional stretch pushes the demo chart to a local OCI registry.
+Speaker: dois modelos de distribuição, e a indústria mudou de lado. (1) O REPO clássico de
+charts: um servidor HTTP com um catálogo index.yaml; você dá `helm repo add nome url` e depois
+instala `nome/chart`. Ainda está em todo lugar (prometheus-community, grafana etc.). (2) OCI
+registries: um chart é só um OCI artifact, então ele vive no MESMO registry das suas container
+images — dê push com `helm push chart.tgz oci://…`, instale direto da URL `oci://` com
+`--version`, sem passo de `repo add`. Mantenha os dois mentalmente distintos: repo = index.yaml
++ `repo add`; OCI = URL por referência. OCI virou GA na 3.8 e é o caminho recomendado agora —
+um registry e uma autenticação para images + charts. `helm pull` só baixa um chart (para
+inspecionar/vendorizar) sem instalar. O stretch opcional do lab dá push do chart de demo para
+um OCI registry local.
 -->
 
 ---
 layout: comparison
-heading: 'Template vs overlay — and when to do neither'
+heading: 'Template vs overlay — e quando não fazer nenhum dos dois'
 leftHeading: Helm
 rightHeading: Kustomize
 leftBadge: templates + values
 rightBadge: patches + overlays
 ---
 
-- **Parameterise** a manifest with `.Values.*` placeholders (the templated holes above).
-- One chart, a values file per environment; also gives you **releases, revisions, rollback**.
-- Ships and versions as a **package** (repo or OCI); great for redistributing apps.
-- Cost: your YAML is now a **Go template** — logic and indentation bugs live in the template.
+- **Parametrize** um manifesto com placeholders `.Values.*` (os buracos templatizados acima).
+- Um chart, um arquivo de values por ambiente; também te dá **releases, revisions, rollback**.
+- Entrega e versiona como um **pacote** (repo ou OCI); ótimo para redistribuir aplicações.
+- Custo: seu YAML agora é um **Go template** — bugs de lógica e de indentação moram no template.
 
 ::right::
 
-- **Patch** plain, valid YAML with overlays — no placeholders, the base stays real Kubernetes YAML.
-- `kubectl apply -k` is **built in** — no extra tool, no release/rollback concept.
-- Great for *your own* app across a few environments (a `base/` + `overlays/dev,prod`).
-- Cost: no packaging/versioning/rollback; expressing big differences via patches gets verbose.
+- **Faça patch** de YAML puro e válido com overlays — sem placeholders, a base continua sendo YAML de Kubernetes de verdade.
+- `kubectl apply -k` é **embutido** — sem ferramenta extra, sem conceito de release/rollback.
+- Ótimo para a *sua própria* aplicação em alguns ambientes (um `base/` + `overlays/dev,prod`).
+- Custo: sem packaging/versionamento/rollback; expressar diferenças grandes via patches fica verboso.
 
 <div class="mt-4 text-sm" v-click>
 
-**When NOT to template:** for one app in one place, a plain `kubectl apply -f` is fine — reach
-for Helm when you **redistribute** a chart or need **release lifecycle** (revisions + rollback),
-and Kustomize when you want to **overlay** your own manifests without turning them into templates.
+**Quando NÃO templatizar:** para uma aplicação em um único lugar, um `kubectl apply -f` puro
+está de bom tamanho — recorra ao Helm quando você **redistribui** um chart ou precisa do
+**ciclo de vida de release** (revisions + rollback), e ao Kustomize quando quer fazer
+**overlay** dos seus próprios manifestos sem transformá-los em templates.
 
 </div>
 
 <!--
-Speaker: not Helm-vs-Kustomize as a war — they solve overlapping problems differently, and you
-can even combine them. Helm TEMPLATES: placeholders + values, plus the whole release lifecycle
-(install/upgrade/history/rollback) and packaging (repo/OCI). Best when you SHIP an app for
-others to install, or you want versioned releases you can roll back. Kustomize OVERLAYS: no
-templating language — your base is real, valid YAML and overlays patch it; it's built into
-kubectl (`apply -k`), but there's no release object, no rollback, no packaging. Best for your
-own manifests across a handful of environments. And the honest third option: for one app in one
-namespace, don't template at all — `kubectl apply -f` is fine. Templating has a cost: your YAML
-becomes a Go template and you debug indentation/logic. Match the tool to whether you're
-redistributing (Helm), overlaying your own (Kustomize), or just deploying once (raw YAML).
+Speaker: não é Helm-vs-Kustomize como guerra — eles resolvem problemas sobrepostos de formas
+diferentes, e você pode até combiná-los. Helm TEMPLATIZA: placeholders + values, mais todo o
+ciclo de vida de release (install/upgrade/history/rollback) e o packaging (repo/OCI). Melhor
+quando você ENTREGA uma aplicação para outros instalarem, ou quer releases versionados aos
+quais pode voltar. Kustomize faz OVERLAY: sem linguagem de templating — sua base é YAML real e
+válido, e os overlays fazem patch nela; é embutido no kubectl (`apply -k`), mas não há objeto
+de release, nem rollback, nem packaging. Melhor para os seus próprios manifestos em um punhado
+de ambientes. E a terceira opção honesta: para uma aplicação em um namespace, não templatize
+nada — `kubectl apply -f` está ótimo. Templatizar tem um custo: seu YAML vira um Go template e
+você debuga indentação/lógica. Case a ferramenta com o caso: redistribuir (Helm), fazer overlay
+do que é seu (Kustomize), ou apenas implantar uma vez (YAML puro).
 -->
 
 ---
 layout: code-annotated
-heading: 'See the output before you touch the cluster'
+heading: 'Veja a saída antes de tocar no cluster'
 compact: true
 lab: labs/day-3/20-helm.md
 ---
 
 ```bash {none|1-2|4-5|all}
-# render locally — NEVER contacts the cluster
+# renderiza localmente — NUNCA contata o cluster
 helm template web ./demo-app --set replicaCount=3
 
-# render AND send to the API server to validate — but do not install
+# renderiza E envia ao API server para validar — mas não instala
 helm install web ./demo-app --dry-run=server
 ```
 
 ::notes::
 
 <CodeNote at="1" label="helm template" variant="ok">
-Pure <strong>client-side</strong> render. Prints the manifests Helm <em>would</em> apply.
-Works with no cluster at all — perfect for diffing and code review.
+Render puramente <strong>client-side</strong>. Imprime os manifestos que o Helm
+<em>aplicaria</em>. Funciona sem cluster nenhum — perfeito para diff e code review.
 </CodeNote>
 
 <CodeNote at="2" label="install --dry-run=server" variant="warn">
-Renders <em>and</em> submits to the API server for <strong>validation/admission</strong>
-(schema, PSA, webhooks) — then throws it away. Nothing is stored, no release created.
+Renderiza <em>e</em> submete ao API server para <strong>validação/admission</strong>
+(schema, PSA, webhooks) — e depois joga fora. Nada é armazenado, nenhum release é criado.
 </CodeNote>
 
 <div v-click="3" class="mt-2 text-sm kw-muted">
-Rule of thumb: <code>helm template</code> to <em>see the YAML</em>; <code>--dry-run=server</code>
-to <em>ask the cluster if it would accept it</em>. Neither one installs.
+Regra de bolso: <code>helm template</code> para <em>ver o YAML</em>;
+<code>--dry-run=server</code> para <em>perguntar ao cluster se ele aceitaria</em>. Nenhum dos
+dois instala.
 </div>
 
 <!--
-Speaker: two "look before you leap" tools that people conflate. `helm template` is 100% local:
-it renders the chart to stdout and never talks to the API server — you can run it offline, in
-CI, in code review, and pipe it to `kubectl apply --dry-run=client -f -` or a differ. `helm
-install --dry-run=server` renders AND sends the result to the API server so it runs real
-validation and admission (schema checks, the PSA restricted gate from S17, mutating/validating
-webhooks) — then discards it; no release is stored. So: template = "what would it render?",
-dry-run=server = "would the cluster actually accept it?". Use template for authoring/diffing,
-dry-run=server as the pre-flight before a real install. The lab uses `helm template` to inspect
-the chart before installing it for real.
+Speaker: duas ferramentas de "olhe antes de pular" que as pessoas confundem. `helm template` é
+100% local: renderiza o chart no stdout e nunca fala com o API server — você pode rodar offline,
+em CI, em code review, e mandar por pipe para `kubectl apply --dry-run=client -f -` ou para um
+differ. `helm install --dry-run=server` renderiza E envia o resultado ao API server, então ele
+roda validação e admission de verdade (checagens de schema, o gate restricted do PSA do S17,
+webhooks mutating/validating) — e depois descarta; nenhum release é armazenado. Ou seja:
+template = "o que isso renderizaria?", dry-run=server = "o cluster aceitaria mesmo?". Use
+template para escrever/comparar, dry-run=server como o pre-flight antes de um install real. O
+lab usa `helm template` para inspecionar o chart antes de instalá-lo de verdade.
 -->
 
 ---
 layout: recap
-heading: 'Recap — one template, many values, reversible releases'
-story: 'The copy-pasted-per-env YAML became one chart with a values file. Install created release revision 1; each upgrade re-rendered and stored a new revision; rollback replayed an old snapshot as a new revision — history intact.'
-next: 'GitOps with Argo CD — put the desired state in Git and let the cluster reconcile toward it'
+heading: 'Recap — um template, muitos values, releases reversíveis'
+story: 'O YAML copiado e colado por ambiente virou um chart com um arquivo de values. O install criou a revision 1 do release; cada upgrade rerrenderizou e armazenou uma nova revision; o rollback reproduziu um snapshot antigo como uma nova revision — histórico intacto.'
+next: 'GitOps com Argo CD — coloque o estado desejado no Git e deixe o cluster reconciliar até ele'
 ---
 
-- A **chart** = `Chart.yaml` + `values.yaml` + `templates/`; a **release** is one installed
-  instance; Helm is a **client** (renders locally, applies as you — no Tiller)
-- **Values flow into templates:** `.Values.*` / `.Release.*` placeholders → rendered manifests;
-  override per environment without copying YAML
-- **Revisions are snapshots:** each stores rendered manifests + values + chart metadata (a
-  `Secret`); **`rollback N` replays revision N as a *new* revision** — nothing is destroyed
-- **Distribution:** classic **repos** (`repo add` + `index.yaml`) **and** **OCI registries**
-  (`oci://` by URL, GA since 3.8, now recommended)
-- **Look before you leap:** `helm template` (client render) vs `install --dry-run=server`
-  (server validation); and know when to **overlay with Kustomize** or not template at all
-- **CKA tie-in:** the exam now covers **Helm & Kustomize** — install/upgrade/rollback, chart
-  structure, and overlays
+- Um **chart** = `Chart.yaml` + `values.yaml` + `templates/`; um **release** é uma instância
+  instalada; o Helm é um **client** (renderiza localmente, aplica como você — sem Tiller)
+- **Values fluem para dentro dos templates:** placeholders `.Values.*` / `.Release.*` →
+  manifestos renderizados; sobrescreva por ambiente sem copiar YAML
+- **Revisions são snapshots:** cada uma guarda manifestos renderizados + values + metadata do
+  chart (um `Secret`); **`rollback N` reproduz a revision N como uma *nova* revision** — nada é destruído
+- **Distribuição:** os **repos** clássicos (`repo add` + `index.yaml`) **e** os **OCI registries**
+  (`oci://` por URL, GA desde a 3.8, hoje recomendado)
+- **Olhe antes de pular:** `helm template` (render client-side) vs `install --dry-run=server`
+  (validação no server); e saiba quando fazer **overlay com Kustomize** ou não templatizar nada
+- **Amarração CKA:** o exame agora cobre **Helm & Kustomize** — install/upgrade/rollback,
+  estrutura de chart e overlays
 
 <!--
-Speaker: pull the thread together. The point was never "learn a tool" — it's "stop maintaining
-N copies of a manifest." One template + per-environment values replaces the copy-paste; the
-release model gives you numbered, reversible history for free. Nail the three facts that stick:
-(1) chart = template, release = instance, Helm has no server; (2) a revision is a full snapshot
-and rollback rolls FORWARD to an old state (new revision, history preserved); (3) two ways to
-ship — repos and, now preferred, OCI. Then the judgment call: Helm to package/redistribute,
-Kustomize to overlay your own YAML, plain apply for one-offs. CKA now examines Helm and
-Kustomize, so this is squarely on-syllabus. Hand to Lab 20: install the demo chart, render it,
-override + upgrade through revisions, break an upgrade, and roll back. Next section, S21, takes
-"declare desired state" all the way — Git becomes the source of truth and Argo CD reconciles.
+Speaker: puxe o fio todo junto. O ponto nunca foi "aprender uma ferramenta" — é "parar de
+manter N cópias de um manifesto". Um template + values por ambiente substituem o copiar e
+colar; o modelo de release te dá histórico numerado e reversível de graça. Fixe os três fatos
+que ficam: (1) chart = template, release = instância, o Helm não tem server; (2) uma revision é
+um snapshot completo e o rollback rola PARA FRENTE rumo a um estado antigo (nova revision,
+histórico preservado); (3) duas formas de entregar — repos e, agora preferido, OCI. Depois o
+julgamento: Helm para empacotar/redistribuir, Kustomize para fazer overlay do seu próprio YAML,
+apply puro para casos avulsos. O CKA agora avalia Helm e Kustomize, então isso está em cheio no
+edital. Passe o bastão ao Lab 20: instale o chart de demo, renderize-o, sobrescreva + faça
+upgrade ao longo das revisions, quebre um upgrade e faça rollback. A próxima seção, S21, leva o
+"declare o estado desejado" até o fim — o Git vira a fonte da verdade e o Argo CD reconcilia.
 -->
 
 ---
@@ -478,10 +490,10 @@ duration: 30 min
 env: namespace ✓ / kind ✓
 ---
 
-## Lab 20 — Release lifecycle
+## Lab 20 — Ciclo de vida de um release
 
-- Install the `demo-app` chart as release `web`; `helm list` and `helm template` to inspect
-- Override `replicaCount` / `image.tag` with `--set` and `-f`, then `helm upgrade`
-- Read `helm history`; **break** an upgrade (bad image tag → pods never Ready), then `helm rollback`
-- Answer: *what does a revision store, and what does rollback restore?*
-- Stretch: package the chart and `helm push` it to a local **OCI** registry
+- Instale o chart `demo-app` como o release `web`; use `helm list` e `helm template` para inspecionar
+- Sobrescreva `replicaCount` / `image.tag` com `--set` e `-f`, depois `helm upgrade`
+- Leia o `helm history`; **quebre** um upgrade (tag de image errada → pods nunca ficam Ready), então `helm rollback`
+- Responda: *o que uma revision armazena e o que o rollback restaura?*
+- Stretch: empacote o chart e dê `helm push` para um **OCI** registry local

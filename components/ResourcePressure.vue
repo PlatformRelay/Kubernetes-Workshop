@@ -40,7 +40,7 @@ const cpuPhase = computed(() => {
     case 0:
       return { label: 'Running', tone: 'ok' as const }
     case 1:
-      return { label: 'Running · at limit', tone: 'warn' as const }
+      return { label: 'Running · no limite', tone: 'warn' as const }
     default:
       return { label: 'Running · throttled', tone: 'warn' as const }
   }
@@ -63,7 +63,7 @@ const memPhase = computed(() => {
       return { label: 'Running', tone: 'ok' as const }
     case 1:
     case 2:
-      return { label: 'Running · at limit', tone: 'warn' as const }
+      return { label: 'Running · no limite', tone: 'warn' as const }
     case 3:
       return { label: 'OOMKilled · exit 137', tone: 'danger' as const }
     default:
@@ -82,8 +82,8 @@ const memRestarts = computed(() => (props.step >= 4 ? 1 : 0))
         <div class="kw-rp-head">
           <K8sIcon kind="pod" variant="unlabeled" size="1.9rem" />
           <div>
-            <div class="kw-rp-title">CPU-bound container</div>
-            <div class="kw-kicker">compressible resource</div>
+            <div class="kw-rp-title">container de CPU</div>
+            <div class="kw-kicker">recurso compressível</div>
           </div>
         </div>
         <div class="kw-rp-meter">
@@ -98,8 +98,8 @@ const memRestarts = computed(() => (props.step >= 4 ? 1 : 0))
         <div class="kw-rp-head">
           <K8sIcon kind="pod" variant="unlabeled" size="1.9rem" />
           <div>
-            <div class="kw-rp-title">Memory-bound container</div>
-            <div class="kw-kicker">incompressible resource</div>
+            <div class="kw-rp-title">container de memória</div>
+            <div class="kw-kicker">recurso incompressível</div>
           </div>
         </div>
         <div class="kw-rp-meter">
@@ -120,21 +120,21 @@ const memRestarts = computed(() => (props.step >= 4 ? 1 : 0))
 
     <div v-if="props.showCaption" class="kw-rp-caption">
       <template v-if="props.step <= 0">
-        Both containers sit <strong>under</strong> their limits — nothing to enforce.
+        Os dois containers estão <strong>abaixo</strong> dos seus limits — nada a impor.
       </template>
       <template v-else-if="props.step === 1">
-        Both push <strong>past</strong> their limit. What the kubelet/kernel does next depends
-        on <em>which</em> resource.
+        Os dois passam <strong>do</strong> seu limit. O que o kubelet/kernel faz a seguir
+        depende de <em>qual</em> recurso é.
       </template>
       <template v-else-if="props.step === 2">
-        CPU is <strong>compressible</strong> → the container is <strong>throttled</strong> (slow,
-        still Running). Memory is <strong>incompressible</strong> → the container is
+        CPU é <strong>compressível</strong> → o container é <strong>throttled</strong> (lento,
+        ainda Running). Memória é <strong>incompressível</strong> → o container é
         <strong>OOMKilled</strong> (exit 137).
       </template>
       <template v-else>
-        The kubelet <strong>restarts</strong> the killed container per <code>restartPolicy</code>
-        (<code>RESTARTS 1</code>); the throttled one never needed restarting. <strong>Same limit
-        breach, opposite outcome.</strong>
+        O kubelet <strong>reinicia</strong> o container morto conforme o
+        <code>restartPolicy</code> (<code>RESTARTS 1</code>); o throttled nunca precisou de
+        restart. <strong>Mesma violação de limit, resultado oposto.</strong>
       </template>
     </div>
   </div>

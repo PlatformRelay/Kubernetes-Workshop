@@ -1,15 +1,16 @@
-# Lab 08 — Ingress (S08) — solutions
+# Lab 08 — Ingress (S08) — soluções
 
-Use this companion after attempting the participant lab. Outputs contain representative
-names, addresses, ages, and image sizes; compare the state and meaning rather than copying
-ephemeral values literally.
+Use este companion depois de tentar o lab do participante. As saídas contêm nomes, endereços,
+idades e tamanhos de image representativos; compare o estado e o significado em vez de copiar
+literalmente valores efêmeros.
 
 ## Guided solutions
 
-Set the same explicit environment variables as the participant lab before running any step:
+Defina as mesmas variáveis de ambiente explícitas do lab do participante antes de executar
+qualquer step:
 
 ```bash
-# Local kind defaults; shared-cluster learners replace all four values as instructed.
+# Defaults do kind local; participantes do cluster compartilhado substituem os quatro valores conforme instruído.
 export LAB_ENV=kind
 export INGRESS_CLASS="platformrelay-lab08-$(openssl rand -hex 6)"
 export WEB_HOST=web.example.com
@@ -23,9 +24,9 @@ if [ "$LAB_ENV" = shared ]; then
 fi
 ```
 
-### Step 1 (kind only) — install the Contour ingress controller
+### Step 1 (apenas kind) — instale o ingress controller Contour
 
-The version is pinned to match `infra/versions.env` (`CONTOUR_VERSION=v1.33.5`).
+A versão está fixada para corresponder a `infra/versions.env` (`CONTOUR_VERSION=v1.33.5`).
 
 ```bash
 if kubectl get ingressclass "$INGRESS_CLASS" >/dev/null 2>&1 ||
@@ -40,14 +41,14 @@ kubectl apply -f https://raw.githubusercontent.com/projectcontour/contour/v1.33.
 kubectl -n projectcontour patch deployment contour --type=json \
   -p="[{\"op\":\"add\",\"path\":\"/spec/template/spec/containers/0/args/-\",\"value\":\"--ingress-class-name=$INGRESS_CLASS\"}]"
 
-# Wait until both halves are ready: the contour controller (Deployment)
-# and the envoy data plane (DaemonSet):
+# Espere até que as duas metades estejam prontas: o controller contour (Deployment)
+# e o data plane envoy (DaemonSet):
 kubectl -n projectcontour rollout status deployment/contour --timeout=180s
 kubectl -n projectcontour rollout status daemonset/envoy --timeout=180s
 kubectl -n projectcontour get pods
 ```
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ kubectl -n projectcontour rollout status deployment/contour --timeout=180s
@@ -62,16 +63,16 @@ contour-certgen-v1-33-5-w6c8h   0/1     Completed   0          90s
 envoy-m5kwp                     2/2     Running     0          90s
 ```
 
-Two halves, matching the slide's mental model: **contour** (the controller — watches Ingress
-objects) and **envoy** (the data plane — actually proxies traffic). The `contour-certgen`
-Job runs once to wire TLS between them and then shows `Completed`. The envoy DaemonSet binds
-**hostPorts 80/443** on the node; your Lab 00 kind config maps those to `127.0.0.1:80/443`,
-which is how your curls will get in.
+Duas metades, correspondendo ao modelo mental do slide: **contour** (o controller — observa
+objetos Ingress) e **envoy** (o data plane — de fato faz o proxy do tráfego). O Job
+`contour-certgen` roda uma vez para configurar o TLS entre eles e depois mostra `Completed`.
+O DaemonSet do envoy faz bind dos **hostPorts 80/443** no node; sua configuração do kind do
+Lab 00 mapeia essas portas para `127.0.0.1:80/443`, que é por onde seus curls vão entrar.
 </details>
 
-<details><summary>Shared-cluster path — do this instead of Steps 1–2</summary>
+<details><summary>Caminho do cluster compartilhado — faça isto em vez dos Steps 1–2</summary>
 
-Do **not** install or patch anything. Confirm the facilitator-approved class exists:
+**Não** instale nem faça patch de nada. Confirme que a class aprovada pelo facilitador existe:
 
 ```console
 $ kubectl get ingressclass
@@ -79,17 +80,18 @@ NAME      CONTROLLER                             PARAMETERS   AGE
 contour   projectcontour.io/ingress-controller   <none>       30d
 ```
 
-Set `INGRESS_CLASS`, `WEB_HOST`, and `WEB2_HOST` to the facilitator-provided values. This is the
-safe alternative when policy prevents arbitrary classes: skip every step labelled `kind only`;
-the shared path never creates, patches, or deletes cluster-scoped resources.
+Defina `INGRESS_CLASS`, `WEB_HOST` e `WEB2_HOST` com os valores fornecidos pelo facilitador.
+Esta é a alternativa segura quando a política impede classes arbitrárias: pule todo step
+rotulado `apenas kind`; o caminho compartilhado nunca cria, faz patch nem deleta recursos
+cluster-scoped.
 </details>
 
 ---
 
-### Step 2 (kind only) — create the IngressClass
+### Step 2 (apenas kind) — crie a IngressClass
 
-The quickstart has no class object. Create the generated class whose name matches the controller
-argument added in Step 1:
+O quickstart não tem objeto de class. Crie a class gerada cujo nome corresponde ao argumento
+do controller adicionado no Step 1:
 
 ```bash
 cat > ingressclass.yaml <<EOF
@@ -107,7 +109,7 @@ kubectl -n projectcontour get deployment contour \
   -o jsonpath='{.spec.template.spec.containers[0].args}' | grep -F -- "--ingress-class-name=$INGRESS_CLASS"
 ```
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ kubectl apply -f ingressclass.yaml
@@ -117,27 +119,28 @@ NAME                            CONTROLLER                             PARAMETER
 platformrelay-lab08-a1b2c3d4   projectcontour.io/ingress-controller   <none>       5s
 ```
 
-The generated **IngressClass** now exists — that *name* is what your Ingress will reference
-in `ingressClassName`. The `controller:` string records which implementation owns the class.
+A **IngressClass** gerada agora existe — esse *nome* é o que seu Ingress vai referenciar em
+`ingressClassName`. A string `controller:` registra qual implementação possui a class.
 </details>
 
-**Question:** how does Contour decide which Ingresses are *its*? (Hint: it's the name.)
+**Pergunta:** como o Contour decide quais Ingresses são *dele*? (Dica: é o nome.)
 
-<details><summary>Answer</summary>
+<details><summary>Resposta</summary>
 
-By **class name**. The `--ingress-class-name=$INGRESS_CLASS` argument restricts this lab's Contour
-instance to the generated name, and the IngressClass object publishes the same contract through
-the Kubernetes API. The preflight prevents the lab from claiming an existing name. On a shared
-cluster you reuse the facilitator-approved class instead of changing controller configuration.
+Pelo **nome da class**. O argumento `--ingress-class-name=$INGRESS_CLASS` restringe a
+instância do Contour deste lab ao nome gerado, e o objeto IngressClass publica o mesmo
+contrato através da API do Kubernetes. O preflight impede que o lab reivindique um nome
+existente. Em um cluster compartilhado você reutiliza a class aprovada pelo facilitador em
+vez de mudar a configuração do controller.
 </details>
 
 ---
 
-### Step 3 — deploy two distinguishable backends
+### Step 3 — implante dois backends distinguíveis
 
-`web` runs the workshop image at **v1**, `web2` the same image at **v2**. The server listens
-on **8080** in the container; each Service exposes it as port **80** (`port: 80` →
-`targetPort: 8080`) — so everything downstream talks to the Service port.
+O `web` roda a image do workshop em **v1**, o `web2` a mesma image em **v2**. O servidor
+escuta na **8080** dentro do container; cada Service a expõe como porta **80** (`port: 80` →
+`targetPort: 8080`) — então tudo downstream fala com a porta do Service.
 
 ```bash
 cat > backends.yaml <<'EOF'
@@ -188,7 +191,7 @@ kubectl apply -f backends.yaml
 kubectl rollout status deploy/web && kubectl rollout status deploy/web2
 ```
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ kubectl apply -f backends.yaml
@@ -201,16 +204,16 @@ deployment "web" successfully rolled out
 deployment "web2" successfully rolled out
 ```
 
-Each pod answers every request with a body like `workshop-web v1` / `workshop-web v2` plus
-its pod name — no ConfigMap tricks needed to tell the backends apart.
+Cada pod responde todo request com um corpo como `workshop-web v1` / `workshop-web v2` mais o
+nome do pod — nenhum truque de ConfigMap é necessário para distinguir os backends.
 </details>
 
 ---
 
-### Step 4 — add the Ingress
+### Step 4 — adicione o Ingress
 
-One Ingress, one entry point, **two hosts**: the `Host` header decides which Service gets
-the request.
+Um Ingress, um ponto de entrada, **dois hosts**: o header `Host` decide qual Service recebe
+o request.
 
 ```bash
 cat > ingress.yaml <<EOF
@@ -224,28 +227,28 @@ spec:
     - host: ${WEB_HOST}
       http:
         paths:
-          - path: /                # everything on this host → the v1 backend
+          - path: /                # tudo neste host → o backend v1
             pathType: Prefix
             backend: { service: { name: web, port: { number: 80 } } }
     - host: ${WEB2_HOST}
       http:
         paths:
-          - path: /                # → the v2 backend
+          - path: /                # → o backend v2
             pathType: Prefix
             backend: { service: { name: web2, port: { number: 80 } } }
 EOF
 
 kubectl apply -f ingress.yaml
 kubectl get ingress web
-kubectl describe ingress web      # confirm the rules, pathType, and backends
+kubectl describe ingress web      # confirme as rules, o pathType e os backends
 ```
 
-> This is the same manifest the slide magic-move builds up field by field. Each rule's
-> `backend` points at a **Service** (never a Pod directly), and the port number **80** is
-> the *Service* port — the Service maps it to the container's 8080. Every path **must**
-> carry a `pathType` — Step 6 proves what happens when it doesn't.
+> Este é o mesmo manifesto que o magic-move do slide constrói campo a campo. O `backend` de
+> cada regra aponta para um **Service** (nunca um Pod diretamente), e o número de porta **80**
+> é a porta do *Service* — o Service o mapeia para a 8080 do container. Todo path **precisa**
+> carregar um `pathType` — o Step 6 prova o que acontece quando não carrega.
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ kubectl get ingress web
@@ -265,22 +268,23 @@ Rules:
 ...
 ```
 
-**On kind, `ADDRESS` stays empty — and that's expected, not broken.** Contour publishes the
-external IP of its `envoy` Service (type `LoadBalancer`) into the Ingress status, and on a
-kind cluster there is no load-balancer provider, so that Service sits at `<pending>` forever.
-Traffic still flows: the envoy DaemonSet listens on the node's ports 80/443 directly, and
-Lab 00's kind config maps those to `127.0.0.1`. On a cloud or shared cluster, `ADDRESS`
-fills in with the load-balancer address after a few seconds.
+**No kind, o `ADDRESS` fica vazio — e isso é esperado, não quebrado.** O Contour publica o IP
+externo do seu Service `envoy` (tipo `LoadBalancer`) no status do Ingress, e em um cluster
+kind não há provedor de load-balancer, então esse Service fica em `<pending>` para sempre.
+O tráfego ainda flui: o DaemonSet do envoy escuta diretamente nas portas 80/443 do node, e a
+configuração do kind do Lab 00 mapeia essas portas para `127.0.0.1`. Em um cluster de nuvem
+ou compartilhado, o `ADDRESS` é preenchido com o endereço do load-balancer depois de alguns
+segundos.
 
-`describe` is the real health check here: each host resolved to its backend **endpoints on
-:8080** — the controller accepted the class, and the Services resolved.
+O `describe` é o verdadeiro health check aqui: cada host resolveu para seus **endpoints de
+backend na :8080** — o controller aceitou a class, e os Services resolveram.
 </details>
 
 ---
 
-### Step 5 — route by host
+### Step 5 — roteie por host
 
-Send requests to the one entry point; the `Host` header decides which backend answers.
+Envie requests para o único ponto de entrada; o header `Host` decide qual backend responde.
 
 ```bash
 if [ "$LAB_ENV" = kind ]; then
@@ -292,11 +296,11 @@ else
 fi
 ```
 
-**Task:** which version answers each hostname? How can you tell?
+**Tarefa:** qual versão responde cada hostname? Como você sabe?
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
-Representative kind output (the exported kind defaults are shown here):
+Saída representativa do kind (os defaults exportados do kind são mostrados aqui):
 
 ```console
 $ curl -sH 'Host: web.example.com'  http://127.0.0.1/
@@ -311,52 +315,52 @@ requests served: 1
 ready: true
 ```
 
-The body says it outright: `workshop-web v1` came from the `web` Service,
-`workshop-web v2` from `web2` — one Ingress, one IP, host-based fan-out to two Services.
-The pod name confirms *which replica* served you; curl a host twice and watch it alternate.
-(The `Host:` header is how the controller picks the rule; on the shared cluster real DNS
-supplies it, so you curl the hostname directly. `curl --resolve web.example.com:80:<ip>` is
-the trick when DNS isn't wired up.)
+O corpo diz na cara: `workshop-web v1` veio do Service `web`, `workshop-web v2` do `web2` —
+um Ingress, um IP, fan-out por host para dois Services. O nome do pod confirma *qual réplica*
+te atendeu; faça curl no mesmo host duas vezes e veja-o alternar. (O header `Host:` é como o
+controller escolhe a regra; no cluster compartilhado o DNS real o fornece, então você faz
+curl direto no hostname. `curl --resolve web.example.com:80:<ip>` é o truque quando o DNS não
+está configurado.)
 </details>
 
-**Question:** what does a request for a host the Ingress does **not** define return?
+**Pergunta:** o que retorna um request para um host que o Ingress **não** define?
 
-<details><summary>Answer</summary>
+<details><summary>Resposta</summary>
 
 ```bash
 if [ "$LAB_ENV" = kind ]; then
   curl -s -o /dev/null -w '%{http_code}\n' -H 'Host: nope.example.com' http://127.0.0.1/
 else
-  # Use an unassigned host only when the facilitator confirms it resolves to this ingress endpoint.
+  # Use um host não atribuído apenas quando o facilitador confirmar que ele resolve para este endpoint de ingress.
   echo "Ask the facilitator for the shared-cluster unmatched-host check"
 fi
 ```
 
-**404** — straight from the proxy. No rule matched the host and this Ingress defines no
-`defaultBackend`, so there is nothing to route to. An Ingress only handles hosts/paths you
-declare; everything else dies at the front door.
+**404** — direto do proxy. Nenhuma regra correspondeu ao host e este Ingress não define
+`defaultBackend`, então não há para onde rotear. Um Ingress só trata hosts/paths que você
+declara; todo o resto morre na porta da frente.
 </details>
 
-**Question:** older tutorials route by *path* on one host (`/` → v1, `/v2` → v2). Why does
-this lab route by host instead?
+**Pergunta:** tutoriais antigos roteiam por *path* em um único host (`/` → v1, `/v2` → v2).
+Por que este lab roteia por host?
 
-<details><summary>Answer</summary>
+<details><summary>Resposta</summary>
 
-Because Ingress forwards the path **as-is** — and our app only serves `/`. With a
-`path: /v2` rule, the request arriving at `web2` still has the path `/v2`, and the backend
-answers **404**. For path fan-out you either need backends that actually serve those paths,
-or a **path rewrite on the way through** — and a rewrite is *not expressible in the Ingress
-spec*. It only exists as controller-specific annotations, which is exactly the "annotation
-sprawl" pain-point on the slides. Gateway API (next section) makes rewrites a **typed
-field** (`URLRewrite` filter).
+Porque o Ingress encaminha o path **como está** — e nossa aplicação só serve `/`. Com uma
+regra `path: /v2`, o request que chega ao `web2` ainda tem o path `/v2`, e o backend responde
+**404**. Para fan-out por path você precisa de backends que de fato sirvam esses paths, ou de
+um **rewrite de path no caminho** — e um rewrite *não é expressável na spec do Ingress*. Ele
+só existe como annotations específicas de controller, que é exatamente a dor de "annotation
+sprawl" dos slides. A Gateway API (próxima seção) torna rewrites um **campo tipado**
+(filtro `URLRewrite`).
 </details>
 
 ---
 
-### Step 6 — break it twice: one loud failure, one silent
+### Step 6 — quebre duas vezes: uma falha ruidosa, uma silenciosa
 
-**Break 1 (loud).** `pathType` has **no default** — the API server requires it on every
-path. Prove it: write a copy of the Ingress with the field removed and try to apply it.
+**Quebra 1 (ruidosa).** O `pathType` **não tem default** — o API server o exige em todo
+path. Prove: escreva uma cópia do Ingress com o campo removido e tente aplicá-la.
 
 ```bash
 cat > ingress-no-pathtype.yaml <<EOF
@@ -370,29 +374,30 @@ spec:
     - host: ${WEB_HOST}
       http:
         paths:
-          - path: /                # pathType deliberately omitted
+          - path: /                # pathType deliberadamente omitido
             backend: { service: { name: web, port: { number: 80 } } }
 EOF
 
 kubectl apply -f ingress-no-pathtype.yaml
 ```
 
-**Task:** does the apply succeed? What is the error, and which line is it about?
+**Tarefa:** o apply funciona? Qual é o erro, e sobre qual linha ele é?
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ kubectl apply -f ingress-no-pathtype.yaml
 The Ingress "web" is invalid: spec.rules[0].http.paths[0].pathType: Required value: pathType must be specified
 ```
 
-The manifest is **rejected at apply time** — a schema validation failure, not a runtime 404.
-Nothing changes on the cluster: your working Ingress from Step 4 is still serving. Because
-`pathType` has no server-side default, an old example that omits it (they were legal in the
-long-gone `extensions/v1beta1` API) will not apply on a modern cluster.
+O manifesto é **rejeitado na hora do apply** — uma falha de validação de schema, não um 404
+em runtime. Nada muda no cluster: seu Ingress funcional do Step 4 continua servindo. Como o
+`pathType` não tem default no lado do servidor, um exemplo antigo que o omite (eles eram
+legais na finada API `extensions/v1beta1`) não vai aplicar em um cluster moderno.
 </details>
 
-**Break 2 (silent).** Now point `ingressClassName` at a generated class **nobody owns**:
+**Quebra 2 (silenciosa).** Agora aponte o `ingressClassName` para uma class gerada que
+**ninguém possui**:
 
 ```bash
 UNOWNED_CLASS="${INGRESS_CLASS}-unowned"
@@ -408,13 +413,13 @@ else
 fi
 ```
 
-**Task:** the patch succeeded but routing stopped. Depending on the controller's current
-configuration, curl may receive a 404 or a reset (`http=000`). Why did the API accept the
-change, and where would you diagnose it?
+**Tarefa:** o patch funcionou, mas o roteamento parou. Dependendo da configuração atual do
+controller, o curl pode receber um 404 ou um reset (`http=000`). Por que a API aceitou a
+mudança, e onde você diagnosticaria isso?
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
-Representative kind output:
+Saída representativa do kind:
 
 ```console
 $ kubectl patch ingress web --type=merge -p '{"spec":{"ingressClassName":"platformrelay-lab08-a1b2c3d4-unowned"}}'
@@ -425,14 +430,14 @@ http=000
 curl exit=56
 ```
 
-This is the real 2026-08-03 kind/Contour replay. A 404 is also valid when the data plane
-keeps a default virtual host. The manifest is schema-valid, so the API server accepts it;
-no controller owns the generated `-unowned` class, Contour withdraws the route, and the symptom
-is controller-dependent. Diagnose by comparing `ingressClassName` with
-`kubectl get ingressclass`, then inspect Ingress events and controller logs.
+Este é o replay real de 2026-08-03 no kind/Contour. Um 404 também é válido quando o data
+plane mantém um virtual host padrão. O manifesto é válido no schema, então o API server o
+aceita; nenhum controller possui a class gerada `-unowned`, o Contour retira a rota, e o
+sintoma depende do controller. Diagnostique comparando o `ingressClassName` com
+`kubectl get ingressclass`, depois inspecione os events do Ingress e os logs do controller.
 </details>
 
-**Fix both:** re-apply the good manifest and confirm routing recovers.
+**Conserte os dois:** reaplique o manifesto bom e confirme que o roteamento se recupera.
 
 ```bash
 kubectl apply -f ingress.yaml
@@ -443,9 +448,9 @@ else
 fi
 ```
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
-Representative kind output:
+Saída representativa do kind:
 
 ```console
 $ kubectl apply -f ingress.yaml
@@ -454,14 +459,16 @@ $ curl -sH 'Host: web.example.com' http://127.0.0.1/ | head -1
 workshop-web v1
 ```
 
-Restoring `ingressClassName: $INGRESS_CLASS` lets the selected controller claim the Ingress again; it
-re-programs envoy within a second or two. (Break 1 never touched the live object — the API
-server rejected it outright — so the class patch was the only thing to undo.)
+Restaurar `ingressClassName: $INGRESS_CLASS` deixa o controller selecionado reivindicar o
+Ingress de novo; ele reprograma o envoy em um ou dois segundos. (A Quebra 1 nunca tocou o
+objeto vivo — o API server a rejeitou de imediato — então o patch de class era a única coisa
+a desfazer.)
 </details>
 
-**Question:** you could also *mistype* the pathType — `pathType: Prefixx`. Loud or silent?
+**Pergunta:** você também poderia *digitar errado* o pathType — `pathType: Prefixx`. Ruidoso
+ou silencioso?
 
-<details><summary>Answer</summary>
+<details><summary>Resposta</summary>
 
 ```console
 $ kubectl apply -f - <<'EOF'
@@ -470,42 +477,45 @@ EOF
 The Ingress "web" is invalid: spec.rules[0].http.paths[0].pathType: Unsupported value: "Prefixx": supported values: "Exact", "ImplementationSpecific", "Prefix"
 ```
 
-Loud — rejected by the same schema validation, and the mistype error is even more helpful:
-it **lists the three valid values**. Rule of thumb: mistakes *inside the schema* fail loud
-at apply; mistakes *about the world around the object* (a class nobody owns, a Service that
-doesn't exist) fail silent at runtime.
+Ruidoso — rejeitado pela mesma validação de schema, e o erro do texto digitado errado é
+ainda mais útil: ele **lista os três valores válidos**. Regra de bolso: erros *dentro do
+schema* falham ruidosamente no apply; erros *sobre o mundo ao redor do objeto* (uma class que
+ninguém possui, um Service que não existe) falham silenciosamente em runtime.
 </details>
 
 ## Expected state / output
 
-- The controller is **two halves**: a `contour` Deployment (watches the API) and an `envoy`
-  DaemonSet (moves the packets) — matching the object-vs-engine mental model.
-- The quickstart ships **no IngressClass**; you created the matchmaker yourself, and
-  `kubectl get ingressclass` now proves who owns the `contour` name.
-- On kind the Ingress **`ADDRESS` stays empty** (the envoy `LoadBalancer` Service is
-  `<pending>` — no LB provider), yet routing **works** via the node's ports 80/443 mapped to
-  `127.0.0.1`. Empty ADDRESS ≠ broken; `describe` + `curl` are the truth.
-- `$WEB_HOST` answers **`workshop-web v1`**, `$WEB2_HOST` answers
-  **`workshop-web v2`** — host-based fan-out, provable from the response body.
-- An undeclared host returns **404** from the proxy.
-- A missing (or mistyped) `pathType` is **rejected at apply time** — loud. A wrong
-  `ingressClassName` applies cleanly and just **stops routing** — silent.
+- O controller são **duas metades**: um Deployment `contour` (observa a API) e um DaemonSet
+  `envoy` (move os pacotes) — correspondendo ao modelo mental objeto-vs-motor.
+- O quickstart **não traz IngressClass**; você mesmo criou o "casamenteiro", e
+  `kubectl get ingressclass` agora prova quem possui o nome `contour`.
+- No kind o **`ADDRESS` do Ingress fica vazio** (o Service `LoadBalancer` do envoy está
+  `<pending>` — sem provedor de LB), e mesmo assim o roteamento **funciona** via as portas
+  80/443 do node mapeadas para `127.0.0.1`. ADDRESS vazio ≠ quebrado; `describe` + `curl` são
+  a verdade.
+- O `$WEB_HOST` responde **`workshop-web v1`**, o `$WEB2_HOST` responde
+  **`workshop-web v2`** — fan-out por host, comprovável a partir do corpo da resposta.
+- Um host não declarado retorna **404** do proxy.
+- Um `pathType` faltando (ou digitado errado) é **rejeitado na hora do apply** — ruidoso. Um
+  `ingressClassName` errado aplica sem erro e simplesmente **para de rotear** — silencioso.
 
 ## Explanation
 
-The Ingress object declares host/path routing, but it only works because a matching
-IngressClass and controller
-turn that declaration into proxy configuration. Schema mistakes fail loudly at admission;
-environment mistakes such as an unowned class fail at runtime. TLS routing additionally
-uses SNI before HTTP headers exist.
+O objeto Ingress declara o roteamento por host/path, mas ele só funciona porque uma
+IngressClass correspondente e um controller
+transformam essa declaração em configuração de proxy. Erros de schema falham ruidosamente na
+admission; erros de ambiente, como uma class sem dono, falham em runtime — e são a causa de
+rotas que somem em silêncio. O roteamento TLS usa adicionalmente SNI antes de existirem
+headers HTTP.
 
 ## Troubleshooting and recovery
 
-If the Ingress applies but does not route, compare
-`spec.ingressClassName` with `kubectl get ingressclass` and inspect controller events.
-For local kind, restore the known-good object with `kubectl apply -f ingress.yaml`.
-On a shared cluster, do not install or remove the controller; ask the facilitator for the
-assigned class and hostnames.
+Se o Ingress aplica mas não roteia, compare o
+`spec.ingressClassName` com `kubectl get ingressclass` e inspecione os events do controller.
+Para o kind local, desfaça o patch de class restaurando o objeto sabidamente bom com
+`kubectl apply -f ingress.yaml`.
+Em um cluster compartilhado, não instale nem remova o controller; peça ao facilitador a
+class e os hostnames atribuídos.
 
 ## Challenge solution
 
@@ -526,20 +536,23 @@ esac
 
 ### Expected state / output
 
-HTTPS returns `workshop-web v1`, proving that TLS terminates at the selected Ingress route.
+O HTTPS retorna `workshop-web v1`, provando que o TLS termina na rota de Ingress selecionada.
 
 ### Explanation
 
-On kind, `--resolve` supplies both the connection address and TLS SNI; a Host header alone is too
-late for certificate selection. On a shared cluster, the facilitator-provided DNS name supplies both.
+No kind, `--resolve` fornece tanto o endereço de conexão quanto o SNI do TLS; um header Host
+sozinho chega tarde demais para a seleção de certificado — a causa é que o handshake TLS
+acontece antes de qualquer header HTTP existir. Em um cluster compartilhado, o nome DNS
+fornecido pelo facilitador supre ambos.
 
 ### Hints
 
-Branch on `LAB_ENV`; kind needs `curl --resolve` for DNS and SNI, while shared clusters use the
-facilitator-provided DNS host directly.
+Faça branch em `LAB_ENV`; o kind precisa de `curl --resolve` para DNS e SNI,
+enquanto clusters compartilhados usam diretamente o host DNS fornecido pelo facilitador.
 
-### Optional extension answer
+### Resposta da extensão opcional
 
-`ingress2gateway` is not installed or pinned by the bootstrap, so its preview is deliberately not
-part of challenge verification. When an approved version is already available, inspect its output
-for Gateway API resource kinds and `hostnames`; do not assert a fixed resource count across versions.
+O `ingress2gateway` não é instalado nem tem versão fixada pelo bootstrap, então sua prévia
+deliberadamente não faz parte da verificação do challenge. Quando uma versão aprovada já
+estiver disponível, inspecione sua saída em busca de kinds de recursos da Gateway API e de
+`hostnames`; não afirme uma contagem fixa de recursos entre versões.

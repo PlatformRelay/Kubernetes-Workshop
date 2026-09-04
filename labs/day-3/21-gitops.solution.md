@@ -1,30 +1,30 @@
-# Lab 21 — GitOps with Argo CD (S21) — solutions
+# Lab 21 — GitOps com Argo CD (S21) — soluções
 
-Use this companion after attempting the participant lab. Outputs contain representative
-names, addresses, ages, and image sizes; compare the state and meaning rather than copying
-ephemeral values literally.
+Use este companion depois de tentar o lab do participante. As saídas contêm nomes, endereços,
+idades e tamanhos de image representativos; compare o estado e o significado em vez de copiar
+literalmente valores efêmeros.
 
 ## Guided solutions
 
-### Step 0 — a cluster, and Argo CD on it
+### Step 0 — um cluster, e o Argo CD nele
 
-### kind path (do this)
+### Caminho kind (faça este)
 
 ```bash
 kind create cluster --name gitops
 kubectl create namespace argocd
 
-# server-side apply: the install manifest is too big for client-side apply
+# server-side apply: o manifesto de install é grande demais para o apply client-side
 kubectl apply -n argocd --server-side --force-conflicts \
   -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
 
-# wait for the control plane to come up (~1–2 min on a fresh kind)
+# espere o control plane subir (~1–2 min em um kind novo)
 kubectl -n argocd wait --for=condition=available deploy --all --timeout=300s
 ```
 
-**Task:** confirm the Argo CD Deployments are all Available.
+**Tarefa:** confirme que todos os Deployments do Argo CD estão Available.
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ kubectl -n argocd wait --for=condition=available deploy --all --timeout=300s
@@ -36,48 +36,48 @@ deployment.apps/argocd-repo-server condition met
 deployment.apps/argocd-server condition met
 ```
 
-`argocd-application-controller` is a **StatefulSet**, not a Deployment, so it won't show in
-that list — check it too with `kubectl -n argocd rollout status statefulset/argocd-application-controller`.
-We install with `--server-side` because the bundled `install.yaml` is larger than the
-`kubectl.kubernetes.io/last-applied-configuration` annotation can hold; a plain client-side
-`kubectl apply` warns or fails on it.
+O `argocd-application-controller` é um **StatefulSet**, não um Deployment, então ele não aparece
+nessa lista — verifique-o também com `kubectl -n argocd rollout status statefulset/argocd-application-controller`.
+Instalamos com `--server-side` porque o `install.yaml` empacotado é maior do que a annotation
+`kubectl.kubernetes.io/last-applied-configuration` consegue guardar; um `kubectl apply`
+client-side puro emite aviso ou falha nele.
 </details>
 
-**Question (optional):** where's the admin password, if you want to open the UI?
+**Pergunta (opcional):** onde está a senha de admin, se você quiser abrir a UI?
 
-<details><summary>Answer</summary>
+<details><summary>Resposta</summary>
 
-Argo CD generates an initial admin password into a Secret on first install:
+O Argo CD gera uma senha inicial de admin em um Secret na primeira instalação:
 
 ```bash
 kubectl -n argocd get secret argocd-initial-admin-secret \
   -o jsonpath='{.data.password}' | base64 -d ; echo
-# then, in another terminal:
+# depois, em outro terminal:
 kubectl -n argocd port-forward svc/argocd-server 8080:443
-# browse https://localhost:8080  (user: admin) — accept the self-signed cert
+# acesse https://localhost:8080  (usuário: admin) — aceite o certificado self-signed
 ```
 
-The UI is a nice-to-have; **this lab never needs it** — we read status with `kubectl` and
-`argocd` CLI. (With the CLI: `argocd admin initial-password -n argocd` prints the same
-password.)
+A UI é um bônus; **este lab nunca precisa dela** — lemos o status com `kubectl` e com o CLI
+`argocd`. (Com o CLI: `argocd admin initial-password -n argocd` imprime a mesma senha.)
 </details>
 
-### shared-cluster path (read-only)
+### Caminho shared-cluster (read-only)
 
 ```bash
-# only if a facilitator Argo CD exists; you are a spectator here
+# só se existir um Argo CD do facilitador; aqui você é espectador
 kubectl config set-context --current --namespace=argocd
 kubectl get applications
 ```
 
-Skip Steps 0–2's writes; join at **Step 3** to read a running Application's status.
+Pule as escritas dos Steps 0–2; entre no **Step 3** para ler o status de uma Application em
+execução.
 
 ---
 
-### Step 1 — write the Application
+### Step 1 — escreva a Application
 
-Create `application.yaml`. This is the entire GitOps declaration: **source** (the desired state,
-in Git) + **destination** (where it lands) + **syncPolicy** (keep it matching, hands-off).
+Crie o `application.yaml`. Esta é a declaração GitOps inteira: **source** (o estado desejado, no
+Git) + **destination** (onde ele cai) + **syncPolicy** (mantenha igual, sem intervenção).
 
 ```bash
 cat > application.yaml <<'EOF'
@@ -102,44 +102,45 @@ spec:
 EOF
 ```
 
-**Task:** validate it against the server before applying (the CRD ships with Argo CD).
+**Tarefa:** valide-o contra o server antes de aplicar (o CRD vem junto com o Argo CD).
 
 ```bash
 kubectl apply --dry-run=server -f application.yaml
 ```
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 application.argoproj.io/guestbook created (server dry run)
 ```
 
-`--dry-run=server` runs schema + admission checks against the real API (the `Application` CRD
-was installed in Step 0) without persisting anything. If it errors with
-`no matches for kind "Application"`, Argo CD isn't installed yet — finish Step 0.
+O `--dry-run=server` roda as checagens de schema + admission contra a API real (o CRD
+`Application` foi instalado no Step 0) sem persistir nada. Se ele falhar com
+`no matches for kind "Application"`, o Argo CD ainda não está instalado — termine o Step 0.
 </details>
 
 ---
 
-### Step 2 — apply it and watch Git pull into the cluster
+### Step 2 — aplique-a e veja o Git ser puxado para o cluster
 
-There is **no "sync" command** here — declaring the Application is enough. Because
-`syncPolicy.automated` is set, Argo CD sees the new Application, pulls the repo, and applies it.
+**Não existe comando "sync"** aqui — declarar a Application já basta. Como o
+`syncPolicy.automated` está definido, o Argo CD vê a nova Application, faz o pull do repo e o
+aplica.
 
 ```bash
 kubectl apply -f application.yaml
-kubectl -n argocd get application guestbook -w   # Ctrl-C once it reads Synced / Healthy
+kubectl -n argocd get application guestbook -w   # Ctrl-C assim que ler Synced / Healthy
 ```
 
-**Task:** watch the app reach `SYNC STATUS: Synced` and `HEALTH STATUS: Healthy`, then confirm
-the guestbook workload actually landed in `default`.
+**Tarefa:** observe a app chegar a `SYNC STATUS: Synced` e `HEALTH STATUS: Healthy`, depois
+confirme que o workload do guestbook realmente caiu em `default`.
 
 ```bash
 kubectl -n default get deploy,svc guestbook-ui
 kubectl -n default get pods -l app=guestbook-ui
 ```
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ kubectl -n argocd get application guestbook
@@ -157,70 +158,74 @@ NAME                           READY   STATUS    RESTARTS   AGE
 guestbook-ui-xxxxxxxxx-xxxxx   1/1     Running   0          40s
 ```
 
-> Note: the guestbook **Deployment and Service objects carry no `app` label** (only the *pods*
-> do), so we get the workloads **by name** and only filter *pods* with `-l app=guestbook-ui`.
+> Note: os **objetos Deployment e Service do guestbook não carregam o label `app`** (só os
+> *pods* carregam), então pegamos os workloads **pelo nome** e filtramos apenas os *pods* com
+> `-l app=guestbook-ui`.
 
-It goes `OutOfSync → Progressing → Synced/Healthy` over ~30–90s: Argo pulled the manifests
-from the repo `path: guestbook` and applied them — **you never ran `kubectl apply` on the
-guestbook itself.** That's the pull model: you declared *what* (an Application) and the
-in-cluster agent did the *how*.
+Ele passa por `OutOfSync → Progressing → Synced/Healthy` em ~30–90s: o Argo fez o pull dos
+manifestos do `path: guestbook` do repo e os aplicou — **você nunca rodou `kubectl apply` no
+guestbook em si.** Esse é o modelo pull: você declarou o *quê* (uma Application) e o agente
+dentro do cluster fez o *como*.
 </details>
 
-**Question:** you set `targetRevision: HEAD`. What does that track, and when would you change it?
+**Pergunta:** você definiu `targetRevision: HEAD`. O que isso acompanha, e quando você mudaria?
 
-<details><summary>Answer</summary>
+<details><summary>Resposta</summary>
 
-`HEAD` tracks the **tip of the repo's default branch** — whatever's latest. In production you'd
-usually pin a **branch** (`main`, `release`), a **tag** (`v1.4.0`), or an exact **commit SHA** so
-a deploy is reproducible and a rollback is "point `targetRevision` at the previous commit." `HEAD`
-is convenient for a demo but means "always the newest thing on that repo."
+O `HEAD` acompanha a **ponta da branch padrão do repo** — o que estiver mais recente. Em
+produção você normalmente fixaria uma **branch** (`main`, `release`), uma **tag** (`v1.4.0`) ou
+um **commit SHA** exato, para que um deploy seja reproduzível e um rollback seja "aponte o
+`targetRevision` para o commit anterior". O `HEAD` é conveniente para uma demo, mas significa
+"sempre a coisa mais nova daquele repo".
 </details>
 
 ---
 
-### Step 3 — read both statuses (the two independent axes)
+### Step 3 — leia os dois statuses (os dois eixos independentes)
 
-Argo reports **two** things that move independently: is the cluster == Git (**sync**), and are the
-workloads OK (**health**)?
+O Argo reporta **duas** coisas que se movem de forma independente: o cluster == Git (**sync**) e
+os workloads estão OK (**health**)?
 
 ```bash
 kubectl -n argocd get application guestbook \
   -o custom-columns='SYNC:.status.sync.status,HEALTH:.status.health.status'
 ```
 
-**Task:** read off the sync status and the health status separately.
+**Tarefa:** leia o sync status e o health status separadamente.
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 SYNC     HEALTH
 Synced   Healthy
 ```
 
-- **Sync status** (`Synced` / `OutOfSync` / `Unknown`) answers *does live match Git?* — a pure diff.
-- **Health status** (`Healthy` / `Progressing` / `Degraded` / `Missing` / `Suspended`) answers
-  *are the workloads actually up?* — Argo's per-resource health checks.
+- **Sync status** (`Synced` / `OutOfSync` / `Unknown`) responde *o estado vivo corresponde ao
+  Git?* — um diff puro.
+- **Health status** (`Healthy` / `Progressing` / `Degraded` / `Missing` / `Suspended`) responde
+  *os workloads estão realmente de pé?* — as health checks por recurso do Argo.
 
-They're orthogonal: you can be `Synced + Degraded` (you faithfully deployed a broken manifest —
-fix Git) or `OutOfSync + Healthy` (a hand-patch that works but isn't in Git — self-heal will
-revert it). The next step manufactures exactly that second case.
+Eles são ortogonais: você pode estar `Synced + Degraded` (você implantou fielmente um manifesto
+quebrado — conserte o Git) ou `OutOfSync + Healthy` (um patch manual que funciona, mas não está
+no Git — o self-heal vai revertê-lo). O próximo passo fabrica exatamente esse segundo caso.
 </details>
 
 ---
 
-### Step 4 — break→fix: drift it by hand, watch self-heal revert
+### Step 4 — break→fix: provoque drift na mão, veja o self-heal reverter
 
-The GitOps moment. Git says `guestbook-ui` has **1** replica. Change it by hand and watch Argo
-CD notice the drift and **put it back** — no human, no `kubectl apply`.
+O momento GitOps. O Git diz que o `guestbook-ui` tem **1** réplica. Mude isso na mão e observe o
+Argo CD perceber o drift e **colocar de volta** — sem humano, sem `kubectl apply`.
 
 ```bash
 kubectl -n default scale deployment guestbook-ui --replicas=5
-kubectl -n default get deploy guestbook-ui -w    # Ctrl-C after it settles back to 1
+kubectl -n default get deploy guestbook-ui -w    # Ctrl-C depois que assentar de volta em 1
 ```
 
-**Task:** watch the replica count briefly jump toward 5, then get dragged back to **1** by Argo.
+**Tarefa:** veja a contagem de réplicas saltar brevemente em direção a 5 e depois ser arrastada
+de volta para **1** pelo Argo.
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ kubectl -n default scale deployment guestbook-ui --replicas=5
@@ -230,29 +235,30 @@ $ kubectl -n default get deploy guestbook-ui -w
 NAME           READY   UP-TO-DATE   AVAILABLE   AGE
 guestbook-ui   1/5     5            1           6m
 guestbook-ui   5/5     5            5           6m
-guestbook-ui   1/1     1            1           6m    # self-heal reverted it
+guestbook-ui   1/1     1            1           6m    # o self-heal reverteu
 ```
 
-You scaled to 5; within a reconcile cycle Argo CD compared live (5) against Git (1), saw
-**drift**, and **re-applied Git** — back to 1. That's `selfHeal: true`. The cluster *refuses to
-stay drifted from Git*. This is the S03 reconcile loop with Git in the "desired" slot: observe →
-diff (5 ≠ 1) → act (re-apply) → repeat. If you were watching the Application, it flicked
-`OutOfSync → Synced` as it healed.
+Você escalou para 5; dentro de um ciclo de reconciliação o Argo CD comparou o vivo (5) com o Git
+(1), viu o **drift** e **reaplicou o Git** — de volta para 1. Isso é `selfHeal: true`. O cluster
+*se recusa a permanecer em drift em relação ao Git*. Este é o loop de reconciliação da S03 com o
+Git na vaga do "desejado": observar → diff (5 ≠ 1) → agir (reaplicar) → repetir. Se você estava
+observando a Application, ela piscou `OutOfSync → Synced` enquanto se curava.
 </details>
 
-**Question (required):** what would happen to that hand-scale if `selfHeal` were **off**?
+**Pergunta (obrigatória):** o que aconteceria com esse scale manual se o `selfHeal` estivesse
+**desligado**?
 
-<details><summary>Answer — prove it</summary>
+<details><summary>Resposta — prove você mesmo</summary>
 
-With self-heal off, Argo still **detects** the drift (it always does) but does **not** revert it —
-the app just sits `OutOfSync` until a human syncs. Prove it:
+Com o self-heal desligado, o Argo continua **detectando** o drift (ele sempre detecta), mas
+**não** o reverte — a app simplesmente fica em `OutOfSync` até que um humano sincronize. Prove:
 
 ```bash
-# turn self-heal off
+# desligue o self-heal
 kubectl -n argocd patch application guestbook --type merge \
   -p '{"spec":{"syncPolicy":{"automated":{"selfHeal":false}}}}'
 
-# drift it again
+# provoque o drift de novo
 kubectl -n default scale deployment guestbook-ui --replicas=5
 sleep 20
 kubectl -n argocd get application guestbook \
@@ -264,82 +270,87 @@ kubectl -n default get deploy guestbook-ui
 SYNC       HEALTH
 OutOfSync  Healthy
 NAME           READY   UP-TO-DATE   AVAILABLE   AGE
-guestbook-ui   5/5     5            5           8m      # stays at 5 — NOT reverted
+guestbook-ui   5/5     5            5           8m      # continua em 5 — NÃO revertido
 ```
 
-`OutOfSync + Healthy`: 5 replicas run happily, but the cluster no longer matches Git and Argo
-**leaves it alone**. Drift *detection* is always on; **self-heal** is the auto-revert on top.
-Put it back and restore the policy:
+`OutOfSync + Healthy`: as 5 réplicas rodam felizes, mas o cluster não corresponde mais ao Git e o
+Argo **deixa quieto**. A *detecção* de drift está sempre ligada; o **self-heal** é a reversão
+automática por cima. Coloque tudo de volta e restaure a policy:
 
 ```bash
 kubectl -n argocd patch application guestbook --type merge \
   -p '{"spec":{"syncPolicy":{"automated":{"selfHeal":true}}}}'
 ```
 
-Re-enabling self-heal makes Argo revert the drift again within a reconcile cycle — back to 1
-replica, `Synced`.
+Reativar o self-heal faz o Argo reverter o drift de novo dentro de um ciclo de reconciliação —
+de volta a 1 réplica, `Synced`.
 
 </details>
 
 ---
 
-## Stretch (optional) — change Git, watch it re-sync
+## Stretch (optional) — mude o Git, veja-o re-sincronizar
 
-This is the "Git is the source of truth" beat end-to-end — it needs a repo **you can push to**.
+Este é o momento "o Git é a fonte da verdade" de ponta a ponta — ele precisa de um repo **em que
+você consiga dar push**.
 
-1. **Fork** `https://github.com/argoproj/argocd-example-apps` on GitHub (or push a copy to any Git
-   host you control).
-2. Point the Application at your fork: edit `application.yaml`'s `repoURL` to your fork's URL and
-   `kubectl apply -f application.yaml` again.
-3. In your fork, edit `guestbook/guestbook-ui-deployment.yaml` — bump `replicas` to `2` — and
+1. Faça um **fork** de `https://github.com/argoproj/argocd-example-apps` no GitHub (ou envie uma
+   cópia para qualquer host Git que você controle).
+2. Aponte a Application para o seu fork: edite o `repoURL` do `application.yaml` para a URL do
+   seu fork e dê `kubectl apply -f application.yaml` de novo.
+3. No seu fork, edite `guestbook/guestbook-ui-deployment.yaml` — suba `replicas` para `2` — e
    `git commit && git push`.
-4. Watch Argo detect the new commit and re-sync:
+4. Observe o Argo detectar o novo commit e re-sincronizar:
 
 ```bash
 kubectl -n argocd get application guestbook -w
 ```
 
-<details><summary>What you should see — and why it matters</summary>
+<details><summary>O que você deve ver — e por que isso importa</summary>
 
-Within Argo's polling interval (~3 min by default, or immediately if you wire a webhook / run
-`argocd app get guestbook --refresh`), the app flips `Synced → OutOfSync → Synced` and the live
-Deployment moves to **2 replicas** — because **Git changed**, not because anyone touched the
-cluster. That's the whole discipline: the **only** way to change the cluster is to change Git,
-and every change is a reviewable, revertable commit. Contrast with Step 4, where a *cluster*
-change (drift) was reverted; here a *Git* change is what actually propagates.
+Dentro do intervalo de polling do Argo (~3 min por padrão, ou imediatamente se você ligar um
+webhook / rodar `argocd app get guestbook --refresh`), a app vira `Synced → OutOfSync → Synced` e
+o Deployment vivo passa para **2 réplicas** — porque **o Git mudou**, não porque alguém tocou no
+cluster. É essa a disciplina inteira: o **único** jeito de mudar o cluster é mudar o Git, e toda
+mudança é um commit revisável e revertível. Compare com o Step 4, em que uma mudança de
+*cluster* (drift) foi revertida; aqui é uma mudança de *Git* que de fato se propaga.
 
-Clean up the fork path the same way: `kubectl -n argocd delete application guestbook`.
+Limpe o caminho do fork da mesma forma: `kubectl -n argocd delete application guestbook`.
 </details>
 
 ## Expected state / output
 
-- **Pull, not push.** You applied one `Application`; Argo CD pulled the guestbook repo and
-  deployed it — you never `kubectl apply`'d the guestbook manifests yourself.
-- **Synced / Healthy are independent.** Sync = "cluster == Git?"; health = "workloads OK?" — read
-  both off `.status.sync.status` and `.status.health.status`.
-- **Self-heal reverts drift.** A hand-scale to 5 was dragged back to Git's 1, automatically.
-- **Drift detection ≠ self-heal.** With `selfHeal: false`, the same drift stays `OutOfSync` and is
-  *not* reverted — detection always runs; self-heal is the auto-fix on top.
+- **Pull, não push.** Você aplicou uma única `Application`; o Argo CD fez o pull do repo do
+  guestbook e o implantou — você nunca deu `kubectl apply` nos manifestos do guestbook.
+- **Synced / Healthy são independentes.** Sync = "cluster == Git?"; health = "workloads OK?" —
+  leia os dois em `.status.sync.status` e `.status.health.status`.
+- **O self-heal reverte o drift.** Um scale manual para 5 foi arrastado de volta para o 1 do
+  Git, automaticamente.
+- **Detecção de drift ≠ self-heal.** Com `selfHeal: false`, o mesmo drift continua `OutOfSync` e
+  *não* é revertido — a detecção sempre roda; o self-heal é a correção automática por cima.
 
-Representative statuses include Ready/Running Pods, Application `Synced/OutOfSync` sync
-statuses, `Healthy/Progressing` health statuses, drift held at `OutOfSync` while
-`selfHeal: false` and auto-reverted once `selfHeal: true`, and the last-sync revision
-message — compare meaning, not ephemeral values (revision SHAs, Pod-name suffixes, ages).
+Statuses representativos incluem Pods Ready/Running, os sync statuses `Synced/OutOfSync` da
+Application, os health statuses `Healthy/Progressing`, o drift mantido em `OutOfSync` enquanto
+`selfHeal: false` e revertido automaticamente com `selfHeal: true`, e a mensagem de revision do
+último sync — compare o significado, não valores efêmeros (SHAs de revision, sufixos de nome de
+Pod, idades).
 
 ## Explanation
 
-Argo CD continuously detects drift, but only selfHeal (or a manual sync) acts
-to reconcile. Sync and health are independent axes — a Healthy app can still be OutOfSync —
-so the challenge is reading both status fields and the syncPolicy that authorizes the fix.
+O Argo CD detecta drift continuamente, mas só o selfHeal (ou um sync manual) age para
+reconciliar. Sync e health são eixos independentes (uma app Healthy ainda pode estar OutOfSync),
+e é essa a causa de o challenge exigir a leitura dos dois campos de status e da syncPolicy que
+autoriza a correção.
 
-The guided steps above prove the control-plane behaviour for this section; read Events and
-status fields when a one-line phase is ambiguous.
+Os passos guiados acima provam o comportamento do control plane para esta seção; leia os Events
+e os campos de status quando uma fase de uma linha só for ambígua.
 
 ## Troubleshooting and recovery
 
-Re-apply the lab's named manifests with `kubectl apply -f <file> -n "$NS"` after fixing the
-broken field, or delete only the labelled objects from Cleanup / reset and restart the guided
-task. Prefer `kubectl describe` Events over guessing. Do not run broad cluster deletes.
+Reaplique os manifestos nomeados do lab com `kubectl apply -f <file> -n "$NS"` depois de
+corrigir o campo quebrado, ou delete apenas os objetos com label da seção Cleanup / reset e
+reinicie o guided task. Prefira os Events do `kubectl describe` a chutar. Não rode deletes
+amplos no cluster.
 
 ## Challenge solution
 
@@ -356,17 +367,19 @@ kubectl -n argocd get application guestbook -w
 
 ### Expected state / output
 
-With selfHeal off, the app stays OutOfSync at the drifted replica count. After
-selfHeal is restored (or a sync), status returns Synced and the Deployment replica count
-matches Git.
+Com o selfHeal desligado, a app permanece OutOfSync na contagem de réplicas em drift. Depois que
+o selfHeal é restaurado (ou após um sync), o status volta a Synced e a contagem de réplicas do
+Deployment corresponde ao Git.
 
 ### Explanation
 
-Argo CD continuously detects drift, but only selfHeal (or a manual sync) acts
-to reconcile. Sync and health are independent axes — a Healthy app can still be OutOfSync —
-so the challenge is reading both status fields and the syncPolicy that authorizes the fix.
+O Argo CD detecta drift continuamente, mas só o selfHeal (ou um sync manual) age para
+reconciliar. Sync e health são eixos independentes (uma app Healthy ainda pode estar OutOfSync),
+e é essa a causa de o challenge exigir a leitura dos dois campos de status e da syncPolicy que
+autoriza a correção.
 
 ### Hints
 
-Inspect spec.syncPolicy.automated on the Application; compare kubectl get deploy
-replicas with the Git guestbook manifest; patch selfHeal true or run argocd/kubectl sync.
+Inspecione spec.syncPolicy.automated na Application; compare as réplicas de
+kubectl get deploy com o manifesto guestbook do Git; aplique patch de selfHeal true ou rode
+argocd/kubectl sync.

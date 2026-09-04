@@ -34,14 +34,14 @@ const pods = computed<PodState[]>(() => {
 
 <template>
   <div class="kw-state">
-    <div class="kw-kicker">Cluster state</div>
+    <div class="kw-kicker">Estado do cluster</div>
     <TransitionGroup name="kw-state-pods" tag="div" class="kw-state-pods">
       <PodCard v-for="pod in pods" :key="pod.id" v-bind="pod" />
     </TransitionGroup>
     <div class="kw-state-caption">
-      <template v-if="props.step <= 0">Desired = observed. Nothing to do.</template>
-      <template v-else-if="props.step === 1">Spec changed → new Pod is created first.</template>
-      <template v-else>New Pod ready → old Pod is terminated.</template>
+      <template v-if="props.step <= 0">Desejado = observado. Nada a fazer.</template>
+      <template v-else-if="props.step === 1">Spec mudou → o Pod novo é criado primeiro.</template>
+      <template v-else>Pod novo Ready → o Pod antigo é terminado.</template>
     </div>
   </div>
 </template>

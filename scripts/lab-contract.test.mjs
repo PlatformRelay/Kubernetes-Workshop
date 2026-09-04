@@ -219,7 +219,7 @@ test('requires the complete ordered participant lab skeleton and substantive met
     [
       'metadata order',
       lab.replace(
-        '| **Section** | S05 — Pod *(red line 1/5)* |',
+        '| **Section** | S05 — Pod *("linha vermelha" 1/5)* |',
         'moved below objective',
       ).replace(
         '## Prerequisites',
@@ -229,7 +229,7 @@ test('requires the complete ordered participant lab skeleton and substantive met
     ],
     [
       'shallow metadata',
-      lab.replace('| **Section** | S05 — Pod *(red line 1/5)* |', '| **Section** | x |'),
+      lab.replace('| **Section** | S05 — Pod *("linha vermelha" 1/5)* |', '| **Section** | x |'),
       'metadata field is not substantive: Section',
     ],
   ];
@@ -351,10 +351,10 @@ test('rejects a colliding Lab 08 class and mandatory unpinned translation', () =
         )
         .replace('kubectl get ingressclass "$INGRESS_CLASS" >/dev/null', 'true')
         .replace(
-          'report the returned application version, and explain why TLS needs SNI rather than only an\nHTTP Host header.',
+          'reporte a versão da aplicação retornada e explique por que o TLS precisa de SNI\nem vez de apenas um header Host de HTTP.',
           'translate the Ingress and identify one Gateway plus two HTTPRoutes.',
         )
-        .replace('not part of the challenge success criteria or verification', 'part of verification')
+        .replace('não faz parte dos critérios de sucesso nem da verificação do challenge', 'part of verification')
       : source;
     writeFileSync(join(day, name), content);
   }

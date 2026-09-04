@@ -71,10 +71,10 @@ function hasData(ordinal: number): boolean {
 }
 
 const phaseLabel: Record<PodState, string> = {
-  absent: 'not created',
+  absent: 'não criado',
   running: 'Running',
   terminating: 'Terminating',
-  restored: 'Running (recreated)',
+  restored: 'Running (recriado)',
 }
 
 const phaseTone: Record<PodState, string> = {
@@ -89,7 +89,7 @@ const phaseTone: Record<PodState, string> = {
   <div class="kw-sts">
     <div class="kw-sts-headless">
       <K8sIcon kind="svc" variant="unlabeled" size="1.6rem" />
-      <span>headless Service <code>web</code> · <code>clusterIP: None</code></span>
+      <span>Service headless <code>web</code> · <code>clusterIP: None</code></span>
     </div>
 
     <div class="kw-sts-lanes">
@@ -107,7 +107,7 @@ const phaseTone: Record<PodState, string> = {
           </div>
         </div>
 
-        <div class="kw-sts-link" :class="{ 'is-live': pvcExists(o.ordinal) }">mounts ↓</div>
+        <div class="kw-sts-link" :class="{ 'is-live': pvcExists(o.ordinal) }">monta ↓</div>
 
         <!-- Per-Pod PVC from volumeClaimTemplates -->
         <div class="kw-sts-card kw-sts-pvc" :class="{ 'is-ghost': !pvcExists(o.ordinal) }">
@@ -122,29 +122,30 @@ const phaseTone: Record<PodState, string> = {
 
     <div v-if="props.showCaption" class="kw-sts-caption">
       <template v-if="props.step <= 0">
-        The <strong>headless Service</strong> gives each Pod a stable DNS name. No Pods yet —
-        the StatefulSet is about to create them <strong>in order</strong>.
+        O <strong>Service headless</strong> dá a cada Pod um nome DNS estável. Nenhum Pod
+        ainda — o StatefulSet está prestes a criá-los <strong>em ordem</strong>.
       </template>
       <template v-else-if="props.step === 1">
-        <code>web-0</code> is created <strong>first</strong> and its own PVC
-        <code>data-web-0</code> is minted from <code>volumeClaimTemplates</code>.
+        <code>web-0</code> é criado <strong>primeiro</strong> e o seu próprio PVC
+        <code>data-web-0</code> é criado a partir do <code>volumeClaimTemplates</code>.
       </template>
       <template v-else-if="props.step === 2">
-        Then <code>web-1</code>, then <code>web-2</code> — <strong>strictly ordered</strong>,
-        each with its <strong>own</strong> PVC. Ordinal names are stable, not random.
+        Depois <code>web-1</code>, depois <code>web-2</code> — <strong>estritamente em
+        ordem</strong>, cada um com o seu <strong>próprio</strong> PVC. Os nomes ordinais são
+        estáveis, não aleatórios.
       </template>
       <template v-else-if="props.step === 3">
-        Write a sentinel into <code>web-1</code>'s volume — it lands on
-        <code>data-web-1</code>, not on the Pod.
+        Escreva um sentinela no volume do <code>web-1</code> — ele vai parar no
+        <code>data-web-1</code>, não no Pod.
       </template>
       <template v-else-if="props.step === 4">
-        Delete <code>web-1</code>. Its PVC <code>data-web-1</code> is a
-        <strong>separate object</strong> and stays put — data and all.
+        Delete o <code>web-1</code>. O PVC <code>data-web-1</code> dele é um
+        <strong>objeto separado</strong> e continua ali — com dados e tudo.
       </template>
       <template v-else>
-        <code>web-1</code> returns with the <strong>same name</strong>, re-binds the
-        <strong>same PVC</strong>, and the sentinel survived. A Deployment Pod would come back
-        <strong>random and empty</strong>.
+        <code>web-1</code> volta com o <strong>mesmo nome</strong>, faz bind de novo no
+        <strong>mesmo PVC</strong>, e o sentinela sobreviveu. Um Pod de Deployment voltaria
+        <strong>aleatório e vazio</strong>.
       </template>
     </div>
   </div>

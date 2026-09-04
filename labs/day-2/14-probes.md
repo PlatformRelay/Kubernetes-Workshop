@@ -5,70 +5,70 @@
 | | |
 | --- | --- |
 | **Section** | S14 — Health probes |
-| **Environment** | namespace ✓ / kind ✓ *(no cluster-admin; everything runs in your own namespace)* |
+| **Environment** | namespace ✓ / kind ✓ *(sem cluster-admin; tudo roda no seu próprio namespace)* |
 | **Estimated time** | 30 min |
 
 ## Objective
 
-Make the difference between the three probes *physical*. You will add **readiness**,
-**liveness**, and **startup** probes to the through-line `web` Deployment, then break each on
-purpose and watch the outcomes diverge:
+Tornar *física* a diferença entre as três probes. Você vai adicionar probes de **readiness**,
+**liveness** e **startup** ao Deployment `web` da linha condutora, depois quebrar cada uma de
+propósito e observar os desfechos divergirem:
 
-- **readiness ✗** → the Pod stays `Running` but leaves its Service's **EndpointSlice**, so it
-  gets no traffic — and because the other replicas keep serving, users see **zero downtime**.
-- **liveness ✗** → the kubelet **restarts** the container (`RESTARTS ↑`) and, if it stays
-  broken, drops it into **CrashLoopBackOff**.
-- **startup** → shepherds a deliberately slow-starting container past a liveness probe that
-  would otherwise kill it mid-boot.
+- **readiness ✗** → o Pod continua `Running`, mas sai da **EndpointSlice** do seu Service, então
+  não recebe tráfego — e, como as outras réplicas continuam servindo, os usuários veem **zero downtime**.
+- **liveness ✗** → o kubelet **reinicia** o container (`RESTARTS ↑`) e, se continuar
+  quebrado, o derruba em **CrashLoopBackOff**.
+- **startup** → conduz um container deliberadamente lento para iniciar através de uma liveness
+  probe que, de outra forma, o mataria no meio do boot.
 
-The one contrast to leave with: **readiness drains traffic, liveness restarts the container** —
-same-looking failure, opposite response.
+O contraste para levar daqui: **readiness drena tráfego, liveness reinicia o container** —
+falhas de aparência igual, respostas opostas.
 
-> **Set your namespace once.** Everything runs in your assigned namespace (or a kind cluster).
-> Set a shell variable so every command is copy-pasteable:
+> **Defina seu namespace uma vez.** Tudo roda no seu namespace atribuído (ou em um cluster kind).
+> Defina uma variável de shell para que todo comando seja copiável e colável:
 >
 > ```bash
-> export NS=<your-assigned-namespace>          # kind users: export NS=default
+> export NS=<your-assigned-namespace>          # usuários de kind: export NS=default
 > kubectl config set-context --current --namespace="$NS"
 > ```
 
 ## Prerequisites
 
-- Labs 05–07 concepts (Pod, Deployment, Service/EndpointSlice). This lab **creates its own**
-  objects and doesn't depend on leftovers from earlier labs.
-- `kubectl` against your assigned namespace **or** a local kind cluster. No admin rights.
-- Internet pull access for `ghcr.io/platformrelay/workshop-web:v1`, `curlimages/curl`, and
-  `busybox:1.37` (the slow-starter stand-in).
-- A way to send HTTP from inside the cluster — the steps use a throwaway `curl` Pod; no
-  external LoadBalancer or Ingress is needed (ClusterIP only).
+- Conceitos dos Labs 05–07 (Pod, Deployment, Service/EndpointSlice). Este lab **cria seus
+  próprios** objetos e não depende de sobras de labs anteriores.
+- `kubectl` apontando para seu namespace atribuído **ou** um cluster kind local. Sem direitos de admin.
+- Acesso de pull à internet para `ghcr.io/platformrelay/workshop-web:v1`, `curlimages/curl` e
+  `busybox:1.37` (o substituto de app lento para iniciar).
+- Uma forma de enviar HTTP de dentro do cluster — os passos usam um Pod `curl` descartável;
+  nenhum LoadBalancer externo ou Ingress é necessário (apenas ClusterIP).
 
 ## Files used
 
-- `deployment-probes.yaml` — the `web` Deployment (3 replicas) with **all three** probes; its
-  container/probe block mirrors the slide's final magic-move frame.
-- `service.yaml` — a ClusterIP `web` Service selecting `app: s14`.
-- `broken/deployment-broken-liveness.yaml` — liveness pointed at a **dead port** → constant
-  restarts.
-- `broken/deployment-broken-readiness.yaml` — every Pod started with `FAIL_READY=1`, so
-  readiness **fails from boot** for the whole Deployment → a rollout that stalls (stretch).
-- `slowstart-noguard.yaml` / `slowstart.yaml` — a slow-booting container **without** and
-  **with** a startup probe.
+- `deployment-probes.yaml` — o Deployment `web` (3 réplicas) com **as três** probes; seu bloco
+  de container/probe espelha o frame final do magic-move do slide.
+- `service.yaml` — um Service `web` do tipo ClusterIP selecionando `app: s14`.
+- `broken/deployment-broken-liveness.yaml` — liveness apontada para uma **porta morta** →
+  restarts constantes.
+- `broken/deployment-broken-readiness.yaml` — todos os Pods iniciados com `FAIL_READY=1`, então
+  a readiness **falha desde o boot** para o Deployment inteiro → um rollout que trava (stretch).
+- `slowstart-noguard.yaml` / `slowstart.yaml` — um container de boot lento **sem** e
+  **com** uma startup probe.
 
-Everything is labelled `app: s14`, so cleanup is a single label selector.
+Tudo é rotulado com `app: s14`, então o cleanup é um único label selector.
 
 ---
 
 ## Guided task
 
-Work through the steps without opening the companion unless you are blocked. The spoiler
-contains exact commands, expected state, explanations, and recovery guidance.
+Percorra os passos sem abrir o companion, a menos que fique travado. O spoiler
+contém os comandos exatos, o estado esperado, explicações e orientações de recuperação.
 
-[Spoiler: guided solutions and expected output](./14-probes.solution.md#guided-solutions)
+[Spoiler: soluções guiadas e saída esperada](./14-probes.solution.md#guided-solutions)
 
-### Step 0 — a Deployment that reports its own health
+### Step 0 — um Deployment que reporta a própria saúde
 
-Apply the `web` Deployment with all three probes plus its Service, and confirm every Pod
-reaches `READY 1/1` and lands in the EndpointSlice.
+Aplique o Deployment `web` com as três probes mais seu Service e confirme que todos os Pods
+chegam a `READY 1/1` e entram na EndpointSlice.
 
 ```bash
 cat > deployment-probes.yaml <<'EOF'
@@ -100,7 +100,7 @@ spec:
           startupProbe:
             httpGet: { path: /healthz, port: 8080 }
             periodSeconds: 3
-            failureThreshold: 30          # up to 90s to boot before liveness takes over
+            failureThreshold: 30          # até 90s para o boot antes de a liveness assumir
 EOF
 
 cat > service.yaml <<'EOF'
@@ -120,7 +120,7 @@ kubectl apply -f deployment-probes.yaml -f service.yaml
 kubectl rollout status deployment/web
 ```
 
-**Task:** confirm all three Pods are `Ready` and their IPs are in the EndpointSlice.
+**Tarefa:** confirme que os três Pods estão `Ready` e que seus IPs estão na EndpointSlice.
 
 ```bash
 kubectl get pods -l app=s14 -o wide
@@ -128,34 +128,34 @@ kubectl get endpointslices -l kubernetes.io/service-name=web \
   -o jsonpath='{.items[*].endpoints[*].addresses[0]}{"\n"}'
 ```
 
-**Question:** the container was `Running` a second after it started, but didn't reach
-`READY 1/1` until a moment later. What sat between "Running" and "Ready"?
+**Pergunta:** o container estava `Running` um segundo depois de iniciar, mas só chegou a
+`READY 1/1` um momento depois. O que ficou entre "Running" e "Ready"?
 
 ---
 
-### Step 1 — break→fix readiness on one Pod (zero downtime)
+### Step 1 — break→fix a readiness em um Pod (zero downtime)
 
-Readiness controls **traffic only**. Break it on a *single* Pod and watch that Pod leave the
-EndpointSlice while the Service keeps serving from the other two — no restart, no error to the
-caller.
+A readiness controla **apenas o tráfego**. Quebre-a em um *único* Pod e observe esse Pod sair da
+EndpointSlice enquanto o Service continua servindo pelos outros dois — sem restart, sem erro para
+quem chama.
 
 ```bash
-# pick one Pod and flip its /ready endpoint to failing — no exec, no restart, just an HTTP POST
+# escolha um Pod e vire seu endpoint /ready para falha — sem exec, sem restart, só um HTTP POST
 POD=$(kubectl get pod -l app=s14 -o jsonpath='{.items[0].metadata.name}')
 POD_IP=$(kubectl get pod "$POD" -o jsonpath='{.status.podIP}')
 kubectl run curl-flip --rm -i --restart=Never --image=curlimages/curl -- \
   curl -s -X POST "http://$POD_IP:8080/fail"
 
-# within ~15s (periodSeconds 5 × failureThreshold 3) it flips to NotReady
-kubectl get pod "$POD" -w        # Ctrl-C once READY shows 0/1
+# em ~15s (periodSeconds 5 × failureThreshold 3) ele vira NotReady
+kubectl get pod "$POD" -w        # Ctrl-C quando READY mostrar 0/1
 ```
 
-> The demo app was built for exactly this: `POST /fail` makes its `/ready` endpoint answer
-> **503** (the process itself keeps serving normally); `POST /recover` flips it back. We
-> target the **Pod IP**, not the Service, so only this one Pod is affected.
+> O app de demo foi construído exatamente para isto: `POST /fail` faz seu endpoint `/ready` responder
+> **503** (o processo em si continua servindo normalmente); `POST /recover` o vira de volta.
+> Miramos o **IP do Pod**, não o Service, então só este Pod é afetado.
 
-**Task:** confirm the broken Pod is still `Running` but has **left** the EndpointSlice, and that
-its `RESTARTS` count is unchanged.
+**Tarefa:** confirme que o Pod quebrado continua `Running`, mas **saiu** da EndpointSlice, e que
+seu contador de `RESTARTS` não mudou.
 
 ```bash
 kubectl get pod "$POD"
@@ -163,8 +163,8 @@ kubectl get endpointslices -l kubernetes.io/service-name=web \
   -o jsonpath='{.items[*].endpoints[*].addresses[0]}{"\n"}'
 ```
 
-**Task:** prove **zero downtime** — hammer the Service while one Pod is drained and confirm every
-request still gets a `200`.
+**Tarefa:** prove o **zero downtime** — martele o Service enquanto um Pod está drenado e confirme
+que toda request ainda recebe `200`.
 
 ```bash
 kubectl run curl-s14 --rm -i --restart=Never --image=curlimages/curl -- \
@@ -173,25 +173,25 @@ kubectl run curl-s14 --rm -i --restart=Never --image=curlimages/curl -- \
          done; echo'
 ```
 
-**Task:** fix it — `POST /recover` and watch the Pod rejoin the slice.
+**Tarefa:** conserte — `POST /recover` e observe o Pod voltar à slice.
 
 ```bash
 kubectl run curl-flip --rm -i --restart=Never --image=curlimages/curl -- \
   curl -s -X POST "http://$POD_IP:8080/recover"
-kubectl get pod "$POD" -w        # Ctrl-C once it's back to 1/1
+kubectl get pod "$POD" -w        # Ctrl-C quando voltar a 1/1
 kubectl get endpointslices -l kubernetes.io/service-name=web \
   -o jsonpath='{.items[*].endpoints[*].addresses[0]}{"\n"}'
 ```
 
-**Question:** readiness failed, yet the app **never restarted**. Why not — and which probe
-*would* have restarted it?
+**Pergunta:** a readiness falhou, e mesmo assim o app **nunca reiniciou**. Por que não — e qual
+probe *teria* reiniciado?
 
 ---
 
-### Step 2 — break→fix liveness (restarts → CrashLoopBackOff)
+### Step 2 — break→fix a liveness (restarts → CrashLoopBackOff)
 
-Liveness controls **the container's life**. Point it at a port nothing is listening on and the
-kubelet will conclude the container is wedged and restart it — over and over.
+A liveness controla **a vida do container**. Aponte-a para uma porta em que nada está escutando e
+o kubelet vai concluir que o container travou e reiniciá-lo — de novo e de novo.
 
 ```bash
 mkdir -p broken
@@ -218,7 +218,7 @@ spec:
             periodSeconds: 5
             failureThreshold: 3
           livenessProbe:
-            httpGet: { path: /healthz, port: 9999 }   # nothing listens on 9999 → always fails
+            httpGet: { path: /healthz, port: 9999 }   # nada escuta na 9999 → sempre falha
             periodSeconds: 10
             failureThreshold: 3
           startupProbe:
@@ -228,10 +228,10 @@ spec:
 EOF
 
 kubectl apply -f broken/deployment-broken-liveness.yaml
-kubectl get pods -l app=s14 -w     # Ctrl-C after RESTARTS climbs a couple of times
+kubectl get pods -l app=s14 -w     # Ctrl-C depois de RESTARTS subir algumas vezes
 ```
 
-**Task:** read `RESTARTS` and confirm from `describe` that **liveness** is the cause.
+**Tarefa:** leia `RESTARTS` e confirme pelo `describe` que a **liveness** é a causa.
 
 ```bash
 kubectl get pods -l app=s14
@@ -239,8 +239,8 @@ POD=$(kubectl get pod -l app=s14 -o jsonpath='{.items[0].metadata.name}')
 kubectl describe pod "$POD" | sed -n '/Liveness:/p;/Events:/,$p'
 ```
 
-**Task:** fix it — re-apply the correct manifest (liveness back on port 8080) and confirm restarts
-stop.
+**Tarefa:** conserte — reaplique o manifesto correto (liveness de volta na porta 8080) e confirme
+que os restarts param.
 
 ```bash
 kubectl apply -f deployment-probes.yaml
@@ -248,19 +248,20 @@ kubectl rollout status deployment/web
 kubectl get pods -l app=s14
 ```
 
-**Question:** during the break, `RESTARTS` climbed but the Pod objects were never recreated and
-never `Deleted`. Which component did the killing, and why didn't a new Pod appear each time?
+**Pergunta:** durante a quebra, `RESTARTS` subiu, mas os objetos Pod nunca foram recriados nem
+`Deleted`. Qual componente fez a matança, e por que um novo Pod não apareceu a cada vez?
 
 ---
 
-### Step 3 — startup probe: protect a slow starter
+### Step 3 — startup probe: proteja um app lento para iniciar
 
-A container that takes 20s to boot will be **killed by liveness** long before it's ready —
-unless a **startup** probe holds liveness off until the app is up. Show both halves. (The
-demo app boots in milliseconds, so it can't play the victim here — instead we fake a slow
-starter with busybox: 20 seconds of `sleep` before its tiny `httpd` starts serving.)
+Um container que leva 20s para dar boot será **morto pela liveness** muito antes de ficar pronto —
+a menos que uma **startup** probe segure a liveness até o app subir. Mostre as duas metades. (O
+app de demo dá boot em milissegundos, então não pode fazer o papel de vítima aqui — em vez disso,
+simulamos um iniciador lento com busybox: 20 segundos de `sleep` antes de seu pequeno `httpd`
+começar a servir.)
 
-First, the trap — a slow starter with liveness but **no** startup probe:
+Primeiro, a armadilha — um iniciador lento com liveness mas **sem** startup probe:
 
 ```bash
 cat > slowstart-noguard.yaml <<'EOF'
@@ -281,21 +282,21 @@ spec:
         - name: web
           image: busybox:1.37
           command: ["sh", "-c", "sleep 20 && echo up > /tmp/index.html && exec httpd -f -p 8080 -h /tmp"]
-          ports: [{ containerPort: 8080 }]     # 20s of sleep before it serves
+          ports: [{ containerPort: 8080 }]     # 20s de sleep antes de servir
           livenessProbe:
             httpGet: { path: /, port: 8080 }
             initialDelaySeconds: 3
             periodSeconds: 3
-            failureThreshold: 3           # ~12s in, liveness gives up — mid-boot
+            failureThreshold: 3           # aos ~12s, a liveness desiste — no meio do boot
 EOF
 
 kubectl apply -f slowstart-noguard.yaml
-kubectl get pod -l role=slow -w        # Ctrl-C after you see RESTARTS climbing
+kubectl get pod -l role=slow -w        # Ctrl-C depois de ver RESTARTS subindo
 ```
 
-**Task:** confirm the container is killed *before it ever finishes booting*.
+**Tarefa:** confirme que o container é morto *antes mesmo de terminar o boot*.
 
-Now the fix — add a **startup** probe that suspends liveness until the app is up:
+Agora o conserto — adicione uma **startup** probe que suspende a liveness até o app subir:
 
 ```bash
 cat > slowstart.yaml <<'EOF'
@@ -320,84 +321,84 @@ spec:
           startupProbe:
             httpGet: { path: /, port: 8080 }
             periodSeconds: 3
-            failureThreshold: 30          # up to 90s to boot — comfortably past 20s
+            failureThreshold: 30          # até 90s para o boot — folgadamente além dos 20s
           livenessProbe:
             httpGet: { path: /, port: 8080 }
             periodSeconds: 3
-            failureThreshold: 3           # only starts counting AFTER startup passes
+            failureThreshold: 3           # só começa a contar DEPOIS que a startup passa
 EOF
 
 kubectl apply -f slowstart.yaml
-kubectl get pod -l role=slow -w        # Ctrl-C once it reaches 1/1 (~25s), RESTARTS 0
+kubectl get pod -l role=slow -w        # Ctrl-C quando chegar a 1/1 (~25s), RESTARTS 0
 ```
 
-**Question:** with the same `httpGet /` on both the startup and liveness probes, why does startup
-succeed where a plain liveness probe failed?
+**Pergunta:** com o mesmo `httpGet /` nas probes de startup e de liveness, por que a startup tem
+sucesso onde uma liveness probe pura falhou?
 
 ---
 
 ## Observe
 
-- `READY 1/1` requires the **readiness** probe to pass; until then a `Running` Pod is `0/1` and
-  stays out of the Service's EndpointSlice.
-- **readiness ✗** on one Pod → it stays `Running` with `RESTARTS 0`, leaves the EndpointSlice,
-  and the Service serves from the other replicas with **zero downtime**; fix → it rejoins.
-- **liveness ✗** → the kubelet restarts the container in place (`RESTARTS ↑`) → **CrashLoopBackOff**
-  if it stays broken; the Pod object is never recreated or deleted.
-- A **startup** probe suspends readiness and liveness until the app boots, so a slow starter that
-  a bare liveness probe would kill mid-boot comes up cleanly.
-- `kubectl describe pod` Events are the diagnosis: `Readiness probe failed…` /
-  `Liveness probe failed…` is the first place to look when `Running` isn't serving.
+- `READY 1/1` exige que a probe de **readiness** passe; até lá, um Pod `Running` fica `0/1` e
+  permanece fora da EndpointSlice do Service.
+- **readiness ✗** em um Pod → ele continua `Running` com `RESTARTS 0`, sai da EndpointSlice,
+  e o Service serve pelas outras réplicas com **zero downtime**; conserto → ele volta.
+- **liveness ✗** → o kubelet reinicia o container no lugar (`RESTARTS ↑`) → **CrashLoopBackOff**
+  se continuar quebrado; o objeto Pod nunca é recriado nem deletado.
+- Uma **startup** probe suspende readiness e liveness até o app dar boot, então um iniciador lento
+  que uma liveness probe sozinha mataria no meio do boot sobe limpo.
+- Os Events do `kubectl describe pod` são o diagnóstico: `Readiness probe failed…` /
+  `Liveness probe failed…` é o primeiro lugar para olhar quando `Running` não está servindo.
 
 ## Challenge
 
-Traffic stops reaching one Pod while another Pod restarts in a loop. Decide which
-symptom is readiness versus liveness, restore Service endpoints without unnecessary
-restarts, and explain why readiness failures must not kill the container.
+O tráfego para de chegar a um Pod enquanto outro Pod reinicia em loop. Diagnostique qual
+sintoma é readiness e qual é liveness, restaure os endpoints do Service sem restarts
+desnecessários e explique por que falhas de readiness não devem matar o container.
 
 **Difficulty:** Intermediate
 
-**Success criteria:** Show an endpoint removed for a failed readiness probe and a restart count climb for
-failed liveness, restore both probes, and explain the traffic versus process consequence
-of each.
+**Success criteria:** Comprove um endpoint removido por uma readiness probe que falhou e um contador de restarts
+subindo por falha de liveness, restaure as duas probes e explique a consequência de tráfego
+versus processo de cada uma.
 
-**Hints:** Watch kubectl get endpointslices while toggling readiness; use kubectl describe pod
-for liveness restart Events.
+**Hints:** Observe kubectl get endpointslices enquanto alterna a readiness; use kubectl describe pod
+para os Events de restart da liveness.
 
-[Spoiler: challenge solution](./14-probes.solution.md#challenge-solution)
+[Spoiler: solução do challenge](./14-probes.solution.md#challenge-solution)
 
 ## Verify
 
-Confirm probe evidence before cleanup.
+Confirme as evidências das probes antes do cleanup.
 
 ```bash
 kubectl get deploy,pods,svc -n "$NS" -l app=s14
 kubectl get endpointslices -n "$NS"
 ```
 
-Expected: the probes Deployment still exists and EndpointSlices reflect Ready Pods
-(or the deliberate not-ready state you have not yet fixed).
+Esperado: o Deployment das probes ainda existe e os EndpointSlices refletem os Pods Ready
+(ou o estado not-ready deliberado que você ainda não consertou).
 
 ## Cleanup / reset
 
-Run this last — it removes everything the lab created (the `slow` Deployment carries
-`app: s14` on the object itself, so the label selector catches it too).
+Execute isto por último — remove tudo que o lab criou (o Deployment `slow` carrega
+`app: s14` no próprio objeto, então o label selector o pega também).
 
 ```bash
-# scoped cleanup — everything this lab made is labelled app=s14
+# cleanup com escopo — tudo que este lab criou é rotulado app=s14
 kubectl delete deployment,svc -l app=s14 -n "$NS" --ignore-not-found
 rm -f deployment-probes.yaml service.yaml slowstart.yaml slowstart-noguard.yaml
 rm -rf broken
 
-# panic reset (namespace): also removes anything else left in your namespace
+# reset de pânico (namespace): remove também qualquer outra coisa deixada no seu namespace
 # kubectl delete deployment,svc,pod --all -n "$NS" --ignore-not-found
-# panic reset (kind): make kind-down && make kind-up   # or: kind delete cluster
+# reset de pânico (kind): make kind-down && make kind-up   # ou: kind delete cluster
 ```
 
-## Stretch (optional) — a rollout that stalls on readiness
+## Stretch (opcional) — um rollout que trava na readiness
 
-Readiness gates the rollout itself. Break readiness for the **whole** Deployment and watch the
-rollout refuse to finish — while the old Pods keep serving.
+A readiness também trava o próprio rollout. Quebre a readiness do Deployment **inteiro** e
+observe o rollout se recusar a terminar — enquanto os Pods antigos continuam servindo.
 
 ```bash
 mkdir -p broken
@@ -420,7 +421,7 @@ spec:
           image: ghcr.io/platformrelay/workshop-web:v1
           env:
             - name: FAIL_READY
-              value: "1"                  # the app boots with /ready answering 503 → never Ready
+              value: "1"                  # o app dá boot com /ready respondendo 503 → nunca Ready
           ports: [{ containerPort: 8080 }]
           readinessProbe:
             httpGet: { path: /ready, port: 8080 }
@@ -429,6 +430,6 @@ spec:
 EOF
 
 kubectl apply -f broken/deployment-broken-readiness.yaml
-kubectl rollout status deployment/web --timeout=40s   # will report it did NOT roll out
+kubectl rollout status deployment/web --timeout=40s   # vai reportar que NÃO terminou o rollout
 kubectl get pods -l app=s14
 ```

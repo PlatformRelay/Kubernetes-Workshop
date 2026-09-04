@@ -48,12 +48,12 @@ export const sections = sectionDefinitions.map((section) => {
 })
 
 export const generatedDecks = [
-  { file: 'slides-day-1.md', title: 'Day 1', description: 'Foundations and the core red line', select: (s) => s.day === 1 && s.canonical },
-  { file: 'slides-day-2.md', title: 'Day 2', description: 'Modern routing and running workloads well', select: (s) => s.day === 2 && s.canonical },
-  { file: 'slides-day-3.md', title: 'Day 3', description: 'Security, delivery, operators, and best practices', select: (s) => s.day === 3 && s.canonical },
-  { file: 'slides-optional.md', title: 'Optional / Appendix', description: 'On-ramp, add-backs, and advanced material', select: (s) => !s.canonical },
-  { file: 'slides-3day.md', title: '3-day compatibility cut', description: 'The three canonical days in one compatibility deck', select: (s) => s.canonical },
-  { file: 'slides.md', title: 'Content superset', description: 'Compatibility deck containing every section source', select: () => true },
+  { file: 'slides-day-1.md', title: 'Day 1', description: 'Fundamentos e a red line central', select: (s) => s.day === 1 && s.canonical },
+  { file: 'slides-day-2.md', title: 'Day 2', description: 'Roteamento moderno e como rodar bem os workloads', select: (s) => s.day === 2 && s.canonical },
+  { file: 'slides-day-3.md', title: 'Day 3', description: 'Segurança, entrega, operators e boas práticas', select: (s) => s.day === 3 && s.canonical },
+  { file: 'slides-optional.md', title: 'Optional / Appendix', description: 'Rampa de entrada, seções extras e material avançado', select: (s) => !s.canonical },
+  { file: 'slides-3day.md', title: '3-day compatibility cut', description: 'Os três dias canônicos em um único deck de compatibilidade', select: (s) => s.canonical },
+  { file: 'slides.md', title: 'Content superset', description: 'Deck de compatibilidade contendo todas as fontes de seção', select: () => true },
 ]
 
 /** S21 GitOps tool switch — Argo CD | Flux only (US-GITOPS-CHOICE). Not a plugin API. */
@@ -563,9 +563,9 @@ export function renderDeck(selected, { title, description, generated = true } = 
   if (!deferred.length && /\b(?:deferred|stub)\b/i.test(description))
     throw new Error('Deck description contradiction: authored selection says deferred')
   const statusNotice = deferred.length
-    ? `\n> **Status:** ${deferred.join(', ')} ${deferred.length === 1 ? 'is' : 'are'} deferred and not schedulable.\n`
-    : '\n> **Status:** All selected sections are authored.\n'
-  return `---\ntheme: ./theme\ntitle: Kubernetes Practitioner Workshop — ${title}\ninfo: |\n  Open source, vendor-neutral Kubernetes workshop.\n  ${description}. Sections are imported from the shared section library.\nlayout: cover\n---\n${marker}\n# Kubernetes Practitioner Workshop\n\n${title} — ${description}.\n${statusNotice}\n${imports}\n`
+    ? `\n> **Status:** ${deferred.join(', ')} ${deferred.length === 1 ? 'está' : 'estão'} deferred e fora de agenda.\n`
+    : '\n> **Status:** Todas as seções selecionadas estão escritas.\n'
+  return `---\ntheme: ./theme\ntitle: Kubernetes Practitioner Workshop — ${title}\ninfo: |\n  Workshop de Kubernetes open source e vendor-neutral.\n  ${description}. As seções são importadas da biblioteca de seções compartilhada.\nlayout: cover\n---\n${marker}\n# Kubernetes Practitioner Workshop\n\n${title} — ${description}.\n${statusNotice}\n${imports}\n`
 }
 
 export function renderGeneratedDecks(manifest = sections, { gitops = DEFAULT_GITOPS } = {}) {

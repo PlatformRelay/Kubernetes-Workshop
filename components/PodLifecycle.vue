@@ -37,10 +37,10 @@ const deleted = () => props.step >= 3
     <div class="kw-plc-timeline">
       <div
         v-for="(node, i) in [
-          { key: 'pending', label: 'Pending', hint: 'scheduler + image pull' },
-          { key: 'running', label: 'Running', hint: 'containers up' },
-          { key: 'restart', label: 'Running', hint: 'container restarted in place' },
-          { key: 'deleted', label: 'Deleted', hint: 'object removed' },
+          { key: 'pending', label: 'Pending', hint: 'scheduler + pull da image' },
+          { key: 'running', label: 'Running', hint: 'containers no ar' },
+          { key: 'restart', label: 'Running', hint: 'container reiniciado no lugar' },
+          { key: 'deleted', label: 'Deleted', hint: 'objeto removido' },
         ]"
         :key="node.key"
         class="kw-plc-node"
@@ -80,21 +80,21 @@ const deleted = () => props.step >= 3
 
       <p class="kw-plc-caption">
         <template v-if="props.step <= 0">
-          Mina runs <code>kubectl apply -f pod.yaml</code>. The Pod is accepted, but
-          <strong>phase stays Pending</strong> until a node is chosen and the image is pulled.
+          A Mina roda <code>kubectl apply -f pod.yaml</code>. O Pod é aceito, mas a
+          <strong>phase continua Pending</strong> até um node ser escolhido e a image ser baixada.
         </template>
         <template v-else-if="props.step === 1">
-          Image pulled, container started — <strong>Running</strong>, <code>READY 1/1</code>.
-          Phase is a headline; <code>describe</code> and Events hold the detail.
+          Image baixada, container iniciado — <strong>Running</strong>, <code>READY 1/1</code>.
+          A phase é a manchete; <code>describe</code> e os Events têm o detalhe.
         </template>
         <template v-else-if="props.step === 2">
-          PID 1 exits non-zero. <strong>Same Pod</strong>, container restarted —
-          <code>RESTARTS</code> climbs, phase stays <strong>Running</strong>.
-          <code>restartPolicy</code> never recreates the Pod object.
+          O PID 1 sai com código diferente de zero. <strong>Mesmo Pod</strong>, container
+          reiniciado — <code>RESTARTS</code> sobe, a phase continua <strong>Running</strong>.
+          O <code>restartPolicy</code> nunca recria o objeto Pod.
         </template>
         <template v-else>
-          <code>kubectl delete pod web</code> — the object is gone. Nothing in the cluster
-          recreates it. That gap is exactly why a <strong>Deployment</strong> exists (S06).
+          <code>kubectl delete pod web</code> — o objeto sumiu. Nada no cluster o recria.
+          Essa lacuna é exatamente o motivo de um <strong>Deployment</strong> existir (S06).
         </template>
       </p>
     </div>

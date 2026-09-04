@@ -1,33 +1,33 @@
-# Lab 09 — Gateway API (S09) — solutions
+# Lab 09 — Gateway API (S09) — soluções
 
-Use this companion after attempting the participant lab. Outputs contain representative
-names, addresses, ages, and image sizes; compare the state and meaning rather than copying
-ephemeral values literally.
+Use este companion depois de tentar o lab do participante. As saídas contêm nomes, endereços,
+idades e tamanhos de image representativos; compare o estado e o significado em vez de copiar
+literalmente valores efêmeros.
 
 ## Guided solutions
 
-### Step 1 (kind only) — install the CRDs, the controller, and a GatewayClass
+### Step 1 (apenas kind) — instale os CRDs, o controller e uma GatewayClass
 
-The Gateway API types are **not** built into Kubernetes. Install the standard-channel
-CRDs, then a conformant controller (**Envoy Gateway**). Its install manifest does
-**not** create a `GatewayClass` — you declare that yourself, exactly like the
-`IngressClass` beat in Lab 08.
+Os tipos do Gateway API **não** vêm embutidos no Kubernetes. Instale os CRDs do standard
+channel e, em seguida, um controller conformante (**Envoy Gateway**). O manifesto de instalação
+dele **não** cria uma `GatewayClass` — você mesmo a declara, exatamente como o momento da
+`IngressClass` no Lab 08.
 
 ```bash
-# make sure you are on your workshop cluster / namespace
+# garanta que você está no cluster / namespace do workshop
 kubectl create namespace workshop --dry-run=client -o yaml | kubectl apply -f -
 kubectl config set-context --current --namespace=workshop
 export NS=workshop
 
-# 1a. Gateway API standard-channel CRDs v1.5.1 (GatewayClass, Gateway, HTTPRoute — all GA).
-#     Server-side apply: the CRDs are too large for the client-side annotation.
+# 1a. CRDs do standard channel do Gateway API v1.5.1 (GatewayClass, Gateway, HTTPRoute — todos GA).
+#     Server-side apply: os CRDs são grandes demais para a annotation client-side.
 kubectl apply --server-side -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.5.1/standard-install.yaml
 
-# 1b. Envoy Gateway v1.8.2 — the controller (installs into namespace `envoy-gateway-system`).
+# 1b. Envoy Gateway v1.8.2 — o controller (instala no namespace `envoy-gateway-system`).
 kubectl apply --server-side -f https://github.com/envoyproxy/gateway/releases/download/v1.8.2/install.yaml
 kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
 
-# 1c. The GatewayClass — infra's one-time declaration of who implements the API.
+# 1c. A GatewayClass — a declaração única da infra de quem implementa a API.
 cat > gatewayclass.yaml <<'EOF'
 apiVersion: gateway.networking.k8s.io/v1
 kind: GatewayClass
@@ -38,11 +38,11 @@ spec:
 EOF
 kubectl apply -f gatewayclass.yaml
 
-# Confirm the controller claimed its class:
+# Confirme que o controller reivindicou sua class:
 kubectl get gatewayclass
 ```
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ kubectl get gatewayclass
@@ -50,16 +50,16 @@ NAME   CONTROLLER                                      ACCEPTED   AGE
 eg     gateway.envoyproxy.io/gatewayclass-controller   True       10s
 ```
 
-`ACCEPTED=True` means a running controller owns the `eg` class — that name is what your
-`Gateway` will reference. If `ACCEPTED` stays `Unknown`, the controller isn't ready yet
-(`kubectl -n envoy-gateway-system get pods`) or the `controllerName` doesn't match the
-one the controller announces.
+`ACCEPTED=True` significa que um controller em execução é dono da class `eg` — é esse o nome que
+seu `Gateway` vai referenciar. Se `ACCEPTED` continuar `Unknown`, o controller ainda não está
+pronto (`kubectl -n envoy-gateway-system get pods`) ou o `controllerName` não bate com o
+que o controller anuncia.
 </details>
 
-<details><summary>Shared-cluster path — do this instead of Step 1</summary>
+<details><summary>Caminho do cluster compartilhado — faça isto em vez do Step 1</summary>
 
-Do **not** install anything. Confirm the CRDs and a controller already exist, and note
-the class name:
+**Não** instale nada. Confirme que os CRDs e um controller já existem, e anote o
+nome da class:
 
 ```console
 $ kubectl get gatewayclass
@@ -67,17 +67,17 @@ NAME   CONTROLLER                                      ACCEPTED   AGE
 eg     gateway.envoyproxy.io/gatewayclass-controller   True       40d
 ```
 
-Use that class name in `gateway.yaml` (replace `eg` if your cluster's class differs) and
-run everything in your assigned namespace `$NS`. Skip every `kind`-specific command below.
+Use esse nome de class no `gateway.yaml` (substitua `eg` se a class do seu cluster for diferente) e
+execute tudo no seu namespace atribuído `$NS`. Pule todos os comandos específicos de `kind` abaixo.
 </details>
 
 ---
 
-### Step 2 — deploy two distinguishable backends
+### Step 2 — implante dois backends distinguíveis
 
-Same backends as Lab 08 — the Gateway fronts the identical Services, proving the red
-line. `workshop-web` answers every request with its pod name and version (`v1`/`v2`),
-so you can always tell which backend replied.
+Os mesmos backends do Lab 08 — o Gateway fica na frente de Services idênticos, provando a red
+line. O `workshop-web` responde toda request com o nome do seu pod e a versão (`v1`/`v2`),
+então você sempre sabe qual backend respondeu.
 
 ```bash
 cat > backends.yaml <<'EOF'
@@ -128,7 +128,7 @@ kubectl apply -f backends.yaml
 kubectl rollout status deploy/web && kubectl rollout status deploy/web2
 ```
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ kubectl apply -f backends.yaml
@@ -141,16 +141,16 @@ deployment "web" successfully rolled out
 deployment "web2" successfully rolled out
 ```
 
-Each Service listens on port **80** and targets the container's **8080** — `web` serves
-`workshop-web v1`, `web2` serves `v2`, so every response names the backend that answered.
+Cada Service escuta na porta **80** e aponta para a **8080** do container — o `web` serve
+`workshop-web v1`, o `web2` serve `v2`, então toda resposta nomeia o backend que respondeu.
 </details>
 
 ---
 
-### Step 3 — apply the Gateway (the entry point)
+### Step 3 — aplique o Gateway (o ponto de entrada)
 
-The `Gateway` is the infra-owned door: one HTTP listener on port 80. By default a listener
-admits `HTTPRoutes` from the **same namespace**, so no extra `allowedRoutes` is needed here.
+O `Gateway` é a porta de propriedade da infra: um listener HTTP na porta 80. Por padrão, um listener
+admite `HTTPRoutes` do **mesmo namespace**, então nenhum `allowedRoutes` extra é necessário aqui.
 
 ```bash
 cat > gateway.yaml <<'EOF'
@@ -159,7 +159,7 @@ kind: Gateway
 metadata:
   name: web
 spec:
-  gatewayClassName: eg             # must match `kubectl get gatewayclass`
+  gatewayClassName: eg             # deve bater com `kubectl get gatewayclass`
   listeners:
     - name: http
       port: 80
@@ -171,10 +171,10 @@ kubectl get gateway web
 kubectl get gateway web -o jsonpath='{range .status.conditions[*]}{.type}={.status} ({.reason}) {.message}{"\n"}{end}'
 ```
 
-**Task:** what do the `Accepted` and `Programmed` conditions say, and why is that
-honest on kind?
+**Tarefa:** o que as conditions `Accepted` e `Programmed` dizem, e por que isso é
+honesto no kind?
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ kubectl get gateway web
@@ -186,9 +186,9 @@ Accepted=True (Accepted) The Gateway has been scheduled by Envoy Gateway
 Programmed=False (AddressNotAssigned) No addresses have been assigned to the Gateway
 ```
 
-`Accepted=True` — the controller claimed your Gateway and provisioned a data plane for
-it: look in the controller's namespace and you'll find a dedicated proxy Service (and
-Deployment) that this Gateway now owns:
+`Accepted=True` — o controller reivindicou seu Gateway e provisionou um data plane para
+ele: olhe no namespace do controller e você vai encontrar um Service (e Deployment) de proxy
+dedicado do qual este Gateway agora é dono:
 
 ```console
 $ kubectl get svc -n envoy-gateway-system
@@ -197,21 +197,21 @@ envoy-gateway               ClusterIP      10.96.24.13    <none>        18000/TC
 envoy-workshop-web-5c866941 LoadBalancer   10.96.101.87   <pending>     80:31627/TCP   20s
 ```
 
-`Programmed=False (AddressNotAssigned)` is kind being kind: the provisioned Service is
-type `LoadBalancer`, and a kind cluster has no load-balancer controller to hand out an
-external IP — `EXTERNAL-IP` stays `<pending>`, so the Gateway never gets an address.
-The proxy is still running and configured; you'll reach it with `port-forward` in
-Step 4. **This is the observability win already:** instead of an Ingress's silent empty
-`ADDRESS`, you get a typed condition with a reason that says exactly what's missing.
-On a cloud or shared cluster the LB assigns an address and `PROGRAMMED` flips `True`.
+`Programmed=False (AddressNotAssigned)` é o kind sendo honesto: o Service provisionado é do
+tipo `LoadBalancer`, e um cluster kind não tem controller de load balancer para entregar um
+IP externo — o `EXTERNAL-IP` fica em `<pending>`, então o Gateway nunca ganha um endereço.
+O proxy continua rodando e configurado; você vai alcançá-lo com `port-forward` no
+Step 4. **Esta já é a vitória de observabilidade:** em vez do `ADDRESS` silenciosamente vazio
+de um Ingress, você recebe uma condition tipada com um reason que diz exatamente o que falta.
+Em um cluster cloud ou compartilhado o LB atribui um endereço e o `PROGRAMMED` vira `True`.
 </details>
 
 ---
 
-### Step 4 — apply the HTTPRoute and route by path
+### Step 4 — aplique o HTTPRoute e roteie por path
 
-The `HTTPRoute` is the app-owned rules. It **attaches** to the Gateway with `parentRefs` and
-sends `/` to the `web` Service.
+O `HTTPRoute` são as regras de propriedade da aplicação. Ele **se anexa** ao Gateway com `parentRefs` e
+envia `/` para o Service `web`.
 
 ```bash
 cat > route.yaml <<'EOF'
@@ -221,21 +221,21 @@ metadata:
   name: web
 spec:
   parentRefs:
-    - name: web                    # attach to the Gateway named "web"
+    - name: web                    # anexa ao Gateway chamado "web"
   hostnames:
     - web.example.com
   rules:
     - matches:
         - path: { type: PathPrefix, value: / }
       backendRefs:
-        - { name: web, port: 80 }  # the SAME Service from Lab 07
+        - { name: web, port: 80 }  # o MESMO Service do Lab 07
 EOF
 
 kubectl apply -f route.yaml
 kubectl get httproute web -o jsonpath='{range .status.parents[0].conditions[*]}{.type}={.status} ({.reason}) {.message}{"\n"}{end}'
 
-# Reach the Gateway: no LoadBalancer on kind, so port-forward its Envoy Service
-# (the upstream-documented path). The Service is labelled with its owning Gateway:
+# Alcance o Gateway: sem LoadBalancer no kind, então faça port-forward do Service Envoy dele
+# (o caminho documentado upstream). O Service é rotulado com o Gateway que o possui:
 export ENVOY_SERVICE=$(kubectl get svc -n envoy-gateway-system \
   --selector=gateway.envoyproxy.io/owning-gateway-namespace=$NS,gateway.envoyproxy.io/owning-gateway-name=web \
   -o jsonpath='{.items[0].metadata.name}')
@@ -244,9 +244,9 @@ sleep 2
 curl -H 'Host: web.example.com' http://localhost:8888/
 ```
 
-**Task:** which backend answers, and what do the HTTPRoute's conditions show?
+**Tarefa:** qual backend responde, e o que as conditions do HTTPRoute mostram?
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ kubectl get httproute web -o jsonpath='{range .status.parents[0].conditions[*]}{.type}={.status} ({.reason}) {.message}{"\n"}{end}'
@@ -260,40 +260,40 @@ requests served: 1
 ready: true
 ```
 
-`/` routes to the `web` Service — the same backend the Ingress fronted, now behind a
-Gateway + HTTPRoute, and the body says so: `workshop-web v1` plus the pod that served
-you. `Accepted=True` means a Gateway admitted the route; `ResolvedRefs=True` confirms
-every `backendRef` pointed at a real Service and port. (`port-forward` runs in the
-background; stop it later with `kill %1` or the cleanup section.)
+O `/` roteia para o Service `web` — o mesmo backend que o Ingress servia, agora atrás de um
+Gateway + HTTPRoute, e o corpo da resposta confirma: `workshop-web v1` mais o pod que te
+atendeu. `Accepted=True` significa que um Gateway admitiu a route; `ResolvedRefs=True` confirma
+que todo `backendRef` apontava para um Service e uma porta reais. (O `port-forward` roda em
+background; pare-o depois com `kill %1` ou pela seção de cleanup.)
 
-> If you use a **shared cluster**, replace the `port-forward` line with the address your
-> facilitator gave you: `curl http://web.example.com/` (real DNS supplies the `Host`), or
+> Se você usa um **cluster compartilhado**, substitua a linha do `port-forward` pelo endereço que
+> seu facilitador te deu: `curl http://web.example.com/` (o DNS real fornece o `Host`), ou
 > `curl --resolve web.example.com:80:<gateway-address> http://web.example.com/`.
 </details>
 
-**Question:** the HTTPRoute lists `hostnames: [web.example.com]`. What happens to a request
-whose `Host` header is something else?
+**Pergunta:** o HTTPRoute lista `hostnames: [web.example.com]`. O que acontece com uma request
+cujo header `Host` é outra coisa?
 
-<details><summary>Answer</summary>
+<details><summary>Resposta</summary>
 
 ```console
 $ curl -s -o /dev/null -w '%{http_code}\n' -H 'Host: nope.example.com' http://localhost:8888/
 404
 ```
 
-The listener admits the request, but no `HTTPRoute` hostname matches, so nothing routes —
-you get a `404`. `hostnames` on the route narrows which hosts its rules apply to, the same
-way an Ingress rule's `host` did.
+O listener admite a request, mas nenhum hostname de `HTTPRoute` casa, então nada é roteado —
+você recebe um `404`. O `hostnames` na route restringe a quais hosts as regras dela se aplicam,
+do mesmo jeito que o `host` de uma regra de Ingress fazia.
 </details>
 
 ---
 
-### Step 5 — add a typed header match
+### Step 5 — adicione um header match tipado
 
-Under Ingress anything past host/path needed controller-specific annotations. Here it's
-a **typed field**: add a rule that matches the header `x-env: canary` and sends those
-requests to `web2`. The header+path rule is **more specific**, so it wins over the plain
-`/` rule regardless of order.
+No Ingress, qualquer coisa além de host/path exigia annotations específicas do controller. Aqui é
+um **campo tipado**: adicione uma regra que casa com o header `x-env: canary` e envia essas
+requests para `web2`. A regra header+path é **mais específica**, então ela vence a regra simples
+de `/` independentemente da ordem.
 
 ```bash
 cat > route-header.yaml <<'EOF'
@@ -310,7 +310,7 @@ spec:
     - matches:
         - path: { type: PathPrefix, value: / }
           headers:
-            - { name: x-env, value: canary }   # typed match — no annotation
+            - { name: x-env, value: canary }   # match tipado — sem annotation
       backendRefs:
         - { name: web2, port: 80 }
     - matches:
@@ -321,13 +321,13 @@ EOF
 
 kubectl apply -f route-header.yaml
 
-curl -sH 'Host: web.example.com' http://localhost:8888/ | head -1                       # no header
-curl -sH 'Host: web.example.com' -H 'x-env: canary' http://localhost:8888/ | head -1    # with header
+curl -sH 'Host: web.example.com' http://localhost:8888/ | head -1                       # sem header
+curl -sH 'Host: web.example.com' -H 'x-env: canary' http://localhost:8888/ | head -1    # com header
 ```
 
-**Task:** which backend answers each request?
+**Tarefa:** qual backend responde a cada request?
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ curl -sH 'Host: web.example.com' http://localhost:8888/ | head -1
@@ -336,19 +336,19 @@ $ curl -sH 'Host: web.example.com' -H 'x-env: canary' http://localhost:8888/ | h
 workshop-web v2
 ```
 
-Same path `/`, two outcomes — the request carrying `x-env: canary` matches the more
-specific rule and lands on `web2` (which answers `workshop-web v2`); everything else
-falls through to `web`. That header-based split is a first-class, validated field.
-Under Ingress it would have been an untyped controller annotation — if your controller
-supported it at all.
+Mesmo path `/`, dois desfechos — a request que carrega `x-env: canary` casa com a regra mais
+específica e cai no `web2` (que responde `workshop-web v2`); todo o resto escorre para o `web`.
+Essa divisão baseada em header é um campo de primeira classe e validado.
+No Ingress teria sido uma annotation de controller sem tipo — se é que o seu controller
+suportava isso.
 </details>
 
 ---
 
-### Step 6 — break it: a `gatewayClassName` nobody owns
+### Step 6 — quebre: um `gatewayClassName` que ninguém possui
 
-Like an Ingress with the wrong class, a Gateway pointing at a class no controller owns just
-sits there. Prove it with a fresh Gateway.
+Como um Ingress com a class errada, um Gateway apontando para uma class que nenhum controller
+possui simplesmente fica parado. Prove isso com um Gateway novo.
 
 ```bash
 cat > gateway-broken.yaml <<'EOF'
@@ -357,7 +357,7 @@ kind: Gateway
 metadata:
   name: web-broken
 spec:
-  gatewayClassName: eg-typo        # no controller owns this class
+  gatewayClassName: eg-typo        # nenhum controller possui esta class
   listeners:
     - name: http
       port: 80
@@ -369,9 +369,9 @@ kubectl get gateway web-broken
 kubectl get gateway web-broken -o jsonpath='{range .status.conditions[*]}{.type}={.status} ({.reason}) {.message}{"\n"}{end}'
 ```
 
-**Task:** does the apply succeed? What is the Gateway's status, and who wrote it?
+**Tarefa:** o apply funciona? Qual é o status do Gateway, e quem o escreveu?
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ kubectl apply -f gateway-broken.yaml
@@ -387,28 +387,28 @@ Programmed=Unknown (Pending) Waiting for controller
 $ kubectl get gatewayclass
 NAME   CONTROLLER                                      ACCEPTED   AGE
 eg     gateway.envoyproxy.io/gatewayclass-controller   True       9m
-# there is no "eg-typo" GatewayClass — so nothing owns this Gateway
+# não existe GatewayClass "eg-typo" — então nada é dono deste Gateway
 ```
 
-The manifest applies fine — it's schema-valid — but the class `eg-typo` doesn't exist, so
-**no controller reconciles the Gateway**. Those `Unknown (Pending) Waiting for controller`
-conditions are **defaults baked into the CRD itself** — no controller ever touched this
-object. Compare Step 3: there the controller *replaced* them with `Accepted=True`. That's
-the Gateway API version of Ingress's silent empty `ADDRESS`, except the status names the
-problem, and the tell is `kubectl get gatewayclass`: the class you named isn't there.
+O manifesto aplica sem problemas — ele é válido pelo schema —, mas a class `eg-typo` não existe,
+então **nenhum controller reconcilia o Gateway**. Aquelas conditions `Unknown (Pending) Waiting
+for controller` são **defaults embutidos no próprio CRD** — nenhum controller jamais tocou neste
+objeto. Compare com o Step 3: lá o controller as *substituiu* por `Accepted=True`. Essa é a
+versão Gateway API do `ADDRESS` silenciosamente vazio do Ingress, exceto que aqui o status nomeia
+o problema, e a pista é o `kubectl get gatewayclass`: a class que você nomeou não está lá.
 </details>
 
-**Fix it:** point the broken Gateway at the real class and watch the controller claim it.
+**Conserte:** aponte o Gateway quebrado para a class real e observe o controller reivindicá-lo.
 
 ```bash
 kubectl patch gateway web-broken --type=merge -p '{"spec":{"gatewayClassName":"eg"}}'
 kubectl get gateway web-broken -o jsonpath='{range .status.conditions[*]}{.type}={.status} ({.reason}){"\n"}{end}'
 
-# it now has its own data plane too — then remove it, one front door is enough:
+# agora ele também tem seu próprio data plane — depois remova-o, uma porta de entrada basta:
 kubectl delete gateway web-broken
 ```
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ kubectl patch gateway web-broken --type=merge -p '{"spec":{"gatewayClassName":"eg"}}'
@@ -420,19 +420,19 @@ $ kubectl delete gateway web-broken
 gateway.gateway.networking.k8s.io/web-broken deleted
 ```
 
-The moment a real class name appears, the controller accepts the Gateway and provisions
-a data plane for it — `Waiting for controller` becomes `Accepted=True` within seconds
-(`Programmed` again reports the honest kind reason: no load balancer, no address). Your
-original `web` Gateway and its route were never affected.
+No instante em que um nome de class real aparece, o controller aceita o Gateway e provisiona
+um data plane para ele — `Waiting for controller` vira `Accepted=True` em segundos
+(o `Programmed` reporta de novo o motivo honesto do kind: sem load balancer, sem endereço). Seu
+Gateway `web` original e a route dele nunca foram afetados.
 </details>
 
-**Question:** earlier your HTTPRoute showed `ResolvedRefs=True`. What would make it
-`ResolvedRefs=False`, and why is that a *route* condition, not a *Gateway* one?
+**Pergunta:** antes, seu HTTPRoute mostrou `ResolvedRefs=True`. O que o tornaria
+`ResolvedRefs=False`, e por que essa é uma condition da *route*, e não do *Gateway*?
 
-<details><summary>Answer</summary>
+<details><summary>Resposta</summary>
 
 ```console
-# point a backendRef at a Service that doesn't exist:
+# aponte um backendRef para um Service que não existe:
 $ kubectl patch httproute web --type=json \
   -p='[{"op":"replace","path":"/spec/rules/1/backendRefs/0/name","value":"web-oops"}]'
 $ kubectl get httproute web -o jsonpath='{range .status.parents[0].conditions[*]}{.type}={.status} ({.reason}) {.message}{"\n"}{end}'
@@ -440,18 +440,18 @@ Accepted=True (Accepted) Route is accepted
 ResolvedRefs=False (BackendNotFound) service workshop/web-oops not found
 ```
 
-`ResolvedRefs` is about whether the **route's `backendRefs`** resolve to real Services/ports,
-which is the **app team's** concern — so it lives on the HTTPRoute, not the Gateway. `Accepted`
-(does a controller own the class, is the listener valid) is the **infra** concern and lives on
-the Gateway. Two conditions, two owners — the same role split the whole section is about. Undo
-with `kubectl apply -f route-header.yaml`.
+O `ResolvedRefs` diz respeito a se os **`backendRefs` da route** resolvem para Services/portas reais,
+o que é assunto do **time de aplicação** — por isso ele vive no HTTPRoute, e não no Gateway. O
+`Accepted` (um controller é dono da class? o listener é válido?) é assunto de **infra** e vive no
+Gateway. Duas conditions, dois donos — a mesma divisão de papéis de que trata a seção inteira.
+Desfaça com `kubectl apply -f route-header.yaml`.
 </details>
 
-### Stretch (optional) — a weighted canary
+### Stretch (opcional) — um canary ponderado
 
-Split one path across two backends by **weight** — the typed replacement for an
-annotation-based canary. Send `/` to `web` and `web2` 90/10 and count the versions in
-the response bodies.
+Divida um path entre dois backends por **weight** — a substituição tipada de um canary baseado
+em annotation. Envie `/` para `web` e `web2` em 90/10 e conte as versões nos corpos de
+resposta.
 
 ```bash
 cat > route-canary.yaml <<'EOF'
@@ -467,7 +467,7 @@ spec:
   rules:
     - matches:
         - path: { type: PathPrefix, value: / }
-      backendRefs:                     # typed weighted split — no annotation
+      backendRefs:                     # divisão ponderada tipada — sem annotation
         - { name: web,  port: 80, weight: 90 }
         - { name: web2, port: 80, weight: 10 }
 EOF
@@ -478,7 +478,7 @@ for i in $(seq 1 20); do curl -s -H 'Host: web.example.com' http://localhost:888
   | grep '^workshop-web' | sort | uniq -c
 ```
 
-<details><summary>Solution / what you're looking at</summary>
+<details><summary>Solução / o que você está vendo</summary>
 
 ```console
 $ for i in $(seq 1 20); do curl -s -H 'Host: web.example.com' http://localhost:8888/; done \
@@ -487,47 +487,47 @@ $ for i in $(seq 1 20); do curl -s -H 'Host: web.example.com' http://localhost:8
    2 workshop-web v2
 ```
 
-Roughly 90/10 across 20 requests (small samples vary) — the split is readable straight
-off the version line each backend prints. `weight` is a validated integer field on each
-`backendRef`, so traffic-splitting is portable and schema-checked — no controller
-annotation, no guessing at the format. Undo with `kubectl apply -f route-header.yaml`.
+Aproximadamente 90/10 em 20 requests (amostras pequenas variam) — a divisão é legível direto
+na linha de versão que cada backend imprime. O `weight` é um campo inteiro validado em cada
+`backendRef`, então a divisão de tráfego é portável e checada pelo schema — sem annotation de
+controller, sem adivinhar o formato. Desfaça com `kubectl apply -f route-header.yaml`.
 </details>
 
 ## Expected state / output
 
-- `kubectl get gatewayclass` shows a controller with `ACCEPTED=True` — and the class only
-  exists because someone **declared** it; the controller install doesn't create one.
-- A valid Gateway reaches `Accepted=True`; on kind `Programmed` stays
-  `False (AddressNotAssigned)` because no load balancer hands out an address — the proxy
-  still serves via `port-forward`. A `gatewayClassName` no controller owns leaves the CRD
-  defaults in place: `Unknown (Pending) Waiting for controller`.
-- `/` answers `workshop-web v1`; `/` **with** `x-env: canary` answers `workshop-web v2` —
-  a typed header match, no annotations.
-- A wrong `backendRef` Service name flips the **HTTPRoute's** `ResolvedRefs` to `False`
-  (route condition), while class problems show on the **Gateway's** `Accepted` (infra
-  condition).
+- `kubectl get gatewayclass` mostra um controller com `ACCEPTED=True` — e a class só
+  existe porque alguém a **declarou**; a instalação do controller não cria uma.
+- Um Gateway válido chega a `Accepted=True`; no kind, `Programmed` permanece
+  `False (AddressNotAssigned)` porque nenhum load balancer distribui um endereço — o proxy
+  ainda serve via `port-forward`. Um `gatewayClassName` que nenhum controller possui deixa os
+  defaults do CRD no lugar: `Unknown (Pending) Waiting for controller`.
+- `/` responde `workshop-web v1`; `/` **com** `x-env: canary` responde `workshop-web v2` —
+  um header match tipado, sem annotations.
+- Um nome de Service errado no `backendRef` vira o `ResolvedRefs` do **HTTPRoute** para `False`
+  (condition da route), enquanto problemas de class aparecem no `Accepted` do **Gateway**
+  (condition de infra).
 
-Representative statuses include Running/Complete/Failed Pods, Bound PVCs, Accepted
-Gateway conditions, or numeric HPA TARGETS — compare meaning, not ephemeral names.
+Status representativos incluem Pods Running/Complete/Failed, PVCs Bound, conditions Accepted de
+Gateway ou TARGETS numéricos de HPA — compare o significado, não nomes efêmeros.
 
 ## Explanation
 
-Gateway API separates infra ownership (GatewayClass / Gateway listeners) from app
-ownership (HTTPRoute parentRefs and backendRefs). Traffic fails closed until the
-controller accepts the attachment and resolves backends, so reading status.conditions
-identifies the lane before you rewrite routing rules.
+O Gateway API separa a propriedade da infra (GatewayClass / listeners do Gateway) da
+propriedade da aplicação (parentRefs e backendRefs do HTTPRoute). O tráfego falha fechado até o
+controller aceitar o attachment e resolver os backends, então ler os `status.conditions` aponta a
+causa e identifica a faixa antes de você reescrever as regras de roteamento.
 
-The guided steps above prove the control-plane behaviour for this section; read Events and
-status fields when a one-line phase is ambiguous.
+Os passos guiados acima provam o comportamento do control plane desta seção; leia os Events e os
+campos de status quando uma fase de uma linha só for ambígua.
 
 ## Troubleshooting and recovery
 
-If the Gateway stays unprogrammed or the HTTPRoute never Accepts, read
-`kubectl describe gateway -n "$NS"` and `kubectl describe httproute -n "$NS"` for the failing
-condition (Accepted, Programmed, or ResolvedRefs). Restore a known-good attachment with
-`kubectl apply -f route.yaml -n "$NS"` after correcting `parentRefs` / `gatewayClassName`, then
-retry `curl -fsS -H "Host: web.local" "http://${GATEWAY_IP:-127.0.0.1}/"`. Delete only named lab
-objects from Cleanup / reset — do not run live namespaced `--all` deletes.
+Se o Gateway continuar unprogrammed ou o HTTPRoute nunca chegar a Accepted, leia
+`kubectl describe gateway -n "$NS"` e `kubectl describe httproute -n "$NS"` em busca da condition
+que falhou (Accepted, Programmed ou ResolvedRefs). Restabeleça um attachment sabidamente bom com
+`kubectl apply -f route.yaml -n "$NS"` depois de corrigir `parentRefs` / `gatewayClassName`, e então
+tente de novo `curl -fsS -H "Host: web.local" "http://${GATEWAY_IP:-127.0.0.1}/"`. Apague apenas os
+objetos de lab nomeados em Cleanup / reset — não execute deleções `--all` ao vivo no namespace.
 
 ## Challenge solution
 
@@ -544,19 +544,19 @@ curl -fsS -H "Host: web.local" "http://${GATEWAY_IP:-127.0.0.1}/web" || \
 
 ### Expected state / output
 
-The HTTPRoute reports Accepted=True and ResolvedRefs=True. A path-routed request
-returns the web backend body (or port-forward reaches it). The diagnosis names which
-status condition failed and whether the broken field lived on the Gateway (infra) or
+O HTTPRoute reporta Accepted=True e ResolvedRefs=True. Uma request roteada por path
+retorna o corpo do backend `web` (ou o port-forward o alcança). O diagnóstico nomeia qual
+condition de status falhou e se o campo quebrado vivia no Gateway (infra) ou no
 HTTPRoute (app).
 
 ### Explanation
 
-Gateway API separates infra ownership (GatewayClass / Gateway listeners) from app
-ownership (HTTPRoute parentRefs and backendRefs). Traffic fails closed until the
-controller accepts the attachment and resolves backends, so reading status.conditions
-identifies the lane before you rewrite routing rules.
+O Gateway API separa a propriedade da infra (GatewayClass / listeners do Gateway) da
+propriedade da aplicação (parentRefs e backendRefs do HTTPRoute). O tráfego falha fechado até o
+controller aceitar o attachment e resolver os backends, então ler os `status.conditions` aponta a
+causa e identifica a faixa antes de você reescrever as regras de roteamento.
 
 ### Hints
 
-Compare Gateway status.conditions with the HTTPRoute parentRefs and backendRefs;
-inspect the GatewayClass name before editing the route.
+Compare os status.conditions do Gateway com os parentRefs e backendRefs do HTTPRoute;
+inspecione o nome da GatewayClass antes de editar a route.

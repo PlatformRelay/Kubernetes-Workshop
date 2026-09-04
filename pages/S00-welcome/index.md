@@ -7,267 +7,273 @@ tier: core
 track: Foundations
 ---
 
-# Welcome & setup
+# Boas-vindas & setup
 
-Everyone can reach their environment and run kubectl.
+Todo mundo consegue acessar seu ambiente e rodar kubectl.
 
-**core** · suggested Day 1 · Foundations track
+**core** · sugerido para o Day 1 · trilha Foundations
 
 <!--
-Section S00 — Welcome & setup. Timing: ~20 min slides + 15 min lab.
-Outcome: everyone can reach their environment and run kubectl.
-Beats: goals + 50/50 contract · agenda / red line · two environments ·
-ground rules · how labs work · prerequisites · optional container refresher ·
-context switching. CKx tie-in: —. Lab: labs/day-1/00-setup.md.
+Seção S00 — Boas-vindas & setup. Duração: ~20 min de slides + 15 min de lab.
+Resultado: todo mundo consegue acessar seu ambiente e rodar kubectl.
+Beats: objetivos + contrato 50/50 · agenda / red line · dois ambientes ·
+regras da casa · como os labs funcionam · pré-requisitos · refresher opcional de
+containers · troca de contexto. Amarração CKx: —. Lab: labs/day-1/00-setup.md.
 -->
 
 ---
 layout: statement
-kicker: Why we're here
+kicker: Por que estamos aqui
 ---
 
-Three days to take you from **"what is a container"** to confidently
-**authoring, running, and operating** core Kubernetes workloads.
+Três dias para levar você de **"o que é um container"** a
+**criar, rodar e operar** com confiança os workloads centrais do Kubernetes.
 
-Half the time is slides, half is your keyboard: every concept block ends with
-a lab you run in **your own** environment.
+Metade do tempo é slide, metade é o seu teclado: todo bloco de conceito termina
+com um lab que você roda no **seu próprio** ambiente.
 
 <!--
-Speaker: state the outcome out loud. The 50/50 contract is the promise of the
-whole workshop — every idea is immediately practised. Point at the footer
-progress bar: they'll see the red line grow all day.
+Speaker: diga o resultado em voz alta. O contrato 50/50 é a promessa do workshop
+inteiro — toda ideia é praticada imediatamente. Aponte para a barra de progresso
+no rodapé: eles vão ver a red line crescer o dia todo.
 -->
 
 ---
 layout: agenda
-heading: Day 1 — foundations and the red line
-kicker: What today builds
+heading: Day 1 — fundamentos e a red line
+kicker: O que construímos hoje
 columns: 2
 ---
 
-- **Containers** — images, layers, runtimes <em>· then Lab 01</em>
-- **Container security** — small, non-root, scanned images <em>· then Lab 02</em>
-- **Mental model** — control plane, nodes, reconciliation <em>· then Lab 03</em>
-- **kubectl** — get, describe, explain, apply <em>· then Lab 04</em>
-- **Pod** 📦 — the smallest deployable unit <em>· then Lab 05</em>
-- **Deployment** — desired state & rolling updates <em>· then Lab 06</em>
-- **Service** — a stable address for moving Pods <em>· then Lab 07</em>
-- **Ingress** — HTTP from outside the cluster <em>· then Lab 08</em>
+- **Containers** — images, layers, runtimes <em>· depois o Lab 01</em>
+- **Segurança de containers** — images pequenas, non-root e escaneadas <em>· depois o Lab 02</em>
+- **Modelo mental** — control plane, nodes, reconciliação <em>· depois o Lab 03</em>
+- **kubectl** — get, describe, explain, apply <em>· depois o Lab 04</em>
+- **Pod** 📦 — a menor unidade implantável <em>· depois o Lab 05</em>
+- **Deployment** — estado desejado & rolling updates <em>· depois o Lab 06</em>
+- **Service** — um endereço estável para Pods que se movem <em>· depois o Lab 07</em>
+- **Ingress** — HTTP de fora do cluster <em>· depois o Lab 08</em>
 
 <div class="mt-4 kw-muted text-sm" v-click>
 
-The core spine is one **red line** — `Pod → Deployment → Service → Ingress → Gateway API` —
-and every step **extends the same manifest** so you always see the through-line.
+A espinha central do core é uma única **"linha vermelha"** (red line) —
+`Pod → Deployment → Service → Ingress → Gateway API` —
+e cada passo **estende o mesmo manifesto**, então você sempre enxerga o fio condutor.
 
 </div>
 
 <!--
-Speaker: the numbered cards are concept blocks; the "then Lab NN" tag is the
-50/50 contract made visible. Gateway API (red line 5/5) lands Day 2.
+Speaker: os cards numerados são blocos de conceito; a tag "depois o Lab NN" é o
+contrato 50/50 tornado visível. Gateway API (red line 5/5) chega no Day 2.
 -->
 
 ---
 layout: comparison
-heading: 'Two ways to work — pick one, both keep up'
-leftHeading: Assigned namespace
-rightHeading: Local kind cluster
-leftBadge: shared cluster
-rightBadge: your laptop
+heading: 'Dois jeitos de trabalhar — escolha um, os dois acompanham'
+leftHeading: Namespace atribuído
+rightHeading: Cluster kind local
+leftBadge: cluster compartilhado
+rightBadge: seu laptop
 ---
 
-- A slice of a **shared cluster** the facilitator runs.
-- You own **one namespace** (e.g. `student-07`); no cluster-admin.
-- Nothing to install beyond `kubectl` + a kubeconfig.
-- A few labs that need cluster-wide add-ons run **read-only** here.
+- Uma fatia de um **cluster compartilhado** operado pelo facilitador.
+- Você é dono de **um namespace** (ex.: `student-07`); sem cluster-admin.
+- Nada para instalar além de `kubectl` + um kubeconfig.
+- Alguns labs que exigem add-ons de cluster inteiro rodam **read-only** aqui.
 
 ::right::
 
-- A throwaway single-node cluster on **your machine**.
-- You are **admin** — every lab, including add-on installs, works.
-- Needs `kind` + a container engine (Docker or Podman).
-- Panic reset is `kind delete cluster` → recreate in ~30 s.
+- Um cluster descartável de um único node na **sua máquina**.
+- Você é **admin** — todo lab funciona, incluindo instalação de add-ons.
+- Precisa de `kind` + um container engine (Docker ou Podman).
+- O panic reset é `kind delete cluster` → recriar em ~30 s.
 
 <div class="mt-4 text-sm" v-click>
 
-**Which am I on?** Run `kubectl config current-context`: a name like
-`kind-workshop` means your laptop; anything else is the shared cluster. Every
-lab states which environment it supports.
+**Em qual estou?** Rode `kubectl config current-context`: um nome como
+`kind-workshop` significa seu laptop; qualquer outra coisa é o cluster
+compartilhado. Todo lab informa qual ambiente ele suporta.
 
 </div>
 
 <!--
-Speaker: labs are environment-honest — each one is badged namespace ✓ / kind ✓,
-kind-only, or namespace: read-only. Nobody is left behind either way.
+Speaker: os labs são honestos quanto ao ambiente — cada um é marcado como
+namespace ✓ / kind ✓, kind-only ou namespace: read-only. Ninguém fica para trás
+em nenhum dos caminhos.
 -->
 
 ---
 
-<span class="kw-kicker">Ground rules</span>
+<span class="kw-kicker">Regras da casa</span>
 
-# How this room works
+# Como esta sala funciona
 
 <div class="kw-cols-3 mt-4">
   <v-click at="1">
-    <KwCard heading="Questions welcome" icon="🙋">
-      Interrupt anytime. If one person is confused, five others are too —
-      asking is doing everyone a favour.
+    <KwCard heading="Perguntas são bem-vindas" icon="🙋">
+      Interrompa a qualquer momento. Se uma pessoa está confusa, outras cinco
+      também estão — perguntar é fazer um favor a todo mundo.
     </KwCard>
   </v-click>
   <v-click at="2">
-    <KwCard heading="Least privilege" icon="🔒">
-      No lab needs <strong>cluster-admin</strong> unless it's flagged
-      <code>kind-only</code>. On the shared cluster you stay inside your
-      namespace — that's RBAC doing its job.
+    <KwCard heading="Privilégio mínimo" icon="🔒">
+      Nenhum lab precisa de <strong>cluster-admin</strong> a menos que esteja
+      marcado como <code>kind-only</code>. No cluster compartilhado você fica
+      dentro do seu namespace — isso é o RBAC fazendo o trabalho dele.
     </KwCard>
   </v-click>
   <v-click at="3">
-    <KwCard heading="You can't break it" icon="🧯" variant="plain">
-      Every lab ends with a <strong>panic reset</strong> scoped to your
-      namespace. A wedged lab never blocks the next one.
+    <KwCard heading="Você não consegue quebrar nada" icon="🧯" variant="plain">
+      Todo lab termina com um <strong>panic reset</strong> restrito ao seu
+      namespace. Um lab travado nunca bloqueia o próximo.
     </KwCard>
   </v-click>
 </div>
 
 <div v-click="4" class="mt-6 kw-muted text-sm">
 
-The teaching rhythm repeats all day: **explain → run → observe → break it on
-purpose → fix it → recap.** The breakage is the point — that's where the
-learning is.
+O ritmo de ensino se repete o dia inteiro: **explicar → rodar → observar →
+quebrar de propósito → consertar → recapitular.** A quebra é o ponto — é ali
+que o aprendizado acontece.
 
 </div>
 
 <!--
-Speaker: emphasise "break it on purpose". Every lab has a deliberate
-break→fix step so failures become familiar, not scary.
+Speaker: enfatize o "quebrar de propósito". Todo lab tem um passo deliberado de
+quebra→conserto para que falhas se tornem familiares, não assustadoras.
 -->
 
 ---
 
-<span class="kw-kicker">How labs work</span>
+<span class="kw-kicker">Como os labs funcionam</span>
 
-# Every task carries a spoiler
+# Toda tarefa vem com spoiler
 
-Labs are standalone Markdown — explicit, copy-pasteable steps. **No "figure it
-out".** Every task and every question is followed by a collapsed answer, so you
-can never get permanently stuck.
+Os labs são Markdown independentes — passos explícitos, prontos para copiar e
+colar. **Nada de "vire-se".** Toda tarefa e toda pergunta é seguida de uma
+resposta recolhida, então você nunca fica travado para sempre.
 
 <div class="mt-4" v-click>
 
-> **Task:** set your default namespace, then confirm it took.
+> **Tarefa:** defina seu namespace padrão e depois confirme que valeu.
 
 </div>
 
 <div class="mt-3" v-click>
 
-> **Question:** which command proves the change without dumping the whole kubeconfig?
+> **Pergunta:** qual comando prova a mudança sem despejar o kubeconfig inteiro?
 
 </div>
 
 <div class="mt-3" v-click>
 
-Stuck? Open the spoiler:
+Travou? Abra o spoiler:
 
 ```console
 $ kubectl config view --minify | grep namespace:
     namespace: student-07
 ```
 
-`--minify` collapses the config to the current context — one line, the answer.
+`--minify` reduz a configuração ao contexto atual — uma linha, a resposta.
 
 </div>
 
 <div v-click class="mt-4 kw-muted text-sm">
 
-In the real lab that answer lives inside a collapsed <code>&lt;details&gt;</code>
-block. Try first; peek if you need to; keep moving.
+No lab de verdade essa resposta vive dentro de um bloco <code>&lt;details&gt;</code>
+recolhido. Tente primeiro; espie se precisar; siga em frente.
 
 </div>
 
 <!--
-Speaker: demo the spoiler pattern live — read the task, ask the room the
-question, then "open the spoiler". This is exactly Lab 00's shape.
+Speaker: demonstre o padrão de spoiler ao vivo — leia a tarefa, faça a pergunta
+para a sala e então "abra o spoiler". Esse é exatamente o formato do Lab 00.
 -->
 
 ---
 
-<span class="kw-kicker">Before Lab 00</span>
+<span class="kw-kicker">Antes do Lab 00</span>
 
-# What you need on your machine
+# O que você precisa na sua máquina
 
 <div class="kw-cols-2 mt-4">
-  <KwCard heading="Required" icon="✅">
+  <KwCard heading="Obrigatório" icon="✅">
     <ul class="text-sm">
-      <li><code>kubectl</code> on your <code>PATH</code></li>
-      <li>A kubeconfig — assigned namespace <em>or</em> kind</li>
-      <li>A terminal you can copy-paste into</li>
+      <li><code>kubectl</code> no seu <code>PATH</code></li>
+      <li>Um kubeconfig — namespace atribuído <em>ou</em> kind</li>
+      <li>Um terminal onde você consiga copiar e colar</li>
     </ul>
   </KwCard>
-  <KwCard heading="For the kind path" icon="🐳" variant="plain">
+  <KwCard heading="Para o caminho kind" icon="🐳" variant="plain">
     <ul class="text-sm">
-      <li><code>kind</code> installed</li>
-      <li>A container engine: Docker or Podman</li>
-      <li>Admin over your own machine</li>
+      <li><code>kind</code> instalado</li>
+      <li>Um container engine: Docker ou Podman</li>
+      <li>Admin na sua própria máquina</li>
     </ul>
   </KwCard>
 </div>
 
 <div v-click class="mt-5 text-sm">
 
-**Pre-flight check (Lab 00):** confirm `kubectl version` reaches a server, set
-your namespace, and prove `kubectl auth can-i create pods` returns `yes`. That
-lands everyone at the **same known-good baseline** before any real content.
+**Checagem pre-flight (Lab 00):** confirme que `kubectl version` alcança um
+servidor, defina seu namespace e prove que `kubectl auth can-i create pods`
+retorna `yes`. Isso coloca todo mundo na **mesma linha de base conhecida** antes
+de qualquer conteúdo de verdade.
 
 </div>
 
 <LabCallout lab="labs/day-1/00-setup.md" />
 
 <!--
-Speaker: don't debug installs live — send anyone missing a tool to the setup
-appendix while the room starts Lab 00. Client/server version skew of one minor
-is fine; flag it if odd errors appear later.
+Speaker: não debugue instalações ao vivo — mande quem estiver sem alguma
+ferramenta para o apêndice de setup enquanto a sala começa o Lab 00. Um desvio
+de uma versão minor entre client e server é aceitável; sinalize se erros
+estranhos aparecerem depois.
 -->
 
 ---
 showRefresher: true
 ---
 
-<span class="kw-kicker">Optional · new to containers?</span>
+<span class="kw-kicker">Opcional · novo em containers?</span>
 
-# 60-second container refresher
+# Refresher de containers em 60 segundos
 
 <div v-if="$frontmatter.showRefresher">
 
 <div class="kw-cols-2 mt-2">
-  <KwCard heading="A container" icon="📦">
-    One process (or a few) running in an <strong>isolated view</strong> of the
-    OS — its own filesystem, network, and process tree — while sharing the
-    host <strong>kernel</strong>. Lighter than a VM, starts in milliseconds.
+  <KwCard heading="Um container" icon="📦">
+    Um processo (ou alguns) rodando em uma <strong>visão isolada</strong> do
+    SO — com filesystem, rede e árvore de processos próprios — enquanto
+    compartilha o <strong>kernel</strong> do host. Mais leve que uma VM, inicia
+    em milissegundos.
   </KwCard>
-  <KwCard heading="An image" icon="🧱" variant="plain">
-    The <strong>read-only template</strong> a container is started from: your
-    app plus its dependencies, frozen as stacked <strong>layers</strong>.
-    Kubernetes schedules containers; images are what it pulls to run them.
+  <KwCard heading="Uma image" icon="🧱" variant="plain">
+    O <strong>template read-only</strong> a partir do qual um container é
+    iniciado: sua aplicação e suas dependências, congeladas como
+    <strong>layers</strong> empilhadas. O Kubernetes agenda containers; images
+    são o que ele baixa (pull) para rodá-los.
   </KwCard>
 </div>
 
 <div class="mt-4 kw-muted text-sm">
 
-That's enough to start. **The container sections go deep** on images, layers,
-runtimes, and hardening — flip <code>showRefresher: false</code> in this slide's
-frontmatter to hide this beat for a stronger cohort.
+Isso basta para começar. **As seções de container aprofundam** images, layers,
+runtimes e hardening — mude <code>showRefresher: false</code> no frontmatter
+deste slide para esconder este beat em uma turma mais avançada.
 
 </div>
 
 </div>
 
 <!--
-Speaker: build/v-if toggle — for an experienced room set showRefresher: false
-and this slide collapses to just the heading. No shared animation here.
+Speaker: toggle de build/v-if — para uma sala experiente defina showRefresher:
+false e este slide colapsa para só o título. Sem animação compartilhada aqui.
 -->
 
 ---
 layout: code-annotated
-heading: 'Point kubectl at the right place'
+heading: 'Aponte o kubectl para o lugar certo'
 lab: labs/day-1/00-setup.md
 ---
 
@@ -281,28 +287,28 @@ kubectl config view --minify | grep namespace:
 ::notes::
 
 <CodeNote at="1" label="get-contexts">
-Lists every cluster your kubeconfig knows. The <code>*</code> marks the one
-you're pointed at right now.
+Lista todos os clusters que seu kubeconfig conhece. O <code>*</code> marca
+aquele para o qual você está apontando agora.
 </CodeNote>
 
 <CodeNote at="2" label="use-context">
-Switches clusters. Kind users are already on <code>kind-workshop</code>; shared
-users pick the context the facilitator gave them.
+Troca de cluster. Usuários de kind já estão em <code>kind-workshop</code>;
+usuários do cluster compartilhado escolhem o contexto que o facilitador entregou.
 </CodeNote>
 
 <CodeNote at="3" label="set-context --namespace">
-Makes your namespace the default so you can drop <code>-n</code> from every
-later command. This one line saves you a thousand keystrokes today.
+Torna seu namespace o padrão, para você poder omitir o <code>-n</code> de todos
+os comandos seguintes. Essa única linha economiza mil toques de tecla hoje.
 </CodeNote>
 
-<CodeNote at="4" label="verify" variant="ok">
-<code>--minify</code> shows only the active context — the fastest proof your
-namespace stuck. This is the spoiler answer from earlier.
+<CodeNote at="4" label="verificar" variant="ok">
+<code>--minify</code> mostra só o contexto ativo — a prova mais rápida de que
+seu namespace pegou. Esta é a resposta do spoiler de antes.
 </CodeNote>
 
 <!--
-Speaker: this is the whole of "context management" they need for the workshop.
-Everything else — RBAC, multiple clusters — comes later (Lab 19).
+Speaker: isso é todo o "gerenciamento de contexto" de que eles precisam para o
+workshop. Todo o resto — RBAC, múltiplos clusters — vem depois (Lab 19).
 -->
 
 ---
@@ -312,10 +318,10 @@ duration: 15 min
 env: namespace ✓ / kind ✓
 ---
 
-## Lab 00 — Setup & pre-flight check
+## Lab 00 — Setup & checagem pre-flight
 
-- Confirm `kubectl version` reaches a **server**, not just a client
-- Set your assigned **namespace** (or spin up a kind cluster) as the default
-- Prove you can create workloads: `kubectl auth can-i create pods` → `yes`
-- **Break it on purpose:** point at a bad context, read the error, switch back
-- Land at the shared **clean baseline** — and learn the panic reset for later
+- Confirme que `kubectl version` alcança um **servidor**, não só um client
+- Defina seu **namespace** atribuído (ou suba um cluster kind) como padrão
+- Prove que você pode criar workloads: `kubectl auth can-i create pods` → `yes`
+- **Quebre de propósito:** aponte para um contexto errado, leia o erro, volte
+- Chegue à **linha de base limpa** compartilhada — e aprenda o panic reset para mais tarde

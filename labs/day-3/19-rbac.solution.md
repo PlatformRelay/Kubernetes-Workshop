@@ -1,14 +1,14 @@
-# Lab 19 — RBAC (S19) — solutions
+# Lab 19 — RBAC (S19) — soluções
 
-Use this companion after attempting the participant lab. Outputs contain representative
-names, addresses, ages, and image sizes; compare the state and meaning rather than copying
-ephemeral values literally.
+Use este companion depois de tentar o lab do participante. As saídas contêm nomes, endereços,
+idades e tamanhos de image representativos; compare o estado e o significado em vez de copiar
+literalmente valores efêmeros.
 
 ## Guided solutions
 
-### Step 0 — a namespace to work in
+### Step 0 — um namespace para trabalhar
 
-### kind path
+### Caminho kind
 
 ```bash
 kind create cluster --name rbac
@@ -16,7 +16,7 @@ export NS=default
 kubectl get nodes
 ```
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ kubectl get nodes
@@ -24,34 +24,34 @@ NAME                 STATUS   ROLES           AGE   VERSION
 rbac-control-plane   Ready    control-plane   40s   v1.3x.x
 ```
 
-On kind you're **cluster-admin**, so the `--as` impersonation checks in Steps 2–4 work with no
-extra setup.
+No kind você é **cluster-admin**, então as checagens de impersonation com `--as` dos Steps 2–4
+funcionam sem nenhuma configuração extra.
 </details>
 
-### Shared-cluster path
+### Caminho do cluster compartilhado
 
 ```bash
 export NS=<your-assigned-namespace>
 kubectl config set-context --current --namespace="$NS"
-kubectl auth can-i create rolebindings          # should print: yes
+kubectl auth can-i create rolebindings          # deve imprimir: yes
 ```
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 yes
 ```
 
-If that prints `yes`, you can create the SA/Role/RoleBinding in your namespace. The `--as` checks
-later may still be denied if you lack impersonation — that's expected; use the stretch goal's
-in-Pod path to verify if so.
+Se isso imprimir `yes`, você consegue criar a SA/Role/RoleBinding no seu namespace. As checagens
+com `--as` mais adiante ainda podem ser negadas se você não tiver impersonation — isso é esperado;
+nesse caso, use o caminho de dentro do Pod do stretch goal para verificar.
 </details>
 
 ---
 
-### Step 1 — a Pod to read, and the identity + Role + binding
+### Step 1 — um Pod para ler, e a identidade + Role + binding
 
-First, something to read:
+Primeiro, algo para ler:
 
 ```bash
 cat > workload.yaml <<'EOF'
@@ -77,8 +77,8 @@ kubectl apply -f workload.yaml
 kubectl rollout status deploy/reader-target
 ```
 
-Now the RBAC objects — the **ServiceAccount**, the read-only **Role**, and the **RoleBinding**
-that joins them. This is the exact manifest from the slide's magic-move final frame:
+Agora os objetos de RBAC — a **ServiceAccount**, a **Role** somente leitura e o **RoleBinding**
+que une as duas. Este é exatamente o manifesto do quadro final do magic-move do slide:
 
 ```bash
 cat > rbac.yaml <<'EOF'
@@ -88,9 +88,9 @@ metadata:
   name: pod-reader
   labels: { app: s19 }
 rules:
-  - apiGroups: [""]                 # "" = the core API group (pods live here)
+  - apiGroups: [""]                 # "" = o core API group (é onde vivem os pods)
     resources: ["pods"]
-    verbs: ["get", "list", "watch"] # read-only: no create/delete
+    verbs: ["get", "list", "watch"] # somente leitura: sem create/delete
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -115,7 +115,7 @@ EOF
 kubectl apply -f rbac.yaml
 ```
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 role.rbac.authorization.k8s.io/pod-reader created
@@ -123,23 +123,23 @@ serviceaccount/pod-reader-sa created
 rolebinding.rbac.authorization.k8s.io/pod-reader-binding created
 ```
 
-Three objects, one file. The **Role** is a pure allow-list (`get`/`list`/`watch` on `pods`), the
-**ServiceAccount** is the identity, and the **RoleBinding** is the join — its `roleRef` names the
-Role and its `subjects` names the SA. Note `apiGroups: [""]` (the empty string) is the **core**
-API group where Pods live — not the literal text `"core"`.
+Três objetos, um arquivo. A **Role** é uma allow-list pura (`get`/`list`/`watch` em `pods`), a
+**ServiceAccount** é a identidade e o **RoleBinding** é a junção — seu `roleRef` nomeia a Role e
+seus `subjects` nomeiam a SA. Repare que `apiGroups: [""]` (a string vazia) é o **core** API group,
+onde vivem os Pods — não o texto literal `"core"`.
 </details>
 
 ---
 
-### Step 2 — verify the grant with `can-i --list`
+### Step 2 — verifique a concessão com `can-i --list`
 
 ```bash
 kubectl auth can-i --list --as=system:serviceaccount:$NS:pod-reader-sa
 ```
 
-**Task:** confirm the SA may read Pods (`get`/`list`/`watch`) and cannot write them.
+**Tarefa:** confirme que a SA pode ler Pods (`get`/`list`/`watch`) e não pode escrevê-los.
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 Resources          Non-Resource URLs   Resource Names   Verbs
@@ -149,36 +149,37 @@ selfsubjectaccessreviews.authorization.k8s.io   []   []   [create]
 ...
 ```
 
-The teaching row is **`pods … [get list watch]`** — exactly the Role you granted. The
-`selfsubject*` rows are **baseline** permissions every identity gets (they let a subject ask "what
-can I do?"); they don't grant access to your workloads. There is **no** `create`/`delete`/`update`
-on `pods`, so writes are denied — which the next step proves against a real Pod.
+A linha didática é **`pods … [get list watch]`** — exatamente a Role que você concedeu. As linhas
+`selfsubject*` são permissões **de base** que toda identidade ganha (elas deixam um subject
+perguntar "o que eu posso fazer?"); elas não dão acesso aos seus workloads. **Não** há
+`create`/`delete`/`update` em `pods`, então as escritas são negadas — o que o próximo step prova
+contra um Pod real.
 
-> If `--as` returns `Error … cannot impersonate resource "serviceaccounts"`, your account lacks
-> the `impersonate` verb (common on a shared namespace). Skip to the stretch goal to verify from
-> inside a Pod, or ask your facilitator to grant impersonation.
+> Se o `--as` retornar `Error … cannot impersonate resource "serviceaccounts"`, sua conta não tem o
+> verb `impersonate` (comum em um namespace compartilhado). Pule para o stretch goal para verificar
+> de dentro de um Pod, ou peça ao seu facilitador para conceder impersonation.
 </details>
 
 ---
 
-### Step 3 — run real commands as the SA (and hit the break)
+### Step 3 — rode comandos reais como a SA (e chegue à quebra)
 
-Point `kubectl` at the SA with `--as` and act on the real Pod from Step 1.
+Aponte o `kubectl` para a SA com `--as` e aja sobre o Pod real do Step 1.
 
 ```bash
-# read — allowed
+# leitura — permitido
 kubectl get pods --as=system:serviceaccount:$NS:pod-reader-sa
 
-# capture a real Pod name to act on
+# capture o nome de um Pod real para agir sobre ele
 POD=$(kubectl get pod -l app=reader-target -o jsonpath='{.items[0].metadata.name}')
 
-# write — the deliberate break
+# escrita — a quebra proposital
 kubectl delete pod "$POD" --as=system:serviceaccount:$NS:pod-reader-sa
 ```
 
-**Task:** `get pods` should list the `reader-target` Pod; `delete pod` should be **Forbidden**.
+**Tarefa:** o `get pods` deve listar o Pod `reader-target`; o `delete pod` deve ser **Forbidden**.
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ kubectl get pods --as=system:serviceaccount:$NS:pod-reader-sa
@@ -189,43 +190,43 @@ $ kubectl delete pod "$POD" --as=system:serviceaccount:$NS:pod-reader-sa
 Error from server (Forbidden): pods "reader-target-6c9d8f7b5c-abcde" is forbidden: User "system:serviceaccount:default:pod-reader-sa" cannot delete resource "pods" in API group "" in the namespace "default"
 ```
 
-`get` matched the Role's `list` verb → allowed. `delete` matched **no** rule → the API server
-returns **`Forbidden`**: *"cannot delete resource pods in API group … in the namespace …"*.
-(Authorization is checked **before** the object is even looked up, so the same error fires for any
-Pod name.) `In API group ""` is the core group again. This is RBAC's deny-by-default doing its
-job — the Role never granted a write verb.
+O `get` deu match com o verb `list` da Role → permitido. O `delete` não deu match com **nenhuma**
+regra → o API server retorna **`Forbidden`**: *"cannot delete resource pods in API group … in the
+namespace …"*. (A autorização é checada **antes** de o objeto sequer ser buscado, então o mesmo
+erro aparece para qualquer nome de Pod.) O `In API group ""` é de novo o core group. Este é o
+deny-by-default do RBAC fazendo seu trabalho — a Role nunca concedeu um verb de escrita.
 </details>
 
-**Question:** you asked to `delete` a Pod that **exists** and are cluster-admin yourself — why did
-the command fail?
+**Pergunta:** você pediu para `delete` um Pod que **existe** e você mesmo é cluster-admin — por que
+o comando falhou?
 
-<details><summary>Answer</summary>
+<details><summary>Resposta</summary>
 
-Because `--as` made the request run **as the ServiceAccount**, not as you. The API server
-authorizes the **impersonated** subject, and `pod-reader-sa`'s Role allows only
-`get`/`list`/`watch`. Your own cluster-admin rights let you *impersonate*, but they don't leak
-into the impersonated identity's permissions — that's the entire point of `--as`: it lets you test
-**another** identity's effective access safely.
+Porque o `--as` fez a requisição rodar **como a ServiceAccount**, não como você. O API server
+autoriza o subject **impersonado**, e a Role da `pod-reader-sa` permite apenas
+`get`/`list`/`watch`. Seus próprios direitos de cluster-admin deixam você *fazer impersonation*,
+mas eles não vazam para as permissões da identidade impersonada — esse é justamente o ponto do
+`--as`: ele deixa você testar com segurança o acesso efetivo de **outra** identidade.
 </details>
 
 ---
 
-### Step 4 — fix: add the `delete` verb and re-check
+### Step 4 — conserte: adicione o verb `delete` e recheque
 
-The break is a missing verb, so the fix is one line in the **Role**. Add `delete`, re-apply, and
-re-run `can-i`.
+A quebra é um verb faltando, então o conserto é uma linha na **Role**. Adicione `delete`, reaplique
+e rode o `can-i` de novo.
 
 ```bash
 kubectl patch role pod-reader --type='json' \
   -p='[{"op":"add","path":"/rules/0/verbs/-","value":"delete"}]'
 
-# re-verify — now allowed
+# re-verifique — agora permitido
 kubectl auth can-i delete pods --as=system:serviceaccount:$NS:pod-reader-sa
 ```
 
-**Task:** `can-i delete pods` should now print `yes`, and the real delete should succeed.
+**Tarefa:** o `can-i delete pods` agora deve imprimir `yes`, e o delete real deve ter sucesso.
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ kubectl auth can-i delete pods --as=system:serviceaccount:$NS:pod-reader-sa
@@ -236,59 +237,62 @@ $ kubectl delete pod "$POD" --as=system:serviceaccount:$NS:pod-reader-sa
 pod "reader-target-6c9d8f7b5c-abcde" deleted
 ```
 
-Adding `delete` to the Role's `verbs` immediately widens the SA's permissions — **no rebind, no
-Pod restart**. RBAC is evaluated live on every request, so the moment the Role changes, `can-i`
-flips and the action goes through. (The Deployment simply starts a replacement Pod, since its
-desired replica count is unchanged.) You could equally have used `kubectl edit role pod-reader` and
-added `delete` to the `verbs` list by hand.
+Adicionar `delete` aos `verbs` da Role amplia imediatamente as permissões da SA — **sem rebind, sem
+restart de Pod**. O RBAC é avaliado ao vivo em cada requisição, então no momento em que a Role muda,
+o `can-i` inverte e a ação passa. (O Deployment simplesmente sobe um Pod substituto, já que a
+contagem desejada de réplicas não mudou.) Você poderia igualmente ter usado
+`kubectl edit role pod-reader` e adicionado `delete` à lista de `verbs` na mão.
 </details>
 
-**Question:** you changed only the **Role** — not the RoleBinding, not the ServiceAccount. Why was
-that enough?
+**Pergunta:** você mudou apenas a **Role** — não o RoleBinding, não a ServiceAccount. Por que isso
+foi suficiente?
 
-<details><summary>Answer</summary>
+<details><summary>Resposta</summary>
 
-The RoleBinding is a **reference**, not a copy — it ties the *subject* to the *Role by name*. The
-SA's effective permissions are always whatever the referenced Role currently lists, evaluated at
-request time. So editing the Role's `verbs` changes what every subject bound to it can do,
-instantly. The binding wires the two together; the Role holds the actual grant.
+O RoleBinding é uma **referência**, não uma cópia — ele amarra o *subject* à *Role pelo nome*. As
+permissões efetivas da SA são sempre o que a Role referenciada lista naquele momento, avaliadas na
+hora da requisição. Então editar os `verbs` da Role muda instantaneamente o que todo subject
+vinculado a ela pode fazer. O binding conecta os dois; a Role guarda a concessão de fato.
 </details>
 
 ---
 
-### Step 5 — question: when do you need a ClusterRole instead?
+### Step 5 — pergunta: quando você precisa de uma ClusterRole no lugar?
 
-You built a **Role** + **RoleBinding**, entirely inside one namespace. That's the right default.
+Você construiu uma **Role** + um **RoleBinding**, inteiramente dentro de um namespace. Esse é o
+padrão certo.
 
-**Question:** when would a `Role` be the wrong choice — forcing a `ClusterRole` (and possibly a
-`ClusterRoleBinding`) instead?
+**Pergunta:** quando uma `Role` seria a escolha errada — forçando uma `ClusterRole` (e possivelmente
+um `ClusterRoleBinding`) no lugar?
 
-<details><summary>Answer</summary>
+<details><summary>Resposta</summary>
 
-A `Role` can only grant access to **namespaced** resources, **within its own namespace**. Reach
-for a `ClusterRole` when:
+Uma `Role` só consegue conceder acesso a resources **namespaced**, **dentro do seu próprio
+namespace**. Recorra a uma `ClusterRole` quando:
 
-- **The resource is cluster-scoped.** `nodes`, `namespaces`, `persistentvolumes`,
-  `storageclasses`, and non-resource URLs like `/healthz` live **outside** any namespace, so a
-  namespaced Role literally cannot name them. Only a ClusterRole can — and to grant it you bind
-  with a **ClusterRoleBinding**.
-- **You want one definition reused across many namespaces.** Define the rules once as a
-  `ClusterRole`, then reference it from a `RoleBinding` **in each namespace** — the grant stays
-  namespaced (only that namespace's resources), but you maintain a single Role definition. This is
-  the common "read-only" pattern.
+- **O resource é cluster-scoped.** `nodes`, `namespaces`, `persistentvolumes`, `storageclasses` e
+  URLs non-resource como `/healthz` vivem **fora** de qualquer namespace, então uma Role namespaced
+  literalmente não consegue nomeá-los. Só uma ClusterRole consegue — e, para concedê-la, você
+  vincula com um **ClusterRoleBinding**.
+- **Você quer uma definição só, reusada em vários namespaces.** Defina as regras uma vez como uma
+  `ClusterRole` e depois referencie-a a partir de um `RoleBinding` **em cada namespace** — a
+  concessão continua namespaced (só os resources daquele namespace), mas você mantém uma única
+  definição de Role. Esse é o padrão "somente leitura" mais comum.
 
-Rule of thumb: **namespaced access to namespaced resources → Role + RoleBinding.** Anything
-cluster-scoped, or shared across namespaces → **ClusterRole** (bound namespaced *or* cluster-wide
-as needed). Least privilege still applies: prefer the narrowest scope that works.
+Regra de bolso: **acesso namespaced a resources namespaced → Role + RoleBinding.** Qualquer coisa
+cluster-scoped, ou compartilhada entre namespaces → **ClusterRole** (vinculada de forma namespaced
+*ou* cluster-wide, conforme a necessidade). O menor privilégio continua valendo: prefira o escopo
+mais estreito que funcione.
 </details>
 
-## Stretch (optional) — hit the API from *inside* a Pod, as the SA
+## Stretch (opcional) — chame a API *de dentro* de um Pod, como a SA
 
-`--as` impersonates from the outside. The real thing is a Pod running **as** the SA, using its
-**projected token** to call the API — exactly how Argo CD (S21) and operators (S22) work.
+O `--as` faz impersonation de fora. A coisa real é um Pod rodando **como** a SA, usando seu
+**token projetado** para chamar a API — exatamente como funcionam o Argo CD (S21) e os operators
+(S22).
 
 ```bash
-# a Pod that runs as pod-reader-sa
+# um Pod que roda como a pod-reader-sa
 cat > reader-pod.yaml <<'EOF'
 apiVersion: v1
 kind: Pod
@@ -305,7 +309,7 @@ EOF
 kubectl apply -f reader-pod.yaml
 kubectl wait --for=condition=Ready pod/api-reader --timeout=60s
 
-# from inside: read the projected token and call the API to LIST pods
+# de dentro: leia o token projetado e chame a API para LISTAR pods
 kubectl exec api-reader -- sh -c '
   TOKEN=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
   NS=$(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace)
@@ -315,17 +319,17 @@ kubectl exec api-reader -- sh -c '
 '
 ```
 
-<details><summary>What you should see, and why</summary>
+<details><summary>O que você deve ver, e por quê</summary>
 
 ```console
 list pods → 200
 ```
 
-The kubelet projected the SA's token at
-`/var/run/secrets/kubernetes.io/serviceaccount/` (plus its `namespace`). The Pod presents it as a
-Bearer token; the API server authenticates it as `system:serviceaccount:$NS:pod-reader-sa` and
-authorizes against the **same Role** — `list pods` is allowed, so **`200`**. Now probe a resource
-the Role **never** grants, to prove the boundary holds from inside too:
+O kubelet projetou o token da SA em `/var/run/secrets/kubernetes.io/serviceaccount/` (junto com o
+`namespace` dela). O Pod o apresenta como Bearer token; o API server o autentica como
+`system:serviceaccount:$NS:pod-reader-sa` e autoriza contra a **mesma Role** — `list pods` é
+permitido, então **`200`**. Agora sonde um resource que a Role **nunca** concede, para provar que a
+fronteira vale de dentro também:
 
 ```bash
 kubectl exec api-reader -- sh -c '
@@ -337,45 +341,45 @@ kubectl exec api-reader -- sh -c '
 '
 ```
 
-This returns **`403`** (Forbidden) — the Role only ever covered `pods`, so **any** verb on
-`secrets` is denied, no matter what you did in Step 4. Same deny-by-default, now enforced against
-a real in-cluster client instead of `--as`. This is the identity every workload uses: no `--as`,
-no cluster-admin, just the projected token and its Role. Clean up with the **Cleanup** section
-below (the Pod is labelled `app: s19`), or `kubectl delete pod api-reader`.
+Isso retorna **`403`** (Forbidden) — a Role só cobriu `pods`, então **qualquer** verb em `secrets` é
+negado, não importa o que você fez no Step 4. O mesmo deny-by-default, agora aplicado contra um
+cliente real dentro do cluster em vez do `--as`. Esta é a identidade que todo workload usa: sem
+`--as`, sem cluster-admin, apenas o token projetado e sua Role. Limpe com a seção **Cleanup**
+abaixo (o Pod tem o label `app: s19`), ou com `kubectl delete pod api-reader`.
 </details>
 
 ## Expected state / output
 
-- **Deny by default:** a fresh ServiceAccount can do nothing; a permission exists only because a
-  **Role lists the verb** *and* a **RoleBinding** ties that Role to the subject.
-- **The binding is the join:** the Role and the SA are inert alone; the RoleBinding's `roleRef` +
-  `subjects` connect them. Editing the **Role** changes access live — no rebind, no restart.
-- **`get pods --as=…` → allowed; `delete pod --as=…` → `Forbidden`** until the Role gains the
-  `delete` verb. The error names the subject, verb, resource, API group `""`, and namespace.
-- **`--as` tests another identity** without becoming it — your own rights authorize the
-  impersonation, but the impersonated SA's Role decides the answer.
-- **Scope:** `Role`/`RoleBinding` are namespaced; cluster-scoped resources or cross-namespace
-  reuse need a `ClusterRole`.
+- **Deny by default:** uma ServiceAccount recém-criada não consegue fazer nada; uma permissão só
+  existe porque uma **Role lista o verb** *e* um **RoleBinding** amarra essa Role ao subject.
+- **O binding é a junção:** a Role e a SA são inertes sozinhas; o `roleRef` + os `subjects` do
+  RoleBinding as conectam. Editar a **Role** muda o acesso ao vivo — sem rebind, sem restart.
+- **`get pods --as=…` → permitido; `delete pod --as=…` → `Forbidden`** até a Role ganhar o verb
+  `delete`. O erro nomeia o subject, o verb, o resource, o API group `""` e o namespace.
+- **`--as` testa outra identidade** sem se tornar ela — seus próprios direitos autorizam a
+  impersonation, mas quem decide a resposta é a Role da SA impersonada.
+- **Escopo:** `Role`/`RoleBinding` são namespaced; resources cluster-scoped ou reúso entre
+  namespaces exigem uma `ClusterRole`.
 
-Representative statuses include Ready/Running Pods, NetworkPolicy timeouts, RBAC Forbidden,
-Helm revision history, Application Synced/Healthy, Certificate Ready, or Prometheus targets —
-compare meaning, not ephemeral names.
+Statuses representativos incluem Pods Ready/Running, timeouts de NetworkPolicy, Forbidden de RBAC,
+histórico de revisões do Helm, Application Synced/Healthy, Certificate Ready ou targets do
+Prometheus — compare o significado, não nomes efêmeros.
 
 ## Explanation
 
-RBAC is deny-by-default: a Role's verbs are inert until a RoleBinding joins them
-to a subject. Editing the bound Role updates authorization immediately because the API server
-re-evaluates the Role on each can-i/request — there is no need to restart the Pod for pure
-RBAC checks with --as.
+RBAC é deny-by-default: os verbs de uma Role ficam inertes até um RoleBinding uni-los a um subject,
+e é essa ausência de vínculo que causa o Forbidden. Editar a Role vinculada atualiza a autorização
+imediatamente porque o API server reavalia a Role a cada can-i/requisição — não é preciso reiniciar
+o Pod para checagens puras de RBAC com --as.
 
-The guided steps above prove the control-plane behaviour for this section; read Events and
-status fields when a one-line phase is ambiguous.
+Os passos guiados acima provam o comportamento do control plane para esta seção; leia os Events e
+os campos de status quando uma fase de uma linha só for ambígua.
 
 ## Troubleshooting and recovery
 
-Re-apply the lab's named manifests with `kubectl apply -f <file> -n "$NS"` after fixing the
-broken field, or delete only the labelled objects from Cleanup / reset and restart the guided
-task. Prefer `kubectl describe` Events over guessing. Do not run broad cluster deletes.
+Reaplique os manifestos nomeados do lab com `kubectl apply -f <file> -n "$NS"` depois de corrigir o
+campo quebrado, ou delete apenas os objetos com label da seção Cleanup / reset e reinicie o guided
+task. Prefira os Events do `kubectl describe` a chutar. Não rode deletes amplos no cluster.
 
 ## Challenge solution
 
@@ -392,18 +396,18 @@ kubectl delete pod -l app=s19 -n "$NS" --as="system:serviceaccount:$NS:pod-reade
 
 ### Expected state / output
 
-Before the patch, can-i delete is no / Forbidden. After the Role gains delete and
-the existing RoleBinding still points at it, can-i returns yes and the impersonated delete
-succeeds for that SA only.
+Antes do patch, o can-i delete apresenta no / Forbidden. Depois que a Role ganha o delete e o
+RoleBinding existente continua apontando para ela, o can-i passa a apresentar yes e o delete
+impersonado tem sucesso apenas para aquela SA.
 
 ### Explanation
 
-RBAC is deny-by-default: a Role's verbs are inert until a RoleBinding joins them
-to a subject. Editing the bound Role updates authorization immediately because the API server
-re-evaluates the Role on each can-i/request — there is no need to restart the Pod for pure
-RBAC checks with --as.
+RBAC é deny-by-default: os verbs de uma Role ficam inertes até um RoleBinding uni-los a um subject,
+e é essa ausência de vínculo que causa o Forbidden. Editar a Role vinculada atualiza a autorização
+imediatamente porque o API server reavalia a Role a cada can-i/requisição — não é preciso reiniciar
+o Pod para checagens puras de RBAC com --as.
 
 ### Hints
 
-Inspect roleRef and subjects on the RoleBinding; edit the Role verbs and re-run
-can-i --list --as=... without recreating the ServiceAccount.
+Inspecione o roleRef e os subjects do RoleBinding; edite os verbs da Role e use
+novamente can-i --list --as=... sem recriar a ServiceAccount.

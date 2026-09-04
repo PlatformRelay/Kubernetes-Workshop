@@ -1,19 +1,19 @@
-# Lab 04 — kubectl (S04) — solutions
+# Lab 04 — kubectl (S04) — soluções
 
-Use this companion after attempting the participant lab. Outputs contain representative
-names, addresses, ages, and image sizes; compare the state and meaning rather than copying
-ephemeral values literally.
+Use este companion depois de tentar o lab do participante. As saídas contêm nomes, endereços,
+idades e tamanhos de image representativos; compare o estado e o significado em vez de copiar
+literalmente valores efêmeros.
 
 ## Guided solutions
 
-### Step 1 — the scavenger hunt (discover, don't create)
+### Step 1 — a caça ao tesouro (descubra, não crie)
 
-Answer each question using **only** `get`, `describe`, and `explain`. Every question has
-a spoiler — try first, then check.
+Responda cada pergunta usando **apenas** `get`, `describe` e `explain`. Toda pergunta tem
+um spoiler — tente primeiro, depois confira.
 
-**Q1.** What is the **default** `restartPolicy` for a Pod?
+**Q1.** Qual é o `restartPolicy` **padrão** de um Pod?
 
-<details><summary>Answer</summary>
+<details><summary>Resposta</summary>
 
 ```console
 $ kubectl explain pod.spec.restartPolicy
@@ -24,13 +24,13 @@ DESCRIPTION:
     ... One of Always, OnFailure, Never. Default to Always.
 ```
 
-**`Always`.** The schema is the authority — no need to guess or search.
+**`Always`.** O schema é a autoridade — não precisa adivinhar nem pesquisar.
 </details>
 
-**Q2.** Your namespace looks empty (`kubectl get all` says so). But list ConfigMaps —
-there's already one. What is it, and who created it?
+**Q2.** Seu namespace parece vazio (`kubectl get all` diz isso). Mas liste os ConfigMaps —
+já existe um. Qual é, e quem o criou?
 
-<details><summary>Answer</summary>
+<details><summary>Resposta</summary>
 
 ```console
 $ kubectl get configmap
@@ -38,14 +38,14 @@ NAME               DATA   AGE
 kube-root-ca.crt   1      3h
 ```
 
-`kube-root-ca.crt` is injected into **every** namespace by the cluster (it holds the
-CA bundle Pods use to trust the API server). You didn't create it — a controller did.
-`kubectl get all` doesn't show ConfigMaps, which is why the namespace *looked* empty.
+O `kube-root-ca.crt` é injetado em **todo** namespace pelo cluster (ele guarda o bundle de
+CA que os Pods usam para confiar no API server). Você não o criou — um controller criou.
+`kubectl get all` não mostra ConfigMaps, e é por isso que o namespace *parecia* vazio.
 </details>
 
-**Q3.** Is a `Deployment` in the same API group as a `Pod`? Use `api-resources`.
+**Q3.** Um `Deployment` está no mesmo API group que um `Pod`? Use `api-resources`.
 
-<details><summary>Answer</summary>
+<details><summary>Resposta</summary>
 
 ```console
 $ kubectl api-resources | grep -E '^(pods|deployments) '
@@ -53,14 +53,14 @@ pods           po       v1        true    Pod
 deployments    deploy   apps/v1   true    Deployment
 ```
 
-No — a **Pod** is core `v1`; a **Deployment** is `apps/v1`. That's why a Deployment
-manifest needs `apiVersion: apps/v1` but a Pod uses `apiVersion: v1`. You'll type both
-in S05/S06.
+Não — um **Pod** é do core `v1`; um **Deployment** é `apps/v1`. É por isso que um manifesto
+de Deployment precisa de `apiVersion: apps/v1`, mas um Pod usa `apiVersion: v1`. Você vai
+digitar os dois na S05/S06.
 </details>
 
-**Q4.** According to the schema, is `containers` **required** in a Pod spec?
+**Q4.** De acordo com o schema, `containers` é **obrigatório** na spec de um Pod?
 
-<details><summary>Answer</summary>
+<details><summary>Resposta</summary>
 
 ```console
 $ kubectl explain pod.spec.containers | head -3
@@ -69,26 +69,26 @@ VERSION:    v1
 FIELD: containers <[]Container> -required-
 ```
 
-Yes — `-required-`. A Pod with no containers is invalid. The server would reject it;
-`explain` tells you before you even try.
+Sim — `-required-`. Um Pod sem containers é inválido. O server o rejeitaria;
+o `explain` te avisa antes mesmo de você tentar.
 </details>
 
 ---
 
-### Step 2 — generate YAML without applying it
+### Step 2 — gere YAML sem aplicá-lo
 
-The fastest way to a correct manifest is to have `kubectl` write it for you, then edit.
-`--dry-run=client` builds the object **locally** and prints it — nothing is created.
+O caminho mais rápido para um manifesto correto é deixar o `kubectl` escrevê-lo para você, depois editar.
+O `--dry-run=client` constrói o objeto **localmente** e o imprime — nada é criado.
 
 ```bash
 kubectl run web --image=ghcr.io/platformrelay/workshop-web:v1 --dry-run=client -o yaml
 kubectl create deployment web --image=ghcr.io/platformrelay/workshop-web:v1 --dry-run=client -o yaml
 ```
 
-**Task:** run both. Confirm you get a full manifest on stdout and that
-`kubectl get pods` / `kubectl get deploy` still show **nothing** — you created nothing.
+**Tarefa:** execute os dois. Confirme que você recebe um manifesto completo no stdout e que
+`kubectl get pods` / `kubectl get deploy` continuam mostrando **nada** — você não criou nada.
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ kubectl run web --image=ghcr.io/platformrelay/workshop-web:v1 --dry-run=client -o yaml
@@ -111,47 +111,47 @@ $ kubectl get pods
 No resources found in student-07 namespace.
 ```
 
-`run` scaffolds a **Pod**; `create deployment` scaffolds a **Deployment** (note the
-`apps/v1`, `replicas`, `selector`, and `template` wrapper — the S06 shape). Redirect to
-a file to keep it: `kubectl create deployment web --image=ghcr.io/platformrelay/workshop-web:v1 --dry-run=client -o yaml > web.yaml`.
+O `run` gera o scaffold de um **Pod**; o `create deployment` gera o de um **Deployment** (note o
+`apps/v1`, `replicas`, `selector` e o wrapper `template` — o formato da S06). Redirecione para
+um arquivo para guardá-lo: `kubectl create deployment web --image=ghcr.io/platformrelay/workshop-web:v1 --dry-run=client -o yaml > web.yaml`.
 </details>
 
-**Question:** why do the printed manifests include empty `resources: {}` and
-`status: {}` you never asked for?
+**Pergunta:** por que os manifestos impressos incluem `resources: {}` e
+`status: {}` vazios que você nunca pediu?
 
-<details><summary>Answer</summary>
+<details><summary>Resposta</summary>
 
-`kubectl` prints the **whole typed object**, including zero-valued fields. `status: {}`
-is the observed half (empty because nothing is running yet — see S03). You can delete
-the noise (`creationTimestamp`, `status`, empty `resources`) before saving; it's just a
-starting point, not a finished manifest.
+O `kubectl` imprime o **objeto tipado inteiro**, incluindo campos com valor zero. `status: {}`
+é a metade observada (vazia porque nada está rodando ainda — veja a S03). Você pode apagar
+o ruído (`creationTimestamp`, `status`, `resources` vazio) antes de salvar; é só um
+ponto de partida, não um manifesto finalizado.
 </details>
 
 ---
 
-### Step 3 — pull exact values with jsonpath and labels
+### Step 3 — extraia valores exatos com jsonpath e labels
 
-Tables are for eyes; `-o jsonpath` is for extracting one value (scripts, quick checks).
+Tabelas são para os olhos; `-o jsonpath` serve para extrair um valor (scripts, checagens rápidas).
 
 ```bash
-# one node's name, no grep/awk:
+# o nome de um node, sem grep/awk:
 kubectl get nodes -o jsonpath='{.items[0].metadata.name}{"\n"}'
 
-# filter by label — the kube-system Pods carry component/tier labels (kind):
+# filtre por label — os Pods do kube-system carregam labels component/tier (kind):
 kubectl get pods -n kube-system -l tier=control-plane
 ```
 
-**Task:** get a single node name with `jsonpath`. Then, on **kind**, list the
-control-plane Pods with a label selector. On a **shared** cluster (no `kube-system`
-access), filter your own namespace instead — e.g. `kubectl get configmap -l foo=bar`
-(expect an empty list, proving the filter works).
+**Tarefa:** obtenha um único nome de node com `jsonpath`. Depois, no **kind**, liste os
+Pods do control plane com um selector de label. Em um cluster **compartilhado** (sem acesso
+ao `kube-system`), filtre seu próprio namespace — ex.: `kubectl get configmap -l foo=bar`
+(espere uma lista vazia, provando que o filtro funciona).
 
-> **Shared cluster:** `get nodes` is cluster-scoped and may return
-> `Error ... "nodes" is forbidden` for your namespace-scoped role (same as Lab 03).
-> If so, practise `jsonpath` on a namespaced object you *can* read instead:
+> **Cluster compartilhado:** `get nodes` é cluster-scoped e pode retornar
+> `Error ... "nodes" is forbidden` para sua role com escopo de namespace (igual ao Lab 03).
+> Se isso acontecer, pratique `jsonpath` em um objeto namespaced que você *pode* ler:
 > `kubectl get configmap kube-root-ca.crt -o jsonpath='{.metadata.name}{"\n"}'`.
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ kubectl get nodes -o jsonpath='{.items[0].metadata.name}{"\n"}'
@@ -165,68 +165,69 @@ kube-controller-manager-...             1/1     Running   0          3h
 kube-scheduler-workshop-control-plane   1/1     Running   0          3h
 ```
 
-`{.items[0].metadata.name}` walks the same object tree `explain` describes. The `-l`
-selector is the *same query language* a Service uses to find its Pods (S07).
-`{"\n"}` just adds a newline so your prompt lands on the next line.
+`{.items[0].metadata.name}` percorre a mesma árvore de objetos que o `explain` descreve. O
+selector `-l` é a *mesma linguagem de consulta* que um Service usa para encontrar seus Pods (S07).
+O `{"\n"}` só adiciona uma quebra de linha para o seu prompt cair na linha seguinte.
 </details>
 
-**Question:** how is `-l app=web` different from grepping `kubectl get pods | grep web`?
+**Pergunta:** em que `-l app=web` é diferente de dar grep com `kubectl get pods | grep web`?
 
-<details><summary>Answer</summary>
+<details><summary>Resposta</summary>
 
-`-l app=web` is evaluated **server-side** against the object's `labels` — precise, and
-it matches nothing by accident. `grep web` is a **text** match on the printed table, so
-it also catches a Pod named `webhook-xyz` or an unrelated column containing "web". Labels
-are a real query; grep is a coincidence.
+`-l app=web` é avaliado **server-side** contra os `labels` do objeto — preciso, e não
+casa nada por acidente. `grep web` é um casamento de **texto** na tabela impressa, então
+também pega um Pod chamado `webhook-xyz` ou uma coluna não relacionada contendo "web". Labels
+são uma consulta de verdade; grep é uma coincidência.
 </details>
 
 ---
 
-### Step 4 — break it on purpose: client says yes, server says no
+### Step 4 — quebre de propósito: o client diz sim, o server diz não
 
-`--dry-run=client` only renders locally. `--dry-run=server` runs the **full** server
-path (validation + admission) and can reject things the client can't see. Prove it with
-the cleanest example: a namespace that doesn't exist.
+O `--dry-run=client` só renderiza localmente. O `--dry-run=server` percorre o caminho
+**completo** do server (validação + admission) e pode rejeitar coisas que o client não enxerga.
+Prove isso com o exemplo mais limpo: um namespace que não existe.
 
 ```bash
 kubectl run probe --image=ghcr.io/platformrelay/workshop-web:v1 --namespace=no-such-namespace --dry-run=client -o yaml >/dev/null; echo "client exit: $?"
 kubectl run probe --image=ghcr.io/platformrelay/workshop-web:v1 --namespace=no-such-namespace --dry-run=server -o yaml >/dev/null; echo "server exit: $?"
 ```
 
-**Task:** run both. The **client** line must succeed; the **server** line must fail.
-Read the server error — its exact text depends on your environment.
+**Tarefa:** execute os dois. A linha do **client** deve ter sucesso; a linha do **server** deve falhar.
+Leia o erro do server — o texto exato depende do seu ambiente.
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ kubectl run probe --image=ghcr.io/platformrelay/workshop-web:v1 --namespace=no-such-namespace --dry-run=client -o yaml >/dev/null; echo "client exit: $?"
 client exit: 0
 
 $ kubectl run probe --image=ghcr.io/platformrelay/workshop-web:v1 --namespace=no-such-namespace --dry-run=server -o yaml >/dev/null; echo "server exit: $?"
-# kind (you own the cluster):
+# kind (você é dono do cluster):
 Error from server (NotFound): namespaces "no-such-namespace" not found
-# shared cluster (namespace-scoped role):
+# cluster compartilhado (role com escopo de namespace):
 Error from server (Forbidden): pods is forbidden: User "..." cannot create
 resource "pods" in ... the namespace "no-such-namespace"
 server exit: 1
 ```
 
-The **result is identical** — client passes (`0`), server fails (`1`) — but the
-**message differs**, and that difference is itself the lesson:
+O **resultado é idêntico** — o client passa (`0`), o server falha (`1`) — mas a
+**mensagem difere**, e essa diferença é, por si só, a lição:
 
-- On **kind**, the request clears authorization and is rejected later, at admission,
-  for the missing namespace → `NotFound`.
-- On a **shared** cluster, authorization runs **first** and your role can't write to
-  `no-such-namespace` at all → `Forbidden`, before the namespace check is even reached.
+- No **kind**, a requisição passa pela autorização e é rejeitada depois, na admission,
+  pelo namespace inexistente → `NotFound`.
+- Em um cluster **compartilhado**, a autorização roda **primeiro** e sua role não pode escrever
+  em `no-such-namespace` de forma alguma → `Forbidden`, antes mesmo de a checagem de
+  namespace ser alcançada.
 
-Either way, the point holds: **`--dry-run=server` evaluated the request against live
-cluster state — identity, permissions, existence — and the client never could.** Two
-very different questions:
+De qualquer forma, o ponto se mantém: **o `--dry-run=server` avaliou a requisição contra o
+estado vivo do cluster — identidade, permissões, existência — e o client nunca poderia.** Duas
+perguntas bem diferentes:
 
-- `--dry-run=client` → *"does this render into a valid-looking object?"*
-- `--dry-run=server` → *"would the cluster actually accept this from me, right now?"*
+- `--dry-run=client` → *"isso renderiza em um objeto de aparência válida?"*
+- `--dry-run=server` → *"o cluster realmente aceitaria isso vindo de mim, agora?"*
 
-**Fix:** target your real namespace — now both pass:
+**Conserto:** aponte para o seu namespace real — agora os dois passam:
 
 ```console
 $ kubectl run probe --image=ghcr.io/platformrelay/workshop-web:v1 -n "$NS" --dry-run=server -o yaml >/dev/null; echo "exit: $?"
@@ -235,43 +236,44 @@ exit: 0
 
 </details>
 
-**Question:** you're about to `apply` an important manifest. Which dry-run do you run
-first, and why?
+**Pergunta:** você está prestes a fazer `apply` de um manifesto importante. Qual dry-run você
+roda primeiro, e por quê?
 
-<details><summary>Answer</summary>
+<details><summary>Resposta</summary>
 
-**`--dry-run=server`** — it's the only one that runs schema validation, defaulting, and
-admission (quota, webhooks, missing references) *without* writing. `--dry-run=client`
-can't catch anything that depends on live cluster state. Pair it with `kubectl diff -f`
-to see exactly what would change before you commit.
+**`--dry-run=server`** — é o único que roda validação de schema, defaulting e
+admission (quota, webhooks, referências ausentes) *sem* escrever. O `--dry-run=client`
+não consegue pegar nada que dependa do estado vivo do cluster. Combine-o com `kubectl diff -f`
+para ver exatamente o que mudaria antes de se comprometer.
 </details>
 
 ---
 
 ## Expected state / output
 
-- `explain` answers schema questions (defaults, required fields, API group)
-  authoritatively — no web search needed.
-- `--dry-run=client -o yaml` generates a full manifest and creates **nothing**.
-- `-o jsonpath` extracts a single value; `-l` filters server-side by label.
-- The **same** manifest can pass `--dry-run=client` and fail `--dry-run=server` — server
-  dry-run is the one that tells you the cluster would really accept it.
-- After this lab, `kubectl get all` in your namespace is still empty.
+- O `explain` responde perguntas de schema (padrões, campos obrigatórios, API group)
+  com autoridade — sem precisar de busca na web.
+- `--dry-run=client -o yaml` gera um manifesto completo e não cria **nada**.
+- `-o jsonpath` extrai um único valor; `-l` filtra server-side por label.
+- O **mesmo** manifesto pode passar no `--dry-run=client` e falhar no `--dry-run=server` — o
+  dry-run de server é o que diz se o cluster realmente aceitaria.
+- Depois deste lab, `kubectl get all` no seu namespace continua vazio.
 
 ---
 
 ## Explanation
 
-Client dry-run renders locally, while server dry-run exercises API validation and admission
-without persistence. JSONPath and label selectors query structured API data directly, and
-`kubectl diff` previews the server-rendered delta without applying it.
+O dry-run de client renderiza localmente, enquanto o dry-run de server exercita a validação e a
+admission da API sem persistência — a causa de o mesmo manifesto poder passar em um e falhar no
+outro. JSONPath e selectors de label consultam dados estruturados da API diretamente, e o
+`kubectl diff` pré-visualiza o delta renderizado pelo server sem aplicá-lo.
 
 ## Troubleshooting and recovery
 
-If server dry-run is Forbidden, recover with the local preview
+Se o dry-run de server retornar Forbidden, recupere-se com o preview local
 `kubectl create deployment web --image=ghcr.io/platformrelay/workshop-web:v1 --dry-run=client -o yaml`
-and show the admission error to the facilitator. Delete only the local file with
-`rm -f web.yaml`; the lab intentionally creates no cluster object.
+e mostre o erro de admission ao facilitador. Delete apenas o arquivo local com
+`rm -f web.yaml`; o lab intencionalmente não cria objeto no cluster.
 
 ## Challenge solution
 
@@ -288,15 +290,16 @@ rm -f web.yaml
 
 ### Expected state / output
 
-Both diff commands show additions for a not-yet-created Deployment, and the second shows
-`replicas: 3`. The final `get` prints nothing, proving that no object was persisted.
+Os dois comandos de diff mostram adições para um Deployment ainda não criado, e o segundo mostra
+`replicas: 3`. O `get` final não imprime nada, provando que nenhum objeto foi persistido.
 
 ### Explanation
 
-`kubectl diff` asks the API server to render the proposed object but does not write it. Exit code 1
-means differences exist, so the guard treats that expected diagnostic result as success.
+O `kubectl diff` pede ao API server para renderizar o objeto proposto, mas não o grava. O código
+de saída 1 significa que existem diferenças, e é essa a causa de o guard tratar esse resultado
+diagnóstico esperado como sucesso.
 
 ### Hints
 
-`kubectl diff` exits 1 when differences exist; inspect its output, then verify with
-`kubectl get deployment web --ignore-not-found`.
+O `kubectl diff` sai com código 1 quando existem diferenças; leia a saída dele e
+depois use `kubectl get deployment web --ignore-not-found` para confirmar.

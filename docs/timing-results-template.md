@@ -1,48 +1,48 @@
-# Timing-Results Template — per-section MEASURED timings
+# Template de timing-results — tempos MEDIDOS por seção
 
-A blank template for recording **measured** timings during a rehearsal or beta run. Copy
-this file (e.g. to `timing-results-2026-08-15.md`), fill the **MEASURED** columns as you
-run, and keep it as the record for that run.
+Um template em branco para registrar tempos **medidos** durante um ensaio ou uma rodada de
+beta. Copie este arquivo (ex.: para `timing-results-2026-08-15.md`), preencha as colunas
+**MEASURED** conforme você roda, e guarde-o como o registro daquela rodada.
 
-> **Measured ≠ planned.** The `PLANNED` columns are copied from the
-> [syllabus](./syllabus.md#per-section-outcomes-timings-and-labs) — they are **unrehearsed
-> planning estimates**, not facts. The `MEASURED` columns start **empty** and hold **only
-> observed stopwatch numbers**. **Never** copy a planned value into a measured column: an
-> empty measured cell means "not yet measured", and that is the honest state until someone
-> actually times it. The whole point of this template is to replace estimates with
-> measurements — do not blur the two.
+> **Medido ≠ planejado.** As colunas `PLANNED` são copiadas do
+> [syllabus](./syllabus.md#per-section-outcomes-timings-and-labs) — são **estimativas de
+> planejamento não ensaiadas**, não fatos. As colunas `MEASURED` começam **vazias** e
+> guardam **apenas números observados no cronômetro**. **Nunca** copie um valor planejado
+> para uma coluna de medição: uma célula de medição vazia significa "ainda não medido", e
+> esse é o estado honesto até que alguém realmente cronometre. O objetivo inteiro deste
+> template é substituir estimativas por medições — não misture as duas coisas.
 
-## Run metadata
+## Metadados da rodada
 
-Fill this in per run:
+Preencha isto a cada rodada:
 
-- **Run date:** _(YYYY-MM-DD)_
-- **Facilitator / timer:** _(who kept the clock)_
-- **Environment:** _(Local kind / Shared namespace / mixed)_
-- **Cut delivered:** _(canonical 3-day cut / custom — list sections actually run)_
-- **Cluster / network notes:** _(kind version, laptop specs, network for image pulls)_
+- **Data da rodada:** _(YYYY-MM-DD)_
+- **Facilitador / cronometrista:** _(quem segurou o relógio)_
+- **Ambiente:** _(kind local / namespace compartilhado / misto)_
+- **Corte entregue:** _(corte canônico de 3 dias / customizado — liste as seções realmente rodadas)_
+- **Notas de cluster / rede:** _(versão do kind, specs do laptop, rede para pulls de image)_
 
-## How to fill this in
+## Como preencher
 
-1. Time **slides** and **lab** separately with a stopwatch; record whole minutes in the
-   `MEASURED slides` and `MEASURED lab` columns.
-2. `Δ slides` / `Δ lab` = **measured − planned** (leave blank until you have a measured
-   value). A positive number means it ran **over** the estimate.
-3. Put anything that cost time — a slow add-on install, a broken command, a room-wide
-   stumble — in **Blockers / notes**. These are what a fix targets.
-4. Leave a cell **empty** if you did not run or did not time that section. Do **not**
-   backfill it with the planned number.
+1. Cronometre **slides** e **lab** separadamente; registre minutos inteiros nas colunas
+   `MEASURED slides` e `MEASURED lab`.
+2. `Δ slides` / `Δ lab` = **medido − planejado** (deixe em branco até ter um valor
+   medido). Um número positivo significa que rodou **acima** da estimativa.
+3. Coloque tudo que custou tempo — uma instalação lenta de add-on, um comando quebrado, um
+   tropeço da sala inteira — em **Bloqueadores / notas**. É neles que uma correção mira.
+4. Deixe uma célula **vazia** se você não rodou ou não cronometrou aquela seção. **Não**
+   preencha depois com o número planejado.
 
-## Legend
+## Legenda
 
-- **PLANNED** — from the syllabus; an unrehearsed estimate. Do not edit these.
-- **MEASURED** — observed stopwatch minutes for this run. Empty = not measured.
-- **Δ** — measured minus planned, in minutes; blank until measured. `+` = over estimate.
-- **`—`** — not applicable (S27 has no lab; S24 is a deferred stub).
+- **PLANNED** — vem do syllabus; uma estimativa não ensaiada. Não edite estes valores.
+- **MEASURED** — minutos observados no cronômetro nesta rodada. Vazio = não medido.
+- **Δ** — medido menos planejado, em minutos; em branco até ser medido. `+` = acima da estimativa.
+- **`—`** — não se aplica (S27 não tem lab; S24 é um stub `deferred`).
 
 ## Day 1
 
-| ID | Section | PLANNED slides | PLANNED lab | MEASURED slides | MEASURED lab | Δ slides | Δ lab | Blockers / notes |
+| ID | Seção | PLANNED slides | PLANNED lab | MEASURED slides | MEASURED lab | Δ slides | Δ lab | Bloqueadores / notas |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | S00 | Welcome & setup | 20 | 15 | | | | | |
 | S01 | Containers | 30 | 25 | | | | | |
@@ -56,7 +56,7 @@ Fill this in per run:
 
 ## Day 2
 
-| ID | Section | PLANNED slides | PLANNED lab | MEASURED slides | MEASURED lab | Δ slides | Δ lab | Blockers / notes |
+| ID | Seção | PLANNED slides | PLANNED lab | MEASURED slides | MEASURED lab | Δ slides | Δ lab | Bloqueadores / notas |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | S09 | Gateway API | 35 | 25 | | | | | |
 | S10 | ConfigMap & Secret | 30 | 25 | | | | | |
@@ -69,7 +69,7 @@ Fill this in per run:
 
 ## Day 3
 
-| ID | Section | PLANNED slides | PLANNED lab | MEASURED slides | MEASURED lab | Δ slides | Δ lab | Blockers / notes |
+| ID | Seção | PLANNED slides | PLANNED lab | MEASURED slides | MEASURED lab | Δ slides | Δ lab | Bloqueadores / notas |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | S17 | Pod security (securityContext + PSS) | 30 | 25 | | | | | |
 | S18 | NetworkPolicy | 25 | 25 | | | | | |
@@ -78,36 +78,39 @@ Fill this in per run:
 | S21 | GitOps with Argo CD | 30 | 25 | | | | | |
 | S22 | The operator pattern | 25 | 15 | | | | | |
 | S23 | Prometheus Operator | 30 | 25 | | | | | |
-| S24 † | Operator dev 101 (kubebuilder) | 40 | 40 | | | | | Deferred stub — planned slot only, not runnable content. |
+| S24 † | Operator dev 101 (kubebuilder) | 40 | 40 | | | | | Stub `deferred` — apenas um slot planejado, não é conteúdo executável. |
 | S25 | Security & pod escape | 35 | 30 | | | | | |
 | S26 | Best practices (capstone) | 30 | 40 | | | | | |
-| S27 | Wrap-up & next steps | 20 | — | | — | | — | Slides only — no lab. |
+| S27 | Wrap-up & next steps | 20 | — | | — | | — | Somente slides — sem lab. |
 
-† **S24 planned = 40/40 is a placeholder slot, not delivered content.** The lab is a
-deferred stub; do not record a measurement against it as if it were a runnable lab.
+† **S24 planejado = 40/40 é um slot placeholder, não conteúdo entregue.** O lab é um stub
+`deferred`; não registre uma medição contra ele como se fosse um lab executável.
 
-## Day totals (measured vs planned)
+## Totais por dia (medido vs planejado)
 
-The syllabus's **planned** day totals (from the canonical 3-day cut) are the targets to
-check against. Fill the measured totals only after timing the sections you actually ran —
-sum **your MEASURED cells**, not the planned ones, and note which sections your cut
-included (the planned totals below assume the canonical cut, which omits some sections).
+Os totais **planejados** por dia do syllabus (a partir do corte canônico de 3 dias) são os
+alvos a conferir. Preencha os totais medidos apenas depois de cronometrar as seções que
+você realmente rodou — some **as suas células MEASURED**, não as planejadas, e anote quais
+seções o seu corte incluiu (os totais planejados abaixo assumem o corte canônico, que omite
+algumas seções).
 
-| Day | PLANNED total (canonical cut) | MEASURED total (this run) | Δ | Sections run this run |
+| Day | Total PLANNED (corte canônico) | Total MEASURED (esta rodada) | Δ | Seções rodadas nesta rodada |
 | --- | --- | --- | --- | --- |
 | Day 1 | 375 | | | |
 | Day 2 | 360 | | | |
 | Day 3 | 420 | | | |
 
-> **Reading the deltas.** The open pre-delivery question is whether the cut lands near
-> **~390 min/day at ~50/50 slides:lab**. That can only be answered from the MEASURED
-> column. Until these cells are filled from a real run, the ~390 target remains an
-> **estimate**, not a measured fact — do not report it as confirmed.
+> **Lendo os deltas.** A pergunta em aberto antes da entrega é se o corte cai perto de
+> **~390 min/dia com ~50/50 entre slides e lab**. Isso só pode ser respondido pela coluna
+> MEASURED. Enquanto essas células não forem preenchidas a partir de uma rodada real, o
+> alvo de ~390 continua sendo uma **estimativa**, não um fato medido — não reporte como
+> confirmado.
 
-## Blockers summary
+## Resumo de bloqueadores
 
-List the cross-cutting or high-impact blockers observed this run (add-on installs that
-were slow, commands that failed, sections that consistently overran). File each as a
-[beta-feedback issue](../.github/ISSUE_TEMPLATE/beta-feedback.yml) and link it here.
+Liste os bloqueadores transversais ou de alto impacto observados nesta rodada (instalações
+de add-on que foram lentas, comandos que falharam, seções que estouraram o tempo
+consistentemente). Registre cada um como uma
+[issue de beta-feedback](../.github/ISSUE_TEMPLATE/beta-feedback.yml) e linke aqui.
 
-- _(none recorded yet — fill during the run)_
+- _(nenhum registrado ainda — preencha durante a rodada)_

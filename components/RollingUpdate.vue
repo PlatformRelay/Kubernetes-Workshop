@@ -76,36 +76,36 @@ const total = computed(() => oldPods.value.length + newPods.value.length)
     <div class="kw-roll-cols">
       <div class="kw-roll-col">
         <div class="kw-kicker">
-          Old ReplicaSet · <code>{{ props.oldTag }}</code>
+          ReplicaSet antigo · <code>{{ props.oldTag }}</code>
         </div>
         <TransitionGroup name="kw-roll-pods" tag="div" class="kw-roll-pods">
           <PodCard v-for="pod in oldPods" :key="pod.id" v-bind="pod" />
           <div v-if="oldPods.length === 0" key="old-empty" class="kw-roll-empty">
-            scaled to 0 — kept for <code>rollout undo</code>
+            escalado para 0 — mantido para o <code>rollout undo</code>
           </div>
         </TransitionGroup>
       </div>
 
       <div class="kw-roll-col">
         <div class="kw-kicker">
-          New ReplicaSet · <code>{{ props.newTag }}</code>
+          ReplicaSet novo · <code>{{ props.newTag }}</code>
         </div>
         <TransitionGroup name="kw-roll-pods" tag="div" class="kw-roll-pods">
           <PodCard v-for="pod in newPods" :key="pod.id" v-bind="pod" />
           <div v-if="newPods.length === 0" key="new-empty" class="kw-roll-empty">
-            not created yet
+            ainda não criado
           </div>
         </TransitionGroup>
       </div>
     </div>
 
     <div class="kw-roll-state">
-      <span class="kw-roll-chip">desired&nbsp;<strong>{{ props.desired }}</strong></span>
+      <span class="kw-roll-chip">desejado&nbsp;<strong>{{ props.desired }}</strong></span>
       <span
         class="kw-roll-chip"
         :class="{ 'is-surge': total > props.desired, 'is-sync': total <= props.desired }"
       >
-        total Pods&nbsp;<strong>{{ total }}</strong>
+        total de Pods&nbsp;<strong>{{ total }}</strong>
       </span>
       <span v-if="total > props.desired" class="kw-roll-chip is-surge">
         +{{ total - props.desired }} surge
@@ -114,19 +114,19 @@ const total = computed(() => oldPods.value.length + newPods.value.length)
 
     <div class="kw-roll-caption">
       <template v-if="props.step <= 0">
-        Steady state — three Pods on <code>{{ props.oldTag }}</code>. Bump the image to start.
+        Estado estável — três Pods em <code>{{ props.oldTag }}</code>. Suba a image para começar.
       </template>
       <template v-else-if="props.step === 1">
-        <strong>maxSurge</strong> — a new-RS Pod is created <em>above</em> desired before any
-        old Pod leaves, so capacity never dips.
+        <strong>maxSurge</strong> — um Pod do ReplicaSet novo é criado <em>acima</em> do
+        desejado antes de qualquer Pod antigo sair, então a capacidade nunca cai.
       </template>
       <template v-else-if="props.step === 2">
-        The new Pod is <code>Ready</code>, so <strong>maxUnavailable</strong> now lets one old
-        Pod terminate. Up as down, one step at a time.
+        O Pod novo está <code>Ready</code>, então o <strong>maxUnavailable</strong> deixa um
+        Pod antigo terminar. Sobe e desce, um passo por vez.
       </template>
       <template v-else>
-        Migration complete — the old ReplicaSet is drained to <strong>0</strong> but kept, so
-        <code>rollout undo</code> can promote it back instantly.
+        Migração completa — o ReplicaSet antigo foi drenado para <strong>0</strong>, mas
+        mantido, para o <code>rollout undo</code> promovê-lo de volta na hora.
       </template>
     </div>
   </div>

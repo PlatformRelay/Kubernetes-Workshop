@@ -1,14 +1,14 @@
-# Lab 01 — Build & inspect a container image (S01) — solutions
+# Lab 01 — Construa & inspecione uma image de container (S01) — soluções
 
-Use this companion after attempting the participant lab. Outputs contain representative
-names, addresses, ages, and image sizes; compare the state and meaning rather than copying
-ephemeral values literally.
+Use este companion depois de tentar o lab do participante. As saídas contêm nomes, endereços,
+idades e tamanhos de image representativos; compare o estado e o significado em vez de copiar
+literalmente valores efêmeros.
 
 ## Guided solutions
 
-### Step 1 — create the project
+### Step 1 — crie o projeto
 
-Paste this whole block. It makes an `app/` folder with the source and both Dockerfiles.
+Cole este bloco inteiro. Ele cria uma pasta `app/` com o código-fonte e os dois Dockerfiles.
 
 ```bash
 mkdir -p app && cd app
@@ -55,14 +55,14 @@ ENTRYPOINT ["/bin/app"]
 EOF
 
 cat > Dockerfile.multistage <<'EOF'
-# stage 1: build with the full toolchain
+# stage 1: build com o toolchain completo
 FROM golang:1.24 AS build
 WORKDIR /src
 COPY . .
-# CGO_ENABLED=0 produces a static binary that runs on a minimal base
+# CGO_ENABLED=0 produz um binário estático que roda em uma base mínima
 RUN CGO_ENABLED=0 go build -o /bin/app .
 
-# stage 2: ship only the binary
+# stage 2: entregue apenas o binário
 FROM alpine:3.20
 RUN adduser -D -u 10001 app
 COPY --from=build /bin/app /bin/app
@@ -75,24 +75,24 @@ EOF
 ls
 ```
 
-**Task:** confirm all four files exist.
+**Tarefa:** confirme que os quatro arquivos existem.
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ ls
 Dockerfile  Dockerfile.multistage  go.mod  main.go
 ```
 
-You are now inside the `app/` directory. Every later command runs from here.
+Você está agora dentro do diretório `app/`. Todo comando posterior roda a partir daqui.
 </details>
 
 ---
 
-### Step 2 — build and run
+### Step 2 — faça o build e execute
 
-Build the image, tag it `demo:1`, then run it **detached** with the container port published to
-your machine.
+Faça o build da image, marque-a com a tag `demo:1`, depois execute-a **detached** com a porta do
+container publicada na sua máquina.
 
 ```bash
 $ENGINE build -t demo:1 .
@@ -101,9 +101,9 @@ $ENGINE ps
 curl -s localhost:8080
 ```
 
-**Task:** the build succeeds, `ps` shows the container `Up`, and `curl` prints a greeting.
+**Tarefa:** o build tem sucesso, o `ps` mostra o container `Up`, e o `curl` imprime uma saudação.
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ $ENGINE build -t demo:1 .
@@ -116,7 +116,7 @@ $ $ENGINE build -t demo:1 .
  => => naming to docker.io/library/demo:1
 
 $ $ENGINE run -d --name demo -p 8080:8080 demo:1
-3f9a1c...   # the container ID
+3f9a1c...   # o ID do container
 
 $ $ENGINE ps
 CONTAINER ID   IMAGE    COMMAND      STATUS         PORTS                    NAMES
@@ -126,35 +126,35 @@ $ curl -s localhost:8080
 hello from 3f9a1c1b2d34
 ```
 
-The greeting's hostname **is the container ID** — the process sees its own isolated hostname, one
-of the namespaces from the slides.
+O hostname da saudação **é o ID do container** — o processo enxerga seu próprio hostname isolado,
+um dos namespaces que apareceram nos slides.
 </details>
 
-**Question:** you published `-p 8080:8080`. Which number is the host's and which is the container's?
+**Pergunta:** você publicou `-p 8080:8080`. Qual número é do host e qual é do container?
 
-<details><summary>Answer</summary>
+<details><summary>Resposta</summary>
 
-`-p HOST:CONTAINER`. The **left** is your machine's port, the **right** is the port the process
-listens on inside the container. They're equal here only because we chose to match them — try
-`-p 9090:8080` and you'd curl `localhost:9090`.
+`-p HOST:CONTAINER`. O da **esquerda** é a porta da sua máquina, o da **direita** é a porta em que
+o processo escuta dentro do container. Aqui elas são iguais só porque escolhemos combiná-las —
+tente `-p 9090:8080` e você faria o curl em `localhost:9090`.
 </details>
 
 ---
 
-### Step 3 — look inside the running container
+### Step 3 — olhe dentro do container em execução
 
-You don't have to trust the Dockerfile — verify the process is really **non-root**, and inspect it
-from both inside and outside.
+Você não precisa confiar no Dockerfile — verifique que o processo é realmente **non-root**, e
+inspecione-o tanto de dentro quanto de fora.
 
 ```bash
-$ENGINE exec demo id                                     # who is the process?
-$ENGINE top demo                                         # the process, seen from the host
-$ENGINE image inspect demo:1 --format '{{.Config.User}}' # what the image declares
+$ENGINE exec demo id                                     # quem é o processo?
+$ENGINE top demo                                         # o processo, visto do host
+$ENGINE image inspect demo:1 --format '{{.Config.User}}' # o que a image declara
 ```
 
-**Task:** all three agree the app runs as UID **10001**, not root.
+**Tarefa:** os três concordam que o app roda como UID **10001**, não root.
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ $ENGINE exec demo id
@@ -168,43 +168,44 @@ $ $ENGINE image inspect demo:1 --format '{{.Config.User}}'
 10001
 ```
 
-`USER 10001` in the Dockerfile is why. Running as a non-root UID is the single cheapest security
-win for an image — S02 goes deeper.
+O `USER 10001` no Dockerfile é a razão disso. Rodar como um UID non-root é a vitória de segurança
+mais barata que existe para uma image — o S02 aprofunda o assunto.
 </details>
 
-**Task (optional interactive poke):** get a shell and look around, then exit.
+**Tarefa (bisbilhotada interativa opcional):** obtenha um shell e dê uma olhada, depois saia.
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ $ENGINE exec -it demo sh
-$ whoami        # app  — the user 'useradd' created in the image
-$ echo $PORT    # 8080  — baked in by ENV
+$ whoami        # app  — o usuário que o 'useradd' criou na image
+$ echo $PORT    # 8080  — embutido pelo ENV
 $ exit
 ```
 
-The `PORT` value came from the image's `ENV`, not from your shell — configuration travels **with**
-the image.
+O valor de `PORT` veio do `ENV` da image, não do seu shell — a configuração viaja **junto com** a
+image.
 </details>
 
 ---
 
-### Step 4 — read the layers, then invalidate the cache
+### Step 4 — leia as layers, depois invalide o cache
 
-An image is an ordered stack of layers. List them, then change the source and watch which layers
-**rebuild** versus come from **cache**.
+Uma image é uma pilha ordenada de layers. Liste-as, depois mude o código-fonte e observe quais
+layers são **reconstruídas** versus quais vêm do **cache**.
 
 ```bash
 $ENGINE history demo:1
 ```
 
-**Question:** which layer holds your source code?
+**Pergunta:** qual layer guarda seu código-fonte?
 
-<details><summary>Answer</summary>
+<details><summary>Resposta</summary>
 
-The layer created by **`COPY . .`**. In `history` it's the one whose size jumps to hold your files;
-everything the `RUN go build` step produced sits in the layer **above** it. Because layers are
-content-addressed, changing your source changes that layer's digest — and every layer after it.
+A layer criada pelo **`COPY . .`**. No `history` é aquela cujo tamanho salta para acomodar seus
+arquivos; tudo o que o passo `RUN go build` produziu fica na layer **acima** dela. Como as layers
+são endereçadas por conteúdo, mudar seu código-fonte muda o digest daquela layer — e o de todas as
+layers depois dela.
 
 ```console
 $ $ENGINE history demo:1
@@ -214,51 +215,52 @@ IMAGE     CREATED         CREATED BY                        SIZE
 <id>      1 minute ago    RUN useradd -u 10001 app          4.1kB
 <id>      1 minute ago    ENV PORT=8080                     0B
 <id>      1 minute ago    RUN go build -o /bin/app .        12MB
-<id>      1 minute ago    COPY . .                          380B     <-- your source
-...       (base golang:1.24 layers below)
+<id>      1 minute ago    COPY . .                          380B     <-- seu código-fonte
+...       (layers da base golang:1.24 abaixo)
 ```
 
 </details>
 
-Now change the source and rebuild:
+Agora mude o código-fonte e refaça o build:
 
 ```bash
 sed -i.bak 's/hello from/HELLO from/' main.go && rm -f main.go.bak
 $ENGINE build -t demo:2 .
 ```
 
-**Task:** in the second build, the early layers say **CACHED** but everything from `COPY . .`
-downward is rebuilt.
+**Tarefa:** no segundo build, as layers iniciais dizem **CACHED**, mas tudo de `COPY . .`
+para baixo é reconstruído.
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ $ENGINE build -t demo:2 .
  => CACHED [1/5] FROM docker.io/library/golang:1.24 ...
  => CACHED [2/5] WORKDIR /src
- => [3/5] COPY . .                      <-- source changed, cache busted here
- => [4/5] RUN go build -o /bin/app .    <-- and everything after must rerun
+ => [3/5] COPY . .                      <-- o código-fonte mudou, o cache é invalidado aqui
+ => [4/5] RUN go build -o /bin/app .    <-- e tudo depois disso precisa rodar de novo
  => [5/5] RUN useradd -u 10001 app
 ```
 
-`FROM` and `WORKDIR` didn't change, so they're reused. The moment a layer's inputs change, that
-layer **and all layers below it** are rebuilt. This is why cheap, rarely-changing steps go **early**
-in a Dockerfile and `COPY` of fast-changing source goes **late**.
+`FROM` e `WORKDIR` não mudaram, então são reaproveitados. No momento em que as entradas de uma
+layer mudam, aquela layer **e todas as layers abaixo dela** são reconstruídas. É por isso que
+passos baratos e que raramente mudam vêm **cedo** no Dockerfile, e o `COPY` do código-fonte que
+muda o tempo todo vem **tarde**.
 </details>
 
 ---
 
-### Step 5 — break it on purpose: `latest` is not "newest"
+### Step 5 — quebre de propósito: `latest` não é "o mais novo"
 
-You never built a `latest` tag. Ask for one anyway and read the failure.
+Você nunca construiu uma tag `latest`. Peça por uma mesmo assim e leia a falha.
 
 ```bash
 $ENGINE run --rm demo:latest
 ```
 
-**Task:** this fails. Read the error, then fix it **two** ways.
+**Tarefa:** isto falha. Leia o erro, depois conserte de **duas** formas.
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ $ENGINE run --rm demo:latest
@@ -267,11 +269,12 @@ docker: Error response from daemon: pull access denied for demo,
 repository does not exist or may require 'docker login'.
 ```
 
-`latest` is just a **tag** — and the default one the engine assumes when you omit a tag. You only
-ever created `demo:1` and `demo:2`, so `demo:latest` doesn't exist locally; the engine then tries
-to **pull** it from a registry and fails. `latest` never means "the newest thing you built".
+`latest` é só uma **tag** — e é a padrão que o engine assume quando você omite a tag. Você só criou
+`demo:1` e `demo:2`, então `demo:latest` não existe localmente; o engine então tenta fazer o
+**pull** dela de um registry e falha. `latest` nunca significa "a coisa mais nova que você
+construiu".
 
-**Fix A — point the tag at a real image:**
+**Conserto A — aponte a tag para uma image real:**
 
 ```console
 $ $ENGINE tag demo:2 demo:latest
@@ -279,7 +282,7 @@ $ $ENGINE run --rm -p 8080:8080 demo:latest
 listening on :8080
 ```
 
-**Fix B — don't rely on a tag at all; pin by the image's content digest (ID):**
+**Conserto B — não dependa de tag nenhuma; faça o pin pelo digest de conteúdo da image (ID):**
 
 ```console
 $ $ENGINE inspect --format '{{.Id}}' demo:2
@@ -288,34 +291,36 @@ $ $ENGINE run --rm sha256:9b2c...e41
 listening on :8080
 ```
 
-A tag can be moved to point anywhere; a **digest** always names the exact bytes you tested. That's
-the difference the slide called out — and what "pin by digest" means in production.
+Uma tag pode ser movida para apontar para qualquer lugar; um **digest** sempre nomeia os bytes
+exatos que você testou. É essa a diferença que o slide destacou — e é isso que "fazer o pin por
+digest" significa em produção.
 </details>
 
-**Question:** you just moved `demo:latest` to `demo:2`. If a teammate had `demo:latest` cached from
-yesterday, would they get your new image?
+**Pergunta:** você acabou de mover `demo:latest` para `demo:2`. Se um colega tivesse `demo:latest`
+em cache desde ontem, ele receberia sua image nova?
 
-<details><summary>Answer</summary>
+<details><summary>Resposta</summary>
 
-Not automatically — their local `latest` still points at whatever digest they pulled yesterday until
-they explicitly re-pull. Two machines can hold **different images under the same `latest` tag**. This
-ambiguity is exactly why tags are unreliable for anything you need to reproduce.
+Não automaticamente — o `latest` local dele continua apontando para o digest que ele baixou ontem
+até que ele refaça o pull explicitamente. Duas máquinas podem guardar **images diferentes sob a
+mesma tag `latest`**. É exatamente essa ambiguidade que torna as tags pouco confiáveis para
+qualquer coisa que você precise reproduzir.
 </details>
 
 ---
 
-### Step 6 — multi-stage: ship thin
+### Step 6 — multi-stage: entregue enxuto
 
-Rebuild with the multi-stage Dockerfile, which discards the toolchain, then compare sizes.
+Refaça o build com o Dockerfile multi-stage, que descarta o toolchain, e depois compare os tamanhos.
 
 ```bash
 $ENGINE build -f Dockerfile.multistage -t demo:slim .
 $ENGINE images demo
 ```
 
-**Task:** `demo:slim` is dramatically smaller than `demo:1`.
+**Tarefa:** a `demo:slim` é dramaticamente menor que a `demo:1`.
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ $ENGINE images demo
@@ -326,47 +331,49 @@ demo         1      d4e5f6...     ~830MB
 demo         latest d4e5f6...     ~830MB
 ```
 
-The single-stage image carries the **entire Go toolchain**; the multi-stage image ships only the
-compiled binary on a tiny `alpine` base — roughly **40× smaller**. Smaller images pull faster and
-expose far less to attack. S02 goes one step further with **distroless** bases (smaller still, and
-no shell at all).
+A image de estágio único carrega o **toolchain Go inteiro**; a image multi-stage entrega apenas o
+binário compilado sobre uma base `alpine` minúscula — cerca de **40× menor**. Images menores fazem
+pull mais rápido e expõem muito menos a ataques. O S02 vai um passo além, com bases **distroless**
+(menores ainda, e sem shell nenhum).
 </details>
 
-**Question:** why can the builder stage be huge without bloating the final image?
+**Pergunta:** por que o estágio de builder pode ser enorme sem inflar a image final?
 
-<details><summary>Answer</summary>
+<details><summary>Resposta</summary>
 
-Because only what you `COPY --from=build` is kept — the builder stage (compiler, source, caches, any
-build-time secrets) is **thrown away**. The final image starts from a fresh `FROM` and inherits
-nothing from the builder except the files you explicitly copy.
+Porque só o que você faz `COPY --from=build` é mantido — o estágio de builder (compilador,
+código-fonte, caches, quaisquer secrets de build) é **jogado fora**. A image final começa a partir
+de um `FROM` novo e não herda nada do builder além dos arquivos que você copia explicitamente.
 </details>
 
 ---
 
 ## Expected state / output
 
-- `$ENGINE build` produces `demo:1`; the container runs and `curl localhost:8080` answers.
-- The process runs as **UID 10001**, confirmed inside (`id`), from the host (`top`), and in the
-  image config (`.Config.User`).
-- `history` shows the image as ordered layers; changing the source rebuilds **`COPY` and below**
-  while earlier layers stay **CACHED**.
-- `run demo:latest` **fails** until you tag or pin — proving `latest` guarantees nothing.
-- The multi-stage `demo:slim` is **~40× smaller** than the single-stage image.
+- `$ENGINE build` produz `demo:1`; o container roda e `curl localhost:8080` responde.
+- O processo roda como **UID 10001**, confirmado por dentro (`id`), do host (`top`) e na
+  configuração da image (`.Config.User`).
+- `history` mostra a image como layers ordenadas; mudar o código-fonte reconstrói **`COPY` e
+  abaixo**, enquanto as layers anteriores continuam **CACHED**.
+- `run demo:latest` **falha** até você criar a tag ou fazer o pin — provando que `latest` não
+  garante nada.
+- A multi-stage `demo:slim` é **~40× menor** que a image de estágio único.
 
 ---
 
 ## Explanation
 
-The lab separates image identity, runtime identity, and build-cache behaviour. Tags are
-movable names, while an image digest identifies exact bytes. A multi-stage build discards
-the compiler and source, and Docker reuses only the layers whose inputs and preceding
-layers remain unchanged.
+O lab separa a identidade da image, a identidade de runtime e o comportamento do cache de build.
+Tags são nomes móveis, enquanto o digest de uma image identifica bytes exatos. Um build
+multi-stage descarta o compilador e o código-fonte, e o Docker reutiliza apenas as layers cujas
+entradas e cujas layers anteriores permanecem inalteradas — é essa a causa de um `COPY` alterado
+reconstruir tudo o que vem depois dele.
 
 ## Troubleshooting and recovery
 
-If a port is busy, remove only this lab's named container with
-`$ENGINE rm -f demo`, then repeat the run command. If a build fails after editing, restore
-`main.go` and the Dockerfiles by rerunning Step 1's heredocs.
+Se uma porta estiver ocupada, remova apenas o container nomeado deste lab com
+`$ENGINE rm -f demo` e repita o comando de run. Se um build falhar depois de uma edição, restaure
+o `main.go` e os Dockerfiles fixados executando de novo os heredocs do Step 1.
 
 ## Challenge solution
 
@@ -376,22 +383,23 @@ If a port is busy, remove only this lab's named container with
 $ sed -i.bak 's/ENV PORT=8080/ENV PORT=9090/' Dockerfile && rm -f Dockerfile.bak
 $ $ENGINE build -t demo:3 .
  => CACHED [3/5] COPY . .
- => CACHED [4/5] RUN go build -o /bin/app .    <-- expensive step reused!
- => [5/5] ...ENV/USER re-applied
+ => CACHED [4/5] RUN go build -o /bin/app .    <-- o passo caro foi reutilizado!
+ => [5/5] ...ENV/USER reaplicados
 ```
 
 ### Expected state / output
 
-The second build reports the source `COPY` and expensive `RUN go build` steps as `CACHED`. Only
-the cheap metadata layer below them changes. Restore the original Dockerfile with the Step 1
-heredoc after recording the result.
+O segundo build reporta o `COPY` do código-fonte e o caro `RUN go build` como `CACHED`. Só a
+layer barata de metadata abaixo deles muda. Restaure o Dockerfile original com o heredoc do
+Step 1 depois de registrar o resultado.
 
 ### Explanation
 
-Docker invalidates a layer and every layer below it. Moving frequently changed metadata below the
-slow build step preserves the build cache without changing the resulting application binary.
+O Docker invalida uma layer e todas as layers abaixo dela. Mover a metadata que muda com
+frequência para baixo do passo lento de build preserva o cache de build — essa é a causa de o
+binário resultante da aplicação continuar o mesmo.
 
 ### Hints
 
-Move `ENV PORT` below `RUN go build`, then compare the second build's `COPY` and `RUN` lines with
-the first build.
+Mova a linha `ENV PORT` para depois de `RUN go build`, depois compare as linhas
+`COPY` e `RUN` do segundo build com as do primeiro build.

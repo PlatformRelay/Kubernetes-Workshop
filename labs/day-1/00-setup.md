@@ -1,55 +1,55 @@
-# Lab 00 — Welcome & setup (S00)
+# Lab 00 — Boas-vindas & setup (S00)
 
 | | |
 | --- | --- |
-| **Section** | S00 — Welcome & setup |
+| **Section** | S00 — Boas-vindas & setup |
 | **Environment** | namespace ✓ / kind ✓ |
 | **Estimated time** | 15 min |
 
 ## Objective
 
-Prove your tooling works **before** any real content: confirm `kubectl` talks to a cluster,
-you are pointed at the right context and namespace, and you can create workloads there. By
-the end, everyone — whether on a shared cluster or a local kind cluster — is at the **same
-verified starting state**.
+Prove que seu ferramental funciona **antes** de qualquer conteúdo real: confirme que o `kubectl`
+fala com um cluster, que você está apontando para o contexto e o namespace certos, e que você
+consegue criar workloads ali. Ao final, todo mundo — seja no cluster compartilhado ou em um
+cluster kind local — está no **mesmo estado inicial verificado**.
 
 ## Prerequisites
 
-- **One** of the two environments:
-  - **Shared cluster:** a kubeconfig from your facilitator and an **assigned namespace**
-    (e.g. `student-07`), plus `kubectl` on your `PATH`. You do **not** need cluster-admin.
-  - **Local kind cluster:** a **container engine** (Docker or Podman) and this repo cloned.
-    You run **one command** (`./workshop up`) — it installs the pinned tools (kubectl, kind,
-    …) and creates your cluster. See [`../../docs/setup.md`](../../docs/setup.md) for engine
-    choice (incl. the Docker Desktop licensing note) and the Windows/WSL2 path.
-- A terminal you can copy-paste into. No prior labs.
+- **Um** dos dois ambientes:
+  - **Cluster compartilhado:** um kubeconfig do seu facilitador e um **namespace atribuído**
+    (ex.: `student-07`), além do `kubectl` no seu `PATH`. Você **não** precisa de cluster-admin.
+  - **Cluster kind local:** um **container engine** (Docker ou Podman) e este repositório clonado.
+    Você executa **um comando** (`./workshop up`) — ele instala as ferramentas fixadas (kubectl, kind,
+    …) e cria seu cluster. Veja [`../../docs/setup.md`](../../docs/setup.md) para a escolha do engine
+    (incl. a nota de licenciamento do Docker Desktop) e o caminho Windows/WSL2.
+- Um terminal em que você consiga copiar e colar. Nenhum lab anterior é necessário.
 
 ## Files used
 
-- **None.** On the kind path, the cluster config lives in `infra/kind/cluster.yaml` and is
-  managed for you by `./workshop`; you create no files in this lab.
+- **Nenhum.** No caminho kind, a configuração do cluster vive em `infra/kind/cluster.yaml` e é
+  gerenciada para você pelo `./workshop`; você não cria nenhum arquivo neste lab.
 
 ---
 
-## Step 0 — first task: confirm your machine is lab-ready
+## Step 0 — primeira tarefa: confirme que sua máquina está pronta para o lab
 
-Every later lab has a spoiler; so does this one. **Get to a verified starting state before
-any content.** Do the task that matches your environment.
+Todo lab posterior tem um spoiler; este também tem. **Chegue a um estado inicial verificado antes
+de qualquer conteúdo.** Faça a tarefa que corresponde ao seu ambiente.
 
-### kind path — one command
+### Caminho kind — um comando
 
-From the repo root, bring up (or re-check) your local cluster:
+A partir da raiz do repositório, suba (ou verifique de novo) seu cluster local:
 
 ```bash
-./workshop up          # preflight → pinned tools → kind cluster → doctor
+./workshop up          # preflight → ferramentas fixadas → cluster kind → doctor
 ```
 
-`up` finishes by running `./workshop doctor`, which checks the engine, tool versions, the
-cluster, its nodes, and a throwaway smoke Pod. A green summary means you're ready.
-If mise was installed for the first time, follow the final `mise activate` hint before
-copying later `kubectl` commands into the same terminal; no shell restart is required.
+O `up` termina executando `./workshop doctor`, que checa o engine, as versões das ferramentas, o
+cluster, seus nodes e um Pod de smoke descartável. Um resumo verde significa que você está pronto.
+Se o mise foi instalado pela primeira vez, siga a dica final de `mise activate` antes de
+copiar os próximos comandos `kubectl` no mesmo terminal; não é preciso reiniciar o shell.
 
-<details><summary>Solution / expected output — kind path</summary>
+<details><summary>Solução / saída esperada — caminho kind</summary>
 
 ```console
 $ ./workshop up
@@ -71,35 +71,36 @@ doctor: 7 passed, 0 warnings, 0 failed
 [ OK ] environment is ready — start with labs/day-1/00-setup.md
 ```
 
-Re-run `./workshop doctor` any time to re-check. A `[WARN]` (e.g. a version drift) is fine;
-a `[FAIL]` prints a targeted fix hint — the common one is "run: make kind-up", which
-`./workshop up` does for you.
+Execute `./workshop doctor` de novo a qualquer momento para reverificar. Um `[WARN]` (ex.: um
+desvio de versão) é aceitável; um `[FAIL]` imprime uma dica de correção direcionada — a mais
+comum é "run: make kind-up", que o `./workshop up` executa para você.
 </details>
 
-### Shared-cluster path — reach your cluster
+### Caminho do cluster compartilhado — alcance seu cluster
 
-`./workshop doctor` is for the local kind cluster only, so on a shared cluster your first
-task is instead to confirm `kubectl` reaches the cluster your facilitator gave you. That is
-exactly Step 1 below — start there.
+O `./workshop doctor` é só para o cluster kind local, então em um cluster compartilhado sua
+primeira tarefa é, em vez disso, confirmar que o `kubectl` alcança o cluster que seu facilitador
+te deu. Isso é exatamente o Step 1 abaixo — comece por lá.
 
 ---
 
-## Step 1 — confirm kubectl and reach a cluster
+## Step 1 — confirme o kubectl e alcance um cluster
 
-Set a shell variable for your working namespace now; **every later command reuses `$NS`.**
-On the shared cluster, use the namespace your facilitator assigned. On kind, your cluster
-came up in Step 0 — we create a `workshop` namespace in Step 2; use `workshop` there.
+Defina agora uma variável de shell para seu namespace de trabalho; **todo comando posterior
+reutiliza `$NS`.** No cluster compartilhado, use o namespace que seu facilitador atribuiu. No
+kind, seu cluster subiu no Step 0 — criamos um namespace `workshop` no Step 2; use `workshop` lá.
 
 ```bash
-export NS=<your-namespace>        # e.g. student-07  (kind users: export NS=workshop)
-kubectl version                   # client + server versions
-kubectl config current-context    # which cluster am I pointed at?
+export NS=<your-namespace>        # ex.: student-07  (usuários de kind: export NS=workshop)
+kubectl version                   # versões de client + server
+kubectl config current-context    # para qual cluster estou apontando?
 ```
 
-**Task:** run the three commands. Confirm `kubectl version` prints **both** a *Client
-Version* and a *Server Version* (a client-only output means you are not reaching a cluster).
+**Tarefa:** execute os três comandos. Confirme que `kubectl version` imprime **tanto** uma *Client
+Version* quanto uma *Server Version* (uma saída só de client significa que você não está
+alcançando um cluster).
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ kubectl version
@@ -108,34 +109,35 @@ Kustomize Version: v5.x.y
 Server Version: v1.3x.z
 
 $ kubectl config current-context
-workshop-shared          # or "kind-workshop" on a local cluster
+workshop-shared          # ou "kind-workshop" em um cluster local
 ```
 
-If you only see `Client Version:` and then a connection error, your kubeconfig is not
-loaded or the cluster is unreachable — fix that with your facilitator (shared) or by
-finishing Step 2 (kind) before continuing.
+Se você só vê `Client Version:` e depois um erro de conexão, seu kubeconfig não está carregado
+ou o cluster está inalcançável — resolva isso com seu facilitador (compartilhado) ou terminando
+o Step 2 (kind) antes de continuar.
 </details>
 
-**Question:** your client and server versions differ — is that a problem?
+**Pergunta:** suas versões de client e server diferem — isso é um problema?
 
-<details><summary>Answer</summary>
+<details><summary>Resposta</summary>
 
-Usually no. Kubernetes supports a `kubectl` that is **within one minor version** of the API
-server (e.g. a v1.34 client against a v1.33 or v1.35 server). A larger skew can produce
-missing fields or odd errors — if you see strange behaviour later, check this first with
-`kubectl version`.
+Normalmente não. O Kubernetes suporta um `kubectl` que esteja **a até uma minor version** do API
+server (ex.: um client v1.34 contra um server v1.33 ou v1.35). Um desvio maior pode produzir
+campos ausentes ou erros estranhos — se você vir comportamento esquisito mais tarde, cheque isto
+primeiro com `kubectl version`.
 </details>
 
 ---
 
-## Step 2 — get a namespace you own, and make it your default
+## Step 2 — obtenha um namespace que seja seu, e torne-o seu padrão
 
-Pick the path that matches your environment. **Both paths end identically:** `$NS` exists,
-is empty, and is your default namespace so you can drop `-n $NS` from later commands.
+Escolha o caminho que corresponde ao seu ambiente. **Os dois caminhos terminam de forma
+idêntica:** `$NS` existe, está vazio, e é seu namespace padrão para que você possa omitir
+`-n $NS` dos comandos seguintes.
 
-### Namespace environment (shared cluster)
+### Ambiente de namespace (cluster compartilhado)
 
-Your namespace already exists. Confirm it and set it as your context default:
+Seu namespace já existe. Confirme-o e defina-o como o padrão do seu contexto:
 
 ```bash
 kubectl get namespace "$NS"
@@ -143,7 +145,7 @@ kubectl config set-context --current --namespace="$NS"
 kubectl config view --minify | grep namespace:
 ```
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ kubectl get namespace student-07
@@ -157,14 +159,14 @@ $ kubectl config view --minify | grep namespace:
     namespace: student-07
 ```
 
-`--minify` collapses the kubeconfig to just the current context, so the `namespace:` line is
-the one that will be used by default from now on.
+`--minify` reduz o kubeconfig apenas ao contexto atual, então a linha `namespace:` é a que
+será usada por padrão daqui em diante.
 </details>
 
-### kind environment (local cluster)
+### Ambiente kind (cluster local)
 
-Your cluster already exists — `./workshop up` created it in Step 0 and switched your kubectl
-context to `kind-workshop`. Now just create a `workshop` namespace and make it your default:
+Seu cluster já existe — o `./workshop up` o criou no Step 0 e mudou seu contexto do kubectl para
+`kind-workshop`. Agora apenas crie um namespace `workshop` e torne-o seu padrão:
 
 ```bash
 kubectl create namespace workshop
@@ -172,7 +174,7 @@ kubectl config set-context --current --namespace=workshop
 kubectl config view --minify | grep namespace:
 ```
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ kubectl create namespace workshop
@@ -185,28 +187,28 @@ $ kubectl config view --minify | grep namespace:
     namespace: workshop
 ```
 
-`./workshop up` already pointed kubectl at `kind-workshop`, so `set-context` here just
-changes the **default namespace** within that context. (If you ever need to recreate the
-cluster from scratch, `./workshop down && ./workshop up` is the full reset.)
+O `./workshop up` já apontou o kubectl para `kind-workshop`, então o `set-context` aqui só muda
+o **namespace padrão** dentro daquele contexto. (Se você algum dia precisar recriar o cluster do
+zero, `./workshop down && ./workshop up` é o reset completo.)
 </details>
 
 ---
 
-## Step 3 — confirm you can actually create workloads
+## Step 3 — confirme que você realmente consegue criar workloads
 
-Reading is not enough — the first real lab creates a Pod. Check the permission directly with
-`kubectl auth can-i` (this asks the API server, so the answer is authoritative for your
-identity in **this** namespace).
+Ler não basta — o primeiro lab de verdade cria um Pod. Cheque a permissão diretamente com
+`kubectl auth can-i` (isso pergunta ao API server, então a resposta é autoritativa para a sua
+identidade **neste** namespace).
 
 ```bash
 kubectl auth can-i create pods -n "$NS"
 kubectl auth can-i delete pods -n "$NS"
 ```
 
-**Task:** both must answer `yes`. If either says `no` on the shared cluster, stop and tell
-your facilitator — you have the wrong namespace or a read-only binding.
+**Tarefa:** os dois devem responder `yes`. Se algum disser `no` no cluster compartilhado, pare e
+avise seu facilitador — você está com o namespace errado ou com um binding somente leitura.
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ kubectl auth can-i create pods -n student-07
@@ -215,30 +217,30 @@ $ kubectl auth can-i delete pods -n student-07
 yes
 ```
 
-On kind you own the cluster, so every answer is `yes`. On the shared cluster you should be
-able to create/delete workloads **inside your namespace** but not cluster-scoped objects —
-that is expected and correct (least privilege). We test RBAC properly in Lab 19.
+No kind você é dono do cluster, então toda resposta é `yes`. No cluster compartilhado você deve
+conseguir criar/deletar workloads **dentro do seu namespace**, mas não objetos de escopo de
+cluster — isso é esperado e correto (privilégio mínimo). Testamos RBAC de verdade no Lab 19.
 </details>
 
 ---
 
-## Step 4 — break it on purpose: a wrong context
+## Step 4 — quebre de propósito: um contexto errado
 
-Every lab in this workshop has a **deliberate break→fix** step — failing safely now means you
-recognise the failure later. Here it's the most common one of all: `kubectl` with **no context
-selected**. Save your current context, unset it so `kubectl` has nowhere to talk to, watch it
-fail, then switch back.
+Todo lab deste workshop tem um passo deliberado de **break→fix** — falhar em segurança
+agora significa reconhecer a falha depois. Aqui é a mais comum de todas: `kubectl` **sem contexto
+selecionado**. Salve seu contexto atual, desfaça a seleção para o `kubectl` não ter com quem
+falar, veja-o falhar, e depois volte.
 
 ```bash
-CURRENT=$(kubectl config current-context)   # remember your real context
-kubectl config unset current-context        # break it: no context is now selected
-kubectl get pods                            # this now fails — read the error
+CURRENT=$(kubectl config current-context)   # lembre seu contexto real
+kubectl config unset current-context        # quebre: nenhum contexto está selecionado agora
+kubectl get pods                            # isto agora falha — leia o erro
 ```
 
-**Task:** run all three. The last command must **fail**. Read the error text before fixing it —
-you'll restore the context in the next block.
+**Tarefa:** execute os três. O último comando deve **falhar**. Leia o texto do erro antes de
+consertar — você restaura o contexto no próximo bloco.
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ CURRENT=$(kubectl config current-context)
@@ -248,53 +250,53 @@ $ kubectl get pods
 error: current-context must exist in order to minify
 ```
 
-With no `current-context`, `kubectl` doesn't know **which cluster** to talk to, so it refuses
-before it ever hits the network. A close cousin you'll meet in the wild is a context that *is*
-set but points nowhere reachable:
+Sem `current-context`, o `kubectl` não sabe **com qual cluster** falar, então ele se recusa
+antes mesmo de tocar a rede. Um primo próximo que você vai encontrar no mundo real é um contexto
+que *está* definido mas aponta para lugar nenhum alcançável:
 
 ```console
 The connection to the server localhost:8080 was refused - did you specify the right host or port?
 ```
 
-Same lesson, different layer: **no context** → fix the *context*; **connection refused** → the
-context is fine but the *cluster/network* isn't.
+Mesma lição, camada diferente: **sem contexto** → conserte o *contexto*; **connection refused** →
+o contexto está bem, mas o *cluster/rede* não está.
 </details>
 
-**Task:** switch back to your real context and confirm `kubectl` works again.
+**Tarefa:** volte para seu contexto real e confirme que o `kubectl` funciona de novo.
 
 ```bash
-kubectl config use-context "$CURRENT"       # restore what you saved above
+kubectl config use-context "$CURRENT"       # restaure o que você salvou acima
 ```
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ kubectl config use-context "$CURRENT"
-Switched to context "workshop-shared".        # or "kind-workshop"
+Switched to context "workshop-shared".        # ou "kind-workshop"
 ```
 
-If `$CURRENT` is empty (e.g. a fresh terminal), pass the name directly:
-`kubectl config use-context workshop-shared` (shared) or `kind-workshop` (kind).
+Se `$CURRENT` estiver vazio (ex.: um terminal novo), passe o nome diretamente:
+`kubectl config use-context workshop-shared` (compartilhado) ou `kind-workshop` (kind).
 </details>
 
-**Task (confirm you're really back):** prove the cluster is reachable again. The check differs
-slightly per environment.
+**Tarefa (confirme que você realmente voltou):** prove que o cluster está alcançável de novo. A
+checagem varia um pouco por ambiente.
 
-<details><summary>Solution / expected output — namespace path</summary>
+<details><summary>Solução / saída esperada — caminho do namespace</summary>
 
-Confirm read scope in your namespace:
+Confirme o escopo de leitura no seu namespace:
 
 ```console
 $ kubectl get pods
 No resources found in student-07 namespace.
 ```
 
-An empty list (not an error) means you're connected and scoped correctly.
+Uma lista vazia (e não um erro) significa que você está conectado e com o escopo correto.
 </details>
 
-<details><summary>Solution / expected output — kind path</summary>
+<details><summary>Solução / saída esperada — caminho kind</summary>
 
-Confirm the cluster exists and the control plane answers:
+Confirme que o cluster existe e que o control plane responde:
 
 ```console
 $ kind get clusters
@@ -305,77 +307,79 @@ Kubernetes control plane is running at https://127.0.0.1:PORT
 CoreDNS is running at https://127.0.0.1:PORT/api/v1/namespaces/kube-system/services/kube-dns:dns/proxy
 ```
 
-`cluster-info` printing endpoints (not a connection error) confirms you're back on a live cluster.
+O `cluster-info` imprimindo endpoints (e não um erro de conexão) confirma que você voltou a um
+cluster vivo.
 </details>
 
 ---
 
-## Step 5 — reach the shared "ready" state
+## Step 5 — chegue ao estado "pronto" compartilhado
 
-Everyone should now have an **empty** working namespace. Confirm nothing is running:
+Todo mundo deve estar agora com um namespace de trabalho **vazio**. Confirme que nada está
+rodando:
 
 ```bash
 kubectl get all -n "$NS"
 ```
 
-<details><summary>Solution / expected output</summary>
+<details><summary>Solução / saída esperada</summary>
 
 ```console
 $ kubectl get all -n student-07
 No resources found in student-07 namespace.
 ```
 
-`No resources found` is the correct, shared ready state for both environments. If you see
-leftover objects on a shared namespace, run the panic reset in the next step.
+`No resources found` é o estado pronto correto e compartilhado para os dois ambientes. Se você
+vir objetos sobrando em um namespace compartilhado, execute o reset de pânico do próximo passo.
 </details>
 
 ## Expected observations
 
-- `kubectl version` shows a client **and** a server version.
-- `kubectl config view --minify` shows your namespace (`$NS`) as the default.
-- `kubectl auth can-i create pods` returns `yes` in your namespace.
-- Pointing at a bad context **fails loudly**, and you can read the error and recover from it.
-- `kubectl get all` reports **no resources** — you are at the clean starting state.
+- `kubectl version` mostra uma versão de client **e** uma de server.
+- `kubectl config view --minify` mostra seu namespace (`$NS`) como o padrão.
+- `kubectl auth can-i create pods` retorna `yes` no seu namespace.
+- Apontar para um contexto ruim **falha ruidosamente**, e você consegue ler o erro e se recuperar dele.
+- `kubectl get all` reporta **nenhum recurso** — você está no estado inicial limpo.
 
 ---
 
 ## Cleanup / panic reset
 
-You created nothing to clean up in this lab, but learn the **panic reset now** — every later
-lab points back here. It deletes the common namespaced workload objects **scoped to your
-namespace**, returning it to the empty state without touching anyone else:
+Você não criou nada para limpar neste lab, mas aprenda o **reset de pânico agora** — todo lab
+posterior aponta de volta para cá. Ele deleta os objetos de workload comuns com escopo de
+namespace **limitados ao seu namespace**, devolvendo-o ao estado vazio sem tocar em ninguém mais:
 
 ```bash
-# Namespace-safe panic reset — deletes YOUR namespace's workloads only.
+# Reset de pânico seguro por namespace — deleta APENAS os workloads do SEU namespace.
 kubectl delete deploy,rs,sts,ds,job,cronjob,pod,svc,ingress,configmap,secret,pvc \
   --all -n "$NS" \
   --ignore-not-found \
-  --field-selector metadata.name!=kube-root-ca.crt   # keep the auto-injected CA configmap
+  --field-selector metadata.name!=kube-root-ca.crt   # mantém o configmap de CA injetado automaticamente
 ```
 
-<details><summary>When the shared cluster is not enough — kind only</summary>
+<details><summary>Quando o cluster compartilhado não basta — apenas kind</summary>
 
-On kind, the fastest possible reset is to throw the cluster away and rebuild it (≈30 s):
+No kind, o reset mais rápido possível é jogar o cluster fora e reconstruí-lo (≈30 s):
 
 ```console
-$ ./workshop down && ./workshop up   # then re-do Step 2's namespace commands
+$ ./workshop down && ./workshop up   # depois refaça os comandos de namespace do Step 2
 ```
 
-`./workshop down` deletes the cluster (it asks you to confirm; add `--yes` to skip the
-prompt) and `./workshop up` recreates it from the same pinned config. Never do this on a
-shared cluster — you would delete everyone's work. There, the scoped
-`kubectl delete ... -n $NS` above is the correct reset.
+O `./workshop down` deleta o cluster (ele pede confirmação; adicione `--yes` para pular o
+prompt) e o `./workshop up` o recria a partir da mesma configuração fixada. Nunca faça isso em
+um cluster compartilhado — você deletaria o trabalho de todo mundo. Lá, o
+`kubectl delete ... -n $NS` com escopo acima é o reset correto.
 </details>
 
 ## Stretch (optional)
 
-See the **full** set of actions your identity is allowed in your namespace:
+Veja o conjunto **completo** de ações que a sua identidade pode executar no seu namespace:
 
 ```bash
 kubectl auth can-i --list -n "$NS"
 ```
 
-<details><summary>Solution / what you're looking at</summary>
+<details><summary>Solução / o que você está vendo</summary>
 
 ```console
 $ kubectl auth can-i --list -n student-07
@@ -386,7 +390,7 @@ deployments.apps   []                  []               [get list watch create u
 selfsubjectreviews []                  []               [create]
 ```
 
-Each row is a rule that applies to you here. On kind you will see a `*.*` wildcard row
-(cluster-admin). On the shared cluster the list is deliberately narrower — that is RBAC doing
-its job, which you'll build yourself in Lab 19.
+Cada linha é uma regra que se aplica a você aqui. No kind você verá uma linha curinga `*.*`
+(cluster-admin). No cluster compartilhado a lista é deliberadamente mais estreita — isso é o
+RBAC fazendo seu trabalho, que você mesmo vai construir no Lab 19.
 </details>

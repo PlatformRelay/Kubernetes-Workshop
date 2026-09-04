@@ -1,11 +1,11 @@
-# Supply-chain policy
+# Política de supply-chain
 
-The repository fails CI when the locked JavaScript dependency graph contains an
-unexcepted **high** or **critical** advisory, a workflow uses a mutable action
-reference, or maintained executable setup code introduces an ungoverned remote
-download or execution path.
+O repositório falha no CI quando o grafo de dependências JavaScript travado no lockfile contém um
+advisory **high** ou **critical** sem exceção registrada, quando um workflow usa uma referência mutável
+de action, ou quando código de setup executável mantido introduz um caminho de download ou execução
+remota sem governança.
 
-Run the same gates locally:
+Execute os mesmos gates localmente:
 
 ```sh
 pnpm install --frozen-lockfile
@@ -14,37 +14,37 @@ node scripts/supply-chain-policy.mjs
 node scripts/dependency-audit.mjs
 ```
 
-## Dependency audit policy
+## Política de auditoria de dependências
 
-`scripts/dependency-audit.mjs` runs `pnpm audit` against the dependency graph in
-`pnpm-lock.yaml`. High and critical advisories fail. Lower severities remain
-visible in the count and are reviewed during routine dependency updates.
+O `scripts/dependency-audit.mjs` roda `pnpm audit` contra o grafo de dependências de
+`pnpm-lock.yaml`. Advisories high e critical falham. Severidades menores continuam
+visíveis na contagem e são revisadas durante as atualizações rotineiras de dependências.
 
-## Dependency update tooling
+## Ferramental de atualização de dependências
 
-Dependabot **security alerts** and **security updates** stay enabled in GitHub
-Settings. **Renovate** (`renovate.json`) owns scheduled npm and GitHub Actions
-version bumps. **Dependabot version updates** (`.github/dependabot.yml`) cover
-only the nested Go module at `infra/images/workshop-web`, where Renovate does
-not manage `gomod`. This split avoids duplicate PRs while keeping both
-ecosystems on a weekly Monday cadence.
+Os **security alerts** e **security updates** do Dependabot permanecem habilitados nas
+Settings do GitHub. O **Renovate** (`renovate.json`) é dono dos bumps de versão agendados de npm e
+GitHub Actions. Os **version updates do Dependabot** (`.github/dependabot.yml`) cobrem
+apenas o módulo Go aninhado em `infra/images/workshop-web`, onde o Renovate não
+gerencia `gomod`. Essa divisão evita PRs duplicados e mantém os dois
+ecossistemas em uma cadência semanal às segundas-feiras.
 
-Before the live registry scan, the same command checks every locked version
-against the GitHub advisory ranges captured in
-`supply-chain/dependency-advisories.json`. This checked-in evidence keeps known
-patched floors enforceable without network access; updating it requires a
-reviewed refresh from the GitHub Global Security Advisory API. Malformed or
-empty evidence fails closed.
+Antes do scan no registry ao vivo, o mesmo comando confere cada versão travada
+contra as faixas de advisory do GitHub registradas em
+`supply-chain/dependency-advisories.json`. Essa evidência versionada no repositório mantém os
+pisos de versões corrigidas conhecidos aplicáveis sem acesso à rede; atualizá-la exige um
+refresh revisado a partir da GitHub Global Security Advisory API. Evidência malformada ou
+vazia falha fechado.
 
-Recorded vulnerable ranges use a deliberately small grammar: one or more
-comma-separated `>`, `>=`, `<`, `<=`, or `=` comparators with exact `x.y.z`
-versions. Every segment is required; OR expressions, wildcards, prereleases,
-and empty segments are rejected. For a range with an upper bound, the recorded
-first patched version must be above an inclusive bound or at/above an exclusive
-bound before any lock entry is evaluated.
+As faixas vulneráveis registradas usam uma gramática deliberadamente pequena: um ou mais
+comparadores `>`, `>=`, `<`, `<=` ou `=` separados por vírgula com versões `x.y.z`
+exatas. Todo segmento é obrigatório; expressões OR, wildcards, prereleases
+e segmentos vazios são rejeitados. Para uma faixa com limite superior, a primeira versão
+corrigida registrada deve estar acima de um limite inclusivo ou igual/acima de um limite
+exclusivo antes que qualquer entrada do lock seja avaliada.
 
-An accepted risk must be added to `supply-chain/dependency-audit.json` with all
-of these fields:
+Um risco aceito precisa ser adicionado a `supply-chain/dependency-audit.json` com todos
+estes campos:
 
 ```json
 {
@@ -55,85 +55,85 @@ of these fields:
 }
 ```
 
-Expired or malformed exceptions fail the gate. An audit command that cannot
-return parseable scanner output exits separately as **scanner unavailable**; it
-is never reported as a clean result. Unexpected scanner status and high/critical
-metadata that disagrees with the advisory records fail the same way. CI fails closed. For a time-critical
-release, the only waiver is a reviewed, committed advisory exception with an
-owner and near-term expiry—never an environment variable that silently skips
-the scanner.
+Exceções expiradas ou malformadas falham o gate. Um comando de auditoria que não consegue
+retornar uma saída de scanner parseável sai separadamente como **scanner unavailable**; isso
+nunca é reportado como resultado limpo. Status inesperado do scanner e metadados high/critical
+que discordem dos registros de advisory falham do mesmo jeito. O CI falha fechado. Para uma
+release urgente, a única dispensa possível é uma exceção de advisory revisada e commitada, com
+owner e expiração de curto prazo — nunca uma variável de ambiente que silenciosamente pule
+o scanner.
 
-## GitHub Actions policy
+## Política de GitHub Actions
 
-Every external action in `.github/workflows/` uses a 40-character commit SHA and
-a nearby version comment, for example:
+Toda action externa em `.github/workflows/` usa um commit SHA de 40 caracteres e
+um comentário de versão próximo, por exemplo:
 
 ```yaml
 - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 ```
 
-Container actions, if introduced, must use an image digest. Local actions under
-`./` are allowed. Renovate's GitHub Actions manager has `pinDigests: true`, so
-updates remain reviewable proposals and preserve immutable references.
+Container actions, se forem introduzidas, precisam usar um digest de image. Actions locais em
+`./` são permitidas. O manager de GitHub Actions do Renovate está com `pinDigests: true`, então as
+atualizações continuam sendo propostas revisáveis e preservam referências imutáveis.
 
-Every workflow declares read-only permissions at the workflow level. Jobs that
-publish an image, Pages deployment, or release artifact opt into only the write
-or OIDC permissions they need. Release assembly and validation run in a
-separate read-only job; only the final publication job receives `contents:
+Todo workflow declara permissions somente leitura no nível do workflow. Jobs que
+publicam uma image, um deployment de Pages ou um artefato de release optam apenas pelas permissions
+de escrita ou de OIDC de que precisam. A montagem e a validação da release rodam em um
+job separado somente leitura; apenas o job final de publicação recebe `contents:
 write`.
 
-## Remote downloads
+## Downloads remotos
 
-The policy currently covers two executable trust boundaries:
+A política cobre hoje duas fronteiras de confiança executáveis:
 
-- every artifact URL generated in `mise.lock` must have a `sha256` checksum in
-  the same platform entry;
-- maintained shell, Python, and Node setup/automation under `infra/`, `setup/`,
-  `scripts/`, `.github/`, plus the root launch/task surfaces may not download a
-  remote input—or pipe one into a shell—without a named, documented, unexpired
-  entry in `supply-chain/exceptions.json`;
-- direct, aliased, and simply token-assembled `curl`/`wget`, Python HTTP clients
-  and subprocess calls, and Node `fetch` are treated as network-capable
-  callsites. A new callsite fails until its exact command is reviewed.
+- toda URL de artefato gerada em `mise.lock` precisa ter um checksum `sha256` na
+  mesma entrada de plataforma;
+- código mantido de setup/automação em shell, Python e Node sob `infra/`, `setup/`,
+  `scripts/`, `.github/`, mais as superfícies de launch/task da raiz, não pode baixar uma
+  entrada remota — nem canalizá-la para um shell — sem uma entrada nomeada, documentada e não
+  expirada em `supply-chain/exceptions.json`;
+- chamadas `curl`/`wget` diretas, via alias ou montadas por tokens simples, clientes HTTP e
+  chamadas de subprocesso em Python, e `fetch` do Node são tratados como callsites com capacidade
+  de rede. Um novo callsite falha até que seu comando exato seja revisado.
 
-Each exception binds an exact HTTPS `source` to one of two auditable kinds:
+Cada exceção vincula um `source` HTTPS exato a um de dois tipos auditáveis:
 
-- `accepted-risk` requires an exact, whitespace-normalized literal `command`
-  with no dynamic source. It states plainly that the bytes are not
-  checksum-pinned and gives the reason and expiry for that temporary risk
-  acceptance;
-- `sha256` permits only one deliberately narrow flow: `curl -fsSL <source> -o
-  <output>`, then `printf ... | sha256sum -c -`, then `bash <output>`. The source,
-  simple output filename, exact digest, verified file, and executed file must
-  all match the inventory. Comments do not satisfy a verification step.
+- `accepted-risk` exige um `command` literal exato, com espaços normalizados
+  e sem source dinâmico. Ela declara claramente que os bytes não estão
+  fixados por checksum e apresenta o motivo e a expiração dessa aceitação temporária de
+  risco;
+- `sha256` permite apenas um fluxo deliberadamente estreito: `curl -fsSL <source> -o
+  <output>`, depois `printf ... | sha256sum -c -`, depois `bash <output>`. O source, o
+  nome de arquivo simples de saída, o digest exato, o arquivo verificado e o arquivo executado precisam
+  todos bater com o inventário. Comentários não satisfazem uma etapa de verificação.
 
-This is a fail-closed drift inventory for ordinary maintained code. It catches
-accidental mutable inputs and the common indirection forms covered by its
-mutation tests. It is **not** a proof against intentionally obfuscated malicious
-code; review, branch protection, and the immutable workflow/action policy remain
-the controls for hostile changes.
+Este é um inventário de drift que falha fechado para código mantido comum. Ele captura
+entradas mutáveis acidentais e as formas comuns de indireção cobertas pelos seus testes de
+mutação. Ele **não** é uma prova contra código malicioso intencionalmente
+ofuscado; revisão, branch protection e a política imutável de workflow/action continuam
+sendo os controles para mudanças hostis.
 
-The interactive mise convenience installer is the only current exception. It
-is isolated from non-interactive/CI setup, but the installer bytes themselves
-are **not checksum-pinned**. That accepted risk expires on **2026-11-03** so the
-bootstrap path must be reviewed again.
+O instalador de conveniência interativo do mise é a única exceção atual. Ele é
+isolado do setup não interativo/de CI, mas os bytes do instalador em si
+**não estão fixados por checksum**. Esse risco aceito expira em **2026-11-03**, para que o
+caminho de bootstrap precise ser revisado de novo.
 
-Learner-facing labs currently contain direct, versioned `kubectl apply -f URL`
-commands. They are intentionally not misrepresented as checksum-verified by
-this gate: converting those commands to cached, checksummed add-on inputs is
-owned by the add-on/lab execution work. Until that lands, these URLs remain a
-known residual rather than a false green claim.
+Os labs voltados ao aluno hoje contêm comandos `kubectl apply -f URL` diretos e
+versionados. Eles não são intencionalmente apresentados como verificados por checksum por
+este gate: converter esses comandos em entradas de add-on cacheadas e com checksum é
+responsabilidade do trabalho de execução de add-ons/labs. Até isso acontecer, essas URLs continuam sendo um
+residual conhecido, e não uma falsa alegação de "tudo verde".
 
-## Existing and residual evidence
+## Evidências existentes e residuais
 
-The `workshop-web` image workflow already scans images at HIGH/CRITICAL, signs
-image digests, and attests an SPDX SBOM. This change pins that workflow's
-actions but does not claim a new image run occurred.
+O workflow de image do `workshop-web` já escaneia images em HIGH/CRITICAL, assina
+digests de image e atesta um SBOM SPDX. Esta mudança fixa as actions desse workflow,
+mas não afirma que uma nova execução de image tenha ocorrido.
 
-CodeQL is owned by US-CI-CODEQL via an explicit `.github/workflows/codeql.yml`
-(default-setup API PUT returned 404). The workflow covers Actions, Go
-(`infra/images/workshop-web`), and JS/TS; `security-events: write` on the
-`analyze` job is allowlisted in `scripts/supply-chain-policy.mjs`. First-scan
-triage cannot be proven by a local change, so this gate does not fabricate that
-evidence. Dependency SBOM retention for published deck release artifacts
-likewise remains release-workflow scope.
+O CodeQL é de responsabilidade de US-CI-CODEQL, via um `.github/workflows/codeql.yml` explícito
+(o PUT da API de default-setup retornou 404). O workflow cobre Actions, Go
+(`infra/images/workshop-web`) e JS/TS; `security-events: write` no job
+`analyze` está na allowlist de `scripts/supply-chain-policy.mjs`. A triagem do primeiro scan
+não pode ser comprovada por uma mudança local, então este gate não fabrica essa
+evidência. A retenção de SBOM de dependências para os artefatos de release publicados do deck
+permanece, igualmente, no escopo do workflow de release.

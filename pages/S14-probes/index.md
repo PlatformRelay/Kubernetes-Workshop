@@ -9,196 +9,198 @@ track: Workloads
 
 # Health probes
 
-A `Running` Pod isn't necessarily **ready** to serve — or even **healthy**.
+Um Pod `Running` não está necessariamente **pronto** para servir — nem sequer **saudável**.
 
-**core** · suggested Day 2 · Workloads track
+**core** · sugerido para o Day 2 · trilha Workloads
 
 <!--
-Section S14 — Health probes. Timing: ~30 min slides + 30 min lab. Follows S13.
-Outcome: learners can state what each of the three probes does — readiness gates traffic,
-liveness restarts the container, startup protects slow starters and suspends the other two —
-the probe mechanisms (httpGet/tcpSocket/exec/grpc) and key timing fields, and the classic
-misconfigurations (flapping liveness, readiness that never passes).
-Beats: problem (Running ≠ ready ≠ healthy) · mental model (three probes, three jobs) ·
-code-annotated (a readiness probe, every field decoded) · magic-move (+readiness → +liveness
-→ +startup on the through-line web Deployment) · ServiceRouting animation REUSED (readiness
-fail drains one Pod from the EndpointSlice, zero downtime — the US-X3 variant the component was
-built for) · two-divergent-arrows fork (readiness ✗ = out of endpoints, no restart / liveness
-✗ = restart) · misconfig beat · recap → lab.
-Animation: ServiceRouting.vue REUSED per the AGENT.md reuse guardrail and the US-S14 AC
-("reused animation, US-X3 variant, extends S07"); no new component. The liveness half of the
-"two divergent arrows" is a static KwCard fork, not a second animation.
-Red line: extends the S06/S07 `web` Deployment by adding probes; the magic-move final frame
-matches the lab's deployment-probes.yaml container spec byte-for-byte (S07/S08 anchor style).
-CKx: CKAD Observability — liveness/readiness/startup probes and their traffic/restart effects.
+Seção S14 — Health probes. Tempo: ~30 min de slides + 30 min de lab. Vem depois do S13.
+Resultado: os participantes conseguem dizer o que cada uma das três probes faz — readiness
+controla o tráfego, liveness reinicia o container, startup protege inicializações lentas e
+suspende as outras duas — os mecanismos de probe (httpGet/tcpSocket/exec/grpc) e os campos-chave
+de timing, e as misconfigurations clássicas (liveness que flapa, readiness que nunca passa).
+Beats: problema (Running ≠ pronto ≠ saudável) · modelo mental (três probes, três trabalhos) ·
+code-annotated (uma readiness probe, cada campo decodificado) · magic-move (+readiness → +liveness
+→ +startup no Deployment web do fio condutor) · animação ServiceRouting REUSADA (falha de
+readiness drena um Pod da EndpointSlice, zero downtime — a variante US-X3 para a qual o componente
+foi construído) · bifurcação de duas setas divergentes (readiness ✗ = fora dos endpoints, sem
+restart / liveness ✗ = restart) · beat de misconfig · recap → lab.
+Animação: ServiceRouting.vue REUSADA conforme a guarda de reuso do AGENT.md e o AC da US-S14
+("reused animation, US-X3 variant, extends S07"); nenhum componente novo. A metade liveness das
+"duas setas divergentes" é uma bifurcação estática com KwCard, não uma segunda animação.
+Red line: estende o Deployment `web` do S06/S07 adicionando probes; o quadro final do magic-move
+bate byte a byte com o spec de container do deployment-probes.yaml do lab (estilo âncora S07/S08).
+CKx: CKAD Observability — probes de liveness/readiness/startup e seus efeitos de tráfego/restart.
 -->
 
 ---
 layout: statement
-kicker: The problem
+kicker: O problema
 ---
 
-`Running` is a lie you tell your users.
+`Running` é uma mentira que você conta aos seus usuários.
 
-The `web` Deployment reports `3/3` and every Pod says `Running` — so the Service sends
-traffic. But `Running` only means *the process started*: the app may still be warming up,
-waiting on a dependency, or wedged on a deadlock, serving nothing but errors. Kubernetes
-can't tell a busy Pod from a broken one **unless you teach it how to ask**. That's what a
-**probe** is.
+O Deployment `web` reporta `3/3` e todo Pod diz `Running` — então o Service envia
+tráfego. Mas `Running` só significa *o processo iniciou*: a aplicação pode ainda estar aquecendo,
+esperando uma dependência, ou travada em um deadlock, servindo nada além de erros. O Kubernetes
+não consegue distinguir um Pod ocupado de um Pod quebrado **a menos que você o ensine a
+perguntar**. É isso que uma **probe** é.
 
 <!--
-Speaker: the "why should I care" beat. Phase == Running is a low bar — it means PID 1 is up,
-nothing more. Two failure modes hide behind it: (1) a Pod that's up but not YET able to serve
-(slow warm-up, waiting on a dependency) — send traffic and users get errors during every
-rollout; (2) a Pod that WAS serving but has since wedged (deadlock, leaked connection pool) —
-it'll sit there Running forever, a black hole in your load balancer. Both are invisible to
-`kubectl get pods`. A probe is how you hand Kubernetes a health question to ask on your behalf,
-on a schedule. Next slide: the three questions, and the three different things Kubernetes does
-with the answers.
+Speaker: o beat do "por que eu deveria me importar". Phase == Running é uma barra baixa —
+significa que o PID 1 está de pé, nada mais. Dois modos de falha se escondem atrás dela: (1) um
+Pod que está de pé mas AINDA não consegue servir (aquecimento lento, esperando uma dependência) —
+envie tráfego e os usuários recebem erros em todo rollout; (2) um Pod que SERVIA mas desde então
+travou (deadlock, connection pool vazado) — ele vai ficar ali Running para sempre, um buraco
+negro no seu load balancer. Ambos são invisíveis para o `kubectl get pods`. Uma probe é como você
+entrega ao Kubernetes uma pergunta de saúde para fazer em seu nome, numa cadência. Próximo slide:
+as três perguntas, e as três coisas diferentes que o Kubernetes faz com as respostas.
 -->
 
 ---
 
 <div class="kw-slide-dense">
 
-<span class="kw-kicker">Mental model · three probes, three different jobs</span>
+<span class="kw-kicker">Modelo mental · três probes, três trabalhos diferentes</span>
 
-# Ask a question · act on the answer
+# Faça uma pergunta · aja sobre a resposta
 
 <div class="mt-3 text-sm" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.85rem;">
   <v-click at="1">
-    <KwCard heading="readiness — may I get traffic?" kind="pod" variant="ok">
-      Fails → the Pod is pulled from its Service <strong>EndpointSlice</strong>. It keeps
-      <strong>Running</strong>; it just stops receiving requests until it passes again.
-      <div class="kw-muted mt-1">Gates traffic. No restart.</div>
+    <KwCard heading="readiness — posso receber tráfego?" kind="pod" variant="ok">
+      Falha → o Pod é retirado da <strong>EndpointSlice</strong> do seu Service. Ele continua
+      <strong>Running</strong>; só para de receber requisições até passar de novo.
+      <div class="kw-muted mt-1">Controla o tráfego. Sem restart.</div>
     </KwCard>
   </v-click>
   <v-click at="2">
-    <KwCard heading="liveness — are you still alive?" kind="pod" variant="warn">
-      Fails <code>failureThreshold</code> times → the kubelet <strong>restarts the
-      container</strong> in place (<code>RESTARTS ↑</code>). For wedged processes that will
-      never recover on their own.
-      <div class="kw-muted mt-1">Triggers restart. Traffic-neutral.</div>
+    <KwCard heading="liveness — você ainda está vivo?" kind="pod" variant="warn">
+      Falha <code>failureThreshold</code> vezes → o kubelet <strong>reinicia o
+      container</strong> no lugar (<code>RESTARTS ↑</code>). Para processos travados que nunca
+      vão se recuperar sozinhos.
+      <div class="kw-muted mt-1">Dispara restart. Neutro para o tráfego.</div>
     </KwCard>
   </v-click>
   <v-click at="3">
-    <KwCard heading="startup — have you finished booting?" kind="pod" variant="danger">
-      Runs <strong>first</strong> and <strong>suspends</strong> readiness &amp; liveness until
-      it passes — so a slow boot isn't mistaken for a crash.
-      <div class="kw-muted mt-1">Protects slow starters.</div>
+    <KwCard heading="startup — você terminou de subir?" kind="pod" variant="danger">
+      Roda <strong>primeiro</strong> e <strong>suspende</strong> readiness &amp; liveness até
+      passar — para um boot lento não ser confundido com um crash.
+      <div class="kw-muted mt-1">Protege quem inicia devagar.</div>
     </KwCard>
   </v-click>
 </div>
 
 <div v-click="4" class="mt-4 kw-muted text-sm">
 
-The one that trips everyone: **readiness and liveness are not the same check.** Readiness ✗
-means *don't send me work yet*; liveness ✗ means *I'm broken, restart me*. Wire the same
-failing check to both and a warm-up blip becomes a restart loop.
+A que derruba todo mundo: **readiness e liveness não são o mesmo check.** Readiness ✗
+significa *não me mande trabalho ainda*; liveness ✗ significa *estou quebrado, me reinicie*.
+Ligue o mesmo check falhando às duas e um soluço de aquecimento vira um loop de restart.
 
 </div>
 
 </div>
 
 <!--
-Speaker: the anchor slide. Three probes map to three verbs — readiness → REMOVE FROM ENDPOINTS,
-liveness → RESTART, startup → WAIT. Readiness is the safety valve of every rolling update
-(S06/S07): a new Pod stays out of the load balancer until it's genuinely ready, so users never
-hit a half-started replica. Liveness is the self-healing valve: a process that deadlocks (still
-Running, answering nothing) gets bounced. Startup is the newest and most under-used — it exists
-because people used to hack `initialDelaySeconds` onto liveness to survive slow boots, which is
-fragile; startup gives slow starters a generous, separate budget and only THEN hands over to
-liveness. Click 4 is the misconception to kill early: readiness != liveness. If your health
-endpoint checks a downstream DB and you wire it to LIVENESS, a DB blip restarts all your Pods
-(making it worse); wire it to READINESS and they just drain until the DB returns. Right check,
-right probe.
+Speaker: o slide-âncora. As três probes mapeiam para três verbos — readiness → REMOVER DOS
+ENDPOINTS, liveness → REINICIAR, startup → ESPERAR. Readiness é a válvula de segurança de todo
+rolling update (S06/S07): um Pod novo fica fora do load balancer até estar genuinamente pronto,
+então os usuários nunca acertam uma réplica meio-iniciada. Liveness é a válvula de self-healing:
+um processo que trava em deadlock (ainda Running, respondendo nada) leva um bounce. Startup é a
+mais nova e mais subutilizada — ela existe porque as pessoas costumavam gambiarrar
+`initialDelaySeconds` na liveness para sobreviver a boots lentos, o que é frágil; a startup dá a
+quem inicia devagar um orçamento generoso e separado e só ENTÃO passa o bastão para a liveness. O
+clique 4 é o equívoco a matar cedo: readiness != liveness. Se o seu endpoint de saúde checa um DB
+downstream e você o liga à LIVENESS, um soluço do DB reinicia todos os seus Pods (piorando tudo);
+ligue-o à READINESS e eles apenas drenam até o DB voltar. Check certo, probe certa.
 -->
 
 ---
 layout: code-annotated
-heading: 'One probe, every knob that matters'
+heading: 'Uma probe, cada botão que importa'
 compact: true
 lab: labs/day-2/14-probes.md
 ---
 
 ```yaml {none|2|3|5|6-7}
 readinessProbe:
-  httpGet:                    # mechanism: HTTP GET
+  httpGet:                    # mecanismo: HTTP GET
     path: /ready
     port: 8080
-  initialDelaySeconds: 0      # wait this long before the FIRST probe
-  periodSeconds: 5            # then probe every 5s
-  failureThreshold: 3         # this many misses in a row = failed
+  initialDelaySeconds: 0      # espere isso antes da PRIMEIRA probe
+  periodSeconds: 5            # depois, uma probe a cada 5s
+  failureThreshold: 3         # tantas falhas seguidas = falhou
 ```
 
 ::notes::
 
-<CodeNote at="1" label="mechanism — four ways to ask" variant="ok">
-<code>httpGet</code> (2xx/3xx = pass, ≥400 = fail), <code>tcpSocket</code> (can I open the
-port?), <code>exec</code> (run a command, exit 0 = pass), and <code>grpc</code> (native
-gRPC health). Pick the one that reflects <em>real</em> health, not just "port open."
+<CodeNote at="1" label="mecanismo — quatro formas de perguntar" variant="ok">
+<code>httpGet</code> (2xx/3xx = passou, ≥400 = falhou), <code>tcpSocket</code> (consigo abrir a
+porta?), <code>exec</code> (rode um comando, exit 0 = passou), e <code>grpc</code> (health
+nativo de gRPC). Escolha o que reflete saúde <em>de verdade</em>, não só "porta aberta".
 </CodeNote>
 
-<CodeNote at="2" label="path — probe a dedicated endpoint">
-<code>/ready</code> here, not <code>/</code>. The demo app owns this endpoint and answers
-200 or 503 from its own logic — so readiness reflects "can I actually serve," not "is the
-web server process listening."
+<CodeNote at="2" label="path — sonde um endpoint dedicado">
+<code>/ready</code> aqui, não <code>/</code>. A aplicação de demo é dona deste endpoint e responde
+200 ou 503 a partir da sua própria lógica — então readiness reflete "consigo realmente servir",
+não "o processo do web server está escutando".
 </CodeNote>
 
-<CodeNote at="3" label="initialDelaySeconds — grace before the first ask" variant="warn">
-Give the app time to start before the first probe. On a slow starter this is the field people
-abuse — a <strong>startupProbe</strong> is the right tool instead (next-but-one slide).
+<CodeNote at="3" label="initialDelaySeconds — carência antes da primeira pergunta" variant="warn">
+Dê à aplicação tempo de iniciar antes da primeira probe. Em quem inicia devagar este é o campo
+que as pessoas abusam — uma <strong>startupProbe</strong> é a ferramenta certa no lugar (daqui
+a dois slides).
 </CodeNote>
 
-<CodeNote at="4" label="periodSeconds / failureThreshold — how twitchy">
-Effective reaction time ≈ <code>periodSeconds × failureThreshold</code>. Too tight → healthy
-blips flap the Pod out; too loose → slow to notice a real failure. <code>3 × 5s = 15s</code>
-here.
+<CodeNote at="4" label="periodSeconds / failureThreshold — quão nervosa">
+Tempo efetivo de reação ≈ <code>periodSeconds × failureThreshold</code>. Apertado demais → soluços
+saudáveis tiram o Pod da rotação; frouxo demais → demora a notar uma falha real. <code>3 × 5s = 15s</code>
+aqui.
 </CodeNote>
 
 <!--
-Speaker: the field-level slide — these knobs cause most probe bugs. MECHANISMS: httpGet is the
-common one and note the success rule (any 2xx or 3xx passes; 400+ fails — that's how the lab
-breaks readiness: POST /fail flips the app's /ready to 503). tcpSocket for non-HTTP
-(databases, brokers). exec for "run a script" (most flexible, most expensive — forks a process
-each period). grpc for services that speak the standard gRPC health protocol. TIMING: the
-reaction window is periodSeconds × failureThreshold — memorise that, it's what you tune. A
-liveness probe with periodSeconds 1 / failureThreshold 1 will restart a Pod over a single GC
-pause; that's the "flapping liveness" antipattern two slides on. initialDelaySeconds is the
-crude grace period people bolt onto liveness for slow apps — the startup probe replaces it.
-This is a single readiness probe; the lab ships all three on the running Deployment.
+Speaker: o slide de nível de campo — estes botões causam a maioria dos bugs de probe.
+MECANISMOS: httpGet é o comum, e note a regra de sucesso (qualquer 2xx ou 3xx passa; 400+
+falha — é assim que o lab quebra a readiness: POST /fail vira o /ready da aplicação para 503).
+tcpSocket para não-HTTP (bancos, brokers). exec para "rode um script" (o mais flexível, o mais
+caro — faz fork de um processo a cada período). grpc para serviços que falam o protocolo padrão
+de health de gRPC. TIMING: a janela de reação é periodSeconds × failureThreshold — memorize, é
+isso que você ajusta. Uma liveness probe com periodSeconds 1 / failureThreshold 1 vai reiniciar
+um Pod por causa de uma única pausa de GC; esse é o antipattern da "liveness que flapa" dois
+slides adiante. initialDelaySeconds é o período de carência tosco que as pessoas pregam na
+liveness para apps lentas — a startup probe o substitui. Esta é uma readiness probe sozinha; o
+lab entrega as três no Deployment em execução.
 -->
 
 ---
 layout: code-walkthrough
-heading: 'Build it up — teach the web Deployment to report its own health'
+heading: 'Construa passo a passo — ensine o Deployment web a reportar a própria saúde'
 lab: labs/day-2/14-probes.md
 ---
 
 ````md magic-move
 ```yaml
-# 1: the web container as the Service section left it — "Running" the instant the process starts
+# 1: o container web como a seção de Service o deixou — "Running" no instante em que o processo inicia
 containers:
   - name: web
     image: ghcr.io/platformrelay/workshop-web:v1
     ports: [{ containerPort: 8080 }]
-    # no probes → Kubernetes assumes process-up = ready AND healthy
+    # sem probes → o Kubernetes assume processo-de-pé = pronto E saudável
 ```
 
 ```yaml
-# 2: +readiness — gate traffic on a dedicated endpoint the app itself owns
+# 2: +readiness — controle o tráfego por um endpoint dedicado que a própria aplicação possui
 containers:
   - name: web
     image: ghcr.io/platformrelay/workshop-web:v1
     ports: [{ containerPort: 8080 }]
     readinessProbe:
-      httpGet: { path: /ready, port: 8080 }   # 200 = send traffic, 503 = drain me
+      httpGet: { path: /ready, port: 8080 }   # 200 = mande tráfego, 503 = me drene
       periodSeconds: 5
       failureThreshold: 3
 ```
 
 ```yaml
-# 3: +liveness — restart the container if it wedges (a DIFFERENT question than readiness)
+# 3: +liveness — reinicie o container se ele travar (uma pergunta DIFERENTE da readiness)
 containers:
   - name: web
     image: ghcr.io/platformrelay/workshop-web:v1
@@ -208,13 +210,13 @@ containers:
       periodSeconds: 5
       failureThreshold: 3
     livenessProbe:
-      httpGet: { path: /healthz, port: 8080 }  # 200 while the process serves
+      httpGet: { path: /healthz, port: 8080 }  # 200 enquanto o processo serve
       periodSeconds: 10
       failureThreshold: 3
 ```
 
 ```yaml
-# 4: +startup — give a slow boot room; readiness & liveness are suspended until it passes
+# 4: +startup — dê espaço a um boot lento; readiness & liveness ficam suspensas até ela passar
 containers:
   - name: web
     image: ghcr.io/platformrelay/workshop-web:v1
@@ -230,94 +232,95 @@ containers:
     startupProbe:
       httpGet: { path: /healthz, port: 8080 }
       periodSeconds: 3
-      failureThreshold: 30          # up to 90s to boot before liveness takes over
+      failureThreshold: 30          # até 90s para subir antes de a liveness assumir
 ```
 ````
 
 <!--
-Speaker: FOUR frames, each a real state of the same web container the deck has carried since
-S06. (1) No probes: "Running" is the only signal, and it's a lie the moment the app needs warm-
-up. (2) +readiness on /ready — the demo app owns this endpoint in its own code (exactly what
-you want real apps to do), and it can be flipped at runtime: POST /fail makes /ready answer
-503, POST /recover flips it back. That's how the lab breaks readiness on ONE Pod without
-touching the process (readiness fails → Pod drains, but liveness on /healthz is still 200 so
-it is NOT restarted). (3) +liveness on /healthz — deliberately a DIFFERENT target from
-readiness, so the two can't be conflated: /healthz answers 200 for as long as the process
-serves, /ready answers "should I get traffic right now." (4) +startup on /healthz with a
-generous 30×3s = 90s budget; while it runs, readiness and liveness are held, so a slow boot
-can't be mistaken for a crash loop. Frame 4's container spec is byte-for-byte the lab's
-deployment-probes.yaml — same through-line manifest. To reach the lab, apply this and watch
-all three Pods reach READY 1/1.
+Speaker: QUATRO quadros, cada um um estado real do mesmo container web que o deck carrega desde a
+S06. (1) Sem probes: "Running" é o único sinal, e ele é uma mentira no momento em que a aplicação
+precisa de aquecimento. (2) +readiness em /ready — a aplicação de demo é dona deste endpoint no
+próprio código (exatamente o que você quer que apps reais façam), e ele pode ser virado em
+runtime: POST /fail faz o /ready responder 503, POST /recover o vira de volta. É assim que o lab
+quebra a readiness de UM Pod sem tocar no processo (readiness falha → o Pod drena, mas a liveness
+em /healthz ainda é 200, então ele NÃO é reiniciado). (3) +liveness em /healthz —
+deliberadamente um alvo DIFERENTE da readiness, para que as duas não possam ser confundidas:
+/healthz responde 200 enquanto o processo servir, /ready responde "devo receber tráfego agora".
+(4) +startup em /healthz com um orçamento generoso de 30×3s = 90s; enquanto ela roda, readiness e
+liveness ficam retidas, então um boot lento não pode ser confundido com um crash loop. O spec de
+container do quadro 4 é byte a byte o deployment-probes.yaml do lab — o mesmo manifesto do fio
+condutor. Para chegar ao lab, aplique isso e veja os três Pods alcançarem READY 1/1.
 -->
 
 ---
 
-<span class="kw-kicker">Readiness fail · drain, don't restart</span>
+<span class="kw-kicker">Readiness falha · drene, não reinicie</span>
 
-# One Pod goes NotReady — traffic just reroutes
+# Um Pod fica NotReady — o tráfego só reroteia
 
 <div class="mt-2">
-  <ServiceRouting :step="$clicks" reason="readiness probe failing" />
+  <ServiceRouting :step="$clicks" reason="com a readiness probe falhando" />
 </div>
 
 <div class="mt-3 text-sm">
 <v-clicks at="1">
 
-- Steady state: the Service load-balances across **all three** endpoints.
-- One Pod's readiness probe starts failing — it flips to **NotReady**, still `Running`, and
-  for a beat its IP is still in the slice.
-- The endpoint controller **drops it from the EndpointSlice**; traffic reroutes to the healthy
-  two — **no error reaches the caller**.
+- Estado estável: o Service balanceia a carga entre **os três** endpoints.
+- A readiness probe de um Pod começa a falhar — ele vira **NotReady**, ainda `Running`, e por
+  um instante seu IP ainda está na slice.
+- O endpoint controller **o remove da EndpointSlice**; o tráfego reroteia para os dois saudáveis
+  — **nenhum erro chega a quem chamou**.
 
 </v-clicks>
 </div>
 
 <!--
-Speaker: this is the S07 ServiceRouting animation, reused — readiness is literally the
-mechanism that decides who's in a Service's EndpointSlice. Drive with clicks: (0) three Ready
-Pods, three endpoints. (1) a request fans out — load-balanced. (2) one Pod's readiness goes
-red; it stays Running (this is the crucial part — it is NOT restarted, NOT deleted) and for a
-beat its IP is STILL in the slice — kubelet has marked it NotReady but the endpoint controller
-hasn't reconciled yet. (3) the controller drops the IP from the slice, kube-proxy reprograms,
-and traffic stops reaching it. The other two absorb the traffic; the user sees nothing —
-that's zero-downtime by design. This is exactly what a rolling update leans on: a new Pod is kept out of the slice
-until readiness passes, so users never touch a half-warmed replica. In the lab you'll cause
-this by POSTing /fail to ONE Pod (its /ready flips to 503) and watch its IP vanish from
-`get endpointslices` while curl keeps returning 200 from the others. Contrast with liveness on
-the next slide — same-looking failure, completely different outcome.
+Speaker: esta é a animação ServiceRouting do S07, reusada — readiness é literalmente o mecanismo
+que decide quem está na EndpointSlice de um Service. Conduza com os cliques: (0) três Pods Ready,
+três endpoints. (1) uma requisição se espalha — balanceada. (2) a readiness de um Pod fica
+vermelha; ele continua Running (esta é a parte crucial — ele NÃO é reiniciado, NÃO é deletado) e
+por um instante seu IP AINDA está na slice — o kubelet o marcou NotReady mas o endpoint
+controller ainda não reconciliou. (3) o controller remove o IP da slice, o kube-proxy reprograma,
+e o tráfego para de alcançá-lo. Os outros dois absorvem o tráfego; o usuário não vê nada — isso
+é zero-downtime por design. É exatamente nisso que um rolling update se apoia: um Pod novo é
+mantido fora da slice até a readiness passar, então os usuários nunca tocam uma réplica
+meio-aquecida. No lab você vai causar isso com um POST /fail em UM Pod (o /ready dele vira 503) e
+ver o IP dele sumir do `get endpointslices` enquanto o curl continua retornando 200 dos outros.
+Contraste com a liveness no próximo slide — falha de aparência igual, desfecho completamente
+diferente.
 -->
 
 ---
 
 <div class="kw-slide-dense">
 
-<span class="kw-kicker">Same symptom · opposite response — the fork to remember</span>
+<span class="kw-kicker">Mesmo sintoma · resposta oposta — a bifurcação para lembrar</span>
 
-# Readiness drains · liveness restarts
+# Readiness drena · liveness reinicia
 
 <div class="kw-cols-2 mt-3 text-sm">
-  <KwCard heading="readiness ✗  →  out of the endpoints" kind="pod" variant="warn">
-    Pod stays <strong>Running</strong>, <code>READY 0/1</code>, <code>RESTARTS 0</code>.
-    Removed from the EndpointSlice → no traffic. Passes again → <strong>rejoins</strong>, no
-    restart, no data lost.
-    <div class="kw-muted mt-1">Use for: warm-up, a busy moment, a missing dependency.</div>
+  <KwCard heading="readiness ✗  →  fora dos endpoints" kind="pod" variant="warn">
+    O Pod continua <strong>Running</strong>, <code>READY 0/1</code>, <code>RESTARTS 0</code>.
+    Removido da EndpointSlice → sem tráfego. Passa de novo → <strong>volta</strong>, sem
+    restart, sem dados perdidos.
+    <div class="kw-muted mt-1">Use para: aquecimento, um momento de pico, uma dependência ausente.</div>
   </KwCard>
-  <KwCard heading="liveness ✗  →  restarted in place" kind="pod" variant="danger">
-    kubelet kills &amp; restarts the container → <code>RESTARTS ↑</code>, phase stays
-    <strong>Running</strong>. Keeps OOM-style bouncing → <strong>CrashLoopBackOff</strong>.
-    <div class="kw-muted mt-1">Use for: deadlocks a restart actually clears.</div>
+  <KwCard heading="liveness ✗  →  reiniciado no lugar" kind="pod" variant="danger">
+    O kubelet mata &amp; reinicia o container → <code>RESTARTS ↑</code>, a phase continua
+    <strong>Running</strong>. Continua quicando estilo OOM → <strong>CrashLoopBackOff</strong>.
+    <div class="kw-muted mt-1">Use para: deadlocks que um restart realmente resolve.</div>
   </KwCard>
 </div>
 
 <div v-click="1" class="mt-4 text-sm">
 
-<span class="kw-kicker">and the guard in front of both</span>
+<span class="kw-kicker">e a guarda na frente das duas</span>
 
-<KwCard heading="startup ✗ (still running)  →  nobody panics yet" icon="⏳">
-While the <strong>startup</strong> probe is still trying, readiness and liveness are
-<strong>suspended</strong> — a 45-second boot can't trip a 15-second liveness timeout. Startup
-finally passes → the other two take over. Startup <em>exhausts</em> its budget → the container
-is killed as failed-to-start.
+<KwCard heading="startup ✗ (ainda rodando)  →  ninguém entra em pânico ainda" icon="⏳">
+Enquanto a probe de <strong>startup</strong> ainda está tentando, readiness e liveness ficam
+<strong>suspensas</strong> — um boot de 45 segundos não pode estourar um timeout de liveness de
+15 segundos. A startup finalmente passa → as outras duas assumem. A startup <em>esgota</em> seu
+orçamento → o container é morto como failed-to-start.
 </KwCard>
 
 </div>
@@ -325,101 +328,104 @@ is killed as failed-to-start.
 </div>
 
 <!--
-Speaker: the punchline slide — two divergent arrows off the same-looking failure. LEFT
-(readiness): the Pod is fine, it just says "not now" — no restart, RESTARTS stays 0, it drops
-from endpoints and comes back clean. This is the safe, reversible one. RIGHT (liveness): the
-kubelet takes action — kill and restart the container; if whatever's wrong persists, each
-restart fails again and you get CrashLoopBackOff with an exponential backoff timer. The trap
-learners must avoid: putting a dependency check (DB reachable?) on LIVENESS — now a DB outage
-restarts every Pod, turning a brown-out into an outage; the same check on READINESS just drains
-them until the DB is back. Click 1: startup is the referee — it holds the other two off during
-boot, so you stop abusing initialDelaySeconds on liveness.
+Speaker: o slide-punchline — duas setas divergentes a partir da mesma falha aparente. ESQUERDA
+(readiness): o Pod está bem, ele só diz "agora não" — sem restart, RESTARTS fica em 0, ele sai
+dos endpoints e volta limpo. Esta é a segura, reversível. DIREITA (liveness): o kubelet toma
+uma atitude — mata e reinicia o container; se o que está errado persiste, cada restart falha de
+novo e você tem CrashLoopBackOff com um timer de backoff exponencial. A armadilha que os alunos
+precisam evitar: colocar um check de dependência (DB alcançável?) na LIVENESS — agora uma queda
+do DB reinicia todos os Pods, transformando um brown-out em outage; o mesmo check na READINESS
+só os drena até o DB voltar. Clique 1: a startup é o árbitro — ela segura as outras duas durante
+o boot, para você parar de abusar de initialDelaySeconds na liveness.
 -->
 
 ---
 
 <div class="kw-slide-dense">
 
-<span class="kw-kicker">The two ways probes bite back</span>
+<span class="kw-kicker">As duas formas de as probes morderem de volta</span>
 
-# Classic misconfigurations
+# Misconfigurations clássicas
 
 <div class="kw-cols-2 mt-3 text-sm">
   <v-click at="1">
-    <KwCard heading="Liveness that flaps" kind="pod" variant="danger">
-      A liveness check too tight (<code>periodSeconds 1</code>) or pointed at a slow dependency
-      restarts the container over a GC pause or a DB blip. Restarts don't fix a *busy* app —
-      they multiply the load → <strong>CrashLoopBackOff</strong> across the fleet.
-      <div class="kw-muted mt-1">Fix: loosen timing; probe <em>self</em>, not downstreams; use
-      <strong>startup</strong> for slow boots.</div>
+    <KwCard heading="Liveness que flapa" kind="pod" variant="danger">
+      Um check de liveness apertado demais (<code>periodSeconds 1</code>) ou apontado para uma
+      dependência lenta reinicia o container por causa de uma pausa de GC ou um soluço do DB.
+      Restarts não consertam uma aplicação *ocupada* — eles multiplicam a carga →
+      <strong>CrashLoopBackOff</strong> na frota inteira.
+      <div class="kw-muted mt-1">Conserto: afrouxe o timing; sonde a <em>si mesmo</em>, não os
+      downstreams; use <strong>startup</strong> para boots lentos.</div>
     </KwCard>
   </v-click>
   <v-click at="2">
-    <KwCard heading="Readiness that never passes" kind="pod" variant="warn">
-      A wrong path/port, or a readiness check waiting on something that never comes, keeps every
-      Pod at <code>READY 0/1</code>. Endpoints stay empty, the Service has nothing to route to,
-      and a <strong>rolling update stalls</strong> — the new ReplicaSet never goes Available.
-      <div class="kw-muted mt-1">Fix: <code>describe pod</code> → read the probe failure event;
-      correct the path/port.</div>
+    <KwCard heading="Readiness que nunca passa" kind="pod" variant="warn">
+      Um path/porta errado, ou um check de readiness esperando algo que nunca chega, mantém todo
+      Pod em <code>READY 0/1</code>. Os endpoints ficam vazios, o Service não tem para onde
+      rotear, e um <strong>rolling update trava</strong> — o novo ReplicaSet nunca fica Available.
+      <div class="kw-muted mt-1">Conserto: <code>describe pod</code> → leia o evento de falha da
+      probe; corrija o path/porta.</div>
     </KwCard>
   </v-click>
 </div>
 
 <div v-click="3" class="mt-4 kw-muted text-sm">
 
-Both show up in <code>kubectl describe pod</code> Events as
-<code>Readiness probe failed…</code> / <code>Liveness probe failed…</code> — the first place
-to look when a Pod is `Running` but nothing works.
+As duas aparecem nos Events do <code>kubectl describe pod</code> como
+<code>Readiness probe failed…</code> / <code>Liveness probe failed…</code> — o primeiro lugar
+para olhar quando um Pod está `Running` mas nada funciona.
 
 </div>
 
 </div>
 
 <!--
-Speaker: the two failure modes people actually ship. FLAPPING LIVENESS: the single most common
-probe outage. Symptoms: RESTARTS climbing across many Pods at once, often correlated with load
-or a dependency wobble. Causes: periodSeconds/failureThreshold too aggressive, or — the big one
-— a liveness probe that transitively checks a database/cache, so when THAT hiccups every Pod
-gets restarted and the stampede makes recovery impossible. Cure: liveness should test only "is
-THIS process wedged," keep it cheap and forgiving, and move slow-boot tolerance to a startup
-probe. READINESS THAT NEVER PASSES: a rollout that silently stops — the new ReplicaSet's Pods
-sit 0/1 forever, Deployment shows unavailable replicas, and because readiness gates the
-rollout, it never completes (old Pods keep serving, which is the safety feature, but your
-deploy is stuck). Cause is almost always a typo'd path/port or a readiness gate on something
-that isn't up in this environment. Both are diagnosable in one command: describe the Pod, read
-the Events. That's the muscle memory the lab builds. The lab makes both arrows physical:
-POST /fail → left arrow (drain); point liveness at a dead port → right arrow (restart).
+Speaker: os dois modos de falha que as pessoas de fato colocam em produção. LIVENESS QUE FLAPA:
+o outage de probe mais comum que existe. Sintomas: RESTARTS subindo em muitos Pods ao mesmo
+tempo, geralmente correlacionado com carga ou uma oscilação de dependência. Causas:
+periodSeconds/failureThreshold agressivos demais, ou — a grande — uma liveness probe que checa
+transitivamente um banco/cache, então quando AQUILO soluça todo Pod é reiniciado e o estouro da
+manada torna a recuperação impossível. Cura: a liveness deve testar apenas "ESTE processo está
+travado?", mantenha-a barata e tolerante, e mova a tolerância a boot lento para uma startup
+probe. READINESS QUE NUNCA PASSA: um rollout que para em silêncio — os Pods do novo ReplicaSet
+ficam 0/1 para sempre, o Deployment mostra réplicas unavailable, e como a readiness controla o
+rollout, ele nunca completa (os Pods antigos continuam servindo, que é o recurso de segurança,
+mas o seu deploy está travado). A causa é quase sempre um path/porta com typo ou um gate de
+readiness sobre algo que não está de pé neste ambiente. Ambos são diagnosticáveis em um comando:
+describe no Pod, leia os Events. Essa é a memória muscular que o lab constrói. O lab torna as
+duas setas físicas: POST /fail → seta da esquerda (drenar); aponte a liveness para uma porta
+morta → seta da direita (restart).
 -->
 
 ---
 layout: recap
-heading: 'Recap — Running is a floor, not a promise'
-story: 'Flipping one Pod''s `/ready` to failing drained it with zero downtime; pointing liveness at a dead port bounced the container until we fixed it — same symptom, opposite cure.'
-next: 'Jobs & CronJobs — workloads that run to completion, not forever'
+heading: 'Recap — Running é um piso, não uma promessa'
+story: 'Virar o `/ready` de um Pod para falha o drenou com zero downtime; apontar a liveness para uma porta morta quicou o container até consertarmos — mesmo sintoma, cura oposta.'
+next: 'Jobs & CronJobs — workloads que rodam até completar, não para sempre'
 ---
 
-- **readiness** gates traffic (in/out of the EndpointSlice) · **liveness** restarts the
-  container · **startup** protects a slow boot and suspends the other two
-- Readiness ✗ = `Running`, `0/1`, drained, **no restart**; liveness ✗ = `RESTARTS ↑`, then
+- **readiness** controla o tráfego (dentro/fora da EndpointSlice) · **liveness** reinicia o
+  container · **startup** protege um boot lento e suspende as outras duas
+- Readiness ✗ = `Running`, `0/1`, drenado, **sem restart**; liveness ✗ = `RESTARTS ↑`, depois
   **CrashLoopBackOff**
-- Mechanisms: `httpGet` (≥400 fails) · `tcpSocket` · `exec` · `grpc`; reaction ≈
+- Mecanismos: `httpGet` (≥400 falha) · `tcpSocket` · `exec` · `grpc`; reação ≈
   `periodSeconds × failureThreshold`
-- Probe **self**, not downstreams — a dependency check on *liveness* turns a blip into a
-  restart storm
-- **Read the Events:** `describe pod` shows `Readiness/Liveness probe failed…` — the first
-  stop when `Running` isn't serving
+- Sonde a **si mesmo**, não os downstreams — um check de dependência na *liveness* transforma um
+  soluço em tempestade de restarts
+- **Leia os Events:** `describe pod` mostra `Readiness/Liveness probe failed…` — a primeira
+  parada quando `Running` não está servindo
 
 <!--
-Speaker: land the through-line. The whole section is one correction to a beginner instinct —
-"my Pod is Running, so it works." Running means the process started; readiness, liveness, and
-startup are how you attach real meaning to it. The two-arrow fork is the keeper: readiness is
-reversible and traffic-only (drain/rejoin), liveness is a hammer (restart/CrashLoop) — so map
-each check to the response you actually want. Probe your own health, keep liveness cheap and
-forgiving, and reach for startup instead of piling initialDelaySeconds onto liveness. CKAD
-Observability domain lives right here. Hand to Lab 14: add all three probes, POST /fail to
-drain one Pod with zero downtime, break liveness to force restarts, and watch a startup
-probe shepherd a slow starter. Next section: Jobs & CronJobs — the first workloads that are
-SUPPOSED to stop.
+Speaker: amarre o fio condutor. A seção inteira é uma correção a um instinto de iniciante —
+"meu Pod está Running, então funciona". Running significa que o processo iniciou; readiness,
+liveness e startup são como você prende significado real a isso. A bifurcação de duas setas é a
+lembrança-chave: readiness é reversível e só-tráfego (drena/volta), liveness é um martelo
+(restart/CrashLoop) — então mapeie cada check para a resposta que você realmente quer. Sonde a
+própria saúde, mantenha a liveness barata e tolerante, e recorra à startup em vez de empilhar
+initialDelaySeconds na liveness. O domínio Observability da CKAD mora bem aqui. Passe o bastão
+para o Lab 14: adicionar as três probes, POST /fail para drenar um Pod com zero downtime, quebrar
+a liveness para forçar restarts, e ver uma startup probe pastorear quem inicia devagar. Próxima
+seção: Jobs & CronJobs — os primeiros workloads que DEVEM parar.
 -->
 
 ---
@@ -429,15 +435,15 @@ duration: 30 min
 env: namespace ✓ / kind ✓
 ---
 
-## Lab 14 — Break the probes
+## Lab 14 — Quebre as probes
 
-- Add readiness, liveness, and startup probes to the `web` Deployment; confirm `READY 1/1` and
-  three IPs in the EndpointSlice
-- **Break readiness** on one Pod (`POST /fail` — its `/ready` flips to 503) → it leaves the slice, `curl` keeps
-  returning 200 from the others — **zero downtime** — then fix and watch it rejoin
-- **Break liveness** (point it at a dead port) → `RESTARTS` climbs into `CrashLoopBackOff` →
-  fix and watch restarts stop
-- Watch a **startup** probe shepherd a deliberately slow-starting container that liveness would
-  otherwise kill mid-boot
-- Answer: *readiness failed but the app never restarted — why?* and *why did users see no errors
-  during the readiness break?*
+- Adicione probes de readiness, liveness e startup ao Deployment `web`; confirme `READY 1/1` e
+  três IPs na EndpointSlice
+- **Quebre a readiness** em um Pod (`POST /fail` — o `/ready` dele vira 503) → ele sai da slice, o `curl` continua
+  retornando 200 dos outros — **zero downtime** — depois conserte e veja-o voltar
+- **Quebre a liveness** (aponte-a para uma porta morta) → `RESTARTS` sobe até `CrashLoopBackOff` →
+  conserte e veja os restarts pararem
+- Veja uma probe de **startup** pastorear um container deliberadamente lento para iniciar que a
+  liveness mataria no meio do boot
+- Responda: *a readiness falhou mas a aplicação nunca reiniciou — por quê?* e *por que os usuários
+  não viram erros durante a quebra da readiness?*

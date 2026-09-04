@@ -73,7 +73,7 @@ const pods = computed(() =>
   <div class="kw-hpa">
     <!-- CPU gauge with the target marker -->
     <div class="kw-hpa-gauge-row">
-      <span class="kw-hpa-gauge-label">avg&nbsp;CPU</span>
+      <span class="kw-hpa-gauge-label">CPU&nbsp;média</span>
       <div class="kw-hpa-gauge">
         <div
           class="kw-hpa-fill"
@@ -81,7 +81,7 @@ const pods = computed(() =>
           :style="{ width: Math.min(100, frame.util) + '%' }"
         />
         <div class="kw-hpa-target" :style="{ left: TARGET + '%' }">
-          <span class="kw-hpa-target-tag">target {{ TARGET }}%</span>
+          <span class="kw-hpa-target-tag">alvo {{ TARGET }}%</span>
         </div>
       </div>
       <span class="kw-hpa-util" :class="{ 'is-over': over, 'is-under': !over }">
@@ -97,9 +97,9 @@ const pods = computed(() =>
         class="kw-hpa-desired"
         :class="{ 'is-grow': desired > frame.replicas, 'is-hold': frame.holding }"
       >
-        desired&nbsp;<strong>{{ frame.holding ? MIN : desired }}</strong>
+        desejado&nbsp;<strong>{{ frame.holding ? MIN : desired }}</strong>
       </span>
-      <span v-if="frame.holding" class="kw-hpa-hold-tag">holding · scaleDown 300s</span>
+      <span v-if="frame.holding" class="kw-hpa-hold-tag">segurando · scaleDown 300s</span>
     </div>
 
     <!-- the herd -->
@@ -117,24 +117,25 @@ const pods = computed(() =>
 
     <div v-if="props.showCaption" class="kw-hpa-caption">
       <template v-if="props.step <= 0">
-        Steady state — <strong>2</strong> Pods (min), CPU well under the target. Nothing to do.
+        Estado estável — <strong>2</strong> Pods (min), CPU bem abaixo do alvo. Nada a fazer.
       </template>
       <template v-else-if="props.step === 1">
-        Load spikes to <strong>90%</strong>. The HPA reads it and computes a new desired count —
-        <strong>4</strong> Pods.
+        A carga dispara para <strong>90%</strong>. O HPA lê isso e calcula uma nova contagem
+        desejada — <strong>4</strong> Pods.
       </template>
       <template v-else-if="props.step === 2">
-        Scaled up to <strong>4</strong>. The same load now spreads across more Pods, so per-Pod
-        CPU falls back toward the target.
+        Escalou para <strong>4</strong>. A mesma carga agora se espalha por mais Pods, então a
+        CPU por Pod cai de volta na direção do alvo.
       </template>
       <template v-else-if="props.step === 3">
-        Settled — utilization sits at the <strong>50% target</strong>, so desired == current and
-        the herd holds at 4.
+        Acomodou — a utilização fica no <strong>alvo de 50%</strong>, então desejado == atual e
+        o rebanho para em 4.
       </template>
       <template v-else>
-        Load gone, CPU back to 15% — but replicas <strong>hold at 4</strong> for the
-        <strong>scaleDown stabilization window (300s)</strong> before shrinking to min. That
-        delay is deliberate: it stops a brief lull from thrashing the count.
+        Carga acabou, CPU de volta a 15% — mas as réplicas <strong>seguram em 4</strong>
+        durante a <strong>janela de estabilização do scaleDown (300s)</strong> antes de
+        encolher até o min. Esse atraso é proposital: impede que uma queda breve fique
+        oscilando a contagem.
       </template>
     </div>
   </div>

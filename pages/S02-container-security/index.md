@@ -7,26 +7,29 @@ tier: recommended
 track: Foundations
 ---
 
-# Container security & supply chain
+# Segurança de containers & supply chain
 
-Build images that are small, non-root, and scanned — the build-time half of security.
+Construa images pequenas, non-root e escaneadas — a metade build-time da segurança.
 
-**recommended** · suggested Day 1 · Foundations track
+**recommended** · sugerido para o Day 1 · trilha Foundations
 
 <!--
-Section S02 — Container security & supply chain. Timing: ~30 min slides + 25 min lab.
-Outcome: learners can build and choose images that are small, non-root, and scanned —
-the build-time half of Kubernetes security (S17/S25 cover the runtime half).
-Beats: the risky image (fat + root + baked secret) · four build-time moves ·
-harden it one fix per step (magic-move) · a deleted layer still ships · scanning
-(illustrative, tools as examples) · SBOM · sign + pin by digest · foreshadow S17/S25/S26.
-CKx tie-in: CKAD/CKA security foundations (image hygiene precedes runtime hardening).
+Seção S02 — Segurança de containers & supply chain. Duração: ~30 min de slides + 25 min de lab.
+Resultado: as pessoas conseguem construir e escolher images pequenas, non-root e
+escaneadas — a metade build-time da segurança no Kubernetes (S17/S25 cobrem a
+metade de runtime).
+Beats: a image arriscada (pesada + root + secret embutido) · quatro movimentos
+de build-time · endureça uma correção por passo (magic-move) · uma layer
+deletada ainda é entregue · scanning (ilustrativo, ferramentas como exemplos) ·
+SBOM · assinar + fixar por digest · prenúncio de S17/S25/S26.
+Amarração CKx: fundamentos de segurança CKAD/CKA (higiene de image precede o
+hardening de runtime).
 Lab: labs/day-1/02-container-security.md.
 -->
 
 ---
 layout: code-annotated
-heading: 'The image that ships your next incident'
+heading: 'A image que entrega seu próximo incidente'
 compact: true
 ---
 
@@ -41,90 +44,92 @@ ENTRYPOINT ["/bin/app"]
 
 ::notes::
 
-<CodeNote at="1" label="fat base" variant="warn">
-The full Go toolchain — compiler, shell, package manager — <strong>ships to
-production</strong>. Every one of those is code an attacker can use and a CVE you
-now own.
+<CodeNote at="1" label="base pesada" variant="warn">
+O toolchain Go completo — compilador, shell, gerenciador de pacotes — <strong>vai
+para produção</strong>. Cada um deles é código que um atacante pode usar e uma
+CVE que agora é sua.
 </CodeNote>
 
 <CodeNote at="2" label="COPY . ." variant="warn">
-Copies the <strong>whole build context</strong> into a layer — <code>.git</code>,
-local <code>.env</code> files, test fixtures. What you didn't mean to ship is now
-shipped.
+Copia o <strong>build context inteiro</strong> para uma layer — <code>.git</code>,
+arquivos <code>.env</code> locais, fixtures de teste. O que você não queria
+entregar agora foi entregue.
 </CodeNote>
 
-<CodeNote at="3" label="baked secret" variant="danger">
-A private key written into a layer. Even if a later step deletes it, the layer
-that added it <strong>still exists</strong> in the image history — recoverable by
-anyone who pulls it.
+<CodeNote at="3" label="secret embutido" variant="danger">
+Uma chave privada escrita em uma layer. Mesmo que um passo posterior a delete, a
+layer que a adicionou <strong>ainda existe</strong> no histórico da image —
+recuperável por qualquer um que fizer pull.
 </CodeNote>
 
 <CodeNote at="4" label="root" variant="danger">
-No <code>USER</code>, so PID 1 is <strong>root</strong>. A process escape from
-this container starts as root on the node — exactly what Day 3's pod-escape module
-attacks.
+Sem <code>USER</code>, o PID 1 é <strong>root</strong>. Um escape de processo a
+partir deste container começa como root no node — exatamente o que o módulo de
+pod-escape do Day 3 ataca.
 </CodeNote>
 
 <!--
-Speaker: four independent mistakes in six lines, and every one is common. This
-slide is the "before"; the magic-move two slides on is the "after". The secret
-and the root user are the two that graduate into runtime attacks (S17/S25).
+Speaker: quatro erros independentes em seis linhas, e todos são comuns. Este
+slide é o "antes"; o magic-move dois slides adiante é o "depois". O secret e o
+usuário root são os dois que evoluem para ataques de runtime (S17/S25).
 -->
 
 ---
 
-<span class="kw-kicker">The build-time half of security</span>
+<span class="kw-kicker">A metade build-time da segurança</span>
 
-# Four moves that shrink the attack surface
+# Quatro movimentos que encolhem a superfície de ataque
 
 <div class="kw-cols-2 mt-4">
   <v-click at="1">
-    <KwCard heading="Minimal / distroless base" icon="📦" variant="ok">
-      Ship your app and its runtime deps — <strong>nothing else</strong>. No shell,
-      no package manager, fewer libraries → fewer CVEs and nothing to pivot through.
+    <KwCard heading="Base mínima / distroless" icon="📦" variant="ok">
+      Entregue sua aplicação e suas dependências de runtime — <strong>nada mais</strong>.
+      Sem shell, sem gerenciador de pacotes, menos bibliotecas → menos CVEs e nada por onde pivotar.
     </KwCard>
   </v-click>
   <v-click at="2">
-    <KwCard heading="Run as non-root" icon="🙅" variant="ok">
-      A <code>USER</code> in the image (or a <code>nonroot</code> base). Cheapest
-      single win: an escape lands as an unprivileged UID, not root.
+    <KwCard heading="Rode como non-root" icon="🙅" variant="ok">
+      Um <code>USER</code> na image (ou uma base <code>nonroot</code>). A vitória
+      isolada mais barata: um escape cai como um UID sem privilégios, não como root.
     </KwCard>
   </v-click>
   <v-click at="3">
-    <KwCard heading="Multi-stage, no secrets in layers" icon="🧅" variant="ok">
-      Build fat, ship thin — the toolchain <em>and</em> build secrets stay in a
-      discarded stage. A deleted file in a later layer is <strong>not</strong> gone.
+    <KwCard heading="Multi-stage, sem secrets nas layers" icon="🧅" variant="ok">
+      Construa pesado, entregue enxuto — o toolchain <em>e</em> os secrets de build
+      ficam em um estágio descartado. Um arquivo deletado em uma layer posterior <strong>não</strong> desapareceu.
     </KwCard>
   </v-click>
   <v-click at="4">
-    <KwCard heading="Pin by digest, scan, sign" icon="🔏" variant="ok">
-      Reference exact bytes by <code>@sha256:…</code>; scan for known CVEs; sign so
-      consumers can verify provenance. Prove <em>what</em> you shipped and <em>where</em> it came from.
+    <KwCard heading="Fixe por digest, escaneie, assine" icon="🔏" variant="ok">
+      Referencie bytes exatos com <code>@sha256:…</code>; escaneie em busca de CVEs
+      conhecidas; assine para que consumidores possam verificar a proveniência.
+      Prove <em>o que</em> você entregou e <em>de onde</em> veio.
     </KwCard>
   </v-click>
 </div>
 
 <div v-click="5" class="mt-5 kw-muted text-sm">
 
-These are all things you do at **build time**. Kubernetes enforces the runtime
-half later — Pod Security Standards, NetworkPolicy, admission.
+Tudo isso são coisas que você faz em **build time**. O Kubernetes impõe a metade
+de runtime depois — Pod Security Standards, NetworkPolicy, admission.
 
 </div>
 
 <!--
-Speaker: these map one-to-one onto the magic-move's fix-per-step. Frame scanners
-and signers as categories, not products — you name examples next, not endorsements.
+Speaker: estes mapeiam um a um para as correções por passo do magic-move.
+Apresente scanners e assinadores como categorias, não produtos — você cita
+exemplos em seguida, não endossos.
 -->
 
 ---
 layout: code-walkthrough
-heading: 'Harden it — one fix per step'
+heading: 'Endureça — uma correção por passo'
 lab: labs/day-1/02-container-security.md
 ---
 
 ````md magic-move
 ```dockerfile
-# BEFORE: fat base, secret in a layer, runs as root
+# ANTES: base pesada, secret em uma layer, roda como root
 FROM golang:1.24
 WORKDIR /src
 COPY . .
@@ -134,15 +139,15 @@ ENTRYPOINT ["/bin/app"]
 ```
 
 ```dockerfile
-# FIX 1 — multi-stage: the toolchain never reaches the final image
+# FIX 1 — multi-stage: o toolchain nunca chega à image final
 FROM golang:1.24 AS build
 WORKDIR /src
 COPY . .
 COPY deploy_key /src/deploy_key
-# CGO off → a static binary that runs on a tiny base
+# CGO desligado → um binário estático que roda em uma base minúscula
 RUN CGO_ENABLED=0 go build -o /bin/app .
 
-# a fresh, clean final stage — inherits nothing it isn't handed
+# um estágio final novo e limpo — não herda nada que não recebeu explicitamente
 FROM alpine:3.20
 COPY --from=build /bin/app /bin/app
 ENTRYPOINT ["/bin/app"]
@@ -150,7 +155,7 @@ ENTRYPOINT ["/bin/app"]
 
 ```dockerfile
 # syntax=docker/dockerfile:1
-# FIX 2 — mount the secret; it's used, never written to any layer
+# FIX 2 — monte o secret; ele é usado, nunca escrito em layer alguma
 FROM golang:1.24 AS build
 WORKDIR /src
 COPY . .
@@ -164,7 +169,7 @@ ENTRYPOINT ["/bin/app"]
 
 ```dockerfile
 # syntax=docker/dockerfile:1
-# FIX 3 — distroless + non-root: no shell, no package manager, unprivileged UID
+# FIX 3 — distroless + non-root: sem shell, sem gerenciador de pacotes, UID sem privilégios
 FROM golang:1.24 AS build
 WORKDIR /src
 COPY . .
@@ -179,14 +184,14 @@ ENTRYPOINT ["/bin/app"]
 
 ```dockerfile
 # syntax=docker/dockerfile:1
-# FIX 4 — pin the base by digest: exact bytes, not a movable tag
+# FIX 4 — fixe a base por digest: bytes exatos, não uma tag móvel
 FROM golang:1.24 AS build
 WORKDIR /src
 COPY . .
 RUN --mount=type=secret,id=deploy_key \
     DEPLOY_KEY="$(cat /run/secrets/deploy_key)" CGO_ENABLED=0 go build -o /bin/app .
 
-FROM gcr.io/distroless/static:nonroot@sha256:5759d19...   # pinned base
+FROM gcr.io/distroless/static:nonroot@sha256:5759d19...   # base fixada
 COPY --from=build /bin/app /bin/app
 USER 65532:65532
 ENTRYPOINT ["/bin/app"]
@@ -194,23 +199,23 @@ ENTRYPOINT ["/bin/app"]
 ````
 
 <!--
-Speaker: one fix per step, mirroring the four moves. CGO_ENABLED=0 makes the Go
-binary static so it runs on alpine/distroless (no libc). FIX 2 needs the
-`# syntax=docker/dockerfile:1` directive for `--mount=type=secret` (BuildKit).
-FIX 3's distroless/static:nonroot ships no shell — you can't `exec sh` into it,
-which is the point. The digest in FIX 4 is illustrative — the lab has them fetch
-the real one. This "after" image is what the lab scans against the "before".
+Speaker: uma correção por passo, espelhando os quatro movimentos. CGO_ENABLED=0
+torna o binário Go estático para rodar em alpine/distroless (sem libc). O FIX 2
+precisa da diretiva `# syntax=docker/dockerfile:1` para `--mount=type=secret`
+(BuildKit). O distroless/static:nonroot do FIX 3 não traz shell — você não
+consegue `exec sh` nele, e esse é o ponto. O digest do FIX 4 é ilustrativo — no
+lab eles buscam o real. Esta image "depois" é a que o lab escaneia contra a "antes".
 -->
 
 ---
 layout: code-annotated
-heading: 'A deleted layer still ships'
+heading: 'Uma layer deletada ainda é entregue'
 compact: true
 ---
 
 ```bash {none|1|2|3|4}
-COPY deploy_key /src/deploy_key   # layer N — secret is in the image
-RUN rm /src/deploy_key            # layer N+1 — hidden, not erased
+COPY deploy_key /src/deploy_key   # layer N — o secret está na image
+RUN rm /src/deploy_key            # layer N+1 — escondido, não apagado
 
 docker history --no-trunc demo:insecure
 docker save demo:insecure -o img.tar && tar xf img.tar
@@ -218,42 +223,42 @@ docker save demo:insecure -o img.tar && tar xf img.tar
 
 ::notes::
 
-<CodeNote at="1" label="the layer that adds it" variant="danger">
-Adding the file creates a layer whose content <strong>is</strong> the secret. That
-layer is now part of the image's identity.
+<CodeNote at="1" label="a layer que o adiciona" variant="danger">
+Adicionar o arquivo cria uma layer cujo conteúdo <strong>é</strong> o secret.
+Essa layer agora faz parte da identidade da image.
 </CodeNote>
 
-<CodeNote at="2" label="rm doesn't rewrite history" variant="warn">
-A later layer records a <em>whiteout</em> that hides the file from the final
-filesystem — but layer N, with the secret, is <strong>still there and pullable</strong>.
+<CodeNote at="2" label="rm não reescreve o histórico" variant="warn">
+Uma layer posterior registra um <em>whiteout</em> que esconde o arquivo do
+filesystem final — mas a layer N, com o secret, <strong>continua lá, disponível para pull</strong>.
 </CodeNote>
 
-<CodeNote at="3" label="history reveals it">
-<code>history</code> lists every layer and the instruction that built it. The
-<code>COPY deploy_key</code> layer is visible to anyone with the image.
+<CodeNote at="3" label="history revela">
+<code>history</code> lista cada layer e a instrução que a construiu. A layer do
+<code>COPY deploy_key</code> fica visível para qualquer um com a image.
 </CodeNote>
 
-<CodeNote at="4" label="the real fix" variant="ok">
-You can't delete your way out — you must never <strong>add</strong> the secret to
-a shipped layer. Build-time secret mounts (FIX 2) or a discarded build stage are
-the only real fixes. The lab proves this end to end.
+<CodeNote at="4" label="a correção de verdade" variant="ok">
+Você não consegue se salvar deletando — você precisa nunca <strong>adicionar</strong>
+o secret a uma layer entregue. Secret mounts em build time (FIX 2) ou um estágio
+de build descartado são as únicas correções reais. O lab prova isso de ponta a ponta.
 </CodeNote>
 
 <!--
-Speaker: this is the single most expensive beginner mistake in this section. The
-mental hook: layers are append-only; `rm` is a new layer, not an edit. Rotate any
-secret that ever touched a shipped layer — assume it's public.
+Speaker: este é o erro de iniciante mais caro desta seção. O gancho mental:
+layers são append-only; `rm` é uma layer nova, não uma edição. Rotacione
+qualquer secret que um dia tenha tocado uma layer entregue — assuma que ele é público.
 -->
 
 ---
 layout: two-cols-code
-heading: 'Scan before and after — sell the drop'
+heading: 'Escaneie antes e depois — venda a queda'
 lab: labs/day-1/02-container-security.md
 ---
 
 ````md magic-move
 ```text
-# demo:insecure  (fat base + toolchain)
+# demo:insecure  (base pesada + toolchain)
 Total: 61 (UNKNOWN: 0, LOW: 18, MEDIUM: 27, HIGH: 14, CRITICAL: 2)
 
   ├─ os-pkgs   glibc, openssl, bash …   fixable + unfixable
@@ -272,102 +277,106 @@ Total: 0 (UNKNOWN: 0, LOW: 0, MEDIUM: 0, HIGH: 0, CRITICAL: 0)
 
 <div class="text-sm">
 
-A scanner (**e.g. Trivy, Grype**) reads the image's package metadata and matches it
-against CVE feeds — OS packages **and** language dependencies.
+Um scanner (**ex.: Trivy, Grype**) lê os metadados de pacotes da image e os cruza
+com feeds de CVE — pacotes do SO **e** dependências de linguagem.
 
 <div class="mt-3">
-<KwChip variant="warn">HIGH / CRITICAL first</KwChip>
+<KwChip variant="warn">HIGH / CRITICAL primeiro</KwChip>
 <KwChip>fixable vs unfixable</KwChip>
-<KwChip variant="ok">gate CI on severity</KwChip>
+<KwChip variant="ok">trave o CI por severidade</KwChip>
 </div>
 
 <div class="mt-4 kw-muted">
 
-Counts are **illustrative and move daily** — the number that matters is the
-**delta**: a minimal base has almost nothing to find. Wire the scan into CI so a
-regression fails the build.
+As contagens são **ilustrativas e mudam todo dia** — o número que importa é o
+**delta**: uma base mínima quase não tem o que encontrar. Ligue o scan ao CI
+para que uma regressão falhe o build.
 
 </div>
 
 </div>
 
 <!--
-Speaker: don't memorize numbers — DBs update constantly (currency guardrail). The
-teaching point is relative: fat base = dozens of findings you didn't write;
-distroless = near-zero because there are barely any packages. Tools named as
-examples, not endorsements. The lab has them run the real before/after.
+Speaker: não memorize números — os bancos de dados atualizam o tempo todo
+(guardrail de atualidade). O ponto de ensino é relativo: base pesada = dezenas
+de achados que você não escreveu; distroless = quase zero porque quase não há
+pacotes. Ferramentas citadas como exemplos, não endossos. No lab eles rodam o
+antes/depois de verdade.
 -->
 
 ---
 
-<span class="kw-kicker">Know what's inside — and prove where it came from</span>
+<span class="kw-kicker">Saiba o que tem dentro — e prove de onde veio</span>
 
-# SBOM, signing, and provenance
+# SBOM, assinatura e proveniência
 
 <div class="kw-cols-3 mt-4">
   <v-click at="1">
     <KwCard heading="SBOM" icon="📋">
-      A <strong>bill of materials</strong> — every package and version in the image,
-      as <strong>SPDX</strong> or <strong>CycloneDX</strong>. Generated at build
-      (e.g. Syft). When the next CVE drops, you grep your SBOMs instead of guessing.
+      Uma <strong>lista de materiais</strong> (bill of materials) — cada pacote e
+      versão na image, como <strong>SPDX</strong> ou <strong>CycloneDX</strong>.
+      Gerada no build (ex.: Syft). Quando a próxima CVE cair, você faz grep nos
+      seus SBOMs em vez de adivinhar.
     </KwCard>
   </v-click>
   <v-click at="2">
-    <KwCard heading="Sign & verify" icon="✍️">
-      Sign the image by <strong>digest</strong> (e.g. cosign / Sigstore); consumers
-      <code>verify</code> before running. A tampered or unsigned image
-      <strong>fails the check</strong> — trust becomes enforceable.
+    <KwCard heading="Assinar & verificar" icon="✍️">
+      Assine a image pelo <strong>digest</strong> (ex.: cosign / Sigstore);
+      consumidores rodam <code>verify</code> antes de executar. Uma image
+      adulterada ou não assinada <strong>falha na checagem</strong> — a confiança
+      vira algo que dá para exigir.
     </KwCard>
   </v-click>
   <v-click at="3">
-    <KwCard heading="Provenance / SLSA" icon="🧾" variant="plain">
-      A signed <strong>attestation</strong> of <em>how</em> the image was built
-      (source, builder, steps). <strong>SLSA</strong> levels grade that chain from
-      "trust me" to "independently verifiable".
+    <KwCard heading="Proveniência / SLSA" icon="🧾" variant="plain">
+      Uma <strong>attestation</strong> assinada de <em>como</em> a image foi
+      construída (fonte, builder, passos). Os níveis <strong>SLSA</strong> graduam
+      essa cadeia de "confia em mim" a "verificável de forma independente".
     </KwCard>
   </v-click>
 </div>
 
 <div v-click="4" class="mt-5 text-sm">
 
-All three hang off one thing: the **digest**. `app:1.4` can move; `app@sha256:…`
-can't — so it's what you scan, sign, attest, and finally **deploy**.
+As três coisas se penduram em um só ponto: o **digest**. `app:1.4` pode se mover;
+`app@sha256:…` não — então é ele que você escaneia, assina, atesta e, no fim,
+usa para **fazer o deploy**.
 
 </div>
 
 <!--
-Speaker: SBOM answers "am I affected?" fast; signing answers "is this really our
-image?"; provenance answers "how was it built?". Mental-model depth only — the lab
-does SBOM for real and demos sign/verify as expected output. Enforcement (only
-admit signed images) is S17/S25.
+Speaker: o SBOM responde "fui afetado?" rápido; a assinatura responde "essa image
+é mesmo nossa?"; a proveniência responde "como ela foi construída?". Profundidade
+só de modelo mental — o lab faz SBOM de verdade e demonstra sign/verify como
+saída esperada. A imposição (admitir só images assinadas) é S17/S25.
 -->
 
 ---
 layout: recap
-heading: 'Build-time security, in one arc'
-story: 'The on-call page wasn''t a runtime exploit — it was a bloated image that still carried a build secret in layer history.'
-next: 'The Kubernetes mental model: control plane, nodes, reconciliation'
+heading: 'Segurança em build time, em um arco só'
+story: 'O alerta do plantão não era um exploit de runtime — era uma image inchada que ainda carregava um secret de build no histórico de layers.'
+next: 'O modelo mental do Kubernetes: control plane, nodes, reconciliação'
 ---
 
-- **Minimal / distroless base** → fewer packages, fewer CVEs, nothing to pivot through
-- **Non-root `USER`** → an escape lands unprivileged, not as root on the node
-- **Multi-stage + secret mounts** → toolchains and secrets never reach a shipped layer
-- **A deleted layer still ships** → never *add* a secret; rotate anything that did
-- **Scan, SBOM, sign, pin by digest** → know what's inside and prove where it came from
+- **Base mínima / distroless** → menos pacotes, menos CVEs, nada por onde pivotar
+- **`USER` non-root** → um escape cai sem privilégios, não como root no node
+- **Multi-stage + secret mounts** → toolchains e secrets nunca chegam a uma layer entregue
+- **Uma layer deletada ainda é entregue** → nunca *adicione* um secret; rotacione qualquer um que já tenha entrado
+- **Escaneie, SBOM, assine, fixe por digest** → saiba o que tem dentro e prove de onde veio
 
 <div class="mt-4 kw-muted text-sm">
 
-This is the **build-time** half. Kubernetes enforces the **runtime** half later —
-Pod Security Standards + NetworkPolicy, the pod-escape walkthrough,
-and the production-readiness checklist. CKx: security
-foundations — image hygiene precedes runtime hardening.
+Esta é a metade de **build time**. O Kubernetes impõe a metade de **runtime**
+depois — Pod Security Standards + NetworkPolicy, o walkthrough de pod-escape e o
+checklist de prontidão para produção. CKx: fundamentos de segurança — higiene de
+image precede o hardening de runtime.
 
 </div>
 
 <!--
-Speaker: close the loop opened in S01 ("S02 goes deeper"). The Gremlin/threat
-that Day 3 hunts is first a stowaway in a bloated image — that's the through-line
-from here to S25.
+Speaker: feche o loop aberto no S01 ("o S02 aprofunda"). O Gremlin/ameaça que o
+Day 3 caça começa como um clandestino em uma image inchada — esse é o fio
+condutor daqui até o S25.
 -->
 
 ---
@@ -377,10 +386,10 @@ duration: 25 min
 env: local — no cluster needed
 ---
 
-## Lab 02 — Scan & harden an image
+## Lab 02 — Escaneie & endureça uma image
 
-- **Scan** a deliberately vulnerable image and record the HIGH/CRITICAL count
-- **Harden it:** minimal base + non-root `USER` + multi-stage → **re-scan** and compare
-- **SBOM:** generate one for the hardened image and find a dependency in it
-- **Break it on purpose:** bake a secret, recover it from image history, then remove it *correctly*
-- **Sign & pin:** (optional) sign/verify, then pin the final reference by **digest**
+- **Escaneie** uma image deliberadamente vulnerável e registre a contagem de HIGH/CRITICAL
+- **Endureça:** base mínima + `USER` non-root + multi-stage → **re-escaneie** e compare
+- **SBOM:** gere um para a image hardened e encontre uma dependência nele
+- **Quebre de propósito:** embuta um secret, recupere-o do histórico da image e então remova-o *corretamente*
+- **Assine & fixe:** (opcional) assine/verifique e então fixe a referência final por **digest**

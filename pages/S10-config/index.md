@@ -9,134 +9,135 @@ track: Core
 
 # ConfigMap & Secret
 
-Separate configuration from the image — inject it as env or files, know what a Secret
-does and doesn't protect, and learn why changing config doesn't restart your Pods.
+Separe a configuração da image — injete-a como env ou arquivos, saiba o que um Secret
+protege e o que não protege, e aprenda por que mudar a config não reinicia seus Pods.
 
-**core** · suggested Day 2 · Core track
+**core** · sugerido para o Day 2 · trilha Core
 
 <!--
-Section S10 — ConfigMap & Secret. Timing: ~30 min slides + 25 min lab. First
-config-layering section of Day 2 (the red line ended at S09). Outcome: learners can
-externalise config into a ConfigMap/Secret, consume it three ways (env via envFrom,
-mounted files, Secret as env), explain that base64 is encoding not encryption (etcd
-encryption-at-rest + RBAC are the real controls), compare the three secure-delivery
-patterns (Sealed Secrets / External Secrets Operator / Vault) by where the truth
-lives and what is safe to commit, and — the sharp edge — know that
-updating a ConfigMap/Secret does NOT restart Pods: env is frozen at start, whole-dir
-mounted files update eventually (~60–90s), subPath mounts never update. The
-checksum-annotation trick forces a rollout on purpose.
-Beats: problem (config baked in → rebuild per env) · mental model (two objects, two
-consumption modes, subPath caveat) · magic-move (extend the web Deployment: +envFrom
-→ +mounted file → +Secret env) · security (base64 ≠ encryption; Secret types) ·
-secure delivery (the Git problem · Sealed Secrets vs ESO vs Vault) ·
-immutability (immutable: true tradeoff) · rotation gotcha (what updates, what doesn't;
-checksum trick) · recap → lab.
-Delivery ACCURACY LOCKS (verified against external-secrets.io, the HashiCorp
-Vault Kubernetes docs, and bitnami-labs/sealed-secrets, 2026-08):
-- Sealed Secrets: kubeseal encrypts with the in-cluster controller's PUBLIC key
-  into a SealedSecret CRD (safe to commit — asymmetric; only the controller
-  decrypts, strict name+namespace scope by default) which the controller unseals
-  into a normal Secret.
+Seção S10 — ConfigMap & Secret. Tempo: ~30 min de slides + 25 min de lab. Primeira
+seção de camadas de config do Day 2 (a red line terminou no S09). Resultado: os
+participantes conseguem externalizar config em um ConfigMap/Secret, consumi-los de três
+formas (env via envFrom, arquivos montados, Secret como env), explicar que base64 é
+encoding e não criptografia (encryption-at-rest do etcd + RBAC são os controles reais),
+comparar os três padrões de entrega segura (Sealed Secrets / External Secrets Operator /
+Vault) por onde a verdade vive e o que é seguro commitar, e — o ponto afiado — saber que
+atualizar um ConfigMap/Secret NÃO reinicia Pods: env é congelado no start, arquivos
+montados por diretório inteiro atualizam eventualmente (~60–90s), mounts com subPath
+nunca atualizam. O truque da annotation de checksum força um rollout de propósito.
+Beats: problema (config embutida → rebuild por ambiente) · modelo mental (dois objetos,
+dois modos de consumo, ressalva do subPath) · magic-move (estender o Deployment web:
++envFrom → +arquivo montado → +Secret como env) · segurança (base64 ≠ criptografia; tipos
+de Secret) · entrega segura (o problema do Git · Sealed Secrets vs ESO vs Vault) ·
+imutabilidade (tradeoff do immutable: true) · pegadinha da rotação (o que atualiza, o que
+não; truque do checksum) · recap → lab.
+ACCURACY LOCKS de entrega (verificados contra external-secrets.io, a documentação do
+HashiCorp Vault para Kubernetes e bitnami-labs/sealed-secrets, 2026-08):
+- Sealed Secrets: o kubeseal criptografa com a chave PÚBLICA do controller in-cluster
+  em um CRD SealedSecret (seguro para commitar — assimétrico; só o controller
+  descriptografa, escopo estrito de name+namespace por padrão) que o controller
+  desela em um Secret normal.
 - External Secrets Operator: ExternalSecret + SecretStore/ClusterSecretStore
-  (external-secrets.io API group) sync values FROM an external manager (AWS/GCP/
-  Azure/Vault/…) INTO native Secrets on spec.refreshInterval. CNCF SANDBOX —
-  do not claim a higher maturity; 2025 maintainer pause resolved, releases
-  monthly again (speaker-note honesty beat).
-- Vault: three delivery paths — Agent Injector sidecar (files in the Pod, no
-  K8s Secret, stays out of etcd), CSI provider (files via volume), Vault
-  Secrets Operator (writes real K8s Secrets). Pods authenticate via their
-  ServiceAccount token. Vault is BSL-licensed since 2023; OpenBao is the
-  Linux Foundation open-source fork (notes-only nuance).
-Concepts-only: no delivery-tool pin, no lab step — the comparison is the deliverable.
-No shared animation (per outline S10 has none; the rotation story is a live console
-sequence, not a state-machine). CKx: CKAD application-configuration.
+  (grupo de API external-secrets.io) sincronizam valores DE um gerenciador externo
+  (AWS/GCP/Azure/Vault/…) PARA Secrets nativos no spec.refreshInterval. CNCF SANDBOX —
+  não afirmar maturidade maior; a pausa de mantenedores de 2025 foi resolvida, releases
+  mensais de novo (beat de honestidade nas speaker notes).
+- Vault: três caminhos de entrega — sidecar Agent Injector (arquivos no Pod, sem
+  Secret K8s, fica fora do etcd), provider CSI (arquivos via volume), Vault
+  Secrets Operator (escreve Secrets K8s reais). Os Pods se autenticam via seu
+  token de ServiceAccount. O Vault é licenciado sob BSL desde 2023; o OpenBao é o
+  fork open-source da Linux Foundation (nuance só nas notas).
+Só conceitos: nenhum pin de ferramenta de entrega, nenhum passo de lab — a comparação é a
+entrega. Sem animação compartilhada (pelo outline o S10 não tem nenhuma; a história da
+rotação é uma sequência de console ao vivo, não uma máquina de estados). CKx: CKAD
+application-configuration.
 -->
 
 ---
 layout: statement
-kicker: The problem
+kicker: O problema
 ---
 
-Bake config into the image and you rebuild it for **every** environment.
+Embuta a config na image e você a reconstrói para **cada** ambiente.
 
-A connection string, a feature flag, a log level, an API token — hard-code them and dev,
-staging, and prod each need their own image. The **same artifact** should run everywhere;
-only the **config** changes around it. So config has to live **outside** the image — as
-data the cluster injects at runtime.
+Uma connection string, uma feature flag, um log level, um API token — deixe-os
+hard-coded e dev, staging e prod passam a precisar cada um da sua própria image. O
+**mesmo artefato** deveria rodar em toda parte; só a **config** muda ao redor dele. Então
+a config precisa viver **fora** da image — como dados que o cluster injeta em runtime.
 
 <!--
-Speaker: this is the twelve-factor "config in the environment" idea, made concrete for
-Kubernetes. The image is the thing you built and scanned in S01/S02 — it should be
-immutable and identical across environments. What differs per environment is
-configuration, and Kubernetes gives you two objects to hold it: ConfigMap (non-secret)
-and Secret (sensitive). Lab 10 follows this section.
+Speaker: esta é a ideia twelve-factor de "config no ambiente", tornada concreta para
+Kubernetes. A image é a coisa que você construiu e escaneou no S01/S02 — ela deve ser
+imutável e idêntica entre ambientes. O que difere por ambiente é a configuração, e o
+Kubernetes te dá dois objetos para guardá-la: ConfigMap (não sensível) e Secret
+(sensível). O Lab 10 vem depois desta seção.
 -->
 
 ---
 
 <div class="kw-slide-dense">
 
-<span class="kw-kicker">Mental model · two objects, two ways in</span>
+<span class="kw-kicker">Modelo mental · dois objetos, duas portas de entrada</span>
 
-# ConfigMap and Secret — key/value, injected two ways
+# ConfigMap e Secret — chave/valor, injetados de duas formas
 
 <div class="kw-cols-2 mt-2 text-sm">
   <v-click at="1">
     <KwCard heading="ConfigMap" kind="cm">
-      Non-sensitive key/value: flags, URLs, tuning.
+      Chave/valor não sensível: flags, URLs, tuning.
     </KwCard>
   </v-click>
   <v-click at="2">
     <KwCard heading="Secret" kind="secret" variant="warn">
-      Sensitive values — <strong>base64</strong>, not encryption (next slide).
+      Valores sensíveis — <strong>base64</strong>, não criptografia (próximo slide).
     </KwCard>
   </v-click>
 </div>
 
 <div class="kw-cols-2 mt-3 text-sm">
   <v-click at="3">
-    <KwCard heading="As environment variables" icon="🌱">
-      <code>envFrom</code> / <code>valueFrom</code> — simple, but <strong>frozen at start</strong>.
+    <KwCard heading="Como variáveis de ambiente" icon="🌱">
+      <code>envFrom</code> / <code>valueFrom</code> — simples, mas <strong>congelado no start</strong>.
     </KwCard>
   </v-click>
   <v-click at="4">
-    <KwCard heading="As mounted files" icon="📄">
-      Whole-directory mount <strong>updates in place</strong>; <code>subPath</code> never does.
+    <KwCard heading="Como arquivos montados" icon="📄">
+      O mount de diretório inteiro <strong>atualiza no lugar</strong>; <code>subPath</code> nunca atualiza.
     </KwCard>
   </v-click>
 </div>
 
 <div v-click="5" class="mt-3 kw-muted text-sm">
 
-Same objects, two consumption modes. The <code>subPath</code> caveat is what the rotation lab proves.
+Os mesmos objetos, dois modos de consumo. A ressalva do <code>subPath</code> é o que o lab de rotação prova.
 
 </div>
 
 </div>
 
 <!--
-Speaker: build the four cards. Land two things hard: (1) a Secret is not encrypted, it's
-just base64 + some guard rails (RBAC, no accidental logging) — the next slide is the
-whole point. (2) The consumption mode decides update behaviour, and subPath is the
-trap: subPath copies the file at mount time so it behaves like an env var (frozen),
-while a directory mount tracks the object. This exact distinction is the lab's rotation
-step and its headline question.
+Speaker: construa os quatro cards. Crave duas coisas: (1) um Secret não é criptografado, é
+só base64 + alguns guard rails (RBAC, sem logging acidental) — o próximo slide é o ponto
+central. (2) O modo de consumo decide o comportamento de atualização, e subPath é a
+armadilha: subPath copia o arquivo na hora do mount, então se comporta como uma env var
+(congelado), enquanto um mount de diretório acompanha o objeto. Essa distinção exata é o
+passo de rotação do lab e sua pergunta-manchete.
 -->
 
 ---
 layout: code-walkthrough
-heading: 'Extend the app — consume config as env, files, and a Secret'
+heading: 'Estenda a aplicação — consuma config como env, arquivos e um Secret'
 lab: labs/day-2/10-config.md
 ---
 
 ````md magic-move
 ```yaml
-# our app from Day 1 — nothing consumes config yet
+# nossa aplicação do Day 1 — nada consome config ainda
 apiVersion: apps/v1
 kind: Deployment
 metadata: { name: web, labels: { app: s10 } }
 spec:
-  replicas: 1                       # one replica → one Pod answers every request
+  replicas: 1                       # uma réplica → um Pod responde toda requisição
   selector: { matchLabels: { app: s10 } }
   template:
     metadata: { labels: { app: s10 } }
@@ -147,7 +148,7 @@ spec:
 ```
 
 ```yaml
-# +1: a ConfigMap injected as environment variables
+# +1: um ConfigMap injetado como variáveis de ambiente
 apiVersion: apps/v1
 kind: Deployment
 metadata: { name: web, labels: { app: s10 } }
@@ -161,11 +162,11 @@ spec:
         - name: web
           image: ghcr.io/platformrelay/workshop-web:v1
           envFrom:
-            - configMapRef: { name: web-config }   # every key → an env var
+            - configMapRef: { name: web-config }   # cada chave → uma env var
 ```
 
 ```yaml
-# +2: the SAME ConfigMap also mounted as files (whole directory → updatable)
+# +2: o MESMO ConfigMap também montado como arquivos (diretório inteiro → atualizável)
 apiVersion: apps/v1
 kind: Deployment
 metadata: { name: web, labels: { app: s10 } }
@@ -181,8 +182,8 @@ spec:
           envFrom:
             - configMapRef: { name: web-config }
           volumeMounts:
-            - { name: config, mountPath: /etc/web-config }   # dir mount, no subPath
-        - name: toolbox   # the app image is shell-less — a sidecar to read the files
+            - { name: config, mountPath: /etc/web-config }   # mount de diretório, sem subPath
+        - name: toolbox   # a image da aplicação não tem shell — um sidecar para ler os arquivos
           image: busybox:1.37
           command: ["sleep", "infinity"]
           volumeMounts:
@@ -192,7 +193,7 @@ spec:
 ```
 
 ```yaml
-# +3: a Secret injected as one env var — same app, sensitive value kept apart
+# +3: um Secret injetado como uma env var — mesma aplicação, valor sensível separado
 apiVersion: apps/v1
 kind: Deployment
 metadata: { name: web, labels: { app: s10 } }
@@ -223,21 +224,22 @@ spec:
 ````
 
 <!--
-Speaker: FOUR frames, all the SAME Deployment growing. (1) the app from Day 1, no config.
-(2) envFrom pulls every ConfigMap key in as an env var — one line; the ConfigMap's VERSION
-key overrides the app's baked version, so the response body itself proves the injection.
-(3) the same ConfigMap ALSO mounted as a directory of files — call out mountPath with NO
-subPath, that's the updatable form (matters two slides on); the toolbox sidecar exists
-because the app image is distroless (no shell) — a second container is the honest way to
-look at mounted files. (4) a Secret's key injected as one env var via secretKeyRef —
-sensitive value lives in its own object, consumed the same way. The lab applies these same
-pieces and proves each one in the response body or via the toolbox. Note replicas:1 is
-deliberate: one Pod means the body's `pod:` line never surprises.
+Speaker: QUATRO frames, todos o MESMO Deployment crescendo. (1) a aplicação do Day 1, sem
+config. (2) envFrom puxa cada chave do ConfigMap como uma env var — uma linha; a chave
+VERSION do ConfigMap sobrescreve a versão embutida da aplicação, então o próprio corpo da
+resposta prova a injeção. (3) o mesmo ConfigMap TAMBÉM montado como um diretório de
+arquivos — destaque o mountPath SEM subPath, essa é a forma atualizável (importa dois
+slides adiante); o sidecar toolbox existe porque a image da aplicação é distroless (sem
+shell) — um segundo container é a forma honesta de olhar arquivos montados. (4) a chave de
+um Secret injetada como uma env var via secretKeyRef — o valor sensível vive no seu
+próprio objeto, consumido do mesmo jeito. O lab aplica essas mesmas peças e prova cada uma
+no corpo da resposta ou via toolbox. Note que replicas:1 é deliberado: um Pod só significa
+que a linha `pod:` do corpo nunca surpreende.
 -->
 
 ---
 layout: code-annotated
-heading: 'A Secret is base64, not a vault'
+heading: 'Um Secret é base64, não um cofre'
 lab: labs/day-2/10-config.md
 ---
 
@@ -245,246 +247,249 @@ lab: labs/day-2/10-config.md
 apiVersion: v1
 kind: Secret
 metadata: { name: web-secret }
-type: Opaque                 # also: kubernetes.io/tls, .../dockerconfigjson
+type: Opaque                 # também: kubernetes.io/tls, .../dockerconfigjson
 data:
-  API_TOKEN: czNjcjN0        # "s3cr3t" — base64, trivially reversible
+  API_TOKEN: czNjcjN0        # "s3cr3t" — base64, trivialmente reversível
 ```
 
 ::notes::
 
 <CodeNote at="1" label="Secret ≈ ConfigMap">
-Same key/value shape as a ConfigMap. The differences are handling, not cryptography:
-it's kept out of most logs and gated by RBAC — that's it.
+O mesmo formato chave/valor de um ConfigMap. As diferenças são de tratamento, não de
+criptografia: ele fica fora da maioria dos logs e é protegido por RBAC — só isso.
 </CodeNote>
 
-<CodeNote at="2" label="base64 ≠ encryption" variant="warn">
-<code>echo czNjcjN0 | base64 -d</code> returns the value. Anyone who can
-<code>get</code> the Secret can read it. The real controls are <strong>RBAC</strong>
-(who can read it) and <strong>etcd encryption-at-rest</strong> (who can read the disk).
+<CodeNote at="2" label="base64 ≠ criptografia" variant="warn">
+<code>echo czNjcjN0 | base64 -d</code> devolve o valor. Qualquer um que puder dar
+<code>get</code> no Secret pode lê-lo. Os controles reais são <strong>RBAC</strong>
+(quem pode lê-lo) e <strong>encryption-at-rest do etcd</strong> (quem pode ler o disco).
 </CodeNote>
 
-<CodeNote at="3" label="typed for a purpose" variant="ok">
-<code>type</code> tells consumers what's inside: <code>Opaque</code> (arbitrary),
-<code>kubernetes.io/tls</code> (cert/key for a listener), <code>.../dockerconfigjson</code>
-(a registry pull secret — remember <code>imagePullSecrets</code> from the Pod).
+<CodeNote at="3" label="tipado com um propósito" variant="ok">
+<code>type</code> diz aos consumidores o que há dentro: <code>Opaque</code> (arbitrário),
+<code>kubernetes.io/tls</code> (cert/chave para um listener), <code>.../dockerconfigjson</code>
+(um pull secret de registry — lembre-se de <code>imagePullSecrets</code> do Pod).
 </CodeNote>
 
 <!--
-Speaker: the single most misunderstood object in Kubernetes. Walk it: it's base64, decode
-it live in your head — czNjcjN0 → s3cr3t. So a Secret protects you only as much as your
-RBAC and etcd config do. Enable encryption-at-rest and lock down `get secrets`; that's
-where the security actually lives. Then the types: Opaque is the default; tls and
-dockerconfigjson are consumed by specific machinery. Lab decodes a real Secret with
-`-o jsonpath | base64 -d` so the "not encrypted" point is felt, not just told.
+Speaker: o objeto mais mal compreendido do Kubernetes. Percorra: é base64, decodifique ao
+vivo de cabeça — czNjcjN0 → s3cr3t. Então um Secret só protege você tanto quanto seu RBAC
+e sua config do etcd protegem. Habilite encryption-at-rest e restrinja `get secrets`; é aí
+que a segurança mora de verdade. Depois os tipos: Opaque é o default; tls e
+dockerconfigjson são consumidos por maquinário específico. O lab decodifica um Secret real
+com `-o jsonpath | base64 -d` para que o ponto "não é criptografado" seja sentido, não só
+contado.
 -->
 
 ---
 layout: statement
-kicker: 'The next question · your manifests live in Git'
+kicker: 'A próxima pergunta · seus manifestos vivem no Git'
 ---
 
-Everything else on this slide deck can be **committed**. A Secret can't.
+Todo o restante deste deck pode ser **commitado**. Um Secret não.
 
-The Deployment, the Service, the ConfigMap — all of it belongs in Git, reviewed and
-versioned. But a Secret's `data:` is just base64: committing it **is** publishing
-it. So every real platform answers one question deliberately: **where does the
-truth about a secret live, and how does it reach the cluster?** Three patterns
-dominate.
+O Deployment, o Service, o ConfigMap — tudo isso pertence ao Git, revisado e
+versionado. Mas o `data:` de um Secret é só base64: commitá-lo **é** publicá-lo.
+Então toda plataforma de verdade responde a uma pergunta deliberadamente: **onde vive a
+verdade sobre um secret, e como ela chega ao cluster?** Três padrões dominam.
 
 <!--
-Speaker: this is the bridge from "a Secret is weak" to "so how do teams actually do
-this". Frame it with Git because Day 3's GitOps section makes everything-in-Git the
-delivery model — secrets are the one thing that can't ride along in plain form.
-Name the anti-pattern out loud: a Secret manifest in a private repo is still a
-leaked credential to everyone with repo access, forever, in history. The three
-patterns on the next slide differ in exactly one deep way: where the source of
-truth lives (encrypted in Git / in an external manager / in Vault) — everything
-else is mechanics. Keep this slide short; the comparison carries the content.
+Speaker: esta é a ponte de "um Secret é fraco" para "então como os times realmente fazem
+isso". Enquadre com Git porque a seção de GitOps do Day 3 faz de tudo-no-Git o modelo de
+entrega — secrets são a única coisa que não pode viajar junto em forma plana. Nomeie o
+anti-padrão em voz alta: um manifesto de Secret em um repositório privado ainda é uma
+credencial vazada para todo mundo com acesso ao repo, para sempre, no histórico. Os três
+padrões do próximo slide diferem em exatamente um ponto profundo: onde a fonte da verdade
+vive (criptografada no Git / em um gerenciador externo / no Vault) — todo o resto é
+mecânica. Mantenha este slide curto; a comparação carrega o conteúdo.
 -->
 
 ---
 
 <div class="kw-slide-dense">
 
-<span class="kw-kicker">Secure delivery · three patterns, one question — where does the truth live?</span>
+<span class="kw-kicker">Entrega segura · três padrões, uma pergunta — onde vive a verdade?</span>
 
 # Sealed Secrets · External Secrets Operator · Vault
 
 <div class="kw-cols-3 mt-3 text-sm">
   <v-click at="1">
-    <KwCard heading="Sealed Secrets — encrypt for Git" icon="📮" variant="ok">
-      <code>kubeseal</code> encrypts your Secret with the controller's
-      <strong>public key</strong> into a <strong>SealedSecret</strong> — safe to
-      commit. Only the in-cluster controller can decrypt it, into a normal Secret.
-      <div class="kw-muted mt-1">Truth lives <strong>in Git</strong>, encrypted.</div>
+    <KwCard heading="Sealed Secrets — criptografe para o Git" icon="📮" variant="ok">
+      O <code>kubeseal</code> criptografa seu Secret com a <strong>chave pública</strong>
+      do controller em um <strong>SealedSecret</strong> — seguro para
+      commitar. Só o controller in-cluster consegue descriptografá-lo, em um Secret normal.
+      <div class="kw-muted mt-1">A verdade vive <strong>no Git</strong>, criptografada.</div>
     </KwCard>
   </v-click>
   <v-click at="2">
-    <KwCard heading="External Secrets Operator — sync in" icon="🔄" variant="ok">
-      An <strong>ExternalSecret</strong> names keys in a
-      <strong>SecretStore</strong> (AWS/GCP/Azure/Vault…); the operator pulls them
-      into a native Secret and <strong>re-syncs</strong> on an interval.
-      <div class="kw-muted mt-1">Truth lives in the <strong>external manager</strong>;
-      Git holds only references.</div>
+    <KwCard heading="External Secrets Operator — sincronize para dentro" icon="🔄" variant="ok">
+      Um <strong>ExternalSecret</strong> nomeia chaves em um
+      <strong>SecretStore</strong> (AWS/GCP/Azure/Vault…); o operator as puxa
+      para um Secret nativo e <strong>ressincroniza</strong> em um intervalo.
+      <div class="kw-muted mt-1">A verdade vive no <strong>gerenciador externo</strong>;
+      o Git guarda só referências.</div>
     </KwCard>
   </v-click>
   <v-click at="3">
-    <KwCard heading="Vault — deliver to the Pod" icon="🏦" variant="ok">
-      A central secrets service. A sidecar or CSI volume mounts secrets as
-      <strong>files in the Pod</strong> — often <em>never</em> creating a K8s
-      Secret at all (nothing lands in etcd); its operator can also sync real Secrets.
-      <div class="kw-muted mt-1">Truth lives <strong>in Vault</strong>; Pods
-      authenticate with their ServiceAccount.</div>
+    <KwCard heading="Vault — entregue ao Pod" icon="🏦" variant="ok">
+      Um serviço central de secrets. Um sidecar ou volume CSI monta secrets como
+      <strong>arquivos no Pod</strong> — muitas vezes <em>nunca</em> criando um
+      Secret K8s (nada cai no etcd); seu operator também pode sincronizar Secrets reais.
+      <div class="kw-muted mt-1">A verdade vive <strong>no Vault</strong>; os Pods
+      se autenticam com seu ServiceAccount.</div>
     </KwCard>
   </v-click>
 </div>
 
 <div v-click="4" class="mt-3 kw-muted text-sm">
 
-All three end at (or deliberately bypass) the **same object you just learned** —
-the app still consumes env vars or files. What you're choosing is **where truth
-lives** and **what's safe to commit**.
+Os três terminam no (ou deliberadamente contornam o) **mesmo objeto que você acabou de
+aprender** — a aplicação continua consumindo env vars ou arquivos. O que você está
+escolhendo é **onde a verdade vive** e **o que é seguro commitar**.
 
 </div>
 
 </div>
 
 <!--
-Speaker: three cards, one axis — source of truth. (1) Sealed Secrets (bitnami-labs)
-is the lightest: asymmetric crypto, kubeseal encrypts with the cluster
-controller's public key, the SealedSecret CRD is safe even in a public repo, and
-the controller unseals it into a regular Secret. By default sealing is scoped
-strictly to that name + namespace, so a sealed blob can't be replayed elsewhere.
-Fits pure GitOps with no extra infrastructure — but rotation still means
-re-sealing and committing. (2) External Secrets Operator: the secret is mastered
-in a cloud secret manager or Vault; ExternalSecret + SecretStore/
-ClusterSecretStore CRDs (external-secrets.io) declare WHICH keys, and the
-operator materialises and refreshes native Secrets (spec.refreshInterval) —
-rotation upstream flows in automatically. Honesty notes: it's a CNCF Sandbox
-project, and in 2025 it briefly paused releases over maintainer shortage before
-new maintainers resumed monthly releases — "check the health of what you adopt"
-is a fair lesson to say out loud. (3) Vault: secrets stay in Vault; the Agent
-Injector sidecar or the CSI provider deliver them as files straight into the Pod
-filesystem — no Secret object, nothing in etcd — while the Vault Secrets
-Operator alternatively syncs real Secrets for apps that need env vars. Pods
-authenticate via their ServiceAccount token (Kubernetes auth method). Licensing
-nuance for the curious: Vault moved to BSL in 2023; OpenBao is the Linux
-Foundation fork continuing under an open-source license. Close on the muted
-line: the CONSUMPTION story from this section is unchanged in all three — that's
-why we taught the plain Secret first.
+Speaker: três cards, um eixo — a fonte da verdade. (1) Sealed Secrets (bitnami-labs)
+é o mais leve: criptografia assimétrica, o kubeseal criptografa com a chave pública do
+controller do cluster, o CRD SealedSecret é seguro até em um repo público, e o controller
+o desela em um Secret comum. Por padrão o selamento é escopado estritamente àquele
+name + namespace, então um blob selado não pode ser reaproveitado em outro lugar.
+Encaixa em GitOps puro sem infraestrutura extra — mas rotação ainda significa
+re-selar e commitar. (2) External Secrets Operator: o secret é mantido em um
+gerenciador de secrets de cloud ou no Vault; os CRDs ExternalSecret + SecretStore/
+ClusterSecretStore (external-secrets.io) declaram QUAIS chaves, e o operator
+materializa e atualiza Secrets nativos (spec.refreshInterval) — rotação no upstream
+flui automaticamente. Notas de honestidade: é um projeto CNCF Sandbox, e em 2025
+pausou brevemente os releases por falta de mantenedores antes de novos mantenedores
+retomarem releases mensais — "confira a saúde do que você adota" é uma lição justa de
+dizer em voz alta. (3) Vault: os secrets ficam no Vault; o sidecar Agent Injector ou o
+provider CSI os entregam como arquivos direto no filesystem do Pod — sem objeto Secret,
+nada no etcd — enquanto o Vault Secrets Operator alternativamente sincroniza Secrets
+reais para aplicações que precisam de env vars. Os Pods se autenticam via token de
+ServiceAccount (método de auth Kubernetes). Nuance de licenciamento para os curiosos:
+o Vault migrou para BSL em 2023; o OpenBao é o fork da Linux Foundation que continua
+sob licença open-source. Feche na linha em cinza: a história de CONSUMO desta seção
+não muda em nenhum dos três — por isso ensinamos o Secret puro primeiro.
 -->
 
 ---
 
-<span class="kw-kicker">Safety valve · lock a value down</span>
+<span class="kw-kicker">Válvula de segurança · trave um valor</span>
 
-# Immutable config — faster and safer, but frozen
+# Config imutável — mais rápida e mais segura, porém congelada
 
 <div class="kw-cols-2 mt-3 text-sm">
   <KwCard heading="immutable: true" icon="🔒">
-    Set it on a ConfigMap or Secret and the value can <strong>never</strong> change.
-    To roll a new value you create a <strong>new object</strong> and repoint the
+    Defina-o em um ConfigMap ou Secret e o valor <strong>nunca</strong> mais muda.
+    Para lançar um valor novo você cria um <strong>objeto novo</strong> e reaponta o
     Deployment.
   </KwCard>
-  <KwCard heading="Why bother" icon="⚡">
-    The kubelet stops watching immutable objects for changes — <strong>less API load</strong>
-    at scale — and an accidental edit can't silently reconfigure live Pods.
+  <KwCard heading="Por que se dar ao trabalho" icon="⚡">
+    O kubelet para de observar objetos imutáveis por mudanças — <strong>menos carga na API</strong>
+    em escala — e uma edição acidental não consegue reconfigurar Pods vivos silenciosamente.
   </KwCard>
 </div>
 
 <div v-click class="mt-4 kw-muted text-sm">
 
-The tradeoff is in the name: no in-place edits. It pairs naturally with treating each
-config version as a **new, named object** — which is exactly how you roll changes safely
-(next slide).
+O tradeoff está no nome: sem edições no lugar. Ele combina naturalmente com tratar cada
+versão de config como um **objeto novo, nomeado** — que é exatamente como você lança
+mudanças com segurança (próximo slide).
 
 </div>
 
 <!--
-Speaker: quick beat, don't linger. immutable: true is a performance + safety lever:
-kubelet drops the watch (real savings when thousands of Pods mount the same object) and
-fat-fingered edits are impossible. Cost: you can't edit it — new value means new object.
-That segues straight into the rotation gotcha: even for MUTABLE objects, changing them
-doesn't restart Pods, so you end up managing config by version anyway.
+Speaker: beat rápido, não se demore. immutable: true é uma alavanca de performance +
+segurança: o kubelet derruba o watch (economia real quando milhares de Pods montam o
+mesmo objeto) e edições de dedo gordo se tornam impossíveis. Custo: você não pode
+editá-lo — valor novo significa objeto novo. Isso emenda direto na pegadinha da rotação:
+mesmo para objetos MUTÁVEIS, mudá-los não reinicia Pods, então você acaba gerenciando
+config por versão de qualquer jeito.
 -->
 
 ---
 layout: code-annotated
-heading: 'Changing config does not restart your Pods'
+heading: 'Mudar a config não reinicia seus Pods'
 compact: true
 lab: labs/day-2/10-config.md
 ---
 
 ```console {none|1-3|5-6|8-10}
-# 1) edit the ConfigMap
+# 1) edite o ConfigMap
 $ kubectl edit configmap web-config    # VERSION: config-v1 → config-v2
 $ wget -qO- http://$POD_IP:8080 | head -1
-workshop-web config-v1                  # env frozen at Pod start
+workshop-web config-v1                  # env congelado no start do Pod
 
-# 2) mounted file updates (~60–90s)
+# 2) o arquivo montado atualiza (~60–90s)
 $ kubectl exec deploy/web -c toolbox -- cat /etc/web-config/VERSION
 config-v2
 
-# 3) force rollout — checksum annotation
+# 3) force o rollout — annotation de checksum
 $ kubectl patch deploy web -p '{"spec":{"template":{"metadata":{"annotations":{"checksum/config":"<sha>"}}}}}'
 ```
 
 ::notes::
 
-<CodeNote at="1" label="env is frozen" variant="warn">
-Environment variables are read <strong>once</strong>, when the container starts. Editing
-the ConfigMap changes the object, not the running process — the old value persists until
-the Pod is recreated.
+<CodeNote at="1" label="env é congelado" variant="warn">
+Variáveis de ambiente são lidas <strong>uma vez</strong>, quando o container inicia.
+Editar o ConfigMap muda o objeto, não o processo em execução — o valor antigo persiste até
+o Pod ser recriado.
 </CodeNote>
 
-<CodeNote at="2" label="files update, eventually">
-A whole-directory volume mount tracks the object: the kubelet refreshes it within about a
-minute. (A <code>subPath</code> mount would <strong>not</strong> — it's copied once.)
+<CodeNote at="2" label="arquivos atualizam, eventualmente">
+Um mount de volume de diretório inteiro acompanha o objeto: o kubelet o atualiza em cerca
+de um minuto. (Um mount com <code>subPath</code> <strong>não</strong> atualizaria — ele é
+copiado uma única vez.)
 </CodeNote>
 
-<CodeNote at="3" label="the checksum trick" variant="ok">
-Nothing auto-restarts Pods on a config change. Teams put a hash of the config in a
-<strong>pod-template annotation</strong>: change the config → change the hash → the
-template changes → a normal rolling update ships the new value.
+<CodeNote at="3" label="o truque do checksum" variant="ok">
+Nada reinicia Pods automaticamente numa mudança de config. Os times colocam um hash da
+config em uma <strong>annotation do pod template</strong>: mudou a config → mudou o hash →
+o template mudou → um rolling update normal entrega o valor novo.
 </CodeNote>
 
 <!--
-Speaker: this is the beat people get burned by in production. Three outcomes from ONE
-edit: (1) env var unchanged — frozen at start; the app's response body still says the OLD
-version, which makes "frozen" visible without a shell; (2) directory-mounted file updates
-after ~60–90s — read via the toolbox sidecar; reassure them the delay is normal, it's not
-broken; (3) if you need env to change now, you must roll the Pods, and the idiom is a
-checksum/config annotation on the pod template (Helm/Kustomize automate this) — after the
-rollout the body says config-v2. Tie back: immutable objects push you to name-per-version
-anyway. The lab walks all three outcomes and asks the learner to explain why env didn't
-change but the file did.
+Speaker: este é o beat que queima as pessoas em produção. Três desfechos de UMA edição:
+(1) env var inalterada — congelada no start; o corpo da resposta da aplicação ainda diz a
+versão ANTIGA, o que torna "congelado" visível sem um shell; (2) o arquivo montado por
+diretório atualiza após ~60–90s — lido via sidecar toolbox; tranquilize-os de que o atraso
+é normal, não está quebrado; (3) se você precisa que o env mude agora, precisa rolar os
+Pods, e o idioma é uma annotation checksum/config no pod template (Helm/Kustomize
+automatizam isso) — depois do rollout o corpo diz config-v2. Amarre de volta: objetos
+imutáveis te empurram para nome-por-versão de qualquer forma. O lab percorre os três
+desfechos e pede ao participante que explique por que o env não mudou mas o arquivo sim.
 -->
 
 ---
 layout: recap
-heading: 'Recap — config lives outside the image'
-story: 'Ops edited the ConfigMap and wondered why the app still said "hi" — env was frozen; the mounted file caught up a minute later.'
-next: 'Storage — give the app a volume that survives a restart (Day 2 continues)'
+heading: 'Recap — a config vive fora da image'
+story: 'Ops editou o ConfigMap e se perguntou por que a aplicação ainda dizia "hi" — o env estava congelado; o arquivo montado alcançou um minuto depois.'
+next: 'Storage — dê à aplicação um volume que sobrevive a um restart (o Day 2 continua)'
 ---
 
-- **ConfigMap** (non-secret) and **Secret** (sensitive) hold key/value config so one image
-  runs in every environment
-- Consume either as **env vars** (`envFrom` / `valueFrom`) or as **mounted files** — the
-  same app, two ways in
-- A **Secret is base64, not encryption**: real protection is **RBAC** + **etcd
-  encryption-at-rest**; `type` (`Opaque` / `tls` / `dockerconfigjson`) tells consumers what's inside
-- **`immutable: true`** trades in-place edits for less API load and no accidental change —
-  roll a new value as a new object
-- **Updates don't restart Pods:** env is **frozen at start**, whole-dir files update in
-  ~60–90s, `subPath` never updates — force a rollout with a **checksum annotation**
-- Next: the app is configurable — now make its **data durable** with a volume
+- **ConfigMap** (não secreto) e **Secret** (sensível) guardam config chave/valor para que
+  uma image rode em todos os ambientes
+- Consuma qualquer um como **env vars** (`envFrom` / `valueFrom`) ou como **arquivos
+  montados** — a mesma aplicação, duas portas de entrada
+- Um **Secret é base64, não criptografia**: a proteção real é **RBAC** + **encryption-at-rest
+  do etcd**; `type` (`Opaque` / `tls` / `dockerconfigjson`) diz aos consumidores o que há dentro
+- **`immutable: true`** troca edições no lugar por menos carga na API e nenhuma mudança
+  acidental — lance um valor novo como um objeto novo
+- **Atualizações não reiniciam Pods:** env é **congelado no start**, arquivos de diretório
+  inteiro atualizam em ~60–90s, `subPath` nunca atualiza — force um rollout com uma
+  **annotation de checksum**
+- A seguir: a aplicação está configurável — agora torne seus **dados duráveis** com um volume
 
 <!--
-Speaker: leave them with the update matrix — it's the practical takeaway they'll reach for
-in an incident: "I changed the ConfigMap and nothing happened" is env-frozen, not a bug.
-Then pivot to Day 2's storage arc: config is externalised, but the app's DATA is still
-ephemeral — a restart loses it. That's S11. Hand off to Lab 10: inject config as env and
-files, decode a Secret, and rotate a value to watch exactly what does and doesn't change.
+Speaker: deixe com eles a matriz de atualização — é o takeaway prático que vão buscar em
+um incidente: "mudei o ConfigMap e nada aconteceu" é env congelado, não um bug. Depois
+pivote para o arco de storage do Day 2: a config está externalizada, mas os DADOS da
+aplicação ainda são efêmeros — um restart os perde. Isso é o S11. Passe o bastão para o
+Lab 10: injetar config como env e arquivos, decodificar um Secret, e rotacionar um valor
+para observar exatamente o que muda e o que não muda.
 -->
 
 ---
@@ -494,12 +499,12 @@ duration: 25 min
 env: namespace ✓ / kind ✓
 ---
 
-## Lab 10 — Config in, secrets rotated
+## Lab 10 — Config para dentro, secrets rotacionados
 
-- Create a **ConfigMap**; consume it as **env** (`envFrom`) — the injected `VERSION`
-  shows up in the app's own response body
-- Mount the **same** ConfigMap as **files**; `cat` a mounted key from the toolbox sidecar
-- Create a **Secret**, consume it as env, and decode it — see the base64, feel "not encrypted"
-- **Rotate:** edit the ConfigMap → env is **unchanged**, the mounted file updates, then a
-  **checksum annotation** forces a rollout
-- Answer the headline: *why did the env var not change but the mounted file did?*
+- Crie um **ConfigMap**; consuma-o como **env** (`envFrom`) — o `VERSION` injetado
+  aparece no próprio corpo da resposta da aplicação
+- Monte o **mesmo** ConfigMap como **arquivos**; dê `cat` em uma chave montada a partir do sidecar toolbox
+- Crie um **Secret**, consuma-o como env e decodifique-o — veja o base64, sinta o "não é criptografado"
+- **Rotacione:** edite o ConfigMap → o env fica **inalterado**, o arquivo montado atualiza, então uma
+  **annotation de checksum** força um rollout
+- Responda a manchete: *por que a env var não mudou mas o arquivo montado sim?*

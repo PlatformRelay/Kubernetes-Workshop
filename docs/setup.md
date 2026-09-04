@@ -1,64 +1,65 @@
-# Participant setup — the local (kind) lab environment
+# Setup do participante — o ambiente de labs local (kind)
 
-This guide gets you from a fresh laptop to a working, lab-ready Kubernetes
-cluster with **one command**: `./workshop up`. It covers the choice of container
-engine (including the Docker Desktop licensing note), installing the pinned
-toolchain, the Windows/WSL2 path, and troubleshooting.
+Este guia leva você de um laptop zerado até um cluster Kubernetes funcionando e
+pronto para os labs com **um comando**: `./workshop up`. Ele cobre a escolha do
+container engine (incluindo a nota de licenciamento do Docker Desktop), a
+instalação da toolchain pinada, o caminho Windows/WSL2 e a resolução de problemas.
 
-> **Prefer a shared cluster?** If your facilitator gave you a kubeconfig and an
-> assigned namespace, you do **not** need any of this — skip straight to
-> [`../labs/day-1/00-setup.md`](../labs/day-1/00-setup.md) and follow the
-> *namespace* path. This guide is only for the **local kind** environment.
+> **Prefere um cluster compartilhado?** Se o seu facilitador entregou um kubeconfig
+> e um namespace atribuído, você **não** precisa de nada disto — pule direto para
+> [`../labs/day-1/00-setup.md`](../labs/day-1/00-setup.md) e siga o caminho de
+> *namespace*. Este guia é apenas para o ambiente **local com kind**.
 
-## What you get
+## O que você ganha
 
-`./workshop up` runs, in order:
+`./workshop up` executa, nesta ordem:
 
-1. **Preflight** — detects your OS/arch, finds a running container engine
-   (Docker, then Podman), and sanity-checks CPUs/RAM (warnings only).
-2. **Tools** — installs a pinned toolchain with [mise](https://mise.jdx.dev)
-   (kubectl, kind, helm, k9s, jq, yq, gum), verified against real checksums in
+1. **Preflight** — detecta o seu OS/arch, encontra um container engine em execução
+   (Docker e, em seguida, Podman) e faz uma checagem de sanidade de CPUs/RAM
+   (apenas warnings).
+2. **Tools** — instala uma toolchain pinada com [mise](https://mise.jdx.dev)
+   (kubectl, kind, helm, k9s, jq, yq, gum), verificada contra checksums reais em
    `mise.lock`.
-3. **Cluster** — creates a single-node [kind](https://kind.sigs.k8s.io) cluster
-   named `workshop`, using the node image pinned by digest in
+3. **Cluster** — cria um cluster [kind](https://kind.sigs.k8s.io) de node único
+   chamado `workshop`, usando a node image pinada por digest em
    `infra/versions.env`.
-4. **Doctor** — runs `./workshop doctor` to confirm the cluster answers, nodes
-   are Ready, and a smoke Pod runs and is cleaned up.
+4. **Doctor** — executa `./workshop doctor` para confirmar que o cluster responde,
+   que os nodes estão Ready e que um Pod de smoke roda e é removido.
 
-When it finishes green, start the labs at
+Quando terminar em verde, comece os labs em
 [`../labs/day-1/00-setup.md`](../labs/day-1/00-setup.md).
 
-## Step 1 — choose and start a container engine
+## Passo 1 — escolha e inicie um container engine
 
-kind runs Kubernetes nodes as containers, so you need a container engine with a
-running daemon/machine. Pick one:
+O kind roda nodes Kubernetes como containers, então você precisa de um container
+engine com um daemon/máquina em execução. Escolha um:
 
-| Engine | Platforms | Notes |
+| Engine | Plataformas | Notas |
 | --- | --- | --- |
-| **Docker Desktop** | macOS, Windows, Linux | Easiest, but see the licensing note below. |
-| **Podman Desktop** | macOS, Windows, Linux | CNCF, Apache-2.0. First-class kind support. On Windows the machine must be **rootful** for kind. |
-| **colima** | macOS, Linux | Lightweight CLI (`colima start`); pairs with the Docker CLI. |
-| **Rancher Desktop** | macOS, Windows, Linux | Works, but **disable its built-in Kubernetes** so it doesn't fight kind. |
+| **Docker Desktop** | macOS, Windows, Linux | O mais fácil, mas veja a nota de licenciamento abaixo. |
+| **Podman Desktop** | macOS, Windows, Linux | CNCF, Apache-2.0. Suporte de primeira classe ao kind. No Windows a máquina precisa ser **rootful** para o kind. |
+| **colima** | macOS, Linux | CLI leve (`colima start`); combina com o Docker CLI. |
+| **Rancher Desktop** | macOS, Windows, Linux | Funciona, mas **desative o Kubernetes embutido** para ele não brigar com o kind. |
 
-> **Docker Desktop licensing note.** Docker Desktop is free for personal use,
-> education, and **small businesses** — but a paid subscription is required for
-> professional use in larger organisations (as of Docker's terms: **250+
-> employees OR more than US $10M in annual revenue**). If that describes your
-> employer, use **Podman Desktop** (CNCF, Apache-2.0) or **colima** instead —
-> both work with kind and this workshop. Nothing in the labs depends on Docker
-> specifically.
+> **Nota de licenciamento do Docker Desktop.** O Docker Desktop é gratuito para uso
+> pessoal, educação e **pequenas empresas** — mas uma assinatura paga é necessária
+> para uso profissional em organizações maiores (conforme os termos da Docker:
+> **250+ funcionários OU mais de US$ 10M de receita anual**). Se isso descreve o seu
+> empregador, use **Podman Desktop** (CNCF, Apache-2.0) ou **colima** no lugar —
+> ambos funcionam com o kind e com este workshop. Nada nos labs depende
+> especificamente do Docker.
 
-Start your engine before continuing:
+Inicie o seu engine antes de continuar:
 
-- Docker Desktop / Rancher Desktop / Podman Desktop: launch the app.
+- Docker Desktop / Rancher Desktop / Podman Desktop: abra o aplicativo.
 - colima: `colima start --cpu 4 --memory 8`
-- Podman (CLI): `podman machine init && podman machine start` (on Windows, make
-  it rootful: `podman machine set --rootful`).
+- Podman (CLI): `podman machine init && podman machine start` (no Windows, deixe-a
+  rootful: `podman machine set --rootful`).
 
-The bootstrap probes **Docker first, then Podman**, and prints a helpful error
-if neither is reachable.
+O bootstrap sonda o **Docker primeiro, depois o Podman**, e imprime um erro útil
+se nenhum dos dois estiver acessível.
 
-## Step 2 — get the repo and run it
+## Passo 2 — obtenha o repositório e execute
 
 ```bash
 git clone <this-repo-url> kubernetes-workshop
@@ -66,18 +67,19 @@ cd kubernetes-workshop
 ./workshop up
 ```
 
-That's it. The first run downloads the pinned tools and the kind node image, so
-budget a few minutes on conference Wi-Fi. Subsequent runs are near-instant.
+É isso. A primeira execução baixa as ferramentas pinadas e a node image do kind,
+então reserve alguns minutos no Wi-Fi de conferência. As execuções seguintes são
+quase instantâneas.
 
-The bootstrap invokes the freshly installed tools through mise immediately, so
-cluster creation does not require a shell restart. A process cannot update the
-shell that launched it, however. If `kubectl` was not already on your `PATH`,
-the successful bootstrap prints the one `eval "$(mise activate …)"` command to
-run before copying the lab commands into that same terminal.
+O bootstrap invoca as ferramentas recém-instaladas através do mise imediatamente,
+então a criação do cluster não exige reiniciar o shell. Um processo, porém, não
+consegue atualizar o shell que o lançou. Se o `kubectl` ainda não estava no seu
+`PATH`, o bootstrap bem-sucedido imprime o único comando `eval "$(mise activate …)"`
+a executar antes de copiar os comandos dos labs para esse mesmo terminal.
 
-You do **not** need to install mise yourself — `./workshop up` installs it if it
-is missing (interactively). If you would rather install it up front, any of
-these work and are picked up automatically:
+Você **não** precisa instalar o mise por conta própria — `./workshop up` o instala
+se estiver faltando (de forma interativa). Se preferir instalá-lo de antemão,
+qualquer uma destas opções funciona e é detectada automaticamente:
 
 ```bash
 # macOS / Linux
@@ -88,18 +90,18 @@ curl https://mise.run | sh   # official installer; bytes are not checksum-pinned
 curl https://mise.run | sh
 ```
 
-The mise installer command above is an explicitly accepted, temporary risk:
-its downloaded bytes are not checksum-pinned by this repository. Once mise is
-present, the participant tools are a separate trust boundary: their pinned
-versions live in `mise.toml` and their artifact checksums live in `mise.lock`.
-Participants who prefer to install tools by hand can read the exact versions
-out of those files — the lockfile *is* the documentation.
+O comando do instalador do mise acima é um risco temporário explicitamente aceito:
+os bytes que ele baixa não são pinados por checksum neste repositório. Uma vez que o
+mise esteja presente, as ferramentas do participante são uma fronteira de confiança
+separada: suas versões pinadas ficam em `mise.toml` e os checksums dos artefatos
+ficam em `mise.lock`. Participantes que preferirem instalar as ferramentas na mão
+podem ler as versões exatas nesses arquivos — o lockfile *é* a documentação.
 
-## Step 3 — Windows: use WSL2 (partial support)
+## Passo 3 — Windows: use WSL2 (suporte parcial)
 
-Native Windows PowerShell is **not supported** (kind + the bootstrap expect a
-Linux userland). The intended Windows path is **WSL2**. In an elevated PowerShell,
-once:
+O PowerShell nativo do Windows **não é suportado** (o kind e o bootstrap esperam um
+userland Linux). O caminho pretendido no Windows é o **WSL2**. Em um PowerShell
+elevado, uma única vez:
 
 ```powershell
 wsl --install
@@ -108,37 +110,38 @@ wsl --set-default-version 2
 wsl --list --verbose
 ```
 
-Reboot if prompted, open your WSL2 distro (e.g. Ubuntu), then run `./workshop
-up` **from inside WSL2**. If you run it from PowerShell by mistake, the
-bootstrap detects it and prints these same commands.
+Reinicie se solicitado, abra a sua distro WSL2 (por exemplo, Ubuntu) e então execute
+`./workshop up` **de dentro do WSL2**. Se você executá-lo pelo PowerShell por engano,
+o bootstrap detecta isso e imprime estes mesmos comandos.
 
-This route is contract-tested but has not completed its live WSL2 acceptance
-run. Do not present it as officially supported yet. The provisional minimum
-tuple and release gate are in [`windows-wsl2.md`](./windows-wsl2.md).
+Esta rota é testada por contrato, mas ainda não completou sua rodada de aceitação ao
+vivo no WSL2. Não a apresente como oficialmente suportada ainda. A tupla mínima
+provisória e o release gate estão em [`windows-wsl2.md`](./windows-wsl2.md).
 
-Engine choice under WSL2:
+Escolha de engine no WSL2:
 
-- **Docker Desktop** with the *WSL2 backend* enabled (Settings → Resources →
-  WSL integration) — subject to the licensing note above.
-- **Podman** inside WSL2 — remember the machine must be **rootful** for kind
-  (`podman machine set --rootful`).
+- **Docker Desktop** com o *backend WSL2* habilitado (Settings → Resources →
+  WSL integration) — sujeito à nota de licenciamento acima.
+- **Podman** dentro do WSL2 — lembre-se de que a máquina precisa ser **rootful**
+  para o kind (`podman machine set --rootful`).
 
-Clone the repository inside the WSL2 Linux filesystem (for example `~/src`),
-not under `/mnt/c`: Windows-mounted files are slower and may not preserve the
-executable-bit behaviour the scripts expect. The bootstrap diagnoses that
-layout, CRLF line endings, missing executable bits, and an unavailable Docker
-Desktop integration socket with targeted recovery steps.
+Clone o repositório dentro do filesystem Linux do WSL2 (por exemplo, `~/src`), e não
+sob `/mnt/c`: arquivos montados do Windows são mais lentos e podem não preservar o
+comportamento do bit de execução que os scripts esperam. O bootstrap diagnostica esse
+layout, quebras de linha CRLF, bits de execução ausentes e um socket de integração do
+Docker Desktop indisponível, com passos de recuperação direcionados.
 
-For virtualization and resource requirements, proxy/VPN guidance, managed
-devices, and the live validation checklist, see the dedicated
-[`windows-wsl2.md`](./windows-wsl2.md) guide.
+Para requisitos de virtualização e recursos, orientações de proxy/VPN, dispositivos
+gerenciados e a checklist de validação ao vivo, veja o guia dedicado
+[`windows-wsl2.md`](./windows-wsl2.md).
 
-> **Managed device?** Participants who cannot install or run local containers
-> can use a facilitator-provided kubeconfig and assigned cloud namespace. This
-> avoids kind and local administrator access, but currently still needs a
-> terminal with `kubectl`. A browser-only shell is future work (US-ENV-6).
+> **Dispositivo gerenciado?** Participantes que não conseguem instalar ou rodar
+> containers locais podem usar um kubeconfig fornecido pelo facilitador e um
+> namespace atribuído na nuvem. Isso evita o kind e o acesso de administrador local,
+> mas por enquanto ainda exige um terminal com `kubectl`. Um shell apenas no
+> navegador é trabalho futuro (US-ENV-6).
 
-## Step 4 — daily use
+## Passo 4 — uso no dia a dia
 
 ```bash
 ./workshop doctor   # is my machine still lab-ready?
@@ -146,60 +149,65 @@ devices, and the live validation checklist, see the dedicated
 ./workshop down     # delete the cluster (asks to confirm)
 ```
 
-`./workshop doctor` is also the first task of Lab 00, so "is my machine ready"
-is a lab step, not a support queue.
+`./workshop doctor` também é a primeira tarefa do Lab 00, então "minha máquina está
+pronta?" é um passo de lab, não uma fila de suporte.
 
-### Non-interactive / CI
+### Não interativo / CI
 
-Every step also runs without prompts. Set `WORKSHOP_NONINTERACTIVE=1` (or run
-under `CI=true`, or with no TTY) and sane defaults are taken — this is the exact
-path CI runs, so the script you run locally is the script that is tested. Use
-`./workshop down --yes` (or `-y`) to skip the teardown confirmation in scripts.
+Todo passo também roda sem prompts. Defina `WORKSHOP_NONINTERACTIVE=1` (ou execute
+sob `CI=true`, ou sem TTY) e defaults sensatos são assumidos — este é exatamente o
+caminho que a CI executa, então o script que você roda localmente é o script que é
+testado. Use `./workshop down --yes` (ou `-y`) para pular a confirmação de teardown
+em scripts.
 
-## Routing profiles (Envoy vs Contour)
+## Profiles de roteamento (Envoy vs Contour)
 
-Ingress (S08) and Gateway API (S09) need **different** controllers that both want host
-ports 80/443. The workshop therefore exposes two **mutually exclusive** profiles:
+Ingress (S08) e Gateway API (S09) precisam de controllers **diferentes** que querem,
+os dois, as host ports 80/443. O workshop portanto expõe dois profiles
+**mutuamente exclusivos**:
 
-| Profile | Command | Lab | Notes |
+| Profile | Comando | Lab | Notas |
 | --- | --- | --- | --- |
-| `gateway-envoy` (canonical) | `./workshop profile gateway-envoy` | S09 | Gateway API CRDs + Envoy Gateway; GatewayClass `eg` |
-| `ingress-contour` (optional) | `./workshop profile ingress-contour` | S08 | Contour Ingress controller; IngressClass `contour` |
+| `gateway-envoy` (canônico) | `./workshop profile gateway-envoy` | S09 | Gateway API CRDs + Envoy Gateway; GatewayClass `eg` |
+| `ingress-contour` (opcional) | `./workshop profile ingress-contour` | S08 | Contour Ingress controller; IngressClass `contour` |
 
-Preflight refuses to install one while the other (or a foreign controller) is present,
-and prints a remediation. To switch: `./workshop profile transition gateway-envoy`
-(or `make profile-transition TO=gateway-envoy`). Teardown removes only workshop-owned
-resources and **preserves** shared Gateway API CRDs.
+O preflight se recusa a instalar um enquanto o outro (ou um controller estranho)
+estiver presente, e imprime uma remediação. Para trocar:
+`./workshop profile transition gateway-envoy` (ou `make profile-transition TO=gateway-envoy`).
+O teardown remove apenas recursos pertencentes ao workshop e **preserva** os
+Gateway API CRDs compartilhados.
 
-Manifests must name the class explicitly (`gatewayClassName: eg` /
-`ingressClassName: …`) — never rely on an accidental cluster default.
+Os manifestos precisam nomear a class explicitamente (`gatewayClassName: eg` /
+`ingressClassName: …`) — nunca conte com um default acidental do cluster.
 
 ## Troubleshooting
 
-| Symptom | Fix |
+| Sintoma | Correção |
 | --- | --- |
-| `no reachable container engine` | Start Docker Desktop / `colima start` / `podman machine start`. In WSL2, enable Docker Desktop integration for the distribution and verify `docker info`. On Podman for Windows, make the machine rootful. |
-| `native Windows (PowerShell) is not supported` | You're not in WSL2. Open your WSL2 distro and re-run there (Step 3). |
-| `repository is on a mounted Windows drive` | Re-clone under `~/src` in the WSL2 Linux filesystem. |
-| `CRLF line endings` / `not executable` | Follow the repair command printed by `./workshop`; see the [WSL2 troubleshooting table](./windows-wsl2.md#troubleshooting). |
-| `mise is required but not installed` (non-interactive) | Install mise in the current Linux/macOS environment (`brew install mise` or `curl https://mise.run \| sh`), then re-run. Windows participants must do this inside WSL2. |
-| `kubectl: command not found` after a green bootstrap | Run the `mise activate` command printed by `./workshop up` in the current shell. You do not need to recreate the cluster. |
-| kind cluster won't create / is unreachable | Panic reset: `./workshop down` then `./workshop up` (equivalently `make kind-down && make kind-up`). |
-| Slow / stalls on downloads | Conference Wi-Fi. The tool cache and node image are only fetched once; retry — mise resumes. |
-| `doctor` reports a version WARN | Your local kubectl/kind differs from the pin. It's a warning, not a failure; `./workshop` uses the pinned mise environment. Activate mise as described above for manual commands. |
+| `no reachable container engine` | Inicie o Docker Desktop / `colima start` / `podman machine start`. No WSL2, habilite a integração do Docker Desktop para a distribuição e verifique `docker info`. No Podman para Windows, deixe a máquina rootful. |
+| `native Windows (PowerShell) is not supported` | Você não está no WSL2. Abra a sua distro WSL2 e execute novamente de lá (Passo 3). |
+| `repository is on a mounted Windows drive` | Clone novamente sob `~/src`, no filesystem Linux do WSL2. |
+| `CRLF line endings` / `not executable` | Siga o comando de reparo impresso por `./workshop`; veja a [tabela de troubleshooting do WSL2](./windows-wsl2.md#troubleshooting). |
+| `mise is required but not installed` (não interativo) | Instale o mise no ambiente Linux/macOS atual (`brew install mise` ou `curl https://mise.run \| sh`) e execute novamente. Participantes no Windows precisam fazer isso dentro do WSL2. |
+| `kubectl: command not found` depois de um bootstrap verde | Execute o comando `mise activate` impresso por `./workshop up` no shell atual. Você não precisa recriar o cluster. |
+| O cluster kind não é criado / está inacessível | Reset de pânico: `./workshop down` e depois `./workshop up` (equivalente a `make kind-down && make kind-up`). |
+| Lento / travando nos downloads | Wi-Fi de conferência. O cache de ferramentas e a node image são baixados apenas uma vez; tente de novo — o mise retoma. |
+| `doctor` reporta um WARN de versão | Seu kubectl/kind local difere do pin. É um warning, não uma falha; `./workshop` usa o ambiente pinado do mise. Ative o mise como descrito acima para comandos manuais. |
 
-If `./workshop up` finishes green but a later lab misbehaves, run `./workshop
-doctor` first — it re-checks the cluster and prints a targeted hint per failure.
+Se `./workshop up` terminar verde mas um lab posterior se comportar mal, execute
+`./workshop doctor` primeiro — ele revalida o cluster e imprime uma dica direcionada
+por falha.
 
-## Under the hood
+## Por baixo do capô
 
-- **Versions** are pinned once in `infra/versions.env` (kind + kubectl + node
-  image digest) and mirrored in `mise.toml`; the checksums live in `mise.lock`.
-- **`./workshop`** is a thin wrapper over `infra/bootstrap.sh`, which orchestrates
-  existing, tested pieces — the cluster is created by `make kind-up` and health
-  is `infra/doctor.sh`. Nothing is reimplemented.
-- **gum** provides the pretty prompts/spinners when you run interactively; it is
-  pure sugar and never required.
+- **Versões** são pinadas em um único lugar, `infra/versions.env` (kind + kubectl +
+  digest da node image), e espelhadas em `mise.toml`; os checksums ficam em
+  `mise.lock`.
+- **`./workshop`** é um wrapper fino sobre `infra/bootstrap.sh`, que orquestra peças
+  existentes e testadas — o cluster é criado por `make kind-up` e a saúde é o
+  `infra/doctor.sh`. Nada é reimplementado.
+- **gum** fornece os prompts/spinners bonitos quando você roda de forma interativa;
+  é puro açúcar e nunca obrigatório.
 
-See [`../labs/README.md`](../labs/README.md) for the full tool list and the
-shared-cluster alternative.
+Veja [`../labs/README.md`](../labs/README.md) para a lista completa de ferramentas e
+a alternativa de cluster compartilhado.
