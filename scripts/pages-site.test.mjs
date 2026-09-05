@@ -59,24 +59,25 @@ const MIME = {
 
 // Minimal localhost file server: ES modules and fetch() both need an http origin,
 // so the built tree is served exactly as GitHub Pages would serve it.
+//
+// The built tree is a flat, fully known set of files (PLAYER_ASSETS), so a request
+// is resolved by looking its name up in that list and serving the entry found
+// there. Nothing the request says is ever joined onto a filesystem path, which is
+// both the simplest containment guarantee for a server that runs in CI and what
+// keeps CodeQL's js/path-injection rule satisfied.
 function serveStatic(rootDirectory) {
   const rootDir = resolve(rootDirectory)
   const server = createServer((request, response) => {
     const url = request.url.split('?')[0].split('#')[0]
-    const requested = resolve(rootDir, `.${decodeURIComponent(url)}`)
-    const file = url === '/' || url === '' ? join(rootDir, 'index.html') : requested
-    if (file !== rootDir && !file.startsWith(rootDir + '/')) {
-      response.writeHead(403)
-      response.end('forbidden')
-      return
-    }
-    if (!existsSync(file)) {
+    const wanted = url === '/' || url === '' ? 'index.html' : decodeURIComponent(url).replace(/^\/+/, '')
+    const asset = PLAYER_ASSETS.find(candidate => candidate === wanted)
+    if (!asset || !existsSync(join(rootDir, asset))) {
       response.writeHead(404)
       response.end('missing')
       return
     }
-    response.writeHead(200, { 'content-type': MIME[extname(file)] ?? 'application/octet-stream' })
-    response.end(readFileSync(file))
+    response.writeHead(200, { 'content-type': MIME[extname(asset)] ?? 'application/octet-stream' })
+    response.end(readFileSync(join(rootDir, asset)))
   })
   return new Promise((resolvePromise) => {
     server.listen(0, '127.0.0.1', () => resolvePromise({ server, port: server.address().port }))
