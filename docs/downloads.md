@@ -14,6 +14,7 @@ navigation and hard refreshes work on project Pages).
 | **Day 2** entry | <https://platformrelay.github.io/Kubernetes-Workshop/deck/day-2/> |
 | **Day 3** entry | <https://platformrelay.github.io/Kubernetes-Workshop/deck/day-3/> |
 | **Template gallery** | <https://platformrelay.github.io/Kubernetes-Workshop/deck/templates/> |
+| **Self-check quiz** | <https://platformrelay.github.io/Kubernetes-Workshop/quiz/> |
 
 Deep-link to a slide with a hash fragment, for example
 `…/deck/day-1/#/5` for slide 5 of Day 1.
@@ -56,4 +57,19 @@ notes body. How tags are cut: [release.md](./release.md).
 | --- | --- |
 | Participant labs | [labs/README.md](https://github.com/PlatformRelay/Kubernetes-Workshop/tree/main/labs#readme) |
 | Lab 00 (start here) | [labs/day-1/00-setup.md](https://github.com/PlatformRelay/Kubernetes-Workshop/blob/main/labs/day-1/00-setup.md) |
+| Self-check quiz (in the browser) | <https://platformrelay.github.io/Kubernetes-Workshop/quiz/> |
 | Question bank | [quiz/README.md](https://github.com/PlatformRelay/Kubernetes-Workshop/tree/main/quiz#readme) |
+
+### Self-check quiz
+
+Pick an answer and see straight away whether it holds, with the explanation and — when you miss —
+why that distractor was tempting. Deep-link to one section with a hash fragment, for example
+`…/quiz/#S05`.
+
+It runs entirely in your browser: **no account, no backend, nothing stored, nothing uploaded**, and
+the score is gone on reload. It is a **self-check, not an exam** — the answers ship inside the static
+files, so anyone can read them, and no obfuscation will be added to pretend otherwise
+([ADR 0015](https://github.com/PlatformRelay/Kubernetes-Workshop/blob/main/docs/decisions/0015-static-self-check-quiz-player.md)).
+
+For a room with no internet, or for a show of hands, the printable participant/facilitator Markdown
+export from the same question bank remains the fallback.

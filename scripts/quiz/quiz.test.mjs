@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs'
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import test from 'node:test'
+import { pathToFileURL } from 'node:url'
 import { gunzipSync, gzipSync } from 'node:zlib'
 import { sections as deckSections } from '../deck-manifest.mjs'
 
@@ -424,4 +425,249 @@ test('CI enforces quiz schema, license, and rehearsal contracts', () => {
   assert.match(workflow, /pnpm run quiz:validate/)
   assert.match(workflow, /pnpm run quiz:license-gate/)
   assert.match(workflow, /pnpm run test:quiz/)
+})
+
+// ---------------------------------------------------------------------------
+// US-QUIZ-4 — static self-check player.
+//
+// These tests EXECUTE the player's pure core (`quiz/player/logic.mjs`) against
+// the real bank and the real deck manifest. They deliberately do not settle for
+// "the file exists": every branch a learner can reach is driven here.
+// ---------------------------------------------------------------------------
+
+const playerLogic = await import(pathToFileURL(path.join(root, 'quiz/player/logic.mjs')).href)
+const playerSections = deckSections.map(({ id, title, day, status }) => ({ id, title, day, status }))
+const bank = JSON.parse(readFileSync(questionsPath, 'utf8'))
+
+test('every player module imports cleanly under Node (no stray tokens at load time)', async () => {
+  for (const asset of ['logic.mjs', 'app.mjs']) {
+    const module = await import(pathToFileURL(path.join(root, 'quiz/player', asset)).href)
+    assert.equal(typeof module, 'object')
+  }
+})
+
+test('grade() always returns the explanation and adds the distractor rationale only when wrong', () => {
+  for (const question of bank.questions) {
+    const right = playerLogic.grade(question, question.answer)
+    assert.equal(right.correct, true)
+    assert.equal(right.answerId, question.answer)
+    assert.equal(right.explanation, question.explanation)
+    assert.equal(right.chosenRationale, null, `${question.id}: a correct pick must not scold with a rationale`)
+
+    for (const option of question.options.filter(candidate => candidate.id !== question.answer)) {
+      const wrong = playerLogic.grade(question, option.id)
+      assert.equal(wrong.correct, false)
+      assert.equal(wrong.chosenId, option.id)
+      assert.equal(wrong.answerId, question.answer)
+      assert.equal(wrong.explanation, question.explanation)
+      assert.equal(wrong.chosenRationale, option.rationale, `${question.id}/${option.id}: wrong picks must explain the temptation`)
+      const chosen = wrong.rationales.find(entry => entry.isChosen)
+      const answer = wrong.rationales.find(entry => entry.isAnswer)
+      assert.equal(chosen.id, option.id)
+      assert.equal(answer.id, question.answer)
+      assert.equal(wrong.rationales.length, question.options.length)
+    }
+  }
+})
+
+test('grade() refuses an option that is not on the question instead of silently scoring it', () => {
+  const question = bank.questions[0]
+  assert.throws(() => playerLogic.grade(question, 'not-an-option'), /unknown option/)
+  assert.throws(() => playerLogic.grade(undefined, 'a'), TypeError)
+})
+
+test('"show all rationales" is opt-in and never hides the wrong pick', () => {
+  const question = bank.questions[0]
+  const distractor = question.options.find(option => option.id !== question.answer)
+  const wrong = playerLogic.grade(question, distractor.id)
+  assert.deepEqual(playerLogic.visibleRationales(wrong, false).map(entry => entry.id), [distractor.id])
+  assert.equal(playerLogic.visibleRationales(wrong, true).length, question.options.length)
+
+  const right = playerLogic.grade(question, question.answer)
+  assert.deepEqual(playerLogic.visibleRationales(right, false), [])
+  assert.equal(playerLogic.visibleRationales(right, true).length, question.options.length)
+})
+
+test('hash deep links filter the bank to one section', () => {
+  assert.equal(playerLogic.parseSectionHash('#S05'), 'S05')
+  assert.equal(playerLogic.parseSectionHash('#/S05'), 'S05')
+  assert.equal(playerLogic.parseSectionHash('#s05'), 'S05')
+  assert.equal(playerLogic.parseSectionHash(''), null)
+  assert.equal(playerLogic.parseSectionHash('#'), null)
+  assert.equal(playerLogic.parseSectionHash('#not-a-section'), null)
+
+  const view = playerLogic.resolveView({ hash: '#S05', sections: playerSections, questions: bank.questions })
+  assert.equal(view.view, 'section')
+  assert.equal(view.sectionId, 'S05')
+  assert.equal(view.section.title, deckSections.find(section => section.id === 'S05').title)
+  assert.ok(view.questions.length > 0)
+  assert.ok(view.questions.every(question => question.section === 'S05'))
+  assert.deepEqual(
+    view.questions.map(question => question.id),
+    bank.questions.filter(question => question.section === 'S05').map(question => question.id),
+  )
+})
+
+test('a section with no questions falls back to a rendered landing page, never a blank one', () => {
+  const probes = [...deckSections.map(section => `#${section.id}`), '#S99', '#not-a-section', '', '#']
+  for (const hash of probes) {
+    const view = playerLogic.resolveView({ hash, sections: playerSections, questions: bank.questions })
+    if (view.view === 'section') {
+      assert.ok(view.questions.length > 0, `${hash} opened a section with no questions`)
+      continue
+    }
+    assert.equal(view.view, 'landing')
+    assert.ok(view.days.length > 0, `${hash} produced a landing page with nothing on it`)
+  }
+
+  const deferred = playerLogic.resolveView({ hash: '#S24', sections: playerSections, questions: bank.questions })
+  assert.equal(deferred.view, 'landing')
+  assert.ok(deferred.days.length > 0)
+  assert.match(deferred.notice, /S24/)
+  assert.match(deferred.notice, /deferred|no questions/i)
+
+  const unknown = playerLogic.resolveView({ hash: '#S99', sections: playerSections, questions: bank.questions })
+  assert.equal(unknown.view, 'landing')
+  assert.match(unknown.notice, /S99/)
+})
+
+test('the landing page groups authored sections by day with manifest titles', () => {
+  const view = playerLogic.resolveView({ hash: '', sections: playerSections, questions: bank.questions })
+  assert.equal(view.view, 'landing')
+  assert.equal(view.notice, null)
+  assert.deepEqual(view.days.map(group => group.day), [1, 2, 3])
+
+  const listed = view.days.flatMap(group => group.sections)
+  assert.equal(listed.length, deckSections.filter(section => section.status === 'authored').length)
+  assert.ok(!listed.some(section => section.id === 'S24'), 'deferred S24 must not be offered')
+  for (const entry of listed) {
+    const manifest = deckSections.find(section => section.id === entry.id)
+    assert.equal(entry.title, manifest.title)
+    assert.equal(entry.day, manifest.day)
+    assert.equal(entry.count, bank.questions.filter(question => question.section === entry.id).length)
+    assert.ok(entry.count > 0)
+  }
+  for (const group of view.days)
+    assert.ok(group.sections.every(section => section.day === group.day))
+})
+
+test('a session locks the first answer, scores in memory, and always offers a way forward', () => {
+  const questions = bank.questions.filter(question => question.section === 'S05')
+  let session = playerLogic.createSession(questions, 'S05')
+  assert.equal(playerLogic.sessionScore(session).total, questions.length)
+
+  const seen = []
+  while (!session.finished) {
+    const question = playerLogic.currentQuestion(session)
+    assert.ok(question, 'a live session must always have a current question')
+    assert.notEqual(playerLogic.advanceLabel(session), '', 'the forward control must never lose its label')
+    seen.push(question.id)
+
+    session = playerLogic.recordAnswer(session, question.answer)
+    assert.equal(playerLogic.currentResult(session).correct, true)
+    assert.equal(playerLogic.isLocked(session), true)
+
+    const distractor = question.options.find(option => option.id !== question.answer)
+    const relocked = playerLogic.recordAnswer(session, distractor.id)
+    assert.equal(relocked.results[relocked.index].chosenId, question.answer, 'the first answer must stand')
+
+    session = playerLogic.advance(session)
+    assert.ok(seen.length <= questions.length, 'advance must terminate')
+  }
+
+  assert.deepEqual(seen, questions.map(question => question.id))
+  assert.equal(session.finished, true)
+  assert.deepEqual(playerLogic.sessionScore(session), {
+    answered: questions.length,
+    correct: questions.length,
+    total: questions.length,
+  })
+})
+
+test('the last question finishes the session instead of dead-ending it', () => {
+  const questions = bank.questions.filter(question => question.section === 'S07')
+  let session = playerLogic.createSession(questions, 'S07')
+  while (!playerLogic.isLastQuestion(session)) session = playerLogic.advance(session)
+
+  assert.equal(playerLogic.isLastQuestion(session), true)
+  assert.equal(session.finished, false)
+  assert.match(playerLogic.advanceLabel(session), /\S/)
+
+  const finished = playerLogic.advance(session)
+  assert.equal(finished.finished, true, 'advancing past the last question must finish, not stall')
+  assert.match(playerLogic.advanceLabel(finished), /\S/)
+  assert.equal(playerLogic.advance(finished).finished, true, 'a finished session stays finished')
+
+  const restarted = playerLogic.restart(finished)
+  assert.equal(restarted.finished, false)
+  assert.equal(restarted.index, 0)
+  assert.equal(playerLogic.sessionScore(restarted).answered, 0)
+})
+
+test('a wrong run scores honestly and keeps every explanation reachable', () => {
+  const questions = bank.questions.filter(question => question.section === 'S10')
+  let session = playerLogic.createSession(questions, 'S10')
+  while (!session.finished) {
+    const question = playerLogic.currentQuestion(session)
+    const distractor = question.options.find(option => option.id !== question.answer)
+    session = playerLogic.recordAnswer(session, distractor.id)
+    const result = playerLogic.currentResult(session)
+    assert.equal(result.correct, false)
+    assert.equal(result.explanation, question.explanation)
+    assert.equal(result.chosenRationale, distractor.rationale)
+    session = playerLogic.advance(session)
+  }
+  assert.deepEqual(playerLogic.sessionScore(session), {
+    answered: questions.length,
+    correct: 0,
+    total: questions.length,
+  })
+})
+
+test('the player keeps no storage, no telemetry, and no backend call', () => {
+  for (const asset of ['index.html', 'player.css', 'app.mjs', 'logic.mjs']) {
+    const source = readFileSync(path.join(root, 'quiz/player', asset), 'utf8')
+    assert.doesNotMatch(source, /localStorage|sessionStorage|indexedDB|document\.cookie/, `${asset} must stay session-only`)
+    assert.doesNotMatch(source, /navigator\.sendBeacon|XMLHttpRequest|WebSocket|gtag|analytics/i, `${asset} must not phone home`)
+    assert.doesNotMatch(source, /https?:\/\/(?!kubernetes\.io|platformrelay\.github\.io|github\.com)/, `${asset} must not load third-party origins`)
+  }
+})
+
+test('the exported player ships the bank, the manifest titles, and every explanation', () => {
+  const directory = mkdtempSync(path.join(tmpdir(), 'quiz-player-'))
+  run('scripts/quiz/export.mjs', ['--out', directory])
+  const playerDirectory = path.join(directory, 'player')
+
+  for (const asset of ['index.html', 'player.css', 'app.mjs', 'logic.mjs', 'questions.json', 'sections.json'])
+    assert.ok(existsSync(path.join(playerDirectory, asset)), `exported player is missing ${asset}`)
+
+  const html = readFileSync(path.join(playerDirectory, 'index.html'), 'utf8')
+  assert.match(html, /app\.mjs/)
+  assert.match(html, /player\.css/)
+  assert.match(html, /not an exam|answers ship/i, 'the player must not over-claim exam security')
+
+  const exported = JSON.parse(readFileSync(path.join(playerDirectory, 'questions.json'), 'utf8'))
+  assert.deepEqual(
+    exported.questions.map(question => question.id),
+    bank.questions.map(question => question.id),
+  )
+  for (const question of bank.questions) {
+    const shipped = exported.questions.find(candidate => candidate.id === question.id)
+    assert.equal(shipped.explanation, question.explanation)
+    assert.equal(shipped.answer, question.answer)
+    assert.deepEqual(shipped.options.map(option => option.rationale), question.options.map(option => option.rationale))
+  }
+
+  const shippedSections = JSON.parse(readFileSync(path.join(playerDirectory, 'sections.json'), 'utf8')).sections
+  assert.deepEqual(shippedSections.map(section => section.id), deckSections.map(section => section.id))
+  for (const section of shippedSections) {
+    const manifest = deckSections.find(candidate => candidate.id === section.id)
+    assert.equal(section.title, manifest.title)
+    assert.equal(section.day, manifest.day)
+    assert.equal(section.status, manifest.status)
+  }
+
+  // The Markdown show-of-hands fallback survives alongside the player.
+  assert.ok(existsSync(path.join(directory, 'participant.md')))
+  assert.ok(existsSync(path.join(directory, 'facilitator.md')))
 })

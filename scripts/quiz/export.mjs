@@ -1,5 +1,6 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
+import { buildPlayer } from './build-player.mjs'
 
 const root = path.resolve(import.meta.dirname, '../..')
 const outFlag = process.argv.indexOf('--out')
@@ -42,4 +43,11 @@ const preview = {
   },
 }
 writeFileSync(path.join(outputDirectory, 'adapter-preview.json'), `${JSON.stringify(preview, null, 2)}\n`)
+
+// The static self-check player ships beside the Markdown copies rather than
+// replacing them: the browser player needs a host to serve it, the Markdown does
+// not. The stdout line below is deliberately unchanged — the committed ADR-0011
+// rehearsal transcript quotes it verbatim.
+buildPlayer({ outDir: path.join(outputDirectory, 'player') })
+
 process.stdout.write(`Exported offline participant/facilitator copies and adapter preview to ${outputDirectory}.\n`)

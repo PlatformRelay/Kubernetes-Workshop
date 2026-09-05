@@ -31,6 +31,7 @@ under the [0BSD License](https://github.com/PlatformRelay/Kubernetes-Workshop/bl
 
 [Interactive decks :octicons-arrow-right-24:](downloads.md#interactive-slidev-decks){ .md-button .md-button--primary }
 [PDF downloads :octicons-download-24:](downloads.md#pdf-downloads){ .md-button }
+[Self-check quiz :octicons-checklist-24:](https://platformrelay.github.io/Kubernetes-Workshop/quiz/){ .md-button }
 [Run locally :octicons-terminal-24:](run-slides.md){ .md-button }
 
 ## Why this workshop
@@ -53,7 +54,8 @@ under the [0BSD License](https://github.com/PlatformRelay/Kubernetes-Workshop/bl
 | Run Slidev on your laptop | [Run the slides locally](run-slides.md) |
 | Do the labs | [Labs guide](https://github.com/PlatformRelay/Kubernetes-Workshop/tree/main/labs#readme) · [Lab 00 setup](https://github.com/PlatformRelay/Kubernetes-Workshop/blob/main/labs/day-1/00-setup.md) |
 | Stand up a local kind cluster | [Local kind setup](setup.md) |
-| Try the question bank | [Quiz README](https://github.com/PlatformRelay/Kubernetes-Workshop/tree/main/quiz#readme) |
+| Check yourself on a section | [Self-check quiz](https://platformrelay.github.io/Kubernetes-Workshop/quiz/) (in the browser; nothing stored) |
+| Read or reuse the question bank | [Quiz README](https://github.com/PlatformRelay/Kubernetes-Workshop/tree/main/quiz#readme) |
 | See the full section map | [Syllabus](syllabus.md) |
 | Facilitate a room | [Facilitator guide](facilitator-guide.md) |
 

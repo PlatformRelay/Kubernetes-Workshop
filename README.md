@@ -33,7 +33,7 @@ telemetry.
 | **Live decks** | [Day 1](https://platformrelay.github.io/Kubernetes-Workshop/deck/day-1/) · [Day 2](https://platformrelay.github.io/Kubernetes-Workshop/deck/day-2/) · [Day 3](https://platformrelay.github.io/Kubernetes-Workshop/deck/day-3/) · [3-day cut](https://platformrelay.github.io/Kubernetes-Workshop/deck/3day/) · [Superset](https://platformrelay.github.io/Kubernetes-Workshop/deck/) |
 | **PDF handouts** | [GitHub Releases](https://github.com/PlatformRelay/Kubernetes-Workshop/releases) (day + full + 3-day PDFs on each `v*` tag) |
 | **Labs** | [`labs/README.md`](./labs/README.md) · start at [`labs/day-1/00-setup.md`](./labs/day-1/00-setup.md) |
-| **Quizzes** | [`quiz/README.md`](./quiz/README.md) (portable bank; FOSS live host still open) |
+| **Quizzes** | [Self-check quiz](https://platformrelay.github.io/Kubernetes-Workshop/quiz/) in the browser · [`quiz/README.md`](./quiz/README.md) (portable bank; FOSS live host still open) |
 | **Run slides locally** | [`docs/run-slides.md`](./docs/run-slides.md) (Node.js + pnpm) |
 | **Known limitations** | [`docs/beta-limitations.md`](./docs/beta-limitations.md) (S24 stub; add-on smoke backlog) |
 | **Roadmap** | [`docs/roadmap.md`](./docs/roadmap.md) (quizzes, OpenTelemetry — no dates) |
@@ -53,6 +53,9 @@ telemetry.
 - **Facilitator support** — syllabus, pacing notes, and add-on checklists in
   [`docs/facilitator-guide.md`](./docs/facilitator-guide.md).
 - **Offline PDFs** — every release exports day decks plus full/3-day compatibility PDFs.
+- **A self-check quiz** — [answer in the browser](https://platformrelay.github.io/Kubernetes-Workshop/quiz/)
+  and see the explanation, plus why the distractor was tempting. No account, no backend, nothing
+  stored or uploaded. It is a self-check, **not an exam**: the answers ship in the static files.
 
 ## Audience
 
@@ -155,7 +158,7 @@ pnpm pages:build        # MkDocs + hash-routed decks → ./site (needs MkDocs)
 | `slides.md` / `slides-3day.md` | Compatibility superset / three-day cut |
 | `pages/SNN-topic/` | Section sources |
 | `labs/day-*/` | Standalone labs |
-| `quiz/` | Portable question bank |
+| `quiz/` | Portable question bank + the static self-check player |
 | `theme/` | Local Slidev theme |
 | `docs/decisions/` | ADRs |
 
@@ -164,7 +167,7 @@ pnpm pages:build        # MkDocs + hash-routed decks → ./site (needs MkDocs)
 | Workflow | Trigger | Role |
 | --- | --- | --- |
 | `ci.yml` | PR + `main` | Labs lint, deck builds, link-check, Pages contract tests, showcase GIF |
-| `pages.yml` | `main` (+ manual) | MkDocs + Slidev → GitHub Pages |
+| `pages.yml` | `main` (+ manual) | MkDocs + Slidev + quiz player → GitHub Pages |
 | `release.yml` | `v*` tags | PDF + offline zip GitHub Release |
 | `lab-smoke.yml` | schedule / dispatch / PR subset | Disposable kind Day-1 smoke |
 | `codeql.yml` | `main` / schedule | Code scanning |

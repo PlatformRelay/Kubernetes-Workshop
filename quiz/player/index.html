@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="index, follow">
+<meta name="description" content="Self-check questions for the Kubernetes Practitioner Workshop. Pick an answer, see whether it holds, and read why.">
+<title>Self-check quiz · Kubernetes Practitioner Workshop</title>
+<link rel="stylesheet" href="player.css">
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to the questions</a>
+
+<header class="topbar">
+  <div class="wrap">
+    <p class="eyebrow">Kubernetes Practitioner Workshop</p>
+    <h1>Self-check quiz</h1>
+    <p class="lede">
+      Pick an answer and find out straight away whether your mental model holds — with the
+      explanation, and, when you miss, why that option was tempting.
+    </p>
+  </div>
+</header>
+
+<main id="main" class="wrap">
+  <p id="boot" class="notice" role="status">Loading the question bank…</p>
+
+  <section id="landing" hidden aria-labelledby="landing-heading">
+    <h2 id="landing-heading">Pick a section</h2>
+    <p id="notice" class="notice" data-testid="notice" role="status" hidden></p>
+    <div id="days"></div>
+  </section>
+
+  <section id="quiz" hidden aria-labelledby="quiz-heading">
+    <p class="crumbs">
+      <button type="button" id="to-sections" class="link-button" data-testid="to-sections">← All sections</button>
+    </p>
+    <h2 id="quiz-heading"></h2>
+
+    <div id="question-view">
+      <p id="progress" class="progress"></p>
+      <p id="prompt" class="prompt"></p>
+      <ul id="options" class="options"></ul>
+
+      <div id="feedback" class="feedback" data-testid="feedback" role="status" hidden></div>
+
+      <p class="controls">
+        <label class="toggle">
+          <input type="checkbox" id="show-all">
+          Show all rationales
+        </label>
+        <button type="button" id="advance" class="primary" data-testid="advance"></button>
+      </p>
+    </div>
+
+    <div id="summary" hidden>
+      <p id="score" class="score" data-testid="score" role="status"></p>
+      <p class="controls">
+        <button type="button" id="again">Try this section again</button>
+        <button type="button" id="done" class="primary" data-testid="to-landing">Back to all sections</button>
+      </p>
+    </div>
+  </section>
+</main>
+
+<footer class="wrap site-footer">
+  <p>
+    <strong>This is a self-check, not an exam.</strong> The answers ship inside these static
+    files, so anyone can read them — treat your score as feedback for yourself, never as proof
+    of anything to anyone else.
+  </p>
+  <p>
+    Your answers stay in this browser tab: nothing is stored, nothing is uploaded, and there is
+    no account, backend, or telemetry. Reload the page and the score is gone.
+  </p>
+  <p>
+    Questions come from
+    <a href="https://github.com/PlatformRelay/Kubernetes-Workshop/tree/main/quiz">the workshop's
+    question bank</a>; a printable participant/facilitator copy is exported from the same source
+    for rooms without internet.
+  </p>
+</footer>
+
+<script type="module" src="app.mjs"></script>
+</body>
+</html>
