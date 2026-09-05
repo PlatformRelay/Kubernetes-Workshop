@@ -32,6 +32,7 @@ shaped the way it is — not just *what* it looks like.
 | [0011](0011-live-quiz-spike.md) | Defer live-quiz adoption until a complete FOSS runtime passes | proposed |
 | [0012](0012-sibling-lab-solutions.md) | Single-file labs with sibling solution companions | accepted |
 | [0013](0013-opentelemetry-scope.md) | Scope OpenTelemetry as a concept coda on S23, not a new section | accepted |
+| [0015](0015-static-self-check-quiz-player.md) | Ship self-check quizzes as a static Pages player, not a hosted service | accepted |
 
 ## Template
 

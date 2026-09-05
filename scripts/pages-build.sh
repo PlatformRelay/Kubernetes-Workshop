@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Build the GitHub Pages tree locally: MkDocs landing + Slidev decks under /deck/.
+# Build the GitHub Pages tree locally: MkDocs landing, Slidev decks under /deck/,
+# and the static self-check quiz player under /quiz/.
 # Mirrors .github/workflows/pages.yml (BASE defaults to /Kubernetes-Workshop).
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -63,5 +64,10 @@ cat >"${SITE}/templates/index.html" <<'EOF'
 <p><a href="../deck/templates/">Continue to the template gallery</a></p>
 </html>
 EOF
+
+# Static self-check quiz player (US-QUIZ-4). Zero dependencies; the bank in
+# quiz/questions.json stays the source of truth and is copied in verbatim.
+echo "==> quiz self-check player → ${SITE}/quiz"
+node scripts/quiz/build-player.mjs --out "${SITE}/quiz"
 
 echo "Pages tree ready at ${SITE}/ (pnpm pages:preview serves it)"

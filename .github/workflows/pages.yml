@@ -6,6 +6,7 @@ name: Deploy to GitHub Pages
 #   <pages-url>/deck/3day/       → canonical 3-day cut
 #   <pages-url>/deck/day-{1,2,3}/→ live day entries
 #   <pages-url>/deck/templates/  → design-system gallery
+#   <pages-url>/quiz/            → static self-check quiz player (zero deps)
 # Legacy /3day/ and /templates/ URLs redirect into /deck/…
 #
 # One-time manual prerequisite: Settings → Pages → Source = "GitHub Actions".
@@ -77,7 +78,7 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
 
-      - name: Build MkDocs + Slidev Pages tree
+      - name: Build MkDocs + Slidev + quiz-player Pages tree
         # Base path MUST use the exact repo-name case (Kubernetes-Workshop).
         # Hash router is required so slide deep links / refreshes work on
         # project Pages (history mode 404s under the subpath).

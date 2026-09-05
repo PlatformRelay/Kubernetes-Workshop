@@ -36,14 +36,22 @@ summarizes; it does not lead over private trackers.
 
 ## Direction
 
-### Live quizzes — planned (host)
+### Live quizzes — planned (host only; the learner self-check is on `main`)
 
 Per-section retrieval questions ship as a portable bank in
-[`quiz/`](https://github.com/PlatformRelay/Kubernetes-Workshop/tree/main/quiz)
-(facilitator and participant Markdown export; no live host).
-The architecture spike evaluated three FOSS live-host candidates and **adopted
-none of them (0/3)** — so the self-hosted live quiz add-on remains **planned**,
-with host architecture still open.
+[`quiz/`](https://github.com/PlatformRelay/Kubernetes-Workshop/tree/main/quiz),
+and learners answer them today in the
+[static self-check quiz](https://platformrelay.github.io/Kubernetes-Workshop/quiz/)
+published beside the decks — no host, no account, no backend, nothing stored.
+That player is a **self-check, not an exam**: the answers ship inside the static
+files, and the workshop does not claim otherwise
+([ADR 0015](./decisions/0015-static-self-check-quiz-player.md)). The printable
+facilitator/participant Markdown export stays the offline and show-of-hands path.
+
+What remains direction is the **live room** picture — one facilitator seeing how
+the room answered. The architecture spike evaluated three FOSS live-host
+candidates and **adopted none of them (0/3)**, so the self-hosted live quiz
+add-on remains **planned**, with host architecture still open.
 
 [Discuss live quizzes →](https://github.com/PlatformRelay/Kubernetes-Workshop/discussions/21)
 
