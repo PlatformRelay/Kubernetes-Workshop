@@ -1,5 +1,5 @@
 {
-  "captured": "2026-08-09",
+  "captured": "2026-09-05",
   "source": "GitHub Global Security Advisory API",
   "advisories": [
     {
@@ -43,8 +43,8 @@
       "package": "nanoid",
       "ecosystem": "npm",
       "severity": "high",
-      "vulnerableVersionRange": "< 3.3.17",
-      "firstPatchedVersion": "3.3.17",
+      "vulnerableVersionRange": "< 3.3.18",
+      "firstPatchedVersion": "3.3.18",
       "source": "https://github.com/advisories/GHSA-2v37-7h3g-55p8"
     },
     {
@@ -55,6 +55,132 @@
       "vulnerableVersionRange": ">= 4.0.0, < 5.1.6",
       "firstPatchedVersion": "5.1.6",
       "source": "https://github.com/advisories/GHSA-2v37-7h3g-55p8"
+    },
+    {
+      "id": "GHSA-5jgf-p345-68v8",
+      "package": "fast-uri",
+      "ecosystem": "npm",
+      "severity": "high",
+      "vulnerableVersionRange": ">= 2.4.2, < 2.4.5",
+      "firstPatchedVersion": "2.4.5",
+      "source": "https://github.com/advisories/GHSA-5jgf-p345-68v8"
+    },
+    {
+      "id": "GHSA-5jgf-p345-68v8",
+      "package": "fast-uri",
+      "ecosystem": "npm",
+      "severity": "high",
+      "vulnerableVersionRange": ">= 3.1.3, < 3.1.6",
+      "firstPatchedVersion": "3.1.6",
+      "source": "https://github.com/advisories/GHSA-5jgf-p345-68v8"
+    },
+    {
+      "id": "GHSA-5jgf-p345-68v8",
+      "package": "fast-uri",
+      "ecosystem": "npm",
+      "severity": "high",
+      "vulnerableVersionRange": ">= 4.0.1, < 4.1.3",
+      "firstPatchedVersion": "4.1.3",
+      "source": "https://github.com/advisories/GHSA-5jgf-p345-68v8"
+    },
+    {
+      "id": "GHSA-f65p-4m7j-42xc",
+      "package": "fast-uri",
+      "ecosystem": "npm",
+      "severity": "high",
+      "vulnerableVersionRange": ">= 2.3.1, < 2.4.5",
+      "firstPatchedVersion": "2.4.5",
+      "source": "https://github.com/advisories/GHSA-f65p-4m7j-42xc"
+    },
+    {
+      "id": "GHSA-f65p-4m7j-42xc",
+      "package": "fast-uri",
+      "ecosystem": "npm",
+      "severity": "high",
+      "vulnerableVersionRange": ">= 3.0.0, < 3.1.6",
+      "firstPatchedVersion": "3.1.6",
+      "source": "https://github.com/advisories/GHSA-f65p-4m7j-42xc"
+    },
+    {
+      "id": "GHSA-f65p-4m7j-42xc",
+      "package": "fast-uri",
+      "ecosystem": "npm",
+      "severity": "high",
+      "vulnerableVersionRange": ">= 4.0.0, < 4.1.3",
+      "firstPatchedVersion": "4.1.3",
+      "source": "https://github.com/advisories/GHSA-f65p-4m7j-42xc"
+    },
+    {
+      "id": "GHSA-fph4-wmhf-6fwf",
+      "package": "fast-uri",
+      "ecosystem": "npm",
+      "severity": "high",
+      "vulnerableVersionRange": ">= 2.4.1, < 2.4.5",
+      "firstPatchedVersion": "2.4.5",
+      "source": "https://github.com/advisories/GHSA-fph4-wmhf-6fwf"
+    },
+    {
+      "id": "GHSA-fph4-wmhf-6fwf",
+      "package": "fast-uri",
+      "ecosystem": "npm",
+      "severity": "high",
+      "vulnerableVersionRange": ">= 3.1.2, < 3.1.6",
+      "firstPatchedVersion": "3.1.6",
+      "source": "https://github.com/advisories/GHSA-fph4-wmhf-6fwf"
+    },
+    {
+      "id": "GHSA-fph4-wmhf-6fwf",
+      "package": "fast-uri",
+      "ecosystem": "npm",
+      "severity": "high",
+      "vulnerableVersionRange": ">= 4.0.0, < 4.1.3",
+      "firstPatchedVersion": "4.1.3",
+      "source": "https://github.com/advisories/GHSA-fph4-wmhf-6fwf"
+    },
+    {
+      "id": "GHSA-jqff-g426-hqxp",
+      "package": "fast-uri",
+      "ecosystem": "npm",
+      "severity": "high",
+      "vulnerableVersionRange": ">= 2.3.1, < 2.4.5",
+      "firstPatchedVersion": "2.4.5",
+      "source": "https://github.com/advisories/GHSA-jqff-g426-hqxp"
+    },
+    {
+      "id": "GHSA-jqff-g426-hqxp",
+      "package": "fast-uri",
+      "ecosystem": "npm",
+      "severity": "high",
+      "vulnerableVersionRange": ">= 3.0.0, < 3.1.6",
+      "firstPatchedVersion": "3.1.6",
+      "source": "https://github.com/advisories/GHSA-jqff-g426-hqxp"
+    },
+    {
+      "id": "GHSA-jqff-g426-hqxp",
+      "package": "fast-uri",
+      "ecosystem": "npm",
+      "severity": "high",
+      "vulnerableVersionRange": ">= 4.0.0, < 4.1.3",
+      "firstPatchedVersion": "4.1.3",
+      "source": "https://github.com/advisories/GHSA-jqff-g426-hqxp"
+    },
+    {
+      "id": "GHSA-73wf-gq98-2v4g",
+      "package": "browserslist",
+      "ecosystem": "npm",
+      "severity": "high",
+      "vulnerableVersionRange": "<= 4.28.6",
+      "firstPatchedVersion": "4.28.7",
+      "source": "https://github.com/advisories/GHSA-73wf-gq98-2v4g"
+    },
+    {
+      "id": "GHSA-c83g-rgw3-j3cx",
+      "package": "browserslist",
+      "ecosystem": "npm",
+      "severity": "high",
+      "vulnerableVersionRange": "<= 4.28.6",
+      "firstPatchedVersion": "4.28.7",
+      "source": "https://github.com/advisories/GHSA-c83g-rgw3-j3cx"
     }
   ]
 }

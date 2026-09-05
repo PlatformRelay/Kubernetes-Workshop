@@ -24,10 +24,12 @@ overrides:
   "js-yaml@>=4.0.0 <5.0.0": 4.3.1
   "js-yaml@>=3.0.0 <4.0.0": 3.15.1
   # GHSA-2v37-7h3g-55p8: nanoid custom generators can loop indefinitely when
-  # size is zero. Patched separately per line (3.x at 3.3.17, 5.x at 5.1.6);
+  # size is zero. Patched separately per line (3.x at 3.3.18, 5.x at 5.1.6);
   # postcss pulls the 3.x line transitively, so pin that range to its first
   # patched version without dragging any consumer across a major boundary.
-  "nanoid@>=3.0.0 <4.0.0": 3.3.17
+  # The advisory range was widened after 3.3.17 shipped an incomplete fix, so
+  # the 3.x floor is now 3.3.18.
+  "nanoid@>=3.0.0 <4.0.0": 3.3.18
   # monaco-editor / mermaid pull older DOMPurify; pin the patched line.
   dompurify: 3.4.13
   # Dependabot/GHSA collapses @hono/node-server to "<2.0.5" even though
@@ -41,9 +43,26 @@ overrides:
   # and sibling-element CSS injection (GHSA-3rrr-jr9j-h3q3). The deck only uses
   # flowchart and stateDiagram-v2, so this is a patch bump on the same line.
   mermaid: 11.16.1
+  # Four advisories against the fast-uri that ajv resolves URI references with,
+  # all first patched in 3.1.6: host confusion via skipped IDN canonicalization
+  # on scheme-relative references (GHSA-5jgf-p345-68v8) and via percent-encoded
+  # scheme normalization (GHSA-jqff-g426-hqxp), and SSRF via malformed IPv6
+  # normalization (GHSA-f65p-4m7j-42xc) and repeated hostname percent-decoding
+  # (GHSA-fph4-wmhf-6fwf). ajv's own range is already ^3.0.1, so this pins the
+  # floor rather than moving a line; only scripts/quiz/validate.mjs uses ajv,
+  # against schemas and data from this repository.
+  fast-uri: 3.1.6
+  # Two advisories against the browserslist @babel/helper-compilation-targets
+  # pulls in for the Vite/Slidev JSX transform, both first patched in 4.28.7:
+  # unbounded query-cache growth leading to OOM (GHSA-c83g-rgw3-j3cx) and an
+  # uncaught crash / prototype write in normalizeStats when parsing an
+  # untrusted browserslist-stats.json (GHSA-73wf-gq98-2v4g). A patch bump on
+  # the same line; the build never reads a custom stats file.
+  browserslist: 4.28.7
 
 # pnpm 11 minimumReleaseAge gate: allow this override pin through when fresh on the registry.
 minimumReleaseAgeExclude:
   - '@hono/node-server@2.1.0'
-  - 'nanoid@3.3.17'
+  - 'nanoid@3.3.18'
+  - 'fast-uri@3.1.6'
 

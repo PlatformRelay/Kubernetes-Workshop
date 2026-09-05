@@ -360,7 +360,15 @@ test('nanoid override is bounded to the intended 3.x major at its patched floor'
   const root = path.resolve(import.meta.dirname, '..')
   const workspace = await readFile(path.join(root, 'pnpm-workspace.yaml'), 'utf8')
 
-  assert.match(workspace, /"nanoid@>=3\.0\.0 <4\.0\.0": 3\.3\.17/)
+  assert.match(workspace, /"nanoid@>=3\.0\.0 <4\.0\.0": 3\.3\.18/)
   assert.doesNotMatch(workspace, /"nanoid@>=3\.0\.0":/)
   assert.doesNotMatch(workspace, /(^|\s)nanoid:/m)
+})
+
+test('fast-uri and browserslist overrides sit at their advisory patched floors', async () => {
+  const root = path.resolve(import.meta.dirname, '..')
+  const workspace = await readFile(path.join(root, 'pnpm-workspace.yaml'), 'utf8')
+
+  assert.match(workspace, /(^|\s)fast-uri: 3\.1\.6/m)
+  assert.match(workspace, /(^|\s)browserslist: 4\.28\.7/m)
 })
