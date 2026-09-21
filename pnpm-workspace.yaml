@@ -21,8 +21,8 @@ overrides:
   # lines that @slidev/cli pulls in transitively. The fix was released on each
   # line separately, so pin each range to its own first patched version rather
   # than dragging Slidev's YAML parser across a major-version boundary.
-  "js-yaml@>=4.0.0 <5.0.0": 4.3.1
-  "js-yaml@>=3.0.0 <4.0.0": 3.15.1
+  "js-yaml@>=4.0.0 <5.0.0": 4.3.2
+  "js-yaml@>=3.0.0 <4.0.0": 3.15.2
   # GHSA-2v37-7h3g-55p8: nanoid custom generators can loop indefinitely when
   # size is zero. Patched separately per line (3.x at 3.3.18, 5.x at 5.1.6);
   # postcss pulls the 3.x line transitively, so pin that range to its first
@@ -52,6 +52,15 @@ overrides:
   # floor rather than moving a line; only scripts/quiz/validate.mjs uses ajv,
   # against schemas and data from this repository.
   fast-uri: 3.1.6
+  # GHSA-2883-xcg3-v3hh (js-yaml maxTotalMergeKeys CPU use) is fixed on the 3.x
+  # and 4.x lines at 3.15.2 and 4.3.2 (pinned above). GHSA-7w5x-hrqm-74c2:
+  # smol-toml denial of service on malformed TOML, first patched in 1.7.1; only
+  # markdownlint-cli2 parses TOML, from this repository's own config.
+  smol-toml: 1.7.1
+  # Three hono advisories (GHSA-g6gw-c38x-mqfc parseBody nesting,
+  # GHSA-crvj-82cr-hjcx query parser, GHSA-gqvv-2mrq-wpjv toSSG path escape),
+  # all first patched in 4.13.5: a minor bump on the 4.x line.
+  hono: 4.13.5
   # Two advisories against the browserslist @babel/helper-compilation-targets
   # pulls in for the Vite/Slidev JSX transform, both first patched in 4.28.7:
   # unbounded query-cache growth leading to OOM (GHSA-c83g-rgw3-j3cx) and an
@@ -65,4 +74,3 @@ minimumReleaseAgeExclude:
   - '@hono/node-server@2.1.0'
   - 'nanoid@3.3.18'
   - 'fast-uri@3.1.6'
-
