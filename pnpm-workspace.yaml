@@ -15,8 +15,9 @@ overrides:
   postcss: 8.5.25
   # GHSA-pm4m-ph32-ghv5 affects only js-yaml 5.0.0 through 5.2.1. Keep the
   # markdownlint 5.x line patched without forcing its unrelated 3.x/4.x users
-  # across a major-version boundary.
-  "js-yaml@>=5.0.0 <6.0.0": 5.2.3
+  # across a major-version boundary. GHSA-r3ph-w7gj-g6xm (5.0.0 through 5.4.0)
+  # raises the 5.x floor to 5.4.1, still on the same line.
+  "js-yaml@>=5.0.0 <6.0.0": 5.4.1
   # GHSA-5p4m-2wfm-xmqj (CVE-2026-59870) hits both the 3.x and 4.x js-yaml
   # lines that @slidev/cli pulls in transitively. The fix was released on each
   # line separately, so pin each range to its own first patched version rather
@@ -31,7 +32,8 @@ overrides:
   # the 3.x floor is now 3.3.18.
   "nanoid@>=3.0.0 <4.0.0": 3.3.18
   # monaco-editor / mermaid pull older DOMPurify; pin the patched line.
-  dompurify: 3.4.13
+  # GHSA-p98j-92pf-mc4p (3.4.13 through 3.4.15) is first patched in 3.4.16.
+  dompurify: 3.4.16
   # Dependabot/GHSA collapses @hono/node-server to "<2.0.5" even though
   # 1.19.15+ is patched on the 1.x line; pin 2.1.0 so the alert clears.
   # MCP only needs getRequestListener from this package.
@@ -50,8 +52,9 @@ overrides:
   # normalization (GHSA-f65p-4m7j-42xc) and repeated hostname percent-decoding
   # (GHSA-fph4-wmhf-6fwf). ajv's own range is already ^3.0.1, so this pins the
   # floor rather than moving a line; only scripts/quiz/validate.mjs uses ajv,
-  # against schemas and data from this repository.
-  fast-uri: 3.1.6
+  # against schemas and data from this repository. GHSA-58mr-gqgx-xq4g hits
+  # exactly 3.1.6 and is fixed in 3.1.7; 3.1.8 is the current 3.x patch.
+  fast-uri: 3.1.8
   # GHSA-2883-xcg3-v3hh (js-yaml maxTotalMergeKeys CPU use) is fixed on the 3.x
   # and 4.x lines at 3.15.2 and 4.3.2 (pinned above). GHSA-7w5x-hrqm-74c2:
   # smol-toml denial of service on malformed TOML, first patched in 1.7.1; only
@@ -68,6 +71,24 @@ overrides:
   # untrusted browserslist-stats.json (GHSA-73wf-gq98-2v4g). A patch bump on
   # the same line; the build never reads a custom stats file.
   browserslist: 4.28.7
+  # GHSA-w3rx-r6r6-pgpr / GHSA-5p2g-fcmc-qvqq: image-size ICNS and JXL/HEIF
+  # parser infinite loops, first patched in 2.0.3. pptxgenjs (slidev PPTX
+  # export) still declares ^1.2.1, but its dist never requires image-size (only
+  # commented-out code mentions it), so the range is inert and only an override
+  # can move it. Replaces the two expired audit exceptions. Drop this when
+  # pptxgenjs moves on.
+  "image-size@>=1.0.0 <2.0.0": 2.0.4
+  # GHSA-253c-mchw-3w2r: markdown-it <14.3.1 (Slidev's Markdown pipeline),
+  # first patched in 14.3.1 on the same 14.x line.
+  "markdown-it@>=14.0.0 <15.0.0": 14.3.1
+  # GHSA-68fv-2mgg-jv7q: source-map-js event-loop DoS via indexed source-map
+  # section offsets, first patched in 1.2.2. Reached through the Vue compiler
+  # and PostCSS at build time; bounded to the 1.x line.
+  "source-map-js@>=1.0.0 <2.0.0": 1.2.2
+  # GHSA-g2v6-rqmx-r4w6: @vue/server-renderer <3.5.42 (attribute-name XSS).
+  # Slidev's packages pull their own vue, so the direct-dependency bump alone
+  # leaves an unpatched copy; pinning vue moves @vue/server-renderer with it.
+  "vue@>=3.0.0 <4.0.0": 3.5.43
 
 # pnpm 11 minimumReleaseAge gate: allow this override pin through when fresh on the registry.
 minimumReleaseAgeExclude:

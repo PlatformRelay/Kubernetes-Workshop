@@ -1,16 +1,10 @@
 {
   "exceptions": [
     {
-      "id": "GHSA-w3rx-r6r6-pgpr",
-      "reason": "image-size ICNS infinite-loop DoS. No patched release exists: the npm registry's latest image-size is 2.0.2, still inside the vulnerable range <= 2.0.2. The only dependency path is pptxgenjs (slidev PPTX export), pinned by upstream to image-size ^1.2.1, and the parser only ever sees this repository's curated slide assets, never attacker-supplied images. Re-check the registry for a patched release before expiry.",
+      "id": "GHSA-vfj7-8cjw-p6xm",
+      "reason": "braces stack-exhaustion DoS on deeply nested patterns. No patched release exists: the advisory lists no patched version and npm latest is 3.0.3 (inside <= 3.0.3), so no override can reach a fixed version. Reached only at dev/build time via chokidar (Slidev's vite-plugin-static-copy) and micromatch (markdownlint-cli2, Slidev's fast-glob), which expand glob patterns taken from this repository's config, never attacker-supplied input. Remove this entry the moment a patched braces publishes.",
       "owner": "maintainers",
-      "expires": "2026-10-08"
-    },
-    {
-      "id": "GHSA-5p2g-fcmc-qvqq",
-      "reason": "image-size JXL/HEIF infinite-loop DoS. Same situation as GHSA-w3rx-r6r6-pgpr: no patched release exists on npm (latest 2.0.2 is inside <= 2.0.2), the sole path is pptxgenjs via slidev PPTX export, and inputs are repository-curated slide assets only. Re-check the registry for a patched release before expiry.",
-      "owner": "maintainers",
-      "expires": "2026-10-08"
+      "expires": "2027-01-08"
     }
   ]
 }

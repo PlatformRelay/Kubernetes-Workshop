@@ -54,13 +54,13 @@
   "dependencies": {
     "@slidev/cli": "^52.19.0",
     "@slidev/theme-default": "0.25.0",
-    "vue": "^3.5.33"
+    "vue": "^3.5.43"
   },
   "devDependencies": {
     "ajv": "8.18.0",
     "markdownlint-cli2": "^0.23.2",
     "playwright-chromium": "^1.61.1",
-    "sharp": "^0.35.4",
+    "sharp": "^0.35.5",
     "yaml": "^2.9.0"
   }
 }
