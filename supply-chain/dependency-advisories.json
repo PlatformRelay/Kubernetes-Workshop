@@ -1,5 +1,5 @@
 {
-  "captured": "2026-09-05",
+  "captured": "2026-10-14",
   "source": "GitHub Global Security Advisory API",
   "advisories": [
     {
@@ -181,6 +181,60 @@
       "vulnerableVersionRange": "<= 4.28.6",
       "firstPatchedVersion": "4.28.7",
       "source": "https://github.com/advisories/GHSA-c83g-rgw3-j3cx"
+    },
+    {
+      "id": "GHSA-58mr-gqgx-xq4g",
+      "package": "fast-uri",
+      "ecosystem": "npm",
+      "severity": "high",
+      "vulnerableVersionRange": "= 3.1.6",
+      "firstPatchedVersion": "3.1.7",
+      "source": "https://github.com/advisories/GHSA-58mr-gqgx-xq4g"
+    },
+    {
+      "id": "GHSA-w3rx-r6r6-pgpr",
+      "package": "image-size",
+      "ecosystem": "npm",
+      "severity": "high",
+      "vulnerableVersionRange": ">= 0.6.3, <= 2.0.2",
+      "firstPatchedVersion": "2.0.3",
+      "source": "https://github.com/advisories/GHSA-w3rx-r6r6-pgpr"
+    },
+    {
+      "id": "GHSA-5p2g-fcmc-qvqq",
+      "package": "image-size",
+      "ecosystem": "npm",
+      "severity": "high",
+      "vulnerableVersionRange": ">= 1.2.0, <= 2.0.2",
+      "firstPatchedVersion": "2.0.3",
+      "source": "https://github.com/advisories/GHSA-5p2g-fcmc-qvqq"
+    },
+    {
+      "id": "GHSA-68fv-2mgg-jv7q",
+      "package": "source-map-js",
+      "ecosystem": "npm",
+      "severity": "high",
+      "vulnerableVersionRange": ">= 1.0.0, < 1.2.2",
+      "firstPatchedVersion": "1.2.2",
+      "source": "https://github.com/advisories/GHSA-68fv-2mgg-jv7q"
+    },
+    {
+      "id": "GHSA-g2v6-rqmx-r4w6",
+      "package": "@vue/server-renderer",
+      "ecosystem": "npm",
+      "severity": "high",
+      "vulnerableVersionRange": "< 3.5.42",
+      "firstPatchedVersion": "3.5.42",
+      "source": "https://github.com/advisories/GHSA-g2v6-rqmx-r4w6"
+    },
+    {
+      "id": "GHSA-wq5f-xc86-pv6w",
+      "package": "sharp",
+      "ecosystem": "npm",
+      "severity": "high",
+      "vulnerableVersionRange": "< 0.35.5",
+      "firstPatchedVersion": "0.35.5",
+      "source": "https://github.com/advisories/GHSA-wq5f-xc86-pv6w"
     }
   ]
 }
