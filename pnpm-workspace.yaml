@@ -59,11 +59,14 @@ overrides:
   # and 4.x lines at 3.15.2 and 4.3.2 (pinned above). GHSA-7w5x-hrqm-74c2:
   # smol-toml denial of service on malformed TOML, first patched in 1.7.1; only
   # markdownlint-cli2 parses TOML, from this repository's own config.
-  smol-toml: 1.7.1
+  # GHSA-r4xh-jqrq-34v2 (quadratic parseKey, <=1.8.0) raises the floor to 1.9.0;
+  # markdownlint-cli2's latest release still pins 1.8.0.
+  smol-toml: 1.9.0
   # Three hono advisories (GHSA-g6gw-c38x-mqfc parseBody nesting,
   # GHSA-crvj-82cr-hjcx query parser, GHSA-gqvv-2mrq-wpjv toSSG path escape),
   # all first patched in 4.13.5: a minor bump on the 4.x line.
-  hono: 4.13.5
+  # GHSA-hxh3-vqpv-xpqv (hono/jsx boundary XSS) raises the floor to 4.13.7.
+  hono: 4.13.7
   # Two advisories against the browserslist @babel/helper-compilation-targets
   # pulls in for the Vite/Slidev JSX transform, both first patched in 4.28.7:
   # unbounded query-cache growth leading to OOM (GHSA-c83g-rgw3-j3cx) and an
@@ -89,6 +92,15 @@ overrides:
   # Slidev's packages pull their own vue, so the direct-dependency bump alone
   # leaves an unpatched copy; pinning vue moves @vue/server-renderer with it.
   "vue@>=3.0.0 <4.0.0": 3.5.43
+  # GHSA-rj75-hqrm-r3gf: postcss-selector-parser <7.1.6 (quadratic flat-selector
+  # parsing), via postcss-nested in @slidev/cli. Bounded to the 7.x line.
+  "postcss-selector-parser@>=7.0.0 <8.0.0": 7.1.6
+  # GHSA-238p-pmpm-9mq7: katex >=0.11.0 <0.18.2. mermaid and
+  # micromark-extension-math (markdownlint) still declare ^0.16, so only an
+  # override moves them. The range matches the advisory, so the override cannot
+  # reach a release outside it; markdownlint uses only the math syntax
+  # extension, and the deck's mermaid diagrams carry no math.
+  "katex@>=0.11.0 <0.18.2": 0.18.4
 
 # pnpm 11 minimumReleaseAge gate: allow this override pin through when fresh on the registry.
 minimumReleaseAgeExclude:
