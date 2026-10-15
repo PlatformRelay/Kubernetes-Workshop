@@ -369,8 +369,16 @@ test('smol-toml and hono overrides sit at their advisory patched floors', async 
   const root = path.resolve(import.meta.dirname, '..')
   const workspace = await readFile(path.join(root, 'pnpm-workspace.yaml'), 'utf8')
 
-  assert.match(workspace, /(^|\s)smol-toml: 1\.7\.1/m)
-  assert.match(workspace, /(^|\s)hono: 4\.13\.5/m)
+  assert.match(workspace, /(^|\s)smol-toml: 1\.9\.0/m)
+  assert.match(workspace, /(^|\s)hono: 4\.13\.7/m)
+})
+
+test('postcss-selector-parser and katex overrides sit at their advisory patched floors', async () => {
+  const root = path.resolve(import.meta.dirname, '..')
+  const workspace = await readFile(path.join(root, 'pnpm-workspace.yaml'), 'utf8')
+
+  assert.match(workspace, /"postcss-selector-parser@>=7\.0\.0 <8\.0\.0": 7\.1\.6/)
+  assert.match(workspace, /"katex@>=0\.11\.0 <0\.18\.2": 0\.18\.4/)
 })
 
 test('fast-uri and browserslist overrides sit at their advisory patched floors', async () => {
