@@ -115,7 +115,7 @@ the controls for hostile changes.
 
 The interactive mise convenience installer is the only current exception. It
 is isolated from non-interactive/CI setup, but the installer bytes themselves
-are **not checksum-pinned**. That accepted risk expires on **2026-11-03** so the
+are **not checksum-pinned**. That accepted risk expires on **2027-02-11** so the
 bootstrap path must be reviewed again.
 
 Learner-facing labs currently contain direct, versioned `kubectl apply -f URL`
