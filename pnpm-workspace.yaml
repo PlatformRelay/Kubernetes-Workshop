@@ -33,11 +33,11 @@ overrides:
   "nanoid@>=3.0.0 <4.0.0": 3.3.18
   # monaco-editor / mermaid pull older DOMPurify; pin the patched line.
   # GHSA-p98j-92pf-mc4p (3.4.13 through 3.4.15) is first patched in 3.4.16.
-  dompurify: 3.4.16
+  dompurify: 3.4.17
   # Dependabot/GHSA collapses @hono/node-server to "<2.0.5" even though
   # 1.19.15+ is patched on the 1.x line; pin 2.1.0 so the alert clears.
   # MCP only needs getRequestListener from this package.
-  "@hono/node-server": 2.1.0
+  "@hono/node-server": 2.1.6
   # Five advisories against the mermaid @slidev/client pulls in, all first
   # patched in 11.16.1: prototype pollution in the architecture renderer
   # (GHSA-2v8p-3f2j-5mp7) and the config APIs (GHSA-c4c3-pg64-4m4v), DoS in the
@@ -54,16 +54,16 @@ overrides:
   # floor rather than moving a line; only scripts/quiz/validate.mjs uses ajv,
   # against schemas and data from this repository. GHSA-58mr-gqgx-xq4g hits
   # exactly 3.1.6 and is fixed in 3.1.7; 3.1.8 is the current 3.x patch.
-  fast-uri: 3.1.8
+  fast-uri: 3.1.9
   # GHSA-2883-xcg3-v3hh (js-yaml maxTotalMergeKeys CPU use) is fixed on the 3.x
   # and 4.x lines at 3.15.2 and 4.3.2 (pinned above). GHSA-7w5x-hrqm-74c2:
   # smol-toml denial of service on malformed TOML, first patched in 1.7.1; only
   # markdownlint-cli2 parses TOML, from this repository's own config.
-  smol-toml: 1.7.1
+  smol-toml: 1.9.1
   # Three hono advisories (GHSA-g6gw-c38x-mqfc parseBody nesting,
   # GHSA-crvj-82cr-hjcx query parser, GHSA-gqvv-2mrq-wpjv toSSG path escape),
   # all first patched in 4.13.5: a minor bump on the 4.x line.
-  hono: 4.13.5
+  hono: 4.13.16
   # Two advisories against the browserslist @babel/helper-compilation-targets
   # pulls in for the Vite/Slidev JSX transform, both first patched in 4.28.7:
   # unbounded query-cache growth leading to OOM (GHSA-c83g-rgw3-j3cx) and an
@@ -80,7 +80,7 @@ overrides:
   "image-size@>=1.0.0 <2.0.0": 2.0.4
   # GHSA-253c-mchw-3w2r: markdown-it <14.3.1 (Slidev's Markdown pipeline),
   # first patched in 14.3.1 on the same 14.x line.
-  "markdown-it@>=14.0.0 <15.0.0": 14.3.1
+  "markdown-it@>=14.0.0 <15.0.0": 14.3.3
   # GHSA-68fv-2mgg-jv7q: source-map-js event-loop DoS via indexed source-map
   # section offsets, first patched in 1.2.2. Reached through the Vue compiler
   # and PostCSS at build time; bounded to the 1.x line.
@@ -90,8 +90,33 @@ overrides:
   # leaves an unpatched copy; pinning vue moves @vue/server-renderer with it.
   "vue@>=3.0.0 <4.0.0": 3.5.43
 
+  # Round 2026-11-13: advisories first patched at these floors, all on the line
+  # Slidev already resolves (no major-version crossing).
+  # vite 8.2.0-8.2.3 (launch-editor existence check and four moderates) -> 8.2.4.
+  "vite@>=8.0.0 <9.0.0": 8.2.4
+  # zod DoS on oversized input -> 4.6.6; @modelcontextprotocol/* SDK transport
+  # advisories -> server 2.3.0, node 2.1.0 (Slidev's MCP server only).
+  "zod@>=4.0.0 <5.0.0": 4.6.6
+  "@modelcontextprotocol/server": 2.3.0
+  "@modelcontextprotocol/node": 2.1.0
+  # katex <0.18.2 and postcss-selector-parser 7.x <7.1.6 advisories.
+  katex: 0.18.2
+  "postcss-selector-parser@>=7.0.0 <8.0.0": 7.1.6
+
 # pnpm 11 minimumReleaseAge gate: allow this override pin through when fresh on the registry.
 minimumReleaseAgeExclude:
   - '@hono/node-server@2.1.0'
   - 'nanoid@3.3.18'
   - 'fast-uri@3.1.6'
+  - 'dompurify@3.4.17'
+  - 'markdown-it@14.3.3'
+  - 'smol-toml@1.9.1'
+  - 'hono@4.13.16'
+  - '@hono/node-server@2.1.6'
+  - 'fast-uri@3.1.9'
+  - 'vite@8.2.4'
+  - 'zod@4.6.6'
+  - '@modelcontextprotocol/server@2.3.0'
+  - '@modelcontextprotocol/node@2.1.0'
+  - 'katex@0.18.2'
+  - 'postcss-selector-parser@7.1.6'
