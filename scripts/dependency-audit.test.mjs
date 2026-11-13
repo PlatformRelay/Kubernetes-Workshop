@@ -369,15 +369,15 @@ test('smol-toml and hono overrides sit at their advisory patched floors', async 
   const root = path.resolve(import.meta.dirname, '..')
   const workspace = await readFile(path.join(root, 'pnpm-workspace.yaml'), 'utf8')
 
-  assert.match(workspace, /(^|\s)smol-toml: 1\.7\.1/m)
-  assert.match(workspace, /(^|\s)hono: 4\.13\.5/m)
+  assert.match(workspace, /(^|\s)smol-toml: 1\.9\.1/m)
+  assert.match(workspace, /(^|\s)hono: 4\.13\.16/m)
 })
 
 test('fast-uri and browserslist overrides sit at their advisory patched floors', async () => {
   const root = path.resolve(import.meta.dirname, '..')
   const workspace = await readFile(path.join(root, 'pnpm-workspace.yaml'), 'utf8')
 
-  assert.match(workspace, /(^|\s)fast-uri: 3\.1\.8/m)
+  assert.match(workspace, /(^|\s)fast-uri: 3\.1\.9/m)
   assert.match(workspace, /(^|\s)browserslist: 4\.28\.7/m)
 })
 
@@ -386,8 +386,8 @@ test('image-size, markdown-it, source-map-js, vue and dompurify overrides sit at
   const workspace = await readFile(path.join(root, 'pnpm-workspace.yaml'), 'utf8')
 
   assert.match(workspace, /"image-size@>=1\.0\.0 <2\.0\.0": 2\.0\.4/)
-  assert.match(workspace, /"markdown-it@>=14\.0\.0 <15\.0\.0": 14\.3\.1/)
+  assert.match(workspace, /"markdown-it@>=14\.0\.0 <15\.0\.0": 14\.3\.3/)
   assert.match(workspace, /"source-map-js@>=1\.0\.0 <2\.0\.0": 1\.2\.2/)
   assert.match(workspace, /"vue@>=3\.0\.0 <4\.0\.0": 3\.5\.43/)
-  assert.match(workspace, /(^|\s)dompurify: 3\.4\.16/m)
+  assert.match(workspace, /(^|\s)dompurify: 3\.4\.17/m)
 })
